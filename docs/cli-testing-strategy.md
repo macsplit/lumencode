@@ -15,7 +15,7 @@ By using the same underlying classes, the CLI provides an accurate representatio
 
 - **One-shot Mode**: Analyze a project root, select a file, and extract symbols, dependencies, routes, and source snippets in a single command.
 - **Persistent Interactive Mode (`-i`)**: Maintains application state across multiple JSON-based commands on `stdin`.
-- **JSON Output**: All state changes and analysis results are emitted as compact JSON for easy machine processing, now including source snippets for symbols.
+- **JSON Output**: All state changes and analysis results are emitted as compact JSON for easy machine processing, including source snippets for symbols.
 
 ## Testing Strategy
 
@@ -38,7 +38,7 @@ In interactive mode, verify that commands correctly update the internal state an
 4. `selectSymbol`: Extract detailed information about a specific symbol, including its snippet.
 
 ### 3. Comparison with GUI Behavior
-Ensure that the JSON output from the CLI matches the data expected by the QML components, particularly regarding the presence and accuracy of symbols, snippets, and project summaries.
+Ensure that the JSON output from the CLI matches the data expected by the QML components, particularly regarding the presence and accuracy of symbols, snippets, project summaries, and selection payloads used by the lower source pane.
 
 ### 4. Regression Testing
 Use the CLI to create a suite of "golden" JSON outputs for known projects. Future changes to the parser can be automatically verified against these baselines.
@@ -71,3 +71,9 @@ Use the CLI to create a suite of "golden" JSON outputs for known projects. Futur
 - `getState`: (No params)
 - `getProjectSummary`: (No params)
 - `exit`: (No params)
+
+## Current Notes
+
+- The CLI remains the best way to regression-test parsing and payload structure without launching the GUI.
+- The GUI now adds extra presentation behavior on top of the shared backend data, including lower-pane snippet rendering, compact snippet diagnostics, and CSS class drill-down behavior.
+- Full GUI parity should not be assumed for purely visual concerns such as splitter layout, lightweight syntax coloring, or rich-text snippet presentation.

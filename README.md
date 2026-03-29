@@ -11,22 +11,27 @@ LumenCode is intentionally:
 
 ## Current State
 
-The project has undergone significant development, enhancing its parsing capabilities and CLI features.
-
 What currently works:
 
-- Browsing a project tree with robust path resolution.
-- Opening files into overview/detail panes with syntax-highlighted source snippets.
-- Extracting detailed symbols for PHP, JS, TS, TSX, CSS, and HTML using Tree-sitter parsers.
+- Browsing a project tree with a dense three-pane explorer and a resizable lower source pane.
+- Resizing the top panes and lower source pane with draggable splitters.
+- Opening files into overview/detail panes with a compact left control rail and project-root display as `/`.
+- Extracting detailed symbols for PHP, JS, TS, TSX, CSS, HTML, and JSON.
+- Using Tree-sitter for PHP, JS, TS, TSX, and CSS parsing where integrated.
+- Showing syntax-colored lower-pane snippets with internal highlighting rather than an external highlighting dependency.
+- Showing parser-aware diagnostics for supported snippet languages, while suppressing false errors for intentionally truncated previews.
+- Showing file previews in the lower pane when a file itself is selected.
+- Surfacing CSS class matches/misses from HTML and allowing those entries to drive the lower pane.
+- Inspecting CSS classes directly from CSS files with rule-level snippets.
 - Improved CommonJS and Node/service-style repo analysis, including:
-    - Accurate dependency extraction (`require(...)` and `import`) with file existence checks.
-    - Reliable export surfacing for CommonJS (`module.exports`, `exports.*`) and ES modules (`export ...`).
-    - Enhanced Express route detection.
-    - Linking to related files (tests, implementations).
-    - Parsing `package.json` for scripts, entrypoint, and dependency lists.
-- A functional, standalone CLI tool (`lumencode-cli`) for automated testing and analysis.
-- Project-level summaries including file type counts and main entry point detection.
-- Stable data contracts between C++ and QML, preventing runtime errors from missing data sections.
+  - dependency extraction from `require(...)` and `import`
+  - export surfacing for `module.exports`, `exports.*`, and ES modules
+  - basic Express route detection
+  - related-file linking
+  - `package.json` scripts, entrypoint, and dependency summaries
+- A functional standalone CLI tool (`lumencode-cli`) for scripted analysis and regression checks.
+- Project-level summaries including file type counts and main entry-point detection.
+- Stable-enough backend payloads for the current QML bindings.
 
 ## Build
 
@@ -37,40 +42,43 @@ cmake -S . -B build
 cmake --build build
 ```
 
+`build/` is now ignored by git and is no longer tracked in the repository.
+
 If KF5 development packages are missing from the CMake search path, CMake will fail during configuration. That is an environment issue, not an application logic issue.
 
 ## Roadmap
 
 Phase 1. Stabilization
 
-- Eliminate the recurring QML `undefined`/type errors in the detail pane.
-- Harden data contracts between C++ and QML so missing sections never crash bindings.
-- Clean up the current Node/CommonJS extraction so it is reliable on real projects. **(Partially completed: Tree-sitter integration for better accuracy)**
+- Remove remaining QML/runtime edge-case binding failures.
+- Harden all selection payloads so every detail section is safe to bind.
+- Reduce misleading or noisy structural output on real projects.
 
-Phase 2. Make the structure actually useful
+Phase 2. Better source inspection
 
-- Improve dependency resolution and local jump links. **(Completed: Tree-sitter based import/export resolution)**
-- Improve exported API surfacing for CommonJS and service-style repos. **(Completed: Enhanced export detection)**
-- Improve route detection and project-level summaries. **(Completed: Basic Express route detection, Project Summary implemented)**
-- Improve HTML/CSS analysis so only actionable matches/mismatches are shown. **(In Progress: Snippets added, further analysis could be refined)**
+- Improve snippet diagnostics beyond the current lightweight parser-aware checks.
+- Add better context selection for dependencies, routes, and quick links in the lower pane.
+- Support clearer line-focused navigation from overview/detail items into the lower pane.
 
-Phase 3. Add source visibility
+Phase 3. Better usability
 
-- add a bottom pane for syntax-highlighted, linted source snippets. **(Initiated: Snippet generation added to symbol data)**
-- sync that pane with the selected file, symbol, route, or dependency
-- support jumping to relevant lines for overview and detail items
+- Search/filter across files and symbols.
+- Improve visual hierarchy and information density further without sacrificing clarity.
+- Expand the left global control rail beyond the current back action.
 
-Phase 4. Improve usability
+Phase 4. Broader project understanding
 
-- better visual hierarchy and denser information display
-- search/filter across files and symbols
-- clearer project-level overview for package metadata, tests, and API artifacts
+- Improve Node/CommonJS and service-repo structure understanding further.
+- Refine HTML/CSS class analysis to reduce noisy matches/mismatches.
+- Improve project-level summaries for package metadata, tests, and API artifacts.
 
 ## Known Issues
 
-- The QML detail pane still throws runtime errors in some navigation paths, including `TypeError` and `Unable to assign [undefined] to bool`.
+- Some extracted structure is still shallow or misleading on real projects.
 - HTML/CSS class comparison can still be noisy on complex HTML documents.
-- There is currently no embedded source pane, which makes inspection much less useful than it should be.
+- Syntax highlighting is currently an internal lightweight implementation, not a full external highlighter.
+- Snippet diagnostics are intentionally conservative for truncated previews and are not a full linter.
+- The UI is materially improved, but still needs a stabilization and polish pass.
 
 Licensing note:
 

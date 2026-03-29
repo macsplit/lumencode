@@ -29,15 +29,18 @@ Implementation decisions:
 
 ### 3.1 Column View
 
-The current main window uses a three-column drill-down layout:
+The current main window uses a resizable explorer layout:
 
-- Column 1: filesystem tree
-- Column 2: selected file overview or selected folder summary
-- Column 3: selected symbol detail and related links
+- Top left: thin global control rail plus filesystem tree
+- Top center: selected file overview or selected folder summary
+- Top right: selected symbol detail and related links
+- Bottom: syntax-colored source pane with snippet diagnostics
 
-Planned next layout step:
+Current layout behavior:
 
-- Add a bottom pane for syntax-highlighted source snippets and snippet diagnostics.
+- The top and bottom regions are vertically resizable.
+- The three top panes are horizontally resizable.
+- The back action lives in the left control rail instead of a top toolbar.
 
 ### 3.2 Filesystem Rules
 
@@ -75,10 +78,12 @@ HTML:
 
 - Linked scripts and stylesheets with improved path resolution.
 - CSS classes used in markup, with cross-highlighting against available CSS.
+- CSS class matches and misses now carry snippets into the detail flow and lower source pane.
 
 CSS:
 
 - Class selectors and custom properties.
+- CSS file class inspection now uses rule-level snippets instead of one-token previews.
 
 JSON:
 
@@ -114,7 +119,7 @@ When a Node/CommonJS project is explored:
 
 ### 4.1 Visual Style
 
-The UI follows Kirigami conventions with a dark-first palette.
+The UI follows Kirigami conventions with a dark-first palette and a dense, low-chrome presentation.
 
 Symbol visual language:
 
@@ -131,7 +136,7 @@ Symbol visual language:
 3.  Browse folders and files in the left column.
 4.  Inspect top-level symbols in the center column, with source snippets available.
 5.  Inspect symbol members and quick links in the right column.
-6.  Future: inspect syntax-highlighted source snippets in a bottom pane.
+6.  Inspect syntax-colored source snippets and lightweight diagnostics in the bottom pane.
 
 ## 5. Architecture
 
@@ -145,8 +150,9 @@ Symbol visual language:
 
 - `Kirigami.ApplicationWindow`
 - Picker-first flow with a dedicated path-selection screen.
-- Central content built from Kirigami cards and list views.
-- Future bottom source pane for snippets and line-focused inspection.
+- Central content built from split views, cards, and list views.
+- Thin left control rail for global actions.
+- Embedded bottom source pane for snippets and line-focused inspection.
 
 ## 6. Parser Strategy
 
@@ -159,11 +165,11 @@ Release 1 parser strategy:
 
 ## 7. Known Problems
 
-- The QML detail pane still emits runtime errors in some navigation paths, including `TypeError` and `Unable to assign [undefined] to bool`.
 - Some extracted structure is still shallow or misleading on real projects.
 - HTML/CSS class comparison can still be noisy on complex HTML documents.
-- The UI is functional but underpowered; it does not yet justify itself as a serious structural explorer.
-- There is currently no embedded source pane, which limits inspection usefulness significantly.
+- The current snippet highlighter is intentionally lightweight and not language-complete.
+- Current diagnostics are parser-aware but not equivalent to full external linting.
+- The UI is much denser and more usable now, but still needs polish.
 
 ## 8. Roadmap
 
@@ -181,9 +187,9 @@ Phase 2. Better project structure
 
 Phase 3. Source inspection
 
-- Add a bottom pane for syntax-highlighted source snippets. **(Initiated: Snippet generation added to symbol data)**
-- Sync selected symbols and routes to source lines.
-- Add lint-aware or parser-aware snippet context where feasible.
+- Add a bottom pane for syntax-highlighted source snippets. **(Completed with internal highlighting and diagnostics)**
+- Sync selected symbols and routes to source lines. **(Partially completed: symbols and CSS class entries update the lower pane)**
+- Add lint-aware or parser-aware snippet context where feasible. **(Partially completed: conservative parser-aware diagnostics are present)**
 
 Phase 4. General polish
 
@@ -204,7 +210,8 @@ Phase 4. General polish
 - Application builds locally against the installed Qt/Kirigami stack.
 - The filesystem tree is browsable from QML.
 - Supported source files show structural symbols with snippets.
-- Current GUI note: snippets exist in backend data, but are not yet rendered in the GUI.
+- Snippets are rendered in the GUI lower pane.
 - HTML files show quick links for linked assets.
 - HTML/CSS class matching is visible in the detail pane.
+- CSS class entries can drive the lower pane.
 - Documentation explains current limits, next phases, and bundled dependency decisions.

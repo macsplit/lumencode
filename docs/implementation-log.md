@@ -61,24 +61,42 @@
     - Confirmed that no syntax-highlighting dependency is currently linked in `CMakeLists.txt`.
     - Confirmed that no lint or parser-diagnostic payload is currently exposed through `ProjectController`.
 
+## 2026-03-31
+
+- **Explorer UI Refactor:**
+    - Replaced the fixed three-column-only explorer with resizable split views.
+    - Added an embedded lower source pane.
+    - Removed the top toolbar/header from the explorer view.
+    - Moved the back action into a thin left control rail for better vertical density.
+    - Reduced margins, padding, icon sizes, and row heights throughout the main explorer.
+    - Changed the filesystem root label from `.` to `/`.
+- **Source Pane State & Rendering:**
+    - Added explicit snippet-view state to `ProjectController`.
+    - Wired file and symbol selection into a dedicated lower-pane payload.
+    - Added internal syntax coloring for snippet display.
+    - Added lightweight parser-aware diagnostics for supported languages.
+    - Suppressed false diagnostics when snippets are intentionally truncated with `...`.
+    - Added file preview snippets when selecting a file directly.
+    - Reduced code tab width in the lower pane for better density.
+- **HTML/CSS Follow-up Work:**
+    - Added structured CSS class summary entries instead of plain class-name strings.
+    - Surfaced snippets for CSS class matches and misses in the detail pane.
+    - Wired CSS class entries so they can populate the lower source pane.
+    - Fixed CSS-file class inspection so Tree-sitter-backed CSS symbols carry rule-level snippets instead of bare selector tokens.
+- **Repository Hygiene:**
+    - Added a repo-root `.gitignore` containing `build/`.
+    - Removed the previously tracked `build/` output tree from git history going forward.
+
 ## Next Session Starting Point
 
-- Bring the documentation back in line with the real UI state before adding more UI claims.
-- Add explicit snippet-view state to `ProjectController` so the GUI can select and display:
-  - the current symbol snippet
-  - dependency/link context
-  - route context
-- Refactor `Main.qml` from a three-column-only layout into:
-  - top explorer/detail area
-  - bottom source/snippet pane
-- Implement syntax highlighting for the bottom pane.
-  - Preferred path: add a proper highlighting dependency if available in the local Qt/KDE stack.
-  - Fallback path: add a small internal highlighter for the currently supported web languages.
-- Add parser-aware linting/diagnostics for snippets.
-  - Minimum viable version: surface Tree-sitter parse-error state and a short diagnostics summary.
-  - Later version: add line/column-specific diagnostics where the parser makes that practical.
-- Wire selection behavior so clicking a symbol, route, dependency, or quick link updates the bottom pane consistently.
-- Re-run GUI verification after the pane exists; the current user-visible problem is expected until that work lands.
+- Expand lower-pane selection behavior beyond files, symbols, and CSS class entries.
+  - dependencies
+  - routes
+  - quick links
+- Improve snippet highlighting fidelity or adopt a stronger highlighting dependency if one is available locally later.
+- Improve diagnostics beyond the current conservative parser-aware checks.
+- Re-run GUI verification on a real display session and capture any remaining QML/runtime issues.
+- Continue reducing noisy HTML/CSS and Node/CommonJS output on real repositories.
 
 ## Wrap-Up State
 
@@ -87,20 +105,20 @@ Current build state:
 - The project builds both the GUI (`lumencode`) and CLI (`lumencode-cli`) targets.
 - The CLI tool is fully functional, supports stateful interaction, and provides enhanced output including project summaries and symbol snippets.
 - Parsing accuracy has been significantly improved through Tree-sitter integration.
+- The GUI now includes a lower source pane with internal syntax coloring and lightweight diagnostics.
+- The repository no longer tracks `build/` outputs.
 
 Known runtime/UI problems:
 
-- repeated QML `TypeError` failures in the detail pane
-- undefined/object conversion errors
-- some bindings assume sections exist when they do not
 - some output remains noisy or underwhelming on real projects
 - HTML/CSS class comparison can still be noisy on complex HTML documents
-- The UI is functional but underpowered; it does not yet justify itself as a serious structural explorer.
-- There is currently no embedded source pane, which limits inspection usefulness significantly.
+- highlighting is intentionally lightweight and not yet language-complete
+- diagnostics are conservative and not equivalent to a full linter
+- some lower-pane context sources are still not wired
 
 Important product-direction notes for next time:
 
 - the app needs a stabilization pass before more ambitious features
-- the next major usability improvement should be a bottom pane for syntax-highlighted, line-focused source snippets
+- the next major usability improvement should be broader lower-pane context wiring and better diagnostics/highlighting
 - Node/CommonJS structure support exists but needs refinement to become genuinely useful
 - documentation now reflects the current project direction instead of the original bootstrap brief
