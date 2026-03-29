@@ -1,0 +1,2 @@
+/usr/bin/ar qc lib/libvendor-tree-sitter-php.a "CMakeFiles/vendor-tree-sitter-php.dir/vendor-tree-sitter-php_autogen/mocs_compilation.cpp.o" "CMakeFiles/vendor-tree-sitter-php.dir/third_party/tree-sitter-php/php/src/parser.c.o" "CMakeFiles/vendor-tree-sitter-php.dir/third_party/tree-sitter-php/php/src/scanner.c.o"
+/usr/bin/ranlib lib/libvendor-tree-sitter-php.a

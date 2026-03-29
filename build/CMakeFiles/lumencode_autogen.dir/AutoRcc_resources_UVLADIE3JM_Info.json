@@ -1,0 +1,20 @@
+{
+	"BUILD_DIR" : "/home/user/Code/OpenSource/lumencode/build/lumencode_autogen",
+	"CMAKE_BINARY_DIR" : "/home/user/Code/OpenSource/lumencode/build",
+	"CMAKE_CURRENT_BINARY_DIR" : "/home/user/Code/OpenSource/lumencode/build",
+	"CMAKE_CURRENT_SOURCE_DIR" : "/home/user/Code/OpenSource/lumencode",
+	"CMAKE_SOURCE_DIR" : "/home/user/Code/OpenSource/lumencode",
+	"GENERATOR" : "Unix Makefiles",
+	"INCLUDE_DIR" : "/home/user/Code/OpenSource/lumencode/build/lumencode_autogen/include",
+	"INPUTS" : [ "/home/user/Code/OpenSource/lumencode/src/contents/ui/Main.qml" ],
+	"LOCK_FILE" : "/home/user/Code/OpenSource/lumencode/build/CMakeFiles/lumencode_autogen.dir/AutoRcc_resources_UVLADIE3JM_Lock.lock",
+	"MULTI_CONFIG" : false,
+	"OPTIONS" : [ "-name", "resources" ],
+	"OUTPUT_CHECKSUM" : "UVLADIE3JM",
+	"OUTPUT_NAME" : "qrc_resources.cpp",
+	"RCC_EXECUTABLE" : "/usr/lib/qt5/bin/rcc",
+	"RCC_LIST_OPTIONS" : [ "--list" ],
+	"SETTINGS_FILE" : "/home/user/Code/OpenSource/lumencode/build/CMakeFiles/lumencode_autogen.dir/AutoRcc_resources_UVLADIE3JM_Used.txt",
+	"SOURCE" : "/home/user/Code/OpenSource/lumencode/src/resources.qrc",
+	"VERBOSITY" : 0
+}
