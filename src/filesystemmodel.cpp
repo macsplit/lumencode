@@ -59,6 +59,9 @@ int entryScore(const QString &rootPath, const QString &path, const QString &name
         QStringLiteral("src/main.c"),
         QStringLiteral("src/main.py"),
         QStringLiteral("src/main.java"),
+        QStringLiteral("src/main.rs"),
+        QStringLiteral("src/main.m"),
+        QStringLiteral("src/main.mm"),
         QStringLiteral("src/program.cs"),
         QStringLiteral("src/main.tsx"),
         QStringLiteral("src/main.ts"),
@@ -76,6 +79,9 @@ int entryScore(const QString &rootPath, const QString &path, const QString &name
         QStringLiteral("main.c"),
         QStringLiteral("main.py"),
         QStringLiteral("main.java"),
+        QStringLiteral("main.rs"),
+        QStringLiteral("main.m"),
+        QStringLiteral("main.mm"),
         QStringLiteral("program.cs"),
         QStringLiteral("app.ts"),
         QStringLiteral("app.js"),
@@ -107,6 +113,10 @@ int entryScore(const QString &rootPath, const QString &path, const QString &name
         score += 120;
     } else if (lowerName == QStringLiteral("program.cs")) {
         score += 115;
+    } else if (lowerName == QStringLiteral("main.rs")) {
+        score += 112;
+    } else if (lowerName == QStringLiteral("main.m") || lowerName == QStringLiteral("main.mm")) {
+        score += 110;
     } else if (lowerName == QStringLiteral("main.py") || lowerName == QStringLiteral("app.py")) {
         score += 105;
     } else if (lowerName == QStringLiteral("main.java")) {
@@ -182,6 +192,9 @@ QString detectConventionalEntry(const QString &rootPath)
         QStringLiteral("src/main.c"),
         QStringLiteral("src/main.py"),
         QStringLiteral("src/main.java"),
+        QStringLiteral("src/main.rs"),
+        QStringLiteral("src/main.m"),
+        QStringLiteral("src/main.mm"),
         QStringLiteral("src/Program.cs"),
         QStringLiteral("src/program.cs"),
         QStringLiteral("src/main.tsx"),
@@ -198,6 +211,9 @@ QString detectConventionalEntry(const QString &rootPath)
         QStringLiteral("main.c"),
         QStringLiteral("main.py"),
         QStringLiteral("main.java"),
+        QStringLiteral("main.rs"),
+        QStringLiteral("main.m"),
+        QStringLiteral("main.mm"),
         QStringLiteral("Program.cs"),
         QStringLiteral("program.cs"),
         QStringLiteral("app.py"),
@@ -488,6 +504,12 @@ QString FileSystemModel::detectFileType(const QString &path, bool isDir)
     if (suffix == QStringLiteral("cs")) {
         return QStringLiteral("csharp");
     }
+    if (suffix == QStringLiteral("rs")) {
+        return QStringLiteral("rust");
+    }
+    if (suffix == QStringLiteral("m") || suffix == QStringLiteral("mm")) {
+        return QStringLiteral("objc");
+    }
     if (QFileInfo(path).fileName() == QStringLiteral("package.json")) {
         return QStringLiteral("package");
     }
@@ -531,6 +553,9 @@ bool FileSystemModel::shouldIncludeFile(const QString &suffix)
         QStringLiteral("hxx"),
         QStringLiteral("java"),
         QStringLiteral("cs"),
+        QStringLiteral("rs"),
+        QStringLiteral("m"),
+        QStringLiteral("mm"),
     };
     return allowed.contains(suffix);
 }

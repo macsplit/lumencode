@@ -16,8 +16,8 @@ What currently works:
 - Browsing a project tree with a dense three-pane explorer and a resizable lower source pane.
 - Resizing the top panes and lower source pane with draggable splitters.
 - Opening files into overview/detail panes with a compact left control rail and project-root display as `/`.
-- Extracting detailed symbols for PHP, JS, TS, TSX, CSS, HTML, JSON, Python, C/C++, Java, and C#.
-- Using Tree-sitter for PHP, JS, TS, TSX, and CSS parsing where integrated.
+- Extracting detailed symbols for PHP, JS, TS, TSX, CSS, HTML, JSON, Python, C/C++, Java, C#, Rust, and Objective-C.
+- Using Tree-sitter for PHP, JS, TS, TSX, CSS, Rust, and Python parsing where integrated.
 - Showing syntax-colored lower-pane snippets with internal highlighting rather than an external highlighting dependency.
 - Showing parser-aware diagnostics for supported snippet languages, while suppressing false errors for intentionally truncated previews.
 - Showing file previews in the lower pane when a file itself is selected.

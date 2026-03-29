@@ -84,6 +84,28 @@ target_include_directories(vendor-tree-sitter-css
         third_party/tree-sitter-css/src
 )
 
+add_library(vendor-tree-sitter-rust STATIC
+    third_party/tree-sitter-rust/src/parser.c
+    third_party/tree-sitter-rust/src/scanner.c
+)
+target_include_directories(vendor-tree-sitter-rust
+    PUBLIC
+        third_party/tree-sitter/lib/include
+    PRIVATE
+        third_party/tree-sitter-rust/src
+)
+
+add_library(vendor-tree-sitter-python STATIC
+    third_party/tree-sitter-python/src/parser.c
+    third_party/tree-sitter-python/src/scanner.c
+)
+target_include_directories(vendor-tree-sitter-python
+    PUBLIC
+        third_party/tree-sitter/lib/include
+    PRIVATE
+        third_party/tree-sitter-python/src
+)
+
 add_executable(lumencode
     src/main.cpp
     src/filesystemmodel.cpp
@@ -108,6 +130,8 @@ target_link_libraries(lumencode
     vendor-tree-sitter-tsx
     vendor-tree-sitter-php
     vendor-tree-sitter-css
+    vendor-tree-sitter-rust
+    vendor-tree-sitter-python
 )
 
 add_executable(lumencode-cli
@@ -130,6 +154,8 @@ target_link_libraries(lumencode-cli
     vendor-tree-sitter-tsx
     vendor-tree-sitter-php
     vendor-tree-sitter-css
+    vendor-tree-sitter-rust
+    vendor-tree-sitter-python
 )
 
 install(TARGETS lumencode lumencode-cli ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})

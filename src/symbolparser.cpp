@@ -21,6 +21,8 @@ const TSLanguage *tree_sitter_typescript(void);
 const TSLanguage *tree_sitter_tsx(void);
 const TSLanguage *tree_sitter_php(void);
 const TSLanguage *tree_sitter_css(void);
+const TSLanguage *tree_sitter_rust(void);
+const TSLanguage *tree_sitter_python(void);
 }
 
 static QVariantList toVariantList(const QStringList &values)
@@ -66,6 +68,12 @@ static TSLanguage *languageForName(const QString &language)
     if (language == QStringLiteral("tsx")) {
         return const_cast<TSLanguage *>(tree_sitter_tsx());
     }
+    if (language == QStringLiteral("rust")) {
+        return const_cast<TSLanguage *>(tree_sitter_rust());
+    }
+    if (language == QStringLiteral("python")) {
+        return const_cast<TSLanguage *>(tree_sitter_python());
+    }
     if (language == QStringLiteral("jsx") || language == QStringLiteral("script")) {
         return const_cast<TSLanguage *>(tree_sitter_javascript());
     }
@@ -91,6 +99,23 @@ static QString nodeSnippet(TSNode node, const QByteArray &source, int maxLines =
         return text;
     }
     return lines.mid(0, maxLines).join(QLatin1Char('\n')) + QStringLiteral("\n...");
+}
+
+static QString rustDependencyLabel(const QString &target)
+{
+    const QString trimmed = target.trimmed();
+    if (trimmed.isEmpty()) {
+        return trimmed;
+    }
+
+    const int groupIndex = trimmed.indexOf(QStringLiteral("::{"));
+    QString prefix = groupIndex >= 0 ? trimmed.left(groupIndex) : trimmed;
+    const int aliasIndex = prefix.indexOf(QStringLiteral(" as "));
+    if (aliasIndex >= 0) {
+        prefix = prefix.mid(aliasIndex + 4).trimmed();
+    }
+    const QStringList parts = prefix.split(QStringLiteral("::"), Qt::SkipEmptyParts);
+    return parts.isEmpty() ? prefix : parts.constFirst().trimmed();
 }
 
 static TSNode firstAncestorOfType(TSNode node, std::initializer_list<const char *> types)
@@ -178,6 +203,104 @@ static QString snippetFromLine(const QString &text, int lineNumber, int contextL
         snippet = snippet.left(220).trimmed() + QStringLiteral(" ...");
     }
     return snippet;
+}
+
+static QString snippetFromBraceBlock(const QString &text, int startOffset, int maxLines = 18)
+{
+    if (text.isEmpty() || startOffset < 0 || startOffset >= text.size()) {
+        return {};
+    }
+
+    const int openBrace = text.indexOf(QLatin1Char('{'), startOffset);
+    if (openBrace < 0) {
+        return snippetFromLine(text, lineNumberAtOffset(text, startOffset), 2);
+    }
+
+    int depth = 0;
+    bool inDoubleQuote = false;
+    bool inSingleQuote = false;
+    bool escaping = false;
+    bool inLineComment = false;
+    bool inBlockComment = false;
+    int endOffset = -1;
+
+    for (int i = openBrace; i < text.size(); ++i) {
+        const QChar ch = text.at(i);
+        const QChar next = i + 1 < text.size() ? text.at(i + 1) : QChar();
+
+        if (inLineComment) {
+            if (ch == QLatin1Char('\n')) {
+                inLineComment = false;
+            }
+            continue;
+        }
+
+        if (inBlockComment) {
+            if (ch == QLatin1Char('*') && next == QLatin1Char('/')) {
+                inBlockComment = false;
+                ++i;
+            }
+            continue;
+        }
+
+        if (inDoubleQuote) {
+            if (!escaping && ch == QLatin1Char('"')) {
+                inDoubleQuote = false;
+            }
+            escaping = !escaping && ch == QLatin1Char('\\');
+            continue;
+        }
+
+        if (inSingleQuote) {
+            if (!escaping && ch == QLatin1Char('\'')) {
+                inSingleQuote = false;
+            }
+            escaping = !escaping && ch == QLatin1Char('\\');
+            continue;
+        }
+
+        escaping = false;
+
+        if (ch == QLatin1Char('/') && next == QLatin1Char('/')) {
+            inLineComment = true;
+            ++i;
+            continue;
+        }
+        if (ch == QLatin1Char('/') && next == QLatin1Char('*')) {
+            inBlockComment = true;
+            ++i;
+            continue;
+        }
+        if (ch == QLatin1Char('"')) {
+            inDoubleQuote = true;
+            continue;
+        }
+        if (ch == QLatin1Char('\'')) {
+            inSingleQuote = true;
+            continue;
+        }
+
+        if (ch == QLatin1Char('{')) {
+            ++depth;
+        } else if (ch == QLatin1Char('}')) {
+            --depth;
+            if (depth == 0) {
+                endOffset = i + 1;
+                break;
+            }
+        }
+    }
+
+    if (endOffset <= startOffset) {
+        return snippetFromLine(text, lineNumberAtOffset(text, startOffset), 2);
+    }
+
+    const QString snippet = text.mid(startOffset, endOffset - startOffset).trimmed();
+    const QStringList lines = snippet.split(QLatin1Char('\n'));
+    if (lines.size() <= maxLines) {
+        return snippet;
+    }
+    return lines.mid(0, maxLines).join(QLatin1Char('\n')) + QStringLiteral("\n...");
 }
 
 static QVariantMap makeSourceContextItem(const QString &sourcePath,
@@ -279,6 +402,10 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
         return parseJson(path, text);
     }
     if (language == QStringLiteral("python")) {
+        const QVariantMap treeSitterResult = parsePythonTreeSitter(path, text);
+        if (!treeSitterResult.value(QStringLiteral("symbols")).toList().isEmpty()) {
+            return treeSitterResult;
+        }
         return parsePython(path, text);
     }
     if (language == QStringLiteral("cpp")) {
@@ -289,6 +416,16 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
     }
     if (language == QStringLiteral("csharp")) {
         return parseCSharp(path, text);
+    }
+    if (language == QStringLiteral("rust")) {
+        const QVariantMap treeSitterResult = parseRustTreeSitter(path, text);
+        if (!treeSitterResult.value(QStringLiteral("symbols")).toList().isEmpty()) {
+            return treeSitterResult;
+        }
+        return parseRust(path, text);
+    }
+    if (language == QStringLiteral("objc")) {
+        return parseObjectiveC(path, text, language);
     }
     return result;
 }
@@ -912,6 +1049,129 @@ QVariantMap SymbolParser::parsePython(const QString &path, const QString &text) 
     return result;
 }
 
+QVariantMap SymbolParser::parsePythonTreeSitter(const QString &path, const QString &text) const
+{
+    QVariantList symbols;
+    const QByteArray source = text.toUtf8();
+    TSLanguage *language = languageForName(QStringLiteral("python"));
+    if (!language) {
+        return makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("python"));
+    }
+
+    TSParser *parser = ts_parser_new();
+    if (!parser || !ts_parser_set_language(parser, language)) {
+        if (parser) {
+            ts_parser_delete(parser);
+        }
+        return makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("python"));
+    }
+
+    TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
+    TSNode root = ts_tree_root_node(tree);
+
+    auto appendUnique = [&](const QVariantMap &symbol) {
+        const QString name = symbol.value(QStringLiteral("name")).toString();
+        const QString kind = symbol.value(QStringLiteral("kind")).toString();
+        for (const QVariant &existingValue : std::as_const(symbols)) {
+            const QVariantMap existing = existingValue.toMap();
+            if (existing.value(QStringLiteral("name")).toString() == name
+                && existing.value(QStringLiteral("kind")).toString() == kind
+                && existing.value(QStringLiteral("line")).toInt() == symbol.value(QStringLiteral("line")).toInt()) {
+                return;
+            }
+        }
+        symbols.append(symbol);
+    };
+
+    std::function<QVariantMap(TSNode, TSNode, const QString &)> parsePythonDefinition;
+    std::function<QVariantList(TSNode)> parsePythonClassMembers;
+
+    auto decorationDetail = [&](TSNode decoratedNode) {
+        QStringList decorators;
+        const uint32_t count = ts_node_named_child_count(decoratedNode);
+        for (uint32_t i = 0; i < count; ++i) {
+            TSNode child = ts_node_named_child(decoratedNode, i);
+            if (QString::fromUtf8(ts_node_type(child)) == QStringLiteral("decorator")) {
+                decorators.append(nodeText(child, source).trimmed());
+            }
+        }
+        if (decorators.isEmpty()) {
+            return QStringLiteral("decorated");
+        }
+        return decorators.join(QStringLiteral(", "));
+    };
+
+    parsePythonClassMembers = [&](TSNode blockNode) {
+        QVariantList members;
+        const uint32_t count = ts_node_named_child_count(blockNode);
+        for (uint32_t i = 0; i < count; ++i) {
+            TSNode child = ts_node_named_child(blockNode, i);
+            TSNode snippetNode = child;
+            QString detail;
+            QString childType = QString::fromUtf8(ts_node_type(child));
+            if (childType == QStringLiteral("decorated_definition")) {
+                detail = decorationDetail(child);
+                child = fieldNode(child, "definition");
+                childType = QString::fromUtf8(ts_node_type(child));
+            }
+            if (childType != QStringLiteral("function_definition")) {
+                continue;
+            }
+            const QString name = nodeText(fieldNode(child, "name"), source);
+            if (name.isEmpty()) {
+                continue;
+            }
+            QString kind = QStringLiteral("method");
+            if (detail.contains(QStringLiteral("@property"))) {
+                kind = QStringLiteral("property");
+            }
+            members.append(makeSymbol(kind, name, nodeLine(child), detail, {}, nodeSnippet(snippetNode, source)));
+        }
+        return members;
+    };
+
+    parsePythonDefinition = [&](TSNode rawNode, TSNode snippetNode, const QString &detail) -> QVariantMap {
+        const QString type = QString::fromUtf8(ts_node_type(rawNode));
+        if (type == QStringLiteral("class_definition")) {
+            const QString name = nodeText(fieldNode(rawNode, "name"), source);
+            const TSNode body = fieldNode(rawNode, "body");
+            return makeSymbol(QStringLiteral("class"), name, nodeLine(rawNode), detail,
+                              parsePythonClassMembers(body), nodeSnippet(snippetNode, source));
+        }
+        if (type == QStringLiteral("function_definition")) {
+            const QString name = nodeText(fieldNode(rawNode, "name"), source);
+            return makeSymbol(QStringLiteral("function"), name, nodeLine(rawNode), detail, {},
+                              nodeSnippet(snippetNode, source));
+        }
+        return {};
+    };
+
+    const uint32_t count = ts_node_named_child_count(root);
+    for (uint32_t i = 0; i < count; ++i) {
+        TSNode child = ts_node_named_child(root, i);
+        const QString type = QString::fromUtf8(ts_node_type(child));
+        if (type == QStringLiteral("class_definition") || type == QStringLiteral("function_definition")) {
+            appendUnique(parsePythonDefinition(child, child, QString()));
+            continue;
+        }
+        if (type == QStringLiteral("decorated_definition")) {
+            TSNode definition = fieldNode(child, "definition");
+            appendUnique(parsePythonDefinition(definition, child, decorationDetail(child)));
+        }
+    }
+
+    ts_tree_delete(tree);
+    ts_parser_delete(parser);
+
+    QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("python"));
+    result.insert(QStringLiteral("symbols"), symbols);
+    result.insert(QStringLiteral("dependencies"), extractPythonDependencies(text));
+    result.insert(QStringLiteral("routes"), extractPythonRoutes(path, text));
+    result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
+    result.insert(QStringLiteral("summary"), QStringLiteral("%1 top-level symbols").arg(symbols.size()));
+    return result;
+}
+
 QVariantMap SymbolParser::parseCppLike(const QString &path, const QString &text, const QString &language) const
 {
     QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), language);
@@ -1052,6 +1312,321 @@ QVariantMap SymbolParser::parseCSharp(const QString &path, const QString &text) 
     result.insert(QStringLiteral("symbols"), symbols);
     result.insert(QStringLiteral("dependencies"), extractCSharpDependencies(text));
     result.insert(QStringLiteral("routes"), extractAspNetRoutes(path, text));
+    result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
+    result.insert(QStringLiteral("summary"), QStringLiteral("%1 top-level symbols").arg(symbols.size()));
+    return result;
+}
+
+QVariantMap SymbolParser::parseRust(const QString &path, const QString &text) const
+{
+    QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("rust"));
+    QVariantList symbols;
+    QSet<QString> seenNames;
+
+    auto appendSymbol = [&](const QVariantMap &symbol) {
+        const QString name = symbol.value(QStringLiteral("name")).toString();
+        if (name.isEmpty() || seenNames.contains(name)) {
+            return;
+        }
+        seenNames.insert(name);
+        symbols.append(symbol);
+    };
+
+    QRegularExpression fnPattern(QStringLiteral(R"(^\s*(?:pub\s+)?fn\s+([A-Za-z_]\w*)\s*(?:<[^>]+>)?\s*\()"),
+                                 QRegularExpression::MultilineOption);
+    auto fnIt = fnPattern.globalMatch(text);
+    while (fnIt.hasNext()) {
+        const auto match = fnIt.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        appendSymbol(makeSymbol(QStringLiteral("function"), match.captured(1), line,
+                                match.captured(0).contains(QStringLiteral("pub")) ? QStringLiteral("public") : QString(),
+                                {}, snippetFromBraceBlock(text, match.capturedStart(0))));
+    }
+
+    QRegularExpression typePattern(QStringLiteral(R"(^\s*(?:pub\s+)?(struct|enum|trait)\s+([A-Za-z_]\w*))"),
+                                   QRegularExpression::MultilineOption);
+    auto typeIt = typePattern.globalMatch(text);
+    while (typeIt.hasNext()) {
+        const auto match = typeIt.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        appendSymbol(makeSymbol(match.captured(1), match.captured(2), line, QString(), {},
+                                snippetFromBraceBlock(text, match.capturedStart(0))));
+    }
+
+    QRegularExpression implPattern(QStringLiteral(R"(^\s*impl(?:\s*<[^>]+>)?(?:\s+[A-Za-z_][\w:<>]*\s+for)?\s+([A-Za-z_][\w:<>]*)\s*\{)"),
+                                   QRegularExpression::MultilineOption);
+    auto implIt = implPattern.globalMatch(text);
+    while (implIt.hasNext()) {
+        const auto match = implIt.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        appendSymbol(makeSymbol(QStringLiteral("impl"), match.captured(1), line, QString(), {},
+                                snippetFromBraceBlock(text, match.capturedStart(0))));
+    }
+
+    result.insert(QStringLiteral("symbols"), symbols);
+    result.insert(QStringLiteral("dependencies"), extractRustDependencies(text));
+    result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
+    result.insert(QStringLiteral("summary"), QStringLiteral("%1 top-level symbols").arg(symbols.size()));
+    return result;
+}
+
+QVariantMap SymbolParser::parseRustTreeSitter(const QString &path, const QString &text) const
+{
+    QVariantList symbols;
+    QVariantList dependencies;
+    QSet<QString> seenSymbols;
+    QSet<QString> seenDependencies;
+    const QByteArray source = text.toUtf8();
+    TSLanguage *language = languageForName(QStringLiteral("rust"));
+    if (!language) {
+        return makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("rust"));
+    }
+
+    TSParser *parser = ts_parser_new();
+    if (!parser || !ts_parser_set_language(parser, language)) {
+        if (parser) {
+            ts_parser_delete(parser);
+        }
+        return makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("rust"));
+    }
+
+    TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
+    TSNode root = ts_tree_root_node(tree);
+
+    auto hasVisibilityModifier = [](TSNode node) {
+        const uint32_t count = ts_node_named_child_count(node);
+        for (uint32_t i = 0; i < count; ++i) {
+            if (QString::fromUtf8(ts_node_type(ts_node_named_child(node, i))) == QStringLiteral("visibility_modifier")) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    auto appendSymbol = [&](const QVariantMap &symbol) {
+        const QString name = symbol.value(QStringLiteral("name")).toString();
+        const QString kind = symbol.value(QStringLiteral("kind")).toString();
+        const int line = symbol.value(QStringLiteral("line")).toInt();
+        if (name.isEmpty()) {
+            return;
+        }
+        const QString key = QStringLiteral("%1|%2|%3").arg(kind, name).arg(line);
+        if (seenSymbols.contains(key)) {
+            return;
+        }
+        seenSymbols.insert(key);
+        symbols.append(symbol);
+    };
+
+    auto appendDependency = [&](const QString &target, const QString &type, TSNode node) {
+        const QString trimmedTarget = target.trimmed();
+        if (trimmedTarget.isEmpty()) {
+            return;
+        }
+        const QString key = type + QLatin1Char('|') + trimmedTarget;
+        if (seenDependencies.contains(key)) {
+            return;
+        }
+        seenDependencies.insert(key);
+
+        QVariantMap item = makeSourceContextItem(path, QStringLiteral("rust"), nodeLine(node),
+                                                 nodeSnippet(node, source, 3),
+                                                 QStringLiteral("%1 dependency").arg(type));
+        item.insert(QStringLiteral("target"), trimmedTarget);
+        item.insert(QStringLiteral("type"), type);
+        item.insert(QStringLiteral("label"),
+                    type == QStringLiteral("use") ? rustDependencyLabel(trimmedTarget) : trimmedTarget);
+
+        if (type == QStringLiteral("module")) {
+            const QDir dir = QFileInfo(path).dir();
+            const QStringList candidates = {
+                dir.filePath(trimmedTarget + QStringLiteral(".rs")),
+                dir.filePath(trimmedTarget + QStringLiteral("/mod.rs"))
+            };
+            QString chosenPath;
+            for (const QString &candidate : candidates) {
+                if (QFileInfo::exists(candidate)) {
+                    chosenPath = candidate;
+                    break;
+                }
+            }
+            item.insert(QStringLiteral("path"), chosenPath);
+            item.insert(QStringLiteral("exists"), !chosenPath.isEmpty());
+            if (!chosenPath.isEmpty()) {
+                item.insert(QStringLiteral("label"), QFileInfo(chosenPath).fileName());
+            }
+        } else {
+            item.insert(QStringLiteral("path"), QString());
+            item.insert(QStringLiteral("exists"), true);
+        }
+
+        dependencies.append(item);
+    };
+
+    std::function<QVariantList(TSNode)> parseRustMembers = [&](TSNode bodyNode) {
+        QVariantList members;
+        if (ts_node_is_null(bodyNode)) {
+            return members;
+        }
+        const uint32_t count = ts_node_named_child_count(bodyNode);
+        for (uint32_t i = 0; i < count; ++i) {
+            TSNode child = ts_node_named_child(bodyNode, i);
+            const QString type = QString::fromUtf8(ts_node_type(child));
+            if (type == QStringLiteral("function_item") || type == QStringLiteral("function_signature_item")) {
+                const QString name = nodeText(fieldNode(child, "name"), source);
+                QString detail = hasVisibilityModifier(child) ? QStringLiteral("public") : QString();
+                members.append(makeSymbol(QStringLiteral("method"), name, nodeLine(child), detail, {},
+                                          nodeSnippet(child, source)));
+            } else if (type == QStringLiteral("const_item")) {
+                const QString name = nodeText(fieldNode(child, "name"), source);
+                members.append(makeSymbol(QStringLiteral("constant"), name, nodeLine(child), QString(), {},
+                                          nodeSnippet(child, source)));
+            }
+        }
+        return members;
+    };
+
+    const uint32_t count = ts_node_named_child_count(root);
+    for (uint32_t i = 0; i < count; ++i) {
+        TSNode child = ts_node_named_child(root, i);
+        const QString type = QString::fromUtf8(ts_node_type(child));
+
+        if (type == QStringLiteral("use_declaration")) {
+            QString target = nodeText(child, source).trimmed();
+            if (target.startsWith(QStringLiteral("use "))) {
+                target.remove(0, 4);
+            }
+            if (target.endsWith(QLatin1Char(';'))) {
+                target.chop(1);
+            }
+            appendDependency(target, QStringLiteral("use"), child);
+            continue;
+        }
+
+        if (type == QStringLiteral("function_item")) {
+            const QString name = nodeText(fieldNode(child, "name"), source);
+            appendSymbol(makeSymbol(QStringLiteral("function"), name, nodeLine(child),
+                                    hasVisibilityModifier(child) ? QStringLiteral("public") : QString(), {},
+                                    nodeSnippet(child, source)));
+        } else if (type == QStringLiteral("struct_item")) {
+            const QString name = nodeText(fieldNode(child, "name"), source);
+            appendSymbol(makeSymbol(QStringLiteral("struct"), name, nodeLine(child),
+                                    hasVisibilityModifier(child) ? QStringLiteral("public") : QString(), {},
+                                    nodeSnippet(child, source)));
+        } else if (type == QStringLiteral("enum_item")) {
+            const QString name = nodeText(fieldNode(child, "name"), source);
+            QVariantList members;
+            TSNode body = fieldNode(child, "body");
+            const uint32_t variantCount = ts_node_named_child_count(body);
+            for (uint32_t variantIndex = 0; variantIndex < variantCount; ++variantIndex) {
+                TSNode variant = ts_node_named_child(body, variantIndex);
+                if (QString::fromUtf8(ts_node_type(variant)) != QStringLiteral("enum_variant")) {
+                    continue;
+                }
+                members.append(makeSymbol(QStringLiteral("variant"),
+                                          nodeText(fieldNode(variant, "name"), source),
+                                          nodeLine(variant), QString(), {}, nodeSnippet(variant, source)));
+            }
+            appendSymbol(makeSymbol(QStringLiteral("enum"), name, nodeLine(child),
+                                    hasVisibilityModifier(child) ? QStringLiteral("public") : QString(),
+                                    members, nodeSnippet(child, source)));
+        } else if (type == QStringLiteral("trait_item")) {
+            const QString name = nodeText(fieldNode(child, "name"), source);
+            appendSymbol(makeSymbol(QStringLiteral("trait"), name, nodeLine(child),
+                                    hasVisibilityModifier(child) ? QStringLiteral("public") : QString(),
+                                    parseRustMembers(fieldNode(child, "body")), nodeSnippet(child, source)));
+        } else if (type == QStringLiteral("impl_item")) {
+            const QString traitName = nodeText(fieldNode(child, "trait"), source);
+            const QString typeName = nodeText(fieldNode(child, "type"), source);
+            const QString name = traitName.isEmpty() ? typeName : QStringLiteral("%1 for %2").arg(traitName, typeName);
+            appendSymbol(makeSymbol(QStringLiteral("impl"), name, nodeLine(child), QString(),
+                                    parseRustMembers(fieldNode(child, "body")), nodeSnippet(child, source)));
+        } else if (type == QStringLiteral("mod_item")) {
+            const QString name = nodeText(fieldNode(child, "name"), source);
+            const TSNode body = fieldNode(child, "body");
+            appendSymbol(makeSymbol(QStringLiteral("module"), name, nodeLine(child),
+                                    hasVisibilityModifier(child) ? QStringLiteral("public") : QString(),
+                                    parseRustMembers(body), nodeSnippet(child, source)));
+            if (ts_node_is_null(body)) {
+                appendDependency(name, QStringLiteral("module"), child);
+            }
+        }
+    }
+
+    ts_tree_delete(tree);
+    ts_parser_delete(parser);
+
+    if (dependencies.isEmpty()) {
+        dependencies = extractRustDependencies(text);
+    }
+
+    QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("rust"));
+    result.insert(QStringLiteral("symbols"), symbols);
+    result.insert(QStringLiteral("dependencies"), dependencies);
+    result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
+    result.insert(QStringLiteral("summary"), QStringLiteral("%1 top-level symbols").arg(symbols.size()));
+    return result;
+}
+
+QVariantMap SymbolParser::parseObjectiveC(const QString &path, const QString &text, const QString &language) const
+{
+    QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), language);
+    QVariantList symbols;
+    QSet<QString> seenNames;
+
+    auto appendSymbol = [&](const QVariantMap &symbol) {
+        const QString name = symbol.value(QStringLiteral("name")).toString();
+        if (name.isEmpty() || seenNames.contains(name)) {
+            return;
+        }
+        seenNames.insert(name);
+        symbols.append(symbol);
+    };
+
+    QRegularExpression implementationPattern(QStringLiteral(R"(^\s*@implementation\s+([A-Za-z_]\w*)[\s\S]*?^\s*@end\s*$)"),
+                                             QRegularExpression::MultilineOption);
+    auto implementationIt = implementationPattern.globalMatch(text);
+    while (implementationIt.hasNext()) {
+        const auto match = implementationIt.next();
+        const QString className = match.captured(1);
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        const QString block = match.captured(0);
+        QVariantList members;
+        QRegularExpression methodPattern(QStringLiteral(R"(^\s*[-+]\s*\([^)]*\)\s*([A-Za-z_]\w*(?::[A-Za-z_]\w*)*:?)?)"),
+                                         QRegularExpression::MultilineOption);
+        auto methodIt = methodPattern.globalMatch(block);
+        while (methodIt.hasNext()) {
+            const auto method = methodIt.next();
+            const QString methodName = method.captured(1).trimmed();
+            if (methodName.isEmpty()) {
+                continue;
+            }
+            const int methodLine = lineNumberAtOffset(text, match.capturedStart(0) + method.capturedStart(0));
+            members.append(makeSymbol(QStringLiteral("method"), methodName, methodLine, QString(), {},
+                                      snippetFromLine(text, methodLine, 1)));
+        }
+        appendSymbol(makeSymbol(QStringLiteral("class"), className, line, QString(), members,
+                                snippetFromLine(text, line, 3)));
+    }
+
+    QRegularExpression functionPattern(
+        QStringLiteral(R"(^\s*(?:static\s+|extern\s+)?(?:[\w<>*]+\s+)+([A-Za-z_]\w*)\s*\([^;{}]*\)\s*\{)"),
+        QRegularExpression::MultilineOption);
+    auto functionIt = functionPattern.globalMatch(text);
+    while (functionIt.hasNext()) {
+        const auto match = functionIt.next();
+        const QString name = match.captured(1);
+        if (name == QStringLiteral("if") || name == QStringLiteral("while")
+            || name == QStringLiteral("for") || name == QStringLiteral("switch")) {
+            continue;
+        }
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        appendSymbol(makeSymbol(QStringLiteral("function"), name, line, QString(), {},
+                                snippetFromLine(text, line, 2)));
+    }
+
+    result.insert(QStringLiteral("symbols"), symbols);
+    result.insert(QStringLiteral("dependencies"), extractObjectiveCDependencies(path, text));
     result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
     result.insert(QStringLiteral("summary"), QStringLiteral("%1 top-level symbols").arg(symbols.size()));
     return result;
@@ -1546,6 +2121,12 @@ QString SymbolParser::detectLanguage(const QString &path)
     if (suffix == QStringLiteral("cs")) {
         return QStringLiteral("csharp");
     }
+    if (suffix == QStringLiteral("rs")) {
+        return QStringLiteral("rust");
+    }
+    if (suffix == QStringLiteral("m") || suffix == QStringLiteral("mm")) {
+        return QStringLiteral("objc");
+    }
     if (suffix == QStringLiteral("c") || suffix == QStringLiteral("cc")
         || suffix == QStringLiteral("cpp") || suffix == QStringLiteral("cxx")
         || suffix == QStringLiteral("h") || suffix == QStringLiteral("hh")
@@ -1905,6 +2486,77 @@ QVariantList SymbolParser::extractCSharpDependencies(const QString &text)
     return links;
 }
 
+QVariantList SymbolParser::extractRustDependencies(const QString &text)
+{
+    QVariantList links;
+    QSet<QString> seen;
+
+    auto appendDependency = [&](const QString &target, int line) {
+        if (target.isEmpty() || seen.contains(target)) {
+            return;
+        }
+        seen.insert(target);
+        QVariantMap item;
+        item.insert(QStringLiteral("target"), target);
+        item.insert(QStringLiteral("type"), QStringLiteral("use"));
+        item.insert(QStringLiteral("line"), line);
+        item.insert(QStringLiteral("label"), rustDependencyLabel(target));
+        item.insert(QStringLiteral("path"), QString());
+        item.insert(QStringLiteral("exists"), true);
+        item.insert(QStringLiteral("snippet"), snippetFromLine(text, line, 0));
+        links.append(item);
+    };
+
+    QRegularExpression usePattern(QStringLiteral(R"(^\s*use\s+([^;]+)\s*;)"),
+                                  QRegularExpression::MultilineOption);
+    auto useIt = usePattern.globalMatch(text);
+    while (useIt.hasNext()) {
+        const auto match = useIt.next();
+        appendDependency(match.captured(1).trimmed(), lineNumberAtOffset(text, match.capturedStart(0)));
+    }
+
+    QRegularExpression modPattern(QStringLiteral(R"(^\s*mod\s+([A-Za-z_]\w*)\s*;)"),
+                                  QRegularExpression::MultilineOption);
+    auto modIt = modPattern.globalMatch(text);
+    while (modIt.hasNext()) {
+        const auto match = modIt.next();
+        appendDependency(match.captured(1), lineNumberAtOffset(text, match.capturedStart(0)));
+    }
+
+    return links;
+}
+
+QVariantList SymbolParser::extractObjectiveCDependencies(const QString &path, const QString &text)
+{
+    QVariantList links;
+    QSet<QString> seen;
+    const QDir dir = QFileInfo(path).dir();
+
+    QRegularExpression importPattern(QStringLiteral(R"(^\s*#(?:import|include)\s*[<"]([^>"]+)[>"])"),
+                                     QRegularExpression::MultilineOption);
+    auto importIt = importPattern.globalMatch(text);
+    while (importIt.hasNext()) {
+        const auto match = importIt.next();
+        const QString target = match.captured(1);
+        if (target.isEmpty() || seen.contains(target)) {
+            continue;
+        }
+        seen.insert(target);
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        QVariantMap item = makeSourceContextItem(path, QStringLiteral("objc"), line, snippetFromLine(text, line, 0),
+                                                 QStringLiteral("import"));
+        item.insert(QStringLiteral("target"), target);
+        item.insert(QStringLiteral("type"), QStringLiteral("import"));
+        item.insert(QStringLiteral("label"), target);
+        const QString resolved = QDir::cleanPath(dir.filePath(target));
+        item.insert(QStringLiteral("path"), QFileInfo::exists(resolved) ? resolved : QString());
+        item.insert(QStringLiteral("exists"), QFileInfo::exists(resolved) || !target.contains(QLatin1Char('/')));
+        links.append(item);
+    }
+
+    return links;
+}
+
 QVariantList SymbolParser::extractExpressRoutes(const QString &text)
 {
     QVariantList routes;
@@ -2075,6 +2727,16 @@ QVariantList SymbolParser::findRelatedFiles(const QString &path)
 
     if (fileName.endsWith(QStringLiteral(".cs"))) {
         appendRelated(dir.filePath(QStringLiteral("%1.csproj").arg(dir.dirName())), QStringLiteral("project"));
+    }
+
+    if (fileName.endsWith(QStringLiteral(".m")) || fileName.endsWith(QStringLiteral(".mm"))) {
+        appendRelated(dir.filePath(baseName + QStringLiteral(".h")), QStringLiteral("header"));
+    }
+
+    if (fileName.endsWith(QStringLiteral(".rs"))) {
+        appendRelated(dir.filePath(QStringLiteral("mod.rs")), QStringLiteral("module"));
+        appendRelated(dir.filePath(QStringLiteral("lib.rs")), QStringLiteral("crate"));
+        appendRelated(dir.filePath(QStringLiteral("main.rs")), QStringLiteral("entrypoint"));
     }
 
     if (fileName == QStringLiteral("package.json")) {

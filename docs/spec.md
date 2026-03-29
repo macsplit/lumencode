@@ -48,7 +48,7 @@ The crawler must:
 
 - recurse directories without blocking the UI
 - ignore `.git`
-- focus on these file types: `js`, `jsx`, `ts`, `tsx`, `php`, `html`, `css`, `json`, `py`, `c`, `cc`, `cpp`, `cxx`, `h`, `hpp`, `java`, `cs`
+- focus on these file types: `js`, `jsx`, `ts`, `tsx`, `php`, `html`, `css`, `json`, `py`, `c`, `cc`, `cpp`, `cxx`, `h`, `hpp`, `java`, `cs`, `rs`, `m`, `mm`
 
 ### 3.3 Symbol Extraction
 
@@ -84,6 +84,18 @@ CSS:
 - Class selectors and custom properties.
 - CSS file class inspection now uses rule-level snippets instead of one-token previews.
 
+Python:
+
+- Top-level functions, decorated functions, classes, and class methods.
+- Flask/FastAPI-style route extraction remains available.
+- Tree-sitter-backed snippets now preserve decorator context and class/method boundaries.
+
+Rust:
+
+- Top-level `mod`, `fn`, `struct`, `enum`, `trait`, and `impl` items.
+- `impl` and trait members are extracted from the AST with bounded snippets.
+- `use` and external `mod` declarations are surfaced as dependencies.
+
 JSON:
 
 - `package.json` scripts, entrypoint, dependency lists, with a project summary.
@@ -106,6 +118,16 @@ Java:
 C#:
 
 - `using` imports, top-level types, top-level statements/variables, and basic ASP.NET route extraction from `Program.cs` style apps.
+
+Rust:
+
+- `use` and `mod` dependency extraction.
+- Top-level `fn`, `struct`, `enum`, `trait`, and `impl` extraction.
+
+Objective-C:
+
+- `#import` dependency extraction.
+- `@implementation` class extraction with per-class Objective-C method summaries.
 
 ### 3.4 Neon Link Features
 
@@ -200,7 +222,7 @@ Phase 2. Better project structure
 
 - Improve CommonJS and Node service understanding. **(Completed: Tree-sitter integration for better accuracy and export surfacing)**
 - Improve project-level summaries and dependency navigation. **(Completed: Project summary implemented, improved dependency resolution)**
-- Broaden parser coverage for common non-web languages used in mixed repos. **(Completed: Python, C/C++, Java, and C# heuristic support added)**
+- Broaden parser coverage for common non-web languages used in mixed repos. **(Completed: Python, C/C++, Java, C#, Rust, and Objective-C heuristic support added)**
 - Improve test linkage and route understanding. **(Completed: Basic Express route detection)**
 
 Phase 3. Source inspection

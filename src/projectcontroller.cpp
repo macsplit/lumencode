@@ -25,6 +25,8 @@ const TSLanguage *tree_sitter_typescript(void);
 const TSLanguage *tree_sitter_tsx(void);
 const TSLanguage *tree_sitter_php(void);
 const TSLanguage *tree_sitter_css(void);
+const TSLanguage *tree_sitter_rust(void);
+const TSLanguage *tree_sitter_python(void);
 }
 
 namespace {
@@ -74,6 +76,12 @@ QString normalizeSnippetLanguage(const QString &language)
     if (language == QStringLiteral("csharp")) {
         return QStringLiteral("csharp");
     }
+    if (language == QStringLiteral("rust")) {
+        return QStringLiteral("rust");
+    }
+    if (language == QStringLiteral("objc")) {
+        return QStringLiteral("objc");
+    }
     return QString();
 }
 
@@ -87,6 +95,12 @@ TSLanguage *languageForSnippet(const QString &language)
     }
     if (language == QStringLiteral("tsx")) {
         return const_cast<TSLanguage *>(tree_sitter_tsx());
+    }
+    if (language == QStringLiteral("rust")) {
+        return const_cast<TSLanguage *>(tree_sitter_rust());
+    }
+    if (language == QStringLiteral("python")) {
+        return const_cast<TSLanguage *>(tree_sitter_python());
     }
     if (language == QStringLiteral("js") || language == QStringLiteral("jsx")) {
         return const_cast<TSLanguage *>(tree_sitter_javascript());
@@ -388,6 +402,24 @@ QSet<QString> keywordSet(const QString &language)
                 QStringLiteral("namespace"), QStringLiteral("throws"), QStringLiteral("async"),
                 QStringLiteral("await"), QStringLiteral("null"), QStringLiteral("true"),
                 QStringLiteral("false")};
+    }
+    if (language == QStringLiteral("rust")) {
+        return {QStringLiteral("fn"), QStringLiteral("struct"), QStringLiteral("enum"),
+                QStringLiteral("trait"), QStringLiteral("impl"), QStringLiteral("pub"),
+                QStringLiteral("let"), QStringLiteral("mut"), QStringLiteral("use"),
+                QStringLiteral("mod"), QStringLiteral("crate"), QStringLiteral("self"),
+                QStringLiteral("super"), QStringLiteral("match"), QStringLiteral("if"),
+                QStringLiteral("else"), QStringLiteral("for"), QStringLiteral("while"),
+                QStringLiteral("loop"), QStringLiteral("return"), QStringLiteral("async"),
+                QStringLiteral("await"), QStringLiteral("const"), QStringLiteral("static")};
+    }
+    if (language == QStringLiteral("objc")) {
+        return {QStringLiteral("@interface"), QStringLiteral("@implementation"), QStringLiteral("@property"),
+                QStringLiteral("@protocol"), QStringLiteral("@end"), QStringLiteral("@class"),
+                QStringLiteral("#import"), QStringLiteral("#include"), QStringLiteral("if"),
+                QStringLiteral("else"), QStringLiteral("for"), QStringLiteral("while"),
+                QStringLiteral("return"), QStringLiteral("nil"), QStringLiteral("self"),
+                QStringLiteral("super"), QStringLiteral("static"), QStringLiteral("extern")};
     }
     return {QStringLiteral("function"), QStringLiteral("class"), QStringLiteral("const"),
             QStringLiteral("let"), QStringLiteral("var"), QStringLiteral("return"),

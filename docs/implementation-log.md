@@ -136,3 +136,8 @@ Important product-direction notes for next time:
     - Added related-file support for C/C++ headers and Python/C# test/project neighbors.
 - **Project Summary Improvements:**
     - Added a conventional-entrypoint pass so obvious roots like `src/main.cpp`, `app.py`, and `Program.cs` are preferred before generic fallback scoring.
+- **Additional Language Coverage:**
+    - Added Rust scanning and heuristic parsing for `use`, `mod`, `fn`, `struct`, `enum`, `trait`, and `impl`.
+    - Added Objective-C / Objective-C++ scanning and heuristic parsing for `#import`, `@implementation`, and per-class method extraction.
+    - Vendored official Tree-sitter Rust and Python grammars and routed both languages through AST-backed symbol extraction before heuristic fallback.
+    - Rust snippets now come from AST node bounds, which fixes prior bleed between adjacent functions inside `impl` blocks.
