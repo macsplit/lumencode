@@ -18,6 +18,7 @@ class ProjectController : public QObject
     Q_PROPERTY(QVariantMap selectedFileData READ selectedFileData NOTIFY selectedFileDataChanged)
     Q_PROPERTY(QVariantMap selectedSymbol READ selectedSymbol NOTIFY selectedSymbolChanged)
     Q_PROPERTY(QVariantList selectedSymbolMembers READ selectedSymbolMembers NOTIFY selectedSymbolChanged)
+    Q_PROPERTY(QVariantMap selectedSnippet READ selectedSnippet NOTIFY selectedSnippetChanged)
 
 public:
     explicit ProjectController(QObject *parent = nullptr);
@@ -31,6 +32,7 @@ public:
     QVariantMap selectedFileData() const;
     QVariantMap selectedSymbol() const;
     QVariantList selectedSymbolMembers() const;
+    QVariantMap selectedSnippet() const;
     Q_INVOKABLE QString lastOpenedPath() const;
 
     Q_INVOKABLE void setRootPath(const QString &path);
@@ -45,8 +47,12 @@ signals:
     void selectedPathChanged();
     void selectedFileDataChanged();
     void selectedSymbolChanged();
+    void selectedSnippetChanged();
 
 private:
+    QVariantMap makeFileSnippet() const;
+    static QVariantMap makeSymbolSnippet(const QVariantMap &symbol, const QVariantMap &fileData);
+    static QVariantMap enrichSnippetPayload(const QVariantMap &snippet);
     void saveLastOpenedPath(const QString &path) const;
 
     FileSystemModel *m_fileSystemModel = nullptr;
@@ -55,4 +61,5 @@ private:
     QString m_selectedPath;
     QVariantMap m_selectedFileData;
     QVariantMap m_selectedSymbol;
+    QVariantMap m_selectedSnippet;
 };

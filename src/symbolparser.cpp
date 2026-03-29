@@ -93,6 +93,21 @@ static QString nodeSnippet(TSNode node, const QByteArray &source, int maxLines =
     return lines.mid(0, maxLines).join(QLatin1Char('\n')) + QStringLiteral("\n...");
 }
 
+static TSNode firstAncestorOfType(TSNode node, std::initializer_list<const char *> types)
+{
+    TSNode current = node;
+    while (!ts_node_is_null(current)) {
+        const QString currentType = QString::fromUtf8(ts_node_type(current));
+        for (const char *type : types) {
+            if (currentType == QLatin1String(type)) {
+                return current;
+            }
+        }
+        current = ts_node_parent(current);
+    }
+    return TSNode{};
+}
+
 static QString nodeValueText(TSNode node, const QByteArray &source)
 {
     const QString raw = nodeText(node, source).trimmed();
@@ -106,6 +121,38 @@ static QString nodeValueText(TSNode node, const QByteArray &source)
         }
     }
     return raw;
+}
+
+static QVariantMap makeCssClassSummaryEntry(const QString &name, bool matched,
+                                            const QString &path = QString(),
+                                            int line = 0,
+                                            const QString &snippet = QString())
+{
+    QVariantMap entry;
+    entry.insert(QStringLiteral("name"), name);
+    entry.insert(QStringLiteral("kind"), QStringLiteral("class"));
+    entry.insert(QStringLiteral("matched"), matched);
+    entry.insert(QStringLiteral("path"), path);
+    entry.insert(QStringLiteral("line"), line);
+    entry.insert(QStringLiteral("snippet"),
+                 !snippet.isEmpty() ? snippet : QStringLiteral(".%1 { ... }").arg(name));
+    return entry;
+}
+
+static QVariantMap findCssClassSummaryEntry(const QString &cssPath, const QString &cssText, const QString &name)
+{
+    const QString escapedName = QRegularExpression::escape(name);
+    QRegularExpression selectorPattern(QStringLiteral(R"(\.%1\b[^{\n]*\{)").arg(escapedName));
+    const QRegularExpressionMatch match = selectorPattern.match(cssText);
+    if (!match.hasMatch()) {
+        return makeCssClassSummaryEntry(name, true, cssPath, 0, QStringLiteral(".%1 { ... }").arg(name));
+    }
+
+    const int start = match.capturedStart(0);
+    const int line = cssText.left(start).count(QLatin1Char('\n')) + 1;
+    const QString snippet = cssText.mid(start, 100).split(QLatin1Char('\n')).at(0).trimmed()
+        + QStringLiteral(" ...");
+    return makeCssClassSummaryEntry(name, true, cssPath, line, snippet);
 }
 
 QVariantMap SymbolParser::makeSymbol(const QString &kind, const QString &name, int line,
@@ -716,11 +763,15 @@ QVariantMap SymbolParser::parseCssTreeSitter(const QString &path, const QString 
             if (name.startsWith(QLatin1Char('.'))) {
                 name.remove(0, 1);
             }
-            symbols.append(makeSymbol(QStringLiteral("class"), name, nodeLine(node)));
+            const TSNode snippetNode = firstAncestorOfType(node, {"rule_set", "block"});
+            const TSNode effectiveNode = ts_node_is_null(snippetNode) ? node : snippetNode;
+            symbols.append(makeSymbol(QStringLiteral("class"), name, nodeLine(effectiveNode), QString(), {}, nodeSnippet(effectiveNode, source)));
         } else if (type == QStringLiteral("property_name")) {
             const QString name = nodeText(node, source);
             if (name.startsWith(QStringLiteral("--"))) {
-                symbols.append(makeSymbol(QStringLiteral("custom-property"), name, nodeLine(node)));
+                const TSNode snippetNode = firstAncestorOfType(node, {"declaration", "block"});
+                const TSNode effectiveNode = ts_node_is_null(snippetNode) ? node : snippetNode;
+                symbols.append(makeSymbol(QStringLiteral("custom-property"), name, nodeLine(effectiveNode), QString(), {}, nodeSnippet(effectiveNode, source)));
             }
         }
 
@@ -1035,6 +1086,7 @@ QVariantMap SymbolParser::parseHtml(const QString &path, const QString &text) co
 
     const QStringList usedClasses = extractHtmlClasses(text);
     QSet<QString> availableClasses;
+    QVariantMap availableClassEntries;
 
     for (const QString &cssPath : linkedCssFiles) {
         QFile cssFile(cssPath);
@@ -1044,6 +1096,9 @@ QVariantMap SymbolParser::parseHtml(const QString &path, const QString &text) co
         const QString cssText = QString::fromUtf8(cssFile.readAll());
         for (const QString &name : extractCssClasses(cssText)) {
             availableClasses.insert(name);
+            if (!availableClassEntries.contains(name)) {
+                availableClassEntries.insert(name, findCssClassSummaryEntry(cssPath, cssText, name));
+            }
         }
     }
 
@@ -1061,6 +1116,9 @@ QVariantMap SymbolParser::parseHtml(const QString &path, const QString &text) co
         const QString cssText = QString::fromUtf8(cssFile.readAll());
         for (const QString &name : extractCssClasses(cssText)) {
             availableClasses.insert(name);
+            if (!availableClassEntries.contains(name)) {
+                availableClassEntries.insert(name, findCssClassSummaryEntry(entry.absoluteFilePath(), cssText, name));
+            }
         }
     }
 
@@ -1068,9 +1126,9 @@ QVariantMap SymbolParser::parseHtml(const QString &path, const QString &text) co
     QVariantList missingClasses;
     for (const QString &name : usedClasses) {
         if (availableClasses.contains(name)) {
-            matchedClasses.append(name);
+            matchedClasses.append(availableClassEntries.value(name).toMap());
         } else {
-            missingClasses.append(name);
+            missingClasses.append(makeCssClassSummaryEntry(name, false));
         }
     }
 

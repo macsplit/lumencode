@@ -315,7 +315,7 @@ FileSystemModel::Node *FileSystemModel::scanDirectory(const QString &path, Node 
 {
     QFileInfo info(path);
     auto *node = new Node;
-    node->name = parent ? info.fileName() : QStringLiteral(".");
+    node->name = parent ? info.fileName() : QStringLiteral("/");
     node->path = info.absoluteFilePath();
     node->isDir = true;
     node->parent = parent;

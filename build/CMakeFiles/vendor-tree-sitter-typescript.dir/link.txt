@@ -1,2 +1,0 @@
-/usr/bin/ar qc lib/libvendor-tree-sitter-typescript.a "CMakeFiles/vendor-tree-sitter-typescript.dir/vendor-tree-sitter-typescript_autogen/mocs_compilation.cpp.o" "CMakeFiles/vendor-tree-sitter-typescript.dir/third_party/tree-sitter-typescript/typescript/src/parser.c.o" "CMakeFiles/vendor-tree-sitter-typescript.dir/third_party/tree-sitter-typescript/typescript/src/scanner.c.o"
-/usr/bin/ranlib lib/libvendor-tree-sitter-typescript.a

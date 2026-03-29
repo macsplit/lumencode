@@ -1,2 +1,0 @@
-/usr/bin/ar qc lib/libvendor-tree-sitter-css.a "CMakeFiles/vendor-tree-sitter-css.dir/vendor-tree-sitter-css_autogen/mocs_compilation.cpp.o" "CMakeFiles/vendor-tree-sitter-css.dir/third_party/tree-sitter-css/src/parser.c.o" "CMakeFiles/vendor-tree-sitter-css.dir/third_party/tree-sitter-css/src/scanner.c.o"
-/usr/bin/ranlib lib/libvendor-tree-sitter-css.a

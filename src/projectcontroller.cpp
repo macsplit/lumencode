@@ -4,9 +4,597 @@
 #include "symbolparser.h"
 
 #include <QDir>
+#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonParseError>
+#include <QRegularExpression>
 #include <QSettings>
+#include <QSet>
+#include <QStringList>
+#include <QVector>
+
+#include <cstring>
+#include <functional>
+#include <tree_sitter/api.h>
+
+extern "C" {
+const TSLanguage *tree_sitter_javascript(void);
+const TSLanguage *tree_sitter_typescript(void);
+const TSLanguage *tree_sitter_tsx(void);
+const TSLanguage *tree_sitter_php(void);
+const TSLanguage *tree_sitter_css(void);
+}
+
+namespace {
+
+struct SnippetAnalysis {
+    QString displayCode;
+    QString lintCode;
+    QString truncationMarker;
+    bool truncated = false;
+};
+
+QString normalizeSnippetLanguage(const QString &language)
+{
+    if (language == QStringLiteral("script")) {
+        return QStringLiteral("js");
+    }
+    if (language == QStringLiteral("jsx")) {
+        return QStringLiteral("jsx");
+    }
+    if (language == QStringLiteral("tsx")) {
+        return QStringLiteral("tsx");
+    }
+    if (language == QStringLiteral("ts")) {
+        return QStringLiteral("ts");
+    }
+    if (language == QStringLiteral("php")) {
+        return QStringLiteral("php");
+    }
+    if (language == QStringLiteral("css")) {
+        return QStringLiteral("css");
+    }
+    if (language == QStringLiteral("html")) {
+        return QStringLiteral("html");
+    }
+    if (language == QStringLiteral("json")) {
+        return QStringLiteral("json");
+    }
+    return QString();
+}
+
+TSLanguage *languageForSnippet(const QString &language)
+{
+    if (language == QStringLiteral("php")) {
+        return const_cast<TSLanguage *>(tree_sitter_php());
+    }
+    if (language == QStringLiteral("css")) {
+        return const_cast<TSLanguage *>(tree_sitter_css());
+    }
+    if (language == QStringLiteral("tsx")) {
+        return const_cast<TSLanguage *>(tree_sitter_tsx());
+    }
+    if (language == QStringLiteral("js") || language == QStringLiteral("jsx")) {
+        return const_cast<TSLanguage *>(tree_sitter_javascript());
+    }
+    if (language == QStringLiteral("ts")) {
+        return const_cast<TSLanguage *>(tree_sitter_typescript());
+    }
+    return nullptr;
+}
+
+QString expandTabs(const QString &text, int tabWidth)
+{
+    QString result;
+    result.reserve(text.size());
+    int column = 0;
+    for (const QChar ch : text) {
+        if (ch == QLatin1Char('\t')) {
+            const int spaces = qMax(1, tabWidth - (column % tabWidth));
+            result += QString(spaces, QLatin1Char(' '));
+            column += spaces;
+        } else {
+            result += ch;
+            if (ch == QLatin1Char('\n')) {
+                column = 0;
+            } else {
+                ++column;
+            }
+        }
+    }
+    return result;
+}
+
+SnippetAnalysis analyzeSnippet(const QString &snippet)
+{
+    SnippetAnalysis analysis;
+    analysis.displayCode = snippet;
+    analysis.lintCode = snippet;
+
+    const QRegularExpression blockEllipsis(QStringLiteral(R"((\r?\n)\s*\.\.\.\s*$)"));
+    QRegularExpressionMatch blockMatch = blockEllipsis.match(analysis.displayCode);
+    if (blockMatch.hasMatch()) {
+        analysis.truncated = true;
+        analysis.truncationMarker = QStringLiteral("...");
+        analysis.displayCode.chop(analysis.displayCode.size() - blockMatch.capturedStart(0));
+        analysis.lintCode = analysis.displayCode;
+        return analysis;
+    }
+
+    const QRegularExpression inlineEllipsis(QStringLiteral(R"(\s*\{\s*\.\.\.\s*\}\s*$)"));
+    QRegularExpressionMatch inlineMatch = inlineEllipsis.match(analysis.displayCode);
+    if (inlineMatch.hasMatch()) {
+        analysis.truncated = true;
+        analysis.truncationMarker = QStringLiteral("{ ... }");
+        analysis.displayCode.chop(analysis.displayCode.size() - inlineMatch.capturedStart(0));
+        analysis.lintCode = analysis.displayCode;
+        return analysis;
+    }
+
+    const QRegularExpression trailingEllipsis(QStringLiteral(R"(\s+\.\.\.\s*$)"));
+    QRegularExpressionMatch trailingMatch = trailingEllipsis.match(analysis.displayCode);
+    if (trailingMatch.hasMatch()) {
+        analysis.truncated = true;
+        analysis.truncationMarker = QStringLiteral("...");
+        analysis.displayCode.chop(analysis.displayCode.size() - trailingMatch.capturedStart(0));
+        analysis.lintCode = analysis.displayCode;
+    }
+
+    return analysis;
+}
+
+QVariantMap makeDiagnostic(const QString &severity, const QString &message, int line = 0, int column = 0)
+{
+    QVariantMap diagnostic;
+    diagnostic.insert(QStringLiteral("severity"), severity);
+    diagnostic.insert(QStringLiteral("message"), message);
+    diagnostic.insert(QStringLiteral("line"), line);
+    diagnostic.insert(QStringLiteral("column"), column);
+    return diagnostic;
+}
+
+QVariantList htmlDiagnostics(const QString &code, int baseLine)
+{
+    struct TagInfo {
+        QString name;
+        int line = 0;
+        int column = 0;
+    };
+
+    static const QSet<QString> voidTags = {
+        QStringLiteral("area"), QStringLiteral("base"), QStringLiteral("br"), QStringLiteral("col"),
+        QStringLiteral("embed"), QStringLiteral("hr"), QStringLiteral("img"), QStringLiteral("input"),
+        QStringLiteral("link"), QStringLiteral("meta"), QStringLiteral("param"), QStringLiteral("source"),
+        QStringLiteral("track"), QStringLiteral("wbr")
+    };
+
+    QVariantList diagnostics;
+    QVector<TagInfo> stack;
+    const QRegularExpression tagPattern(QStringLiteral(R"(<\s*(/)?\s*([A-Za-z][A-Za-z0-9:-]*)[^>]*(/)?\s*>)"));
+    auto it = tagPattern.globalMatch(code);
+    while (it.hasNext()) {
+        const QRegularExpressionMatch match = it.next();
+        const QString full = match.captured(0);
+        if (full.startsWith(QStringLiteral("<!--"))) {
+            continue;
+        }
+
+        const QString tagName = match.captured(2).toLower();
+        const int offset = match.capturedStart(0);
+        const int line = baseLine + code.left(offset).count(QLatin1Char('\n'));
+        const int lastBreak = code.left(offset).lastIndexOf(QLatin1Char('\n'));
+        const int column = offset - lastBreak;
+
+        if (!match.captured(1).isEmpty()) {
+            if (stack.isEmpty()) {
+                diagnostics.append(makeDiagnostic(QStringLiteral("warning"),
+                                                  QStringLiteral("Closing tag </%1> has no matching opener.").arg(tagName),
+                                                  line, column));
+                continue;
+            }
+
+            const TagInfo opener = stack.takeLast();
+            if (opener.name != tagName) {
+                diagnostics.append(makeDiagnostic(QStringLiteral("warning"),
+                                                  QStringLiteral("Closing tag </%1> does not match <%2>.").arg(tagName, opener.name),
+                                                  line, column));
+            }
+            continue;
+        }
+
+        if (voidTags.contains(tagName) || !match.captured(3).isEmpty()) {
+            continue;
+        }
+
+        stack.append(TagInfo{tagName, line, column});
+    }
+
+    for (const TagInfo &tag : stack) {
+        diagnostics.append(makeDiagnostic(QStringLiteral("warning"),
+                                          QStringLiteral("Tag <%1> is not closed in this snippet.").arg(tag.name),
+                                          tag.line, tag.column));
+    }
+
+    return diagnostics;
+}
+
+QVariantList treeSitterDiagnostics(const QString &language, const QString &code, int baseLine)
+{
+    QVariantList diagnostics;
+
+    TSLanguage *tsLanguage = languageForSnippet(language);
+    if (!tsLanguage) {
+        return diagnostics;
+    }
+
+    QByteArray source = code.toUtf8();
+    int lineAdjustment = 0;
+    if (language == QStringLiteral("php") && !code.startsWith(QStringLiteral("<?php"))) {
+        source = QStringLiteral("<?php\n").toUtf8() + source;
+        lineAdjustment = 1;
+    }
+
+    TSParser *parser = ts_parser_new();
+    if (!parser || !ts_parser_set_language(parser, tsLanguage)) {
+        if (parser) {
+            ts_parser_delete(parser);
+        }
+        diagnostics.append(makeDiagnostic(QStringLiteral("info"),
+                                          QStringLiteral("Parser diagnostics are unavailable for this language on this build.")));
+        return diagnostics;
+    }
+
+    TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
+    if (!tree) {
+        ts_parser_delete(parser);
+        diagnostics.append(makeDiagnostic(QStringLiteral("warning"),
+                                          QStringLiteral("Unable to parse this snippet for diagnostics.")));
+        return diagnostics;
+    }
+
+    QSet<QString> seen;
+    std::function<void(TSNode)> walk = [&](TSNode node) {
+        if (diagnostics.size() >= 8 || ts_node_is_null(node)) {
+            return;
+        }
+
+        const bool isError = ts_node_is_error(node);
+        const bool isMissing = ts_node_is_missing(node);
+        if (isError || isMissing) {
+            const TSPoint point = ts_node_start_point(node);
+            const int line = qMax(baseLine, baseLine + static_cast<int>(point.row) - lineAdjustment);
+            const int column = static_cast<int>(point.column) + 1;
+            QString message;
+            if (isMissing) {
+                message = QStringLiteral("Missing syntax element near %1.").arg(QString::fromUtf8(ts_node_type(node)));
+            } else {
+                message = QStringLiteral("Parser error near %1.").arg(QString::fromUtf8(ts_node_type(node)));
+            }
+
+            const QString key = QStringLiteral("%1:%2:%3").arg(message).arg(line).arg(column);
+            if (!seen.contains(key)) {
+                diagnostics.append(makeDiagnostic(QStringLiteral("warning"), message, line, column));
+                seen.insert(key);
+            }
+        }
+
+        const uint32_t childCount = ts_node_child_count(node);
+        for (uint32_t i = 0; i < childCount; ++i) {
+            walk(ts_node_child(node, i));
+            if (diagnostics.size() >= 8) {
+                break;
+            }
+        }
+    };
+
+    walk(ts_tree_root_node(tree));
+
+    ts_tree_delete(tree);
+    ts_parser_delete(parser);
+    return diagnostics;
+}
+
+QVariantList snippetDiagnostics(const QString &language, const QString &code, int baseLine, bool truncated)
+{
+    if (code.trimmed().isEmpty()) {
+        return {};
+    }
+
+    if (truncated) {
+        return {};
+    }
+
+    if (language == QStringLiteral("json")) {
+        QJsonParseError error;
+        QJsonDocument::fromJson(code.toUtf8(), &error);
+        if (error.error == QJsonParseError::NoError) {
+            return {};
+        }
+
+        const QString prefix = code.left(error.offset);
+        const int line = baseLine + prefix.count(QLatin1Char('\n'));
+        const int lastBreak = prefix.lastIndexOf(QLatin1Char('\n'));
+        const int column = static_cast<int>(error.offset) - lastBreak;
+        return {makeDiagnostic(QStringLiteral("warning"), error.errorString(), line, column)};
+    }
+
+    if (language == QStringLiteral("html")) {
+        return htmlDiagnostics(code, baseLine);
+    }
+
+    return treeSitterDiagnostics(language, code, baseLine);
+}
+
+QSet<QString> keywordSet(const QString &language)
+{
+    if (language == QStringLiteral("php")) {
+        return {QStringLiteral("class"), QStringLiteral("function"), QStringLiteral("public"),
+                QStringLiteral("private"), QStringLiteral("protected"), QStringLiteral("static"),
+                QStringLiteral("return"), QStringLiteral("if"), QStringLiteral("else"),
+                QStringLiteral("foreach"), QStringLiteral("for"), QStringLiteral("while"),
+                QStringLiteral("extends"), QStringLiteral("implements"), QStringLiteral("interface"),
+                QStringLiteral("trait"), QStringLiteral("const"), QStringLiteral("new"),
+                QStringLiteral("namespace"), QStringLiteral("use"), QStringLiteral("null"),
+                QStringLiteral("true"), QStringLiteral("false")};
+    }
+    if (language == QStringLiteral("css")) {
+        return {QStringLiteral("@media"), QStringLiteral("@supports"), QStringLiteral("@keyframes"),
+                QStringLiteral("display"), QStringLiteral("position"), QStringLiteral("color"),
+                QStringLiteral("background"), QStringLiteral("font"), QStringLiteral("grid"),
+                QStringLiteral("flex"), QStringLiteral("padding"), QStringLiteral("margin")};
+    }
+    if (language == QStringLiteral("json")) {
+        return {QStringLiteral("true"), QStringLiteral("false"), QStringLiteral("null")};
+    }
+    return {QStringLiteral("function"), QStringLiteral("class"), QStringLiteral("const"),
+            QStringLiteral("let"), QStringLiteral("var"), QStringLiteral("return"),
+            QStringLiteral("if"), QStringLiteral("else"), QStringLiteral("for"),
+            QStringLiteral("while"), QStringLiteral("switch"), QStringLiteral("case"),
+            QStringLiteral("break"), QStringLiteral("continue"), QStringLiteral("import"),
+            QStringLiteral("from"), QStringLiteral("export"), QStringLiteral("default"),
+            QStringLiteral("extends"), QStringLiteral("implements"), QStringLiteral("interface"),
+            QStringLiteral("type"), QStringLiteral("enum"), QStringLiteral("new"),
+            QStringLiteral("this"), QStringLiteral("async"), QStringLiteral("await"),
+            QStringLiteral("try"), QStringLiteral("catch"), QStringLiteral("finally"),
+            QStringLiteral("throw"), QStringLiteral("null"), QStringLiteral("true"),
+            QStringLiteral("false"), QStringLiteral("undefined")};
+}
+
+QString colorForToken(const QString &tokenType)
+{
+    if (tokenType == QStringLiteral("keyword")) {
+        return QStringLiteral("#81a1c1");
+    }
+    if (tokenType == QStringLiteral("string")) {
+        return QStringLiteral("#a3be8c");
+    }
+    if (tokenType == QStringLiteral("number")) {
+        return QStringLiteral("#b48ead");
+    }
+    if (tokenType == QStringLiteral("comment")) {
+        return QStringLiteral("#616e88");
+    }
+    if (tokenType == QStringLiteral("tag")) {
+        return QStringLiteral("#88c0d0");
+    }
+    if (tokenType == QStringLiteral("attribute")) {
+        return QStringLiteral("#d08770");
+    }
+    return QString();
+}
+
+void appendToken(QString &html, const QString &text, const QString &tokenType = QString())
+{
+    if (text.isEmpty()) {
+        return;
+    }
+
+    const QString escaped = text.toHtmlEscaped();
+    const QString color = colorForToken(tokenType);
+    if (color.isEmpty()) {
+        html += escaped;
+        return;
+    }
+
+    html += QStringLiteral("<span style=\"color:%1;\">%2</span>").arg(color, escaped);
+}
+
+QString highlightHtmlSnippet(const QString &code)
+{
+    QString html;
+    int i = 0;
+    while (i < code.size()) {
+        if (code.midRef(i, 4) == QStringLiteral("<!--")) {
+            const int end = code.indexOf(QStringLiteral("-->"), i + 4);
+            const int length = end >= 0 ? (end - i + 3) : (code.size() - i);
+            appendToken(html, code.mid(i, length), QStringLiteral("comment"));
+            i += length;
+            continue;
+        }
+
+        if (code.at(i) == QLatin1Char('<')) {
+            const int end = code.indexOf(QLatin1Char('>'), i + 1);
+            const int length = end >= 0 ? (end - i + 1) : (code.size() - i);
+            const QString tag = code.mid(i, length);
+            QRegularExpression tagNamePattern(QStringLiteral(R"(^<\s*/?\s*([A-Za-z][A-Za-z0-9:-]*))"));
+            const QRegularExpressionMatch tagMatch = tagNamePattern.match(tag);
+
+            int cursor = 0;
+            if (tagMatch.hasMatch()) {
+                const int nameStart = tagMatch.capturedStart(1);
+                const int nameEnd = tagMatch.capturedEnd(1);
+                appendToken(html, tag.left(nameStart), QStringLiteral("tag"));
+                appendToken(html, tag.mid(nameStart, nameEnd - nameStart), QStringLiteral("tag"));
+                cursor = nameEnd;
+            }
+
+            QRegularExpression attrPattern(QStringLiteral(R"(([A-Za-z_:][-A-Za-z0-9_:.]*)(\s*=\s*(\"[^\"]*\"|'[^']*'))?)"));
+            auto attrIt = attrPattern.globalMatch(tag);
+            while (attrIt.hasNext()) {
+                const QRegularExpressionMatch attrMatch = attrIt.next();
+                if (attrMatch.capturedStart(1) < cursor) {
+                    continue;
+                }
+                appendToken(html, tag.mid(cursor, attrMatch.capturedStart(1) - cursor), QStringLiteral("tag"));
+                appendToken(html, attrMatch.captured(1), QStringLiteral("attribute"));
+                if (!attrMatch.captured(2).isEmpty()) {
+                    const QString equalsPart = attrMatch.captured(2);
+                    const int quotePos = equalsPart.indexOf(QLatin1Char('"')) >= 0
+                        ? equalsPart.indexOf(QLatin1Char('"'))
+                        : equalsPart.indexOf(QLatin1Char('\''));
+                    if (quotePos >= 0) {
+                        appendToken(html, equalsPart.left(quotePos));
+                        appendToken(html, equalsPart.mid(quotePos), QStringLiteral("string"));
+                    } else {
+                        appendToken(html, equalsPart);
+                    }
+                }
+                cursor = attrMatch.capturedEnd(0);
+            }
+            appendToken(html, tag.mid(cursor), QStringLiteral("tag"));
+            i += length;
+            continue;
+        }
+
+        appendToken(html, QString(code.at(i)));
+        ++i;
+    }
+
+    return html;
+}
+
+QString highlightCodeSnippet(const QString &code, const QString &language)
+{
+    if (language == QStringLiteral("html")) {
+        return highlightHtmlSnippet(code);
+    }
+
+    const QSet<QString> keywords = keywordSet(language);
+    QString html;
+    int i = 0;
+    while (i < code.size()) {
+        const QChar ch = code.at(i);
+
+        if (language == QStringLiteral("php") && ch == QLatin1Char('#')) {
+            const int end = code.indexOf(QLatin1Char('\n'), i);
+            const int length = end >= 0 ? (end - i) : (code.size() - i);
+            appendToken(html, code.mid(i, length), QStringLiteral("comment"));
+            i += length;
+            continue;
+        }
+
+        if (i + 1 < code.size() && code.at(i) == QLatin1Char('/') && code.at(i + 1) == QLatin1Char('/')) {
+            const int end = code.indexOf(QLatin1Char('\n'), i);
+            const int length = end >= 0 ? (end - i) : (code.size() - i);
+            appendToken(html, code.mid(i, length), QStringLiteral("comment"));
+            i += length;
+            continue;
+        }
+
+        if (i + 1 < code.size() && code.at(i) == QLatin1Char('/') && code.at(i + 1) == QLatin1Char('*')) {
+            const int end = code.indexOf(QStringLiteral("*/"), i + 2);
+            const int length = end >= 0 ? (end - i + 2) : (code.size() - i);
+            appendToken(html, code.mid(i, length), QStringLiteral("comment"));
+            i += length;
+            continue;
+        }
+
+        if (ch == QLatin1Char('"') || ch == QLatin1Char('\'') || ch == QLatin1Char('`')) {
+            const QChar quote = ch;
+            int end = i + 1;
+            bool escaped = false;
+            while (end < code.size()) {
+                const QChar current = code.at(end);
+                if (!escaped && current == quote) {
+                    ++end;
+                    break;
+                }
+                escaped = !escaped && current == QLatin1Char('\\');
+                if (escaped && current != QLatin1Char('\\')) {
+                    escaped = false;
+                }
+                ++end;
+            }
+            appendToken(html, code.mid(i, end - i), QStringLiteral("string"));
+            i = end;
+            continue;
+        }
+
+        if (ch.isDigit()) {
+            int end = i + 1;
+            while (end < code.size() && (code.at(end).isDigit() || code.at(end) == QLatin1Char('.'))) {
+                ++end;
+            }
+            appendToken(html, code.mid(i, end - i), QStringLiteral("number"));
+            i = end;
+            continue;
+        }
+
+        if (ch.isLetter() || ch == QLatin1Char('_') || ch == QLatin1Char('$') || ch == QLatin1Char('@')) {
+            int end = i + 1;
+            while (end < code.size()) {
+                const QChar current = code.at(end);
+                if (!(current.isLetterOrNumber() || current == QLatin1Char('_')
+                      || current == QLatin1Char('$') || current == QLatin1Char('-'))) {
+                    break;
+                }
+                ++end;
+            }
+
+            const QString word = code.mid(i, end - i);
+            const QString tokenType = keywords.contains(word) ? QStringLiteral("keyword") : QString();
+            appendToken(html, word, tokenType);
+            i = end;
+            continue;
+        }
+
+        appendToken(html, QString(ch));
+        ++i;
+    }
+
+    return html;
+}
+
+QString buildSnippetHtml(const QString &code, const QString &language, const QString &truncationMarker)
+{
+    QString html = QStringLiteral("<pre style=\"margin:0;font-family:monospace;white-space:pre;\">");
+    html += highlightCodeSnippet(expandTabs(code, 2), language);
+    if (!truncationMarker.isEmpty()) {
+        if (!code.isEmpty() && !code.endsWith(QLatin1Char('\n'))) {
+            html += QLatin1Char('\n');
+        }
+        html += QStringLiteral("<span style=\"color:#616e88;font-style:italic;\">%1</span>")
+                    .arg(truncationMarker.toHtmlEscaped());
+    }
+    html += QStringLiteral("</pre>");
+    return html;
+}
+
+QString loadFilePreviewSnippet(const QString &path)
+{
+    QFileInfo info(path);
+    if (!info.exists() || info.isDir()) {
+        return QString();
+    }
+
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return QString();
+    }
+
+    const QString text = QString::fromUtf8(file.readAll());
+    const QStringList lines = text.split(QLatin1Char('\n'));
+    const int maxLines = 40;
+    if (lines.size() <= maxLines) {
+        return text;
+    }
+
+    return lines.mid(0, maxLines).join(QLatin1Char('\n')) + QStringLiteral("\n...");
+}
+
+} // namespace
 
 ProjectController::ProjectController(QObject *parent)
     : QObject(parent)
@@ -45,12 +633,12 @@ QString ProjectController::selectedRelativePath() const
     }
 
     if (m_rootPath.isEmpty() || m_selectedPath == m_rootPath) {
-        return QStringLiteral(".");
+        return QStringLiteral("/");
     }
 
     QDir rootDir(m_rootPath);
     const QString relative = rootDir.relativeFilePath(m_selectedPath);
-    return relative.isEmpty() ? QStringLiteral(".") : relative;
+    return relative.isEmpty() ? QStringLiteral("/") : relative;
 }
 
 QVariantMap ProjectController::selectedFileData() const
@@ -66,6 +654,11 @@ QVariantMap ProjectController::selectedSymbol() const
 QVariantList ProjectController::selectedSymbolMembers() const
 {
     return m_selectedSymbol.value(QStringLiteral("members")).toList();
+}
+
+QVariantMap ProjectController::selectedSnippet() const
+{
+    return m_selectedSnippet;
 }
 
 QString ProjectController::lastOpenedPath() const
@@ -98,8 +691,10 @@ void ProjectController::selectPath(const QString &path)
     if (!info.exists()) {
         m_selectedFileData = SymbolParser::makeResultSkeleton(path, info.fileName().isEmpty() ? path : info.fileName(), QString());
         m_selectedSymbol = {};
+        m_selectedSnippet = makeFileSnippet();
         emit selectedFileDataChanged();
         emit selectedSymbolChanged();
+        emit selectedSnippetChanged();
         return;
     }
 
@@ -111,8 +706,10 @@ void ProjectController::selectPath(const QString &path)
     }
 
     m_selectedSymbol = {};
+    m_selectedSnippet = makeFileSnippet();
     emit selectedFileDataChanged();
     emit selectedSymbolChanged();
+    emit selectedSnippetChanged();
 }
 
 void ProjectController::selectSymbol(int index)
@@ -120,16 +717,23 @@ void ProjectController::selectSymbol(int index)
     const QVariantList symbols = m_selectedFileData.value(QStringLiteral("symbols")).toList();
     if (index < 0 || index >= symbols.size()) {
         m_selectedSymbol = {};
+        m_selectedSnippet = makeFileSnippet();
     } else {
         m_selectedSymbol = symbols.at(index).toMap();
+        m_selectedSnippet = makeSymbolSnippet(m_selectedSymbol, m_selectedFileData);
     }
     emit selectedSymbolChanged();
+    emit selectedSnippetChanged();
 }
 
 void ProjectController::selectSymbolByData(const QVariantMap &symbol)
 {
     m_selectedSymbol = symbol;
+    m_selectedSnippet = m_selectedSymbol.isEmpty()
+        ? makeFileSnippet()
+        : makeSymbolSnippet(m_selectedSymbol, m_selectedFileData);
     emit selectedSymbolChanged();
+    emit selectedSnippetChanged();
 }
 
 QString ProjectController::pickFolder() const
@@ -156,4 +760,59 @@ void ProjectController::saveLastOpenedPath(const QString &path) const
 {
     QSettings settings;
     settings.setValue(QStringLiteral("session/lastOpenedPath"), path);
+}
+
+QVariantMap ProjectController::makeFileSnippet() const
+{
+    QVariantMap snippet;
+    const QString path = m_selectedFileData.value(QStringLiteral("path")).toString();
+    const QString language = m_selectedFileData.value(QStringLiteral("language")).toString();
+    snippet.insert(QStringLiteral("kind"), QStringLiteral("file"));
+    snippet.insert(QStringLiteral("name"), m_selectedFileData.value(QStringLiteral("fileName")).toString());
+    snippet.insert(QStringLiteral("path"), path);
+    snippet.insert(QStringLiteral("language"), language);
+    snippet.insert(QStringLiteral("line"), 0);
+    snippet.insert(QStringLiteral("snippet"), loadFilePreviewSnippet(path));
+    snippet.insert(QStringLiteral("detail"), m_selectedFileData.value(QStringLiteral("summary")).toString());
+    return enrichSnippetPayload(snippet);
+}
+
+QVariantMap ProjectController::makeSymbolSnippet(const QVariantMap &symbol, const QVariantMap &fileData)
+{
+    QVariantMap snippet;
+    snippet.insert(QStringLiteral("kind"), symbol.value(QStringLiteral("kind")).toString());
+    snippet.insert(QStringLiteral("name"), symbol.value(QStringLiteral("name")).toString());
+    snippet.insert(QStringLiteral("path"),
+                   symbol.value(QStringLiteral("path")).toString().isEmpty()
+                       ? fileData.value(QStringLiteral("path")).toString()
+                       : symbol.value(QStringLiteral("path")).toString());
+    snippet.insert(QStringLiteral("language"),
+                   symbol.value(QStringLiteral("language")).toString().isEmpty()
+                       ? fileData.value(QStringLiteral("language")).toString()
+                       : symbol.value(QStringLiteral("language")).toString());
+    snippet.insert(QStringLiteral("line"), symbol.value(QStringLiteral("line")).toInt());
+    snippet.insert(QStringLiteral("snippet"), symbol.value(QStringLiteral("snippet")).toString());
+    snippet.insert(QStringLiteral("detail"), symbol.value(QStringLiteral("detail")).toString());
+    return enrichSnippetPayload(snippet);
+}
+
+QVariantMap ProjectController::enrichSnippetPayload(const QVariantMap &snippet)
+{
+    QVariantMap enriched = snippet;
+    const QString normalizedLanguage = normalizeSnippetLanguage(snippet.value(QStringLiteral("language")).toString());
+    const QString rawSnippet = snippet.value(QStringLiteral("snippet")).toString();
+    const int baseLine = qMax(1, snippet.value(QStringLiteral("line")).toInt());
+    const SnippetAnalysis analysis = analyzeSnippet(rawSnippet);
+
+    enriched.insert(QStringLiteral("language"), normalizedLanguage);
+    enriched.insert(QStringLiteral("tabWidthSpaces"), 2);
+    enriched.insert(QStringLiteral("isTruncated"), analysis.truncated);
+    enriched.insert(QStringLiteral("displaySnippet"), expandTabs(analysis.displayCode, 2));
+    enriched.insert(QStringLiteral("displayHtml"),
+                    rawSnippet.isEmpty()
+                        ? QStringLiteral("<pre style=\"margin:0;font-family:monospace;white-space:pre;color:#616e88;\">Select a symbol to inspect its source snippet.</pre>")
+                        : buildSnippetHtml(analysis.displayCode, normalizedLanguage, analysis.truncationMarker));
+    enriched.insert(QStringLiteral("diagnostics"),
+                    snippetDiagnostics(normalizedLanguage, analysis.lintCode, baseLine, analysis.truncated));
+    return enriched;
 }
