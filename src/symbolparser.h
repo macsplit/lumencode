@@ -12,6 +12,8 @@ public:
 
     QVariantMap parseFile(const QString &path) const;
 
+    static QVariantMap makeResultSkeleton(const QString &path, const QString &fileName, const QString &language);
+
 private:
     QVariantMap parsePhpTreeSitter(const QString &path, const QString &text) const;
     QVariantMap parseScriptLikeTreeSitter(const QString &path, const QString &text, const QString &language) const;
@@ -26,7 +28,8 @@ private:
     static QString detectLanguage(const QString &path);
     static QVariantMap makeSymbol(const QString &kind, const QString &name, int line,
                                   const QString &detail = QString(),
-                                  const QVariantList &members = {});
+                                  const QVariantList &members = {},
+                                  const QString &snippet = QString());
     static QVariantList parseClassMembers(const QString &body, const QString &language);
     static QVariantList parseObjectMembers(const QString &body);
     static QStringList extractHtmlClasses(const QString &text);

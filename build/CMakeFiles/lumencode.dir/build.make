@@ -72,7 +72,7 @@ include CMakeFiles/lumencode.dir/flags.make
 lumencode_autogen/timestamp: /usr/lib/qt5/bin/moc
 lumencode_autogen/timestamp: CMakeFiles/lumencode.dir/compiler_depend.ts
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Automatic MOC for target lumencode"
-	/usr/bin/cmake -E cmake_autogen /home/user/Code/OpenSource/lumencode/build/CMakeFiles/lumencode_autogen.dir/AutogenInfo.json ""
+	/usr/bin/cmake -E cmake_autogen /home/user/Code/OpenSource/lumencode/build/CMakeFiles/lumencode_autogen.dir/AutogenInfo.json Debug
 	/usr/bin/cmake -E touch /home/user/Code/OpenSource/lumencode/build/lumencode_autogen/timestamp
 
 lumencode_autogen/UVLADIE3JM/qrc_resources.cpp: /home/user/Code/OpenSource/lumencode/src/resources.qrc
@@ -80,7 +80,7 @@ lumencode_autogen/UVLADIE3JM/qrc_resources.cpp: CMakeFiles/lumencode_autogen.dir
 lumencode_autogen/UVLADIE3JM/qrc_resources.cpp: /home/user/Code/OpenSource/lumencode/src/contents/ui/Main.qml
 lumencode_autogen/UVLADIE3JM/qrc_resources.cpp: /usr/lib/qt5/bin/rcc
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Automatic RCC for src/resources.qrc"
-	/usr/bin/cmake -E cmake_autorcc /home/user/Code/OpenSource/lumencode/build/CMakeFiles/lumencode_autogen.dir/AutoRcc_resources_UVLADIE3JM_Info.json 
+	/usr/bin/cmake -E cmake_autorcc /home/user/Code/OpenSource/lumencode/build/CMakeFiles/lumencode_autogen.dir/AutoRcc_resources_UVLADIE3JM_Info.json Debug
 
 CMakeFiles/lumencode.dir/lumencode_autogen/mocs_compilation.cpp.o: CMakeFiles/lumencode.dir/flags.make
 CMakeFiles/lumencode.dir/lumencode_autogen/mocs_compilation.cpp.o: lumencode_autogen/mocs_compilation.cpp

@@ -7,11 +7,11 @@ C_DEFINES = -D_GNU_SOURCE -D_LARGEFILE64_SOURCE
 
 C_INCLUDES = -I/home/user/Code/OpenSource/lumencode/build -I/home/user/Code/OpenSource/lumencode -I/home/user/Code/OpenSource/lumencode/build/vendor-tree-sitter-tsx_autogen/include -I/home/user/Code/OpenSource/lumencode/third_party/tree-sitter/lib/include -I/home/user/Code/OpenSource/lumencode/third_party/tree-sitter-typescript/tsx/src
 
-C_FLAGS =  -fno-common -Wall -Wextra -Wcast-align -Wchar-subscripts -Wformat-security -Wno-long-long -Wpointer-arith -Wundef -Wmissing-format-attribute -Wwrite-strings -Werror=implicit-function-declaration -std=gnu11 -fvisibility=hidden
+C_FLAGS =  -fno-common -Wall -Wextra -Wcast-align -Wchar-subscripts -Wformat-security -Wno-long-long -Wpointer-arith -Wundef -Wmissing-format-attribute -Wwrite-strings -Werror=implicit-function-declaration -g -std=gnu11 -fvisibility=hidden
 
 CXX_DEFINES = -D_GNU_SOURCE -D_LARGEFILE64_SOURCE
 
 CXX_INCLUDES = -I/home/user/Code/OpenSource/lumencode/build -I/home/user/Code/OpenSource/lumencode -I/home/user/Code/OpenSource/lumencode/build/vendor-tree-sitter-tsx_autogen/include -I/home/user/Code/OpenSource/lumencode/third_party/tree-sitter/lib/include -I/home/user/Code/OpenSource/lumencode/third_party/tree-sitter-typescript/tsx/src
 
-CXX_FLAGS =  -fno-operator-names -fno-exceptions -Wall -Wextra -Wcast-align -Wchar-subscripts -Wformat-security -Wno-long-long -Wpointer-arith -Wundef -Wnon-virtual-dtor -Woverloaded-virtual -Werror=return-type -Werror=init-self -Wvla -Wdate-time -Wsuggest-override -Wlogical-op -std=gnu++17 -fvisibility=hidden -fvisibility-inlines-hidden
+CXX_FLAGS =  -fno-operator-names -fno-exceptions -Wall -Wextra -Wcast-align -Wchar-subscripts -Wformat-security -Wno-long-long -Wpointer-arith -Wundef -Wnon-virtual-dtor -Woverloaded-virtual -Werror=return-type -Werror=init-self -Wvla -Wdate-time -Wsuggest-override -Wlogical-op -g -std=gnu++17 -fvisibility=hidden -fvisibility-inlines-hidden
 

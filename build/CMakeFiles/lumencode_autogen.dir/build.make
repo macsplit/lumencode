@@ -71,7 +71,7 @@ CMakeFiles/lumencode_autogen: lumencode_autogen/timestamp
 lumencode_autogen/timestamp: /usr/lib/qt5/bin/moc
 lumencode_autogen/timestamp: CMakeFiles/lumencode_autogen.dir/compiler_depend.ts
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Automatic MOC for target lumencode"
-	/usr/bin/cmake -E cmake_autogen /home/user/Code/OpenSource/lumencode/build/CMakeFiles/lumencode_autogen.dir/AutogenInfo.json ""
+	/usr/bin/cmake -E cmake_autogen /home/user/Code/OpenSource/lumencode/build/CMakeFiles/lumencode_autogen.dir/AutogenInfo.json Debug
 	/usr/bin/cmake -E touch /home/user/Code/OpenSource/lumencode/build/lumencode_autogen/timestamp
 
 lumencode_autogen: CMakeFiles/lumencode_autogen

@@ -12,6 +12,7 @@ class ProjectController : public QObject
     Q_OBJECT
     Q_PROPERTY(QObject *fileSystemModel READ fileSystemModel CONSTANT)
     Q_PROPERTY(QString rootPath READ rootPath WRITE setRootPath NOTIFY rootPathChanged)
+    Q_PROPERTY(QVariantMap projectSummary READ projectSummary NOTIFY rootPathChanged)
     Q_PROPERTY(QString selectedPath READ selectedPath NOTIFY selectedPathChanged)
     Q_PROPERTY(QString selectedRelativePath READ selectedRelativePath NOTIFY selectedPathChanged)
     Q_PROPERTY(QVariantMap selectedFileData READ selectedFileData NOTIFY selectedFileDataChanged)
@@ -24,6 +25,7 @@ public:
 
     QObject *fileSystemModel() const;
     QString rootPath() const;
+    QVariantMap projectSummary() const;
     QString selectedPath() const;
     QString selectedRelativePath() const;
     QVariantMap selectedFileData() const;

@@ -8,6 +8,7 @@
 /home/user/Code/OpenSource/lumencode/build/CMakeFiles/vendor-tree-sitter-php.dir
 /home/user/Code/OpenSource/lumencode/build/CMakeFiles/vendor-tree-sitter-css.dir
 /home/user/Code/OpenSource/lumencode/build/CMakeFiles/lumencode.dir
+/home/user/Code/OpenSource/lumencode/build/CMakeFiles/lumencode-cli.dir
 /home/user/Code/OpenSource/lumencode/build/CMakeFiles/test.dir
 /home/user/Code/OpenSource/lumencode/build/CMakeFiles/edit_cache.dir
 /home/user/Code/OpenSource/lumencode/build/CMakeFiles/rebuild_cache.dir
@@ -29,3 +30,5 @@
 /home/user/Code/OpenSource/lumencode/build/CMakeFiles/vendor-tree-sitter-css_autogen.dir
 /home/user/Code/OpenSource/lumencode/build/CMakeFiles/lumencode_autogen_timestamp_deps.dir
 /home/user/Code/OpenSource/lumencode/build/CMakeFiles/lumencode_autogen.dir
+/home/user/Code/OpenSource/lumencode/build/CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir
+/home/user/Code/OpenSource/lumencode/build/CMakeFiles/lumencode-cli_autogen.dir

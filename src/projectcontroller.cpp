@@ -28,6 +28,11 @@ QString ProjectController::rootPath() const
     return m_rootPath;
 }
 
+QVariantMap ProjectController::projectSummary() const
+{
+    return m_fileSystemModel->collectStats();
+}
+
 QString ProjectController::selectedPath() const
 {
     return m_selectedPath;
@@ -91,7 +96,7 @@ void ProjectController::selectPath(const QString &path)
 
     const QFileInfo info(path);
     if (!info.exists()) {
-        m_selectedFileData = {};
+        m_selectedFileData = SymbolParser::makeResultSkeleton(path, info.fileName().isEmpty() ? path : info.fileName(), QString());
         m_selectedSymbol = {};
         emit selectedFileDataChanged();
         emit selectedSymbolChanged();
@@ -99,19 +104,8 @@ void ProjectController::selectPath(const QString &path)
     }
 
     if (info.isDir()) {
-        QVariantMap folderData;
-        folderData.insert(QStringLiteral("path"), path);
-        folderData.insert(QStringLiteral("fileName"), info.fileName().isEmpty() ? path : info.fileName());
-        folderData.insert(QStringLiteral("language"), QStringLiteral("folder"));
-        folderData.insert(QStringLiteral("symbols"), QVariantList{});
-        folderData.insert(QStringLiteral("quickLinks"), QVariantList{});
-        folderData.insert(QStringLiteral("dependencies"), QVariantList{});
-        folderData.insert(QStringLiteral("routes"), QVariantList{});
-        folderData.insert(QStringLiteral("relatedFiles"), QVariantList{});
-        folderData.insert(QStringLiteral("packageSummary"), QVariantMap{});
-        folderData.insert(QStringLiteral("cssSummary"), QVariantMap{});
-        folderData.insert(QStringLiteral("summary"), QStringLiteral("Directory"));
-        m_selectedFileData = folderData;
+        m_selectedFileData = SymbolParser::makeResultSkeleton(path, info.fileName().isEmpty() ? path : info.fileName(), QStringLiteral("folder"));
+        m_selectedFileData.insert(QStringLiteral("summary"), QStringLiteral("Directory"));
     } else {
         m_selectedFileData = m_symbolParser->parseFile(path);
     }

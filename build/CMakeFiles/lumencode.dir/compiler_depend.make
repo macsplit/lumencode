@@ -726,9 +726,11 @@ CMakeFiles/lumencode.dir/src/filesystemmodel.cpp.o: /home/user/Code/OpenSource/l
   /usr/include/c++/13/algorithm \
   /usr/include/c++/13/array \
   /usr/include/c++/13/atomic \
+  /usr/include/c++/13/backward/auto_ptr.h \
   /usr/include/c++/13/backward/binders.h \
   /usr/include/c++/13/bit \
   /usr/include/c++/13/bits/algorithmfwd.h \
+  /usr/include/c++/13/bits/align.h \
   /usr/include/c++/13/bits/alloc_traits.h \
   /usr/include/c++/13/bits/allocated_ptr.h \
   /usr/include/c++/13/bits/allocator.h \
@@ -773,6 +775,9 @@ CMakeFiles/lumencode.dir/src/filesystemmodel.cpp.o: /home/user/Code/OpenSource/l
   /usr/include/c++/13/bits/range_access.h \
   /usr/include/c++/13/bits/refwrap.h \
   /usr/include/c++/13/bits/requires_hosted.h \
+  /usr/include/c++/13/bits/shared_ptr.h \
+  /usr/include/c++/13/bits/shared_ptr_atomic.h \
+  /usr/include/c++/13/bits/shared_ptr_base.h \
   /usr/include/c++/13/bits/std_abs.h \
   /usr/include/c++/13/bits/std_function.h \
   /usr/include/c++/13/bits/stl_algo.h \
@@ -789,6 +794,7 @@ CMakeFiles/lumencode.dir/src/filesystemmodel.cpp.o: /home/user/Code/OpenSource/l
   /usr/include/c++/13/bits/stl_multimap.h \
   /usr/include/c++/13/bits/stl_numeric.h \
   /usr/include/c++/13/bits/stl_pair.h \
+  /usr/include/c++/13/bits/stl_raw_storage_iter.h \
   /usr/include/c++/13/bits/stl_relops.h \
   /usr/include/c++/13/bits/stl_tempbuf.h \
   /usr/include/c++/13/bits/stl_tree.h \
@@ -800,6 +806,7 @@ CMakeFiles/lumencode.dir/src/filesystemmodel.cpp.o: /home/user/Code/OpenSource/l
   /usr/include/c++/13/bits/string_view.tcc \
   /usr/include/c++/13/bits/stringfwd.h \
   /usr/include/c++/13/bits/uniform_int_dist.h \
+  /usr/include/c++/13/bits/unique_ptr.h \
   /usr/include/c++/13/bits/unordered_map.h \
   /usr/include/c++/13/bits/uses_allocator.h \
   /usr/include/c++/13/bits/uses_allocator_args.h \
@@ -822,6 +829,7 @@ CMakeFiles/lumencode.dir/src/filesystemmodel.cpp.o: /home/user/Code/OpenSource/l
   /usr/include/c++/13/ext/aligned_buffer.h \
   /usr/include/c++/13/ext/alloc_traits.h \
   /usr/include/c++/13/ext/atomicity.h \
+  /usr/include/c++/13/ext/concurrence.h \
   /usr/include/c++/13/ext/numeric_traits.h \
   /usr/include/c++/13/ext/string_conversions.h \
   /usr/include/c++/13/ext/type_traits.h \
@@ -832,10 +840,12 @@ CMakeFiles/lumencode.dir/src/filesystemmodel.cpp.o: /home/user/Code/OpenSource/l
   /usr/include/c++/13/limits \
   /usr/include/c++/13/list \
   /usr/include/c++/13/map \
+  /usr/include/c++/13/memory \
   /usr/include/c++/13/new \
   /usr/include/c++/13/numeric \
   /usr/include/c++/13/pstl/execution_defs.h \
   /usr/include/c++/13/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/13/pstl/glue_memory_defs.h \
   /usr/include/c++/13/pstl/glue_numeric_defs.h \
   /usr/include/c++/13/pstl/pstl_config.h \
   /usr/include/c++/13/ratio \
@@ -950,8 +960,11 @@ CMakeFiles/lumencode.dir/src/filesystemmodel.cpp.o: /home/user/Code/OpenSource/l
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/QAbstractItemModel \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/QDir \
+  /usr/include/x86_64-linux-gnu/qt5/QtCore/QFile \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/QFileInfo \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/QHash \
+  /usr/include/x86_64-linux-gnu/qt5/QtCore/QJsonDocument \
+  /usr/include/x86_64-linux-gnu/qt5/QtCore/QJsonObject \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/QSet \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/QString \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/QVariantList \
@@ -963,11 +976,16 @@ CMakeFiles/lumencode.dir/src/filesystemmodel.cpp.o: /home/user/Code/OpenSource/l
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qbasicatomic.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qbytearray.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qbytearraylist.h \
+  /usr/include/x86_64-linux-gnu/qt5/QtCore/qcborcommon.h \
+  /usr/include/x86_64-linux-gnu/qt5/QtCore/qcborvalue.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qchar.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qcompilerdetection.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qconfig.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qcontainerfwd.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qcontainertools_impl.h \
+  /usr/include/x86_64-linux-gnu/qt5/QtCore/qcontiguouscache.h \
+  /usr/include/x86_64-linux-gnu/qt5/QtCore/qdatetime.h \
+  /usr/include/x86_64-linux-gnu/qt5/QtCore/qdebug.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qdir.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qfile.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qfiledevice.h \
@@ -980,7 +998,11 @@ CMakeFiles/lumencode.dir/src/filesystemmodel.cpp.o: /home/user/Code/OpenSource/l
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qhashfunctions.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qiodevice.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qiterator.h \
+  /usr/include/x86_64-linux-gnu/qt5/QtCore/qjsondocument.h \
+  /usr/include/x86_64-linux-gnu/qt5/QtCore/qjsonobject.h \
+  /usr/include/x86_64-linux-gnu/qt5/QtCore/qjsonvalue.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qlist.h \
+  /usr/include/x86_64-linux-gnu/qt5/QtCore/qlocale.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qlogging.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qmap.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qmetatype.h \
@@ -994,9 +1016,12 @@ CMakeFiles/lumencode.dir/src/filesystemmodel.cpp.o: /home/user/Code/OpenSource/l
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qprocessordetection.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qrefcount.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qregexp.h \
+  /usr/include/x86_64-linux-gnu/qt5/QtCore/qregularexpression.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qscopedpointer.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qset.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qshareddata.h \
+  /usr/include/x86_64-linux-gnu/qt5/QtCore/qsharedpointer.h \
+  /usr/include/x86_64-linux-gnu/qt5/QtCore/qsharedpointer_impl.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qstring.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qstringalgorithms.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qstringlist.h \
@@ -1006,7 +1031,10 @@ CMakeFiles/lumencode.dir/src/filesystemmodel.cpp.o: /home/user/Code/OpenSource/l
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qsysinfo.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qsystemdetection.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qtcore-config.h \
+  /usr/include/x86_64-linux-gnu/qt5/QtCore/qtextstream.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qtypeinfo.h \
+  /usr/include/x86_64-linux-gnu/qt5/QtCore/qurl.h \
+  /usr/include/x86_64-linux-gnu/qt5/QtCore/quuid.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qvariant.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qvarlengtharray.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qvector.h \
@@ -2066,23 +2094,13 @@ CMakeFiles/lumencode.dir/src/symbolparser.cpp.o: /home/user/Code/OpenSource/lume
 
 /usr/lib/gcc/x86_64-linux-gnu/13/include/stdbool.h:
 
-/usr/include/x86_64-linux-gnu/qt5/QtCore/qregularexpression.h:
-
-/usr/include/x86_64-linux-gnu/qt5/QtCore/qjsondocument.h:
-
-/usr/include/x86_64-linux-gnu/qt5/QtCore/qdatetime.h:
-
 /usr/include/x86_64-linux-gnu/qt5/QtCore/QVector:
 
 /usr/include/x86_64-linux-gnu/qt5/QtCore/QStringList:
 
 /usr/include/x86_64-linux-gnu/qt5/QtCore/QRegularExpression:
 
-/usr/include/x86_64-linux-gnu/qt5/QtCore/QJsonDocument:
-
 /usr/include/x86_64-linux-gnu/qt5/QtCore/QJsonArray:
-
-/usr/include/x86_64-linux-gnu/qt5/QtCore/QFile:
 
 /home/user/Code/OpenSource/lumencode/third_party/tree-sitter/lib/include/tree_sitter/api.h:
 
@@ -2091,6 +2109,18 @@ CMakeFiles/lumencode.dir/src/symbolparser.cpp.o: /home/user/Code/OpenSource/lume
 /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qsizepolicy.h:
 
 /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qdialog.h:
+
+/usr/include/x86_64-linux-gnu/qt5/QtGui/qrgba64.h:
+
+/usr/include/x86_64-linux-gnu/qt5/QtGui/qpolygon.h:
+
+/usr/include/x86_64-linux-gnu/qt5/QtGui/qpixmap.h:
+
+/usr/include/x86_64-linux-gnu/qt5/QtGui/qpalette.h:
+
+/usr/include/x86_64-linux-gnu/qt5/QtGui/qmatrix.h:
+
+/usr/include/x86_64-linux-gnu/qt5/QtGui/qkeysequence.h:
 
 /usr/include/x86_64-linux-gnu/qt5/QtCore/qstringalgorithms.h:
 
@@ -2142,10 +2172,6 @@ CMakeFiles/lumencode.dir/src/symbolparser.cpp.o: /home/user/Code/OpenSource/lume
 
 /usr/include/x86_64-linux-gnu/qt5/QtCore/qbasicatomic.h:
 
-/usr/include/x86_64-linux-gnu/qt5/QtCore/qcborvalue.h:
-
-/usr/include/x86_64-linux-gnu/qt5/QtCore/qstring.h:
-
 /usr/include/x86_64-linux-gnu/qt5/QtCore/qalgorithms.h:
 
 /usr/include/x86_64-linux-gnu/qt5/QtCore/qabstractitemmodel.h:
@@ -2167,8 +2193,6 @@ CMakeFiles/lumencode.dir/src/symbolparser.cpp.o: /home/user/Code/OpenSource/lume
 /usr/include/x86_64-linux-gnu/gnu/stubs-64.h:
 
 /usr/include/c++/13/bits/node_handle.h:
-
-/usr/include/x86_64-linux-gnu/qt5/QtGui/qrgba64.h:
 
 /usr/include/x86_64-linux-gnu/bits/select.h:
 
@@ -2219,8 +2243,6 @@ CMakeFiles/lumencode.dir/src/symbolparser.cpp.o: /home/user/Code/OpenSource/lume
 /usr/include/x86_64-linux-gnu/bits/timex.h:
 
 /usr/include/x86_64-linux-gnu/bits/stdio_lim.h:
-
-/usr/include/x86_64-linux-gnu/qt5/QtGui/qpalette.h:
 
 /usr/include/x86_64-linux-gnu/bits/struct_mutex.h:
 
@@ -2322,6 +2344,10 @@ CMakeFiles/lumencode.dir/src/symbolparser.cpp.o: /home/user/Code/OpenSource/lume
 
 /usr/include/c++/13/bits/shared_ptr_base.h:
 
+/usr/include/x86_64-linux-gnu/qt5/QtGui/qpaintdevice.h:
+
+/usr/include/c++/13/streambuf:
+
 /usr/lib/x86_64-linux-gnu/cmake/Qt5Qml/Qt5Qml_QDebugMessageServiceFactory.cmake:
 
 /usr/include/c++/13/bits/invoke.h:
@@ -2356,10 +2382,6 @@ CMakeFiles/lumencode.dir/src/symbolparser.cpp.o: /home/user/Code/OpenSource/lume
 
 /usr/lib/x86_64-linux-gnu/cmake/Qt5Core/Qt5CoreMacros.cmake:
 
-/usr/include/x86_64-linux-gnu/qt5/QtCore/qcborcommon.h:
-
-/usr/include/x86_64-linux-gnu/qt5/QtNetwork/qtnetwork-config.h:
-
 /usr/include/c++/13/bits/exception_defines.h:
 
 /usr/include/c++/13/bits/move.h:
@@ -2388,6 +2410,8 @@ CMakeFiles/lumencode.dir/src/symbolparser.cpp.o: /home/user/Code/OpenSource/lume
 
 /usr/share/ECM/modules/ECMSourceVersionControl.cmake:
 
+/usr/include/x86_64-linux-gnu/qt5/QtCore/QFile:
+
 /usr/include/c++/13/functional:
 
 /usr/include/x86_64-linux-gnu/qt5/QtCore/qstringliteral.h:
@@ -2403,6 +2427,10 @@ CMakeFiles/lumencode.dir/src/symbolparser.cpp.o: /home/user/Code/OpenSource/lume
 /usr/include/x86_64-linux-gnu/bits/wchar.h:
 
 /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h:
+
+/usr/include/x86_64-linux-gnu/qt5/QtNetwork/qtnetwork-config.h:
+
+/usr/include/x86_64-linux-gnu/qt5/QtCore/qcborcommon.h:
 
 /usr/include/c++/13/iterator:
 
@@ -2438,6 +2466,10 @@ CMakeFiles/3.28.3/CMakeSystem.cmake:
 
 /usr/include/x86_64-linux-gnu/sys/cdefs.h:
 
+/usr/include/x86_64-linux-gnu/qt5/QtGui/qpixelformat.h:
+
+/usr/include/c++/13/bits/memoryfwd.h:
+
 lumencode_autogen/UVLADIE3JM/moc_filesystemmodel.cpp:
 
 /usr/include/x86_64-linux-gnu/qt5/QtCore/QDir:
@@ -2447,6 +2479,8 @@ lumencode_autogen/UVLADIE3JM/moc_filesystemmodel.cpp:
 /usr/include/x86_64-linux-gnu/c++/13/bits/c++locale.h:
 
 /usr/include/x86_64-linux-gnu/qt5/QtCore/qvector.h:
+
+/usr/include/x86_64-linux-gnu/qt5/QtCore/QJsonDocument:
 
 lumencode_autogen/moc_predefs.h:
 
@@ -2467,10 +2501,6 @@ lumencode_autogen/moc_predefs.h:
 /usr/include/x86_64-linux-gnu/bits/types/mbstate_t.h:
 
 /usr/bin/cmake:
-
-/usr/include/c++/13/bits/memoryfwd.h:
-
-/usr/include/x86_64-linux-gnu/qt5/QtGui/qpixelformat.h:
 
 /usr/include/c++/13/bit:
 
@@ -2750,10 +2780,6 @@ lumencode_autogen/UVLADIE3JM/moc_projectcontroller.cpp:
 
 /usr/lib/x86_64-linux-gnu/cmake/KF5CoreAddons/KF5CoreAddonsTargets-debian.cmake:
 
-/usr/include/c++/13/streambuf:
-
-/usr/include/x86_64-linux-gnu/qt5/QtGui/qpaintdevice.h:
-
 /usr/lib/x86_64-linux-gnu/cmake/KF5CoreAddons/KF5CoreAddonsTargets.cmake:
 
 /usr/lib/x86_64-linux-gnu/cmake/KF5CoreAddons/KF5CoreAddonsToolingTargets-debian.cmake:
@@ -2848,6 +2874,12 @@ lumencode_autogen/UVLADIE3JM/moc_projectcontroller.cpp:
 
 /usr/lib/x86_64-linux-gnu/cmake/Qt5Gui/Qt5Gui_QSvgPlugin.cmake:
 
+/usr/include/x86_64-linux-gnu/qt5/QtGui/qimage.h:
+
+/usr/include/c++/13/bits/stl_pair.h:
+
+/usr/lib/x86_64-linux-gnu/cmake/Qt5Gui/Qt5Gui_QTuioTouchPlugin.cmake:
+
 /usr/lib/x86_64-linux-gnu/cmake/Qt5Gui/Qt5Gui_QVncIntegrationPlugin.cmake:
 
 /usr/lib/x86_64-linux-gnu/cmake/Qt5Gui/Qt5Gui_QXcbIntegrationPlugin.cmake:
@@ -2861,6 +2893,8 @@ lumencode_autogen/UVLADIE3JM/moc_projectcontroller.cpp:
 /usr/lib/x86_64-linux-gnu/cmake/Qt5Network/Qt5NetworkConfigVersion.cmake:
 
 /usr/lib/x86_64-linux-gnu/cmake/Qt5Network/Qt5Network_QConnmanEnginePlugin.cmake:
+
+/usr/include/x86_64-linux-gnu/qt5/QtCore/qdatetime.h:
 
 /usr/include/c++/13/pstl/glue_algorithm_defs.h:
 
@@ -2908,6 +2942,8 @@ lumencode_autogen/UVLADIE3JM/moc_projectcontroller.cpp:
 
 /usr/lib/x86_64-linux-gnu/cmake/Qt5Quick/Qt5QuickConfigVersion.cmake:
 
+/usr/include/x86_64-linux-gnu/qt5/QtCore/qjsondocument.h:
+
 /usr/include/x86_64-linux-gnu/bits/timesize.h:
 
 /usr/lib/x86_64-linux-gnu/cmake/Qt5QuickControls2/Qt5QuickControls2Config.cmake:
@@ -2951,10 +2987,6 @@ lumencode_autogen/UVLADIE3JM/moc_projectcontroller.cpp:
 /usr/share/cmake-3.28/Modules/CMakeInitializeConfigs.cmake:
 
 /usr/include/x86_64-linux-gnu/qt5/QtCore/qdir.h:
-
-/usr/include/x86_64-linux-gnu/qt5/QtCore/quuid.h:
-
-/usr/share/ECM/modules/ECMFindModuleHelpers.cmake:
 
 /usr/share/ECM/modules/ECMUseFindModules.cmake:
 
@@ -3064,12 +3096,6 @@ lumencode_autogen/UVLADIE3JM/moc_symbolparser.cpp:
 
 /usr/include/c++/13/cstdio:
 
-/usr/include/x86_64-linux-gnu/qt5/QtCore/qjsonvalue.h:
-
-/usr/include/x86_64-linux-gnu/qt5/QtCore/qobject.h:
-
-/usr/include/c++/13/ctime:
-
 /usr/include/c++/13/ext/concurrence.h:
 
 /usr/lib/x86_64-linux-gnu/cmake/Qt5Gui/Qt5Gui_QEvdevKeyboardPlugin.cmake:
@@ -3122,6 +3148,10 @@ lumencode_autogen/UVLADIE3JM/moc_symbolparser.cpp:
 
 /usr/include/x86_64-linux-gnu/qt5/QtCore/QFileInfo:
 
+/usr/include/x86_64-linux-gnu/qt5/QtCore/qstring.h:
+
+/usr/include/x86_64-linux-gnu/qt5/QtCore/qcborvalue.h:
+
 /usr/include/x86_64-linux-gnu/bits/floatn.h:
 
 /usr/include/x86_64-linux-gnu/qt5/QtCore/qeventloop.h:
@@ -3130,7 +3160,15 @@ lumencode_autogen/UVLADIE3JM/moc_symbolparser.cpp:
 
 /usr/include/x86_64-linux-gnu/qt5/QtQml/qqml.h:
 
-/usr/include/x86_64-linux-gnu/qt5/QtCore/qmetaobject.h:
+/usr/include/x86_64-linux-gnu/qt5/QtCore/qobject.h:
+
+/usr/include/c++/13/ctime:
+
+/usr/include/x86_64-linux-gnu/qt5/QtCore/qjsonvalue.h:
+
+/usr/include/x86_64-linux-gnu/qt5/QtCore/qregularexpression.h:
+
+/usr/include/x86_64-linux-gnu/qt5/QtCore/qsize.h:
 
 /usr/share/cmake-3.28/Modules/Compiler/GNU-C.cmake:
 
@@ -3138,9 +3176,13 @@ lumencode_autogen/UVLADIE3JM/moc_symbolparser.cpp:
 
 /usr/include/x86_64-linux-gnu/qt5/QtCore/qsharedpointer_impl.h:
 
-/usr/include/x86_64-linux-gnu/qt5/QtCore/qsize.h:
-
 /usr/include/x86_64-linux-gnu/qt5/QtCore/qurl.h:
+
+/usr/share/ECM/modules/ECMFindModuleHelpers.cmake:
+
+/usr/include/x86_64-linux-gnu/qt5/QtCore/quuid.h:
+
+/usr/include/x86_64-linux-gnu/qt5/QtCore/qmetaobject.h:
 
 /usr/include/x86_64-linux-gnu/qt5/QtGui/qcursor.h:
 
@@ -3181,17 +3223,3 @@ CMakeFiles/3.28.3/CMakeCCompiler.cmake:
 /usr/include/x86_64-linux-gnu/qt5/QtGui/qfont.h:
 
 /usr/include/x86_64-linux-gnu/qt5/QtGui/qfontinfo.h:
-
-/usr/include/c++/13/bits/stl_pair.h:
-
-/usr/lib/x86_64-linux-gnu/cmake/Qt5Gui/Qt5Gui_QTuioTouchPlugin.cmake:
-
-/usr/include/x86_64-linux-gnu/qt5/QtGui/qimage.h:
-
-/usr/include/x86_64-linux-gnu/qt5/QtGui/qkeysequence.h:
-
-/usr/include/x86_64-linux-gnu/qt5/QtGui/qpolygon.h:
-
-/usr/include/x86_64-linux-gnu/qt5/QtGui/qmatrix.h:
-
-/usr/include/x86_64-linux-gnu/qt5/QtGui/qpixmap.h:

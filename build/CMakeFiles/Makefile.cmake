@@ -164,6 +164,7 @@ set(CMAKE_MAKEFILE_PRODUCTS
   "CMakeFiles/vendor-tree-sitter-css_autogen.dir/AutogenInfo.json"
   "CMakeFiles/lumencode_autogen.dir/AutogenInfo.json"
   "CMakeFiles/lumencode_autogen.dir/AutoRcc_resources_UVLADIE3JM_Info.json"
+  "CMakeFiles/lumencode-cli_autogen.dir/AutogenInfo.json"
   "CMakeFiles/CMakeDirectoryInformation.cmake"
   )
 
@@ -179,6 +180,7 @@ set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/vendor-tree-sitter-php.dir/DependInfo.cmake"
   "CMakeFiles/vendor-tree-sitter-css.dir/DependInfo.cmake"
   "CMakeFiles/lumencode.dir/DependInfo.cmake"
+  "CMakeFiles/lumencode-cli.dir/DependInfo.cmake"
   "CMakeFiles/vendor-tree-sitter_autogen_timestamp_deps.dir/DependInfo.cmake"
   "CMakeFiles/vendor-tree-sitter_autogen.dir/DependInfo.cmake"
   "CMakeFiles/vendor-tree-sitter-javascript_autogen_timestamp_deps.dir/DependInfo.cmake"
@@ -193,4 +195,6 @@ set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/vendor-tree-sitter-css_autogen.dir/DependInfo.cmake"
   "CMakeFiles/lumencode_autogen_timestamp_deps.dir/DependInfo.cmake"
   "CMakeFiles/lumencode_autogen.dir/DependInfo.cmake"
+  "CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/DependInfo.cmake"
+  "CMakeFiles/lumencode-cli_autogen.dir/DependInfo.cmake"
   )

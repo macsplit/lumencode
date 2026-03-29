@@ -1,7 +1,155 @@
 #include "filesystemmodel.h"
 
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <limits>
+
+namespace {
+
+QString normalizeProjectEntry(const QString &rootPath, const QString &value)
+{
+    if (value.isEmpty()) {
+        return {};
+    }
+
+    QString cleaned = value.trimmed();
+    if (cleaned.isEmpty()) {
+        return {};
+    }
+
+    if (cleaned.startsWith(QStringLiteral("./"))) {
+        cleaned.remove(0, 2);
+    }
+
+    const QFileInfo info(QDir(rootPath).filePath(cleaned));
+    return info.absoluteFilePath();
+}
+
+int entryScore(const QString &rootPath, const QString &path, const QString &name, bool isDir)
+{
+    if (isDir) {
+        return std::numeric_limits<int>::min();
+    }
+
+    const QString relativePath = QDir(rootPath).relativeFilePath(path);
+    const QString lowerRelative = relativePath.toLower();
+    const QString lowerName = name.toLower();
+
+    if (lowerRelative.startsWith(QStringLiteral("third_party/"))
+        || lowerRelative.startsWith(QStringLiteral("vendor/"))
+        || lowerRelative.startsWith(QStringLiteral("node_modules/"))
+        || lowerRelative.startsWith(QStringLiteral("dist/"))
+        || lowerRelative.startsWith(QStringLiteral("build/"))
+        || lowerRelative.startsWith(QStringLiteral("coverage/"))
+        || lowerRelative.startsWith(QStringLiteral("tests/"))
+        || lowerRelative.startsWith(QStringLiteral("test/"))
+        || lowerRelative.startsWith(QStringLiteral("docs/"))) {
+        return std::numeric_limits<int>::min() / 2;
+    }
+
+    int score = 0;
+
+    const QStringList preferredRoots = {
+        QStringLiteral("src/main.tsx"),
+        QStringLiteral("src/main.ts"),
+        QStringLiteral("src/main.jsx"),
+        QStringLiteral("src/main.js"),
+        QStringLiteral("src/index.tsx"),
+        QStringLiteral("src/index.ts"),
+        QStringLiteral("src/index.jsx"),
+        QStringLiteral("src/index.js"),
+        QStringLiteral("main.ts"),
+        QStringLiteral("main.js"),
+        QStringLiteral("app.ts"),
+        QStringLiteral("app.js"),
+        QStringLiteral("index.ts"),
+        QStringLiteral("index.js")
+    };
+
+    const int preferredIndex = preferredRoots.indexOf(lowerRelative);
+    if (preferredIndex >= 0) {
+        score += 200 - preferredIndex;
+    }
+
+    if (lowerRelative.startsWith(QStringLiteral("src/"))) {
+        score += 80;
+    }
+    if (!lowerRelative.contains(QLatin1Char('/'))) {
+        score += 30;
+    }
+
+    const int slashCount = lowerRelative.count(QLatin1Char('/'));
+    score -= slashCount * 8;
+
+    if (lowerName == QStringLiteral("main.ts") || lowerName == QStringLiteral("main.js")
+        || lowerName == QStringLiteral("main.tsx") || lowerName == QStringLiteral("main.jsx")) {
+        score += 120;
+    } else if (lowerName == QStringLiteral("app.ts") || lowerName == QStringLiteral("app.js")) {
+        score += 90;
+    } else if (lowerName == QStringLiteral("index.ts") || lowerName == QStringLiteral("index.js")
+               || lowerName == QStringLiteral("index.tsx") || lowerName == QStringLiteral("index.jsx")) {
+        score += 40;
+    }
+
+    return score;
+}
+
+QString detectPackageEntry(const QString &rootPath)
+{
+    QFile packageFile(QDir(rootPath).filePath(QStringLiteral("package.json")));
+    if (!packageFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return {};
+    }
+
+    const QJsonDocument doc = QJsonDocument::fromJson(packageFile.readAll());
+    if (!doc.isObject()) {
+        return {};
+    }
+
+    const QJsonObject root = doc.object();
+    const QStringList directFields = {
+        QStringLiteral("browser"),
+        QStringLiteral("module"),
+        QStringLiteral("main")
+    };
+
+    for (const QString &field : directFields) {
+        const QString value = root.value(field).toString();
+        const QString candidate = normalizeProjectEntry(rootPath, value);
+        if (!candidate.isEmpty() && QFileInfo::exists(candidate)) {
+            return candidate;
+        }
+    }
+
+    const QJsonObject scripts = root.value(QStringLiteral("scripts")).toObject();
+    if (scripts.contains(QStringLiteral("dev")) || scripts.contains(QStringLiteral("build"))) {
+        const QStringList frontendCandidates = {
+            QStringLiteral("src/main.tsx"),
+            QStringLiteral("src/main.ts"),
+            QStringLiteral("src/main.jsx"),
+            QStringLiteral("src/main.js"),
+            QStringLiteral("src/index.tsx"),
+            QStringLiteral("src/index.ts"),
+            QStringLiteral("src/index.jsx"),
+            QStringLiteral("src/index.js"),
+            QStringLiteral("index.html")
+        };
+
+        for (const QString &entry : frontendCandidates) {
+            const QString candidate = normalizeProjectEntry(rootPath, entry);
+            if (QFileInfo::exists(candidate)) {
+                return candidate;
+            }
+        }
+    }
+
+    return {};
+}
+
+}
 
 FileSystemModel::FileSystemModel(QObject *parent)
     : QAbstractItemModel(parent)
@@ -293,6 +441,42 @@ bool FileSystemModel::shouldIncludeFile(const QString &suffix)
         QStringLiteral("css"),
     };
     return allowed.contains(suffix);
+}
+
+QVariantMap FileSystemModel::collectStats() const
+{
+    QVariantMap stats;
+    QMap<QString, int> typeCounts;
+    QString mainEntry = detectPackageEntry(m_rootPath);
+    int totalFiles = 0;
+    int bestEntryScore = std::numeric_limits<int>::min();
+
+    for (Node *node : std::as_const(m_nodesByPath)) {
+        if (!node->isDir) {
+            totalFiles++;
+            typeCounts[node->fileType]++;
+
+            if (mainEntry.isEmpty()) {
+                const int score = entryScore(m_rootPath, node->path, node->name, node->isDir);
+                if (score > bestEntryScore) {
+                    bestEntryScore = score;
+                    mainEntry = node->path;
+                }
+            }
+        }
+    }
+
+    QVariantMap typeCountsMap;
+    for (auto it = typeCounts.begin(); it != typeCounts.end(); ++it) {
+        typeCountsMap.insert(it.key(), it.value());
+    }
+
+    stats.insert(QStringLiteral("totalFiles"), totalFiles);
+    stats.insert(QStringLiteral("fileTypes"), typeCountsMap);
+    stats.insert(QStringLiteral("mainEntry"), mainEntry);
+    stats.insert(QStringLiteral("rootPath"), m_rootPath);
+
+    return stats;
 }
 
 FileSystemModel::Node *FileSystemModel::nodeForIndex(const QModelIndex &index) const

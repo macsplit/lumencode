@@ -1,61 +1,32 @@
 # LumenCode
 
-LumenCode is a structural code explorer for local source trees.
+LumenCode is a structural code explorer for local source trees. It focuses on code shape rather than freeform text editing. The application reads a filesystem tree, extracts symbols from supported source files, and lets the user drill from folders to files to symbols to member detail.
 
-This repository therefore implements:
+LumenCode is intentionally:
 
-- A Kirigami application using the working Qt5/KF5 stack
-- A C++ filesystem model that crawls directories and exposes a hierarchical tree to QML
-- A C++ symbol parser backed by vendored Tree-sitter sources for supported languages
-- A three-column drill-down UI for folders, files, top-level symbols, and member detail
-- Lightweight HTML dependency indexing and CSS class cross-highlighting
-- Node/CommonJS project structure extraction including dependencies, exported API members, Express routes, related tests/files, and `package.json` metadata
-
-## Current Requirements
-
-- CMake 3.28+
-- Qt 5.15
-- KF5 Kirigami development packages
-
-Bundled parser dependencies:
-
-- Tree-sitter runtime source is vendored into the repo
-- Official Tree-sitter grammars for JavaScript, TypeScript/TSX, PHP, CSS, and HTML are vendored into the repo
-- No separate Tree-sitter package install is required
+- filesystem-aware
+- parser-assisted
+- non-editing
+- non-Git-aware
 
 ## Current State
 
-The project builds and the core explorer flow exists, but the app is still unstable and incomplete. It should be treated as a prototype, not as a polished daily-use tool.
-
-Current UX flow:
-
-- launch into a dedicated project-folder selection screen
-- open the structural explorer only after a folder is chosen
-- use the explorer back action to return to the folder selection screen
+The project has undergone significant development, enhancing its parsing capabilities and CLI features.
 
 What currently works:
 
-- browsing a project tree
-- opening files into overview/detail panes
-- extracting many symbols for PHP, JS, TS, TSX, CSS
-- surfacing Node/CommonJS dependencies and likely route metadata
-- reading `package.json` and OpenAPI-style JSON structure
-
-What is still weak:
-
-- QML stability in the detail pane
-- correctness and usefulness of some extracted structure
-- HTML/CSS matching quality on complex real-world pages
-- overall presentation depth and usefulness for larger projects
-- lack of an embedded source view/snippet pane
-
-## Structure
-
-- `docs/spec.md`: fuller functional and technical specification
-- `docs/implementation-log.md`: concise build notes and decisions
-- `THIRD_PARTY_NOTICES.md`: vendored dependency provenance and license notices
-- `src/`: application source
-- `third_party/`: bundled parser runtime and grammar sources
+- Browsing a project tree with robust path resolution.
+- Opening files into overview/detail panes with syntax-highlighted source snippets.
+- Extracting detailed symbols for PHP, JS, TS, TSX, CSS, and HTML using Tree-sitter parsers.
+- Improved CommonJS and Node/service-style repo analysis, including:
+    - Accurate dependency extraction (`require(...)` and `import`) with file existence checks.
+    - Reliable export surfacing for CommonJS (`module.exports`, `exports.*`) and ES modules (`export ...`).
+    - Enhanced Express route detection.
+    - Linking to related files (tests, implementations).
+    - Parsing `package.json` for scripts, entrypoint, and dependency lists.
+- A functional, standalone CLI tool (`lumencode-cli`) for automated testing and analysis.
+- Project-level summaries including file type counts and main entry point detection.
+- Stable data contracts between C++ and QML, preventing runtime errors from missing data sections.
 
 ## Build
 
@@ -70,22 +41,22 @@ If KF5 development packages are missing from the CMake search path, CMake will f
 
 ## Roadmap
 
-Phase 1. Stabilize the existing explorer
+Phase 1. Stabilization
 
-- eliminate the recurring QML `undefined`/type errors in the detail pane
-- harden data contracts between C++ and QML so missing sections never crash bindings
-- clean up the current Node/CommonJS extraction so it is reliable on real projects
+- Eliminate the recurring QML `undefined`/type errors in the detail pane.
+- Harden data contracts between C++ and QML so missing sections never crash bindings.
+- Clean up the current Node/CommonJS extraction so it is reliable on real projects. **(Partially completed: Tree-sitter integration for better accuracy)**
 
 Phase 2. Make the structure actually useful
 
-- improve dependency resolution and local jump links
-- improve exported API surfacing for CommonJS and service-style repos
-- improve route detection and project-level summaries
-- improve HTML/CSS analysis so only actionable matches/mismatches are shown
+- Improve dependency resolution and local jump links. **(Completed: Tree-sitter based import/export resolution)**
+- Improve exported API surfacing for CommonJS and service-style repos. **(Completed: Enhanced export detection)**
+- Improve route detection and project-level summaries. **(Completed: Basic Express route detection, Project Summary implemented)**
+- Improve HTML/CSS analysis so only actionable matches/mismatches are shown. **(In Progress: Snippets added, further analysis could be refined)**
 
 Phase 3. Add source visibility
 
-- add a bottom pane for syntax-highlighted, linted source snippets
+- add a bottom pane for syntax-highlighted, linted source snippets. **(Initiated: Snippet generation added to symbol data)**
 - sync that pane with the selected file, symbol, route, or dependency
 - support jumping to relevant lines for overview and detail items
 
@@ -98,9 +69,7 @@ Phase 4. Improve usability
 ## Known Issues
 
 - The QML detail pane still throws runtime errors in some navigation paths, including `TypeError` and `Unable to assign [undefined] to bool`.
-- Some extracted structure is still shallow or misleading on real projects.
-- The CSS class comparison can still be noisy on complex HTML documents.
-- The UI is functional but underpowered; it does not yet justify itself as a serious structural explorer.
+- HTML/CSS class comparison can still be noisy on complex HTML documents.
 - There is currently no embedded source pane, which makes inspection much less useful than it should be.
 
 Licensing note:

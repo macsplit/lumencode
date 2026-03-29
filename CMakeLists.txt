@@ -110,4 +110,26 @@ target_link_libraries(lumencode
     vendor-tree-sitter-css
 )
 
-install(TARGETS lumencode ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
+add_executable(lumencode-cli
+    src/lumencode-cli.cpp
+    src/filesystemmodel.cpp
+    src/filesystemmodel.h
+    src/projectcontroller.cpp
+    src/projectcontroller.h
+    src/symbolparser.cpp
+    src/symbolparser.h
+)
+
+target_link_libraries(lumencode-cli
+    Qt5::Core
+    Qt5::Widgets
+    KF5::CoreAddons
+    vendor-tree-sitter
+    vendor-tree-sitter-javascript
+    vendor-tree-sitter-typescript
+    vendor-tree-sitter-tsx
+    vendor-tree-sitter-php
+    vendor-tree-sitter-css
+)
+
+install(TARGETS lumencode lumencode-cli ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})

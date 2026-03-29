@@ -75,7 +75,54 @@ static TSLanguage *languageForName(const QString &language)
     return nullptr;
 }
 
-static QVariantMap makeResultSkeleton(const QString &path, const QString &fileName, const QString &language)
+static QString nodeSnippet(TSNode node, const QByteArray &source, int maxLines = 10)
+{
+    if (ts_node_is_null(node)) {
+        return {};
+    }
+    const uint32_t start = ts_node_start_byte(node);
+    const uint32_t end = ts_node_end_byte(node);
+    if (end <= start || static_cast<int>(end) > source.size()) {
+        return {};
+    }
+    const QString text = QString::fromUtf8(source.constData() + start, static_cast<int>(end - start));
+    const QStringList lines = text.split(QLatin1Char('\n'));
+    if (lines.size() <= maxLines) {
+        return text;
+    }
+    return lines.mid(0, maxLines).join(QLatin1Char('\n')) + QStringLiteral("\n...");
+}
+
+static QString nodeValueText(TSNode node, const QByteArray &source)
+{
+    const QString raw = nodeText(node, source).trimmed();
+    if (raw.size() >= 2) {
+        const QChar first = raw.front();
+        const QChar last = raw.back();
+        if ((first == QLatin1Char('"') && last == QLatin1Char('"'))
+            || (first == QLatin1Char('\'') && last == QLatin1Char('\''))
+            || (first == QLatin1Char('`') && last == QLatin1Char('`'))) {
+            return raw.mid(1, raw.size() - 2);
+        }
+    }
+    return raw;
+}
+
+QVariantMap SymbolParser::makeSymbol(const QString &kind, const QString &name, int line,
+                                     const QString &detail, const QVariantList &members,
+                                     const QString &snippet)
+{
+    QVariantMap result;
+    result.insert(QStringLiteral("kind"), kind);
+    result.insert(QStringLiteral("name"), name);
+    result.insert(QStringLiteral("line"), line);
+    result.insert(QStringLiteral("detail"), detail);
+    result.insert(QStringLiteral("members"), members);
+    result.insert(QStringLiteral("snippet"), snippet);
+    return result;
+}
+
+QVariantMap SymbolParser::makeResultSkeleton(const QString &path, const QString &fileName, const QString &language)
 {
     QVariantMap result;
     result.insert(QStringLiteral("path"), path);
@@ -173,24 +220,26 @@ QVariantMap SymbolParser::parsePhpTreeSitter(const QString &path, const QString 
             const QString type = QString::fromUtf8(ts_node_type(child));
             if (type == QStringLiteral("method_declaration")) {
                 const QString name = nodeText(fieldNode(child, "name"), source);
-                members.append(makeSymbol(QStringLiteral("method"), name, nodeLine(child)));
+                members.append(makeSymbol(QStringLiteral("method"), name, nodeLine(child), QString(), {}, nodeSnippet(child, source)));
             } else if (type == QStringLiteral("property_declaration")) {
                 const QString snippet = nodeText(child, source);
+                const QString fullSnippet = nodeSnippet(child, source);
                 QRegularExpression propertyPattern(QStringLiteral(R"(\$([A-Za-z_]\w*))"));
                 auto it = propertyPattern.globalMatch(snippet);
                 while (it.hasNext()) {
                     const auto match = it.next();
                     members.append(makeSymbol(QStringLiteral("property"),
                                               QStringLiteral("$") + match.captured(1),
-                                              nodeLine(child)));
+                                              nodeLine(child), QString(), {}, fullSnippet));
                 }
             } else if (type == QStringLiteral("const_declaration")) {
                 const QString snippet = nodeText(child, source);
+                const QString fullSnippet = nodeSnippet(child, source);
                 QRegularExpression constPattern(QStringLiteral(R"(\b([A-Z_][A-Z0-9_]*)\b)"));
                 auto it = constPattern.globalMatch(snippet);
                 while (it.hasNext()) {
                     const auto match = it.next();
-                    members.append(makeSymbol(QStringLiteral("constant"), match.captured(1), nodeLine(child)));
+                    members.append(makeSymbol(QStringLiteral("constant"), match.captured(1), nodeLine(child), QString(), {}, fullSnippet));
                 }
             }
         }
@@ -216,17 +265,18 @@ QVariantMap SymbolParser::parsePhpTreeSitter(const QString &path, const QString 
                 kind = QStringLiteral("trait");
             }
             const TSNode body = fieldNode(child, "body");
-            symbols.append(makeSymbol(kind, name, nodeLine(child), QString(), parsePhpMembers(body)));
+            symbols.append(makeSymbol(kind, name, nodeLine(child), QString(), parsePhpMembers(body), nodeSnippet(child, source)));
         } else if (type == QStringLiteral("function_definition")) {
             const QString name = nodeText(fieldNode(child, "name"), source);
-            symbols.append(makeSymbol(QStringLiteral("function"), name, nodeLine(child)));
+            symbols.append(makeSymbol(QStringLiteral("function"), name, nodeLine(child), QString(), {}, nodeSnippet(child, source)));
         } else if (type == QStringLiteral("const_declaration")) {
             const QString snippet = nodeText(child, source);
+            const QString fullSnippet = nodeSnippet(child, source);
             QRegularExpression constPattern(QStringLiteral(R"(\b([A-Z_][A-Z0-9_]*)\b)"));
             auto it = constPattern.globalMatch(snippet);
             while (it.hasNext()) {
                 const auto match = it.next();
-                symbols.append(makeSymbol(QStringLiteral("constant"), match.captured(1), nodeLine(child)));
+                symbols.append(makeSymbol(QStringLiteral("constant"), match.captured(1), nodeLine(child), QString(), {}, fullSnippet));
             }
         }
     }
@@ -271,23 +321,29 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
         return QStringLiteral("function");
     };
 
-    auto symbolExists = [&](const QString &name, const QString &kind = QString()) {
-        for (const QVariant &symbolValue : std::as_const(symbols)) {
-            const QVariantMap symbol = symbolValue.toMap();
-            if (symbol.value(QStringLiteral("name")).toString() == name
-                && (kind.isEmpty() || symbol.value(QStringLiteral("kind")).toString() == kind)) {
-                return true;
-            }
-        }
-        return false;
-    };
-
     auto appendSymbolIfNew = [&](const QVariantMap &symbol) {
         const QString name = symbol.value(QStringLiteral("name")).toString();
         const QString kind = symbol.value(QStringLiteral("kind")).toString();
-        if (!symbolExists(name, kind)) {
-            symbols.append(symbol);
+        
+        for (int i = 0; i < symbols.size(); ++i) {
+            QVariantMap existing = symbols.at(i).toMap();
+            if (existing.value(QStringLiteral("name")).toString() == name
+                && (kind.isEmpty() || existing.value(QStringLiteral("kind")).toString() == kind)) {
+                
+                const QString newDetail = symbol.value(QStringLiteral("detail")).toString();
+                if (!newDetail.isEmpty()) {
+                    QString existingDetail = existing.value(QStringLiteral("detail")).toString();
+                    if (existingDetail.isEmpty()) {
+                        existing.insert(QStringLiteral("detail"), newDetail);
+                    } else if (!existingDetail.contains(newDetail)) {
+                        existing.insert(QStringLiteral("detail"), existingDetail + QStringLiteral(", ") + newDetail);
+                    }
+                    symbols[i] = existing;
+                }
+                return;
+            }
         }
+        symbols.append(symbol);
     };
 
     auto parseJsClassMembers = [&](TSNode body) {
@@ -301,14 +357,14 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
                 if (name.isEmpty()) {
                     name = nodeText(ts_node_named_child(child, 0), source);
                 }
-                members.append(makeSymbol(QStringLiteral("method"), name, nodeLine(child)));
+                members.append(makeSymbol(QStringLiteral("method"), name, nodeLine(child), QString(), {}, nodeSnippet(child, source)));
             } else if (type == QStringLiteral("public_field_definition")
                        || type == QStringLiteral("field_definition")) {
                 QString name = nodeText(fieldNode(child, "name"), source);
                 if (name.isEmpty()) {
                     name = nodeText(ts_node_named_child(child, 0), source);
                 }
-                members.append(makeSymbol(QStringLiteral("property"), name, nodeLine(child)));
+                members.append(makeSymbol(QStringLiteral("property"), name, nodeLine(child), QString(), {}, nodeSnippet(child, source)));
             }
         }
         return members;
@@ -328,48 +384,24 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
                 if (valueType == QStringLiteral("arrow_function")
                     || valueType == QStringLiteral("function")
                     || valueType == QStringLiteral("function_expression")) {
-                    members.append(makeSymbol(QStringLiteral("function"), key, nodeLine(child)));
+                    members.append(makeSymbol(QStringLiteral("function"), key, nodeLine(child), QString(), {}, nodeSnippet(child, source)));
                 } else if (valueType == QStringLiteral("object")) {
                     members.append(makeSymbol(QStringLiteral("property"), key, nodeLine(child),
-                                              QStringLiteral("nested object"), parseJsObjectMembers(valueNode)));
+                                              QStringLiteral("nested object"), parseJsObjectMembers(valueNode), nodeSnippet(child, source)));
                 } else {
-                    members.append(makeSymbol(QStringLiteral("property"), key, nodeLine(child)));
+                    members.append(makeSymbol(QStringLiteral("property"), key, nodeLine(child), QString(), {}, nodeSnippet(child, source)));
                 }
             } else if (type == QStringLiteral("method_definition")) {
                 QString name = nodeText(fieldNode(child, "name"), source);
                 if (name.isEmpty()) {
                     name = nodeText(ts_node_named_child(child, 0), source);
                 }
-                members.append(makeSymbol(QStringLiteral("method"), name, nodeLine(child)));
+                members.append(makeSymbol(QStringLiteral("method"), name, nodeLine(child), QString(), {}, nodeSnippet(child, source)));
             } else if (type == QStringLiteral("shorthand_property_identifier")) {
-                members.append(makeSymbol(QStringLiteral("property"), nodeText(child, source), nodeLine(child)));
+                members.append(makeSymbol(QStringLiteral("property"), nodeText(child, source), nodeLine(child), QString(), {}, nodeSnippet(child, source)));
             }
         }
         return members;
-    };
-
-    auto addVariableDeclarator = [&](TSNode declarator) {
-        const QString name = nodeText(fieldNode(declarator, "name"), source);
-        const TSNode valueNode = fieldNode(declarator, "value");
-        const QString valueType = QString::fromUtf8(ts_node_type(valueNode));
-        if (valueType == QStringLiteral("arrow_function")
-            || valueType == QStringLiteral("function")
-            || valueType == QStringLiteral("function_expression")) {
-            appendSymbolIfNew(makeSymbol(classifyFunctionName(name), name, nodeLine(declarator),
-                                         valueType == QStringLiteral("function_expression")
-                                             ? QStringLiteral("function expression")
-                                             : QString()));
-        } else if (valueType == QStringLiteral("class")
-                   || valueType == QStringLiteral("class_expression")) {
-            const TSNode body = fieldNode(valueNode, "body");
-            appendSymbolIfNew(makeSymbol(QStringLiteral("class"), name, nodeLine(declarator),
-                                         QStringLiteral("class expression"), parseJsClassMembers(body)));
-        } else if (valueType == QStringLiteral("object")) {
-            appendSymbolIfNew(makeSymbol(QStringLiteral("variable"), name, nodeLine(declarator),
-                                         QStringLiteral("object export"), parseJsObjectMembers(valueNode)));
-        } else {
-            appendSymbolIfNew(makeSymbol(QStringLiteral("variable"), name, nodeLine(declarator)));
-        }
     };
 
     auto unwrapExport = [&](TSNode node) {
@@ -389,45 +421,161 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
     };
 
     const uint32_t count = ts_node_named_child_count(root);
+    QVariantList dependencies;
+    QVariantList routes;
+    QSet<QString> seenDependencies;
+
+    auto appendDependency = [&](const QString &target, const QString &type, int line) {
+        if (seenDependencies.contains(type + QLatin1Char('|') + target)) {
+            return;
+        }
+        seenDependencies.insert(type + QLatin1Char('|') + target);
+
+        QVariantMap item;
+        item.insert(QStringLiteral("target"), target);
+        item.insert(QStringLiteral("type"), type);
+        item.insert(QStringLiteral("line"), line);
+        item.insert(QStringLiteral("label"), target);
+
+        const QDir dir = QFileInfo(path).dir();
+        if (target.startsWith(QStringLiteral("./")) || target.startsWith(QStringLiteral("../"))) {
+            QString resolved = QDir::cleanPath(dir.filePath(target));
+            QString chosenPath = resolved;
+            const QStringList candidates = {
+                resolved,
+                resolved + QStringLiteral(".js"),
+                resolved + QStringLiteral(".json"),
+                resolved + QStringLiteral(".ts"),
+                resolved + QStringLiteral(".tsx"),
+                QDir(resolved).filePath(QStringLiteral("index.js")),
+                QDir(resolved).filePath(QStringLiteral("index.ts"))
+            };
+            for (const QString &candidate : candidates) {
+                if (QFileInfo::exists(candidate)) {
+                    chosenPath = candidate;
+                    break;
+                }
+            }
+            item.insert(QStringLiteral("path"), chosenPath);
+            item.insert(QStringLiteral("exists"), QFileInfo::exists(chosenPath));
+            item.insert(QStringLiteral("label"), QFileInfo(chosenPath).fileName().isEmpty() ? target : QFileInfo(chosenPath).fileName());
+        } else {
+            item.insert(QStringLiteral("path"), QString());
+            item.insert(QStringLiteral("exists"), true);
+        }
+        dependencies.append(item);
+    };
+
     for (uint32_t i = 0; i < count; ++i) {
-        TSNode child = unwrapExport(ts_node_named_child(root, i));
+        TSNode originalNode = ts_node_named_child(root, i);
+        const QString originalType = QString::fromUtf8(ts_node_type(originalNode));
+        bool isExported = originalType == QStringLiteral("export_statement");
+        TSNode child = unwrapExport(originalNode);
         const QString type = QString::fromUtf8(ts_node_type(child));
+
+        if (originalType == QStringLiteral("import_statement")) {
+            const TSNode sourceNode = fieldNode(originalNode, "source");
+            const QString target = nodeValueText(sourceNode, source);
+            appendDependency(target, QStringLiteral("import"), nodeLine(originalNode));
+            continue;
+        }
+
+        if (originalType == QStringLiteral("export_statement")) {
+            const TSNode sourceNode = fieldNode(originalNode, "source");
+            if (!ts_node_is_null(sourceNode)) {
+                const QString target = nodeValueText(sourceNode, source);
+                appendDependency(target, QStringLiteral("export"), nodeLine(originalNode));
+            }
+        }
 
         if (type == QStringLiteral("function_declaration")
             || type == QStringLiteral("generator_function_declaration")) {
             const QString name = nodeText(fieldNode(child, "name"), source);
-            appendSymbolIfNew(makeSymbol(classifyFunctionName(name), name, nodeLine(child)));
+            QVariantMap symbol = makeSymbol(classifyFunctionName(name), name, nodeLine(child), QString(), {}, nodeSnippet(child, source));
+            if (isExported) symbol.insert(QStringLiteral("detail"), QStringLiteral("exported"));
+            appendSymbolIfNew(symbol);
+        } else if (type == QStringLiteral("identifier") && isExported) {
+            const QString name = nodeText(child, source);
+            appendSymbolIfNew(makeSymbol(QStringLiteral("variable"), name, nodeLine(child), QStringLiteral("exported"), {}, nodeSnippet(child, source)));
         } else if (type == QStringLiteral("class_declaration")
                    || type == QStringLiteral("abstract_class_declaration")) {
             const QString name = nodeText(fieldNode(child, "name"), source);
             const TSNode body = fieldNode(child, "body");
-            appendSymbolIfNew(makeSymbol(QStringLiteral("class"), name, nodeLine(child), QString(),
-                                         parseJsClassMembers(body)));
+            QVariantMap symbol = makeSymbol(QStringLiteral("class"), name, nodeLine(child), 
+                                         isExported ? QStringLiteral("exported") : QString(),
+                                         parseJsClassMembers(body), nodeSnippet(child, source));
+            appendSymbolIfNew(symbol);
         } else if (type == QStringLiteral("interface_declaration")) {
             const QString name = nodeText(fieldNode(child, "name"), source);
-            appendSymbolIfNew(makeSymbol(QStringLiteral("props"), name, nodeLine(child)));
+            QVariantMap symbol = makeSymbol(QStringLiteral("props"), name, nodeLine(child), QString(), {}, nodeSnippet(child, source));
+            if (isExported) symbol.insert(QStringLiteral("detail"), QStringLiteral("exported"));
+            appendSymbolIfNew(symbol);
         } else if (type == QStringLiteral("type_alias_declaration")) {
             const QString name = nodeText(fieldNode(child, "name"), source);
-            appendSymbolIfNew(makeSymbol(QStringLiteral("type"), name, nodeLine(child)));
+            QVariantMap symbol = makeSymbol(QStringLiteral("type"), name, nodeLine(child), QString(), {}, nodeSnippet(child, source));
+            if (isExported) symbol.insert(QStringLiteral("detail"), QStringLiteral("exported"));
+            appendSymbolIfNew(symbol);
         } else if (type == QStringLiteral("lexical_declaration")
                    || type == QStringLiteral("variable_declaration")) {
             const uint32_t declarationCount = ts_node_named_child_count(child);
             for (uint32_t j = 0; j < declarationCount; ++j) {
                 TSNode declarator = ts_node_named_child(child, j);
                 if (QString::fromUtf8(ts_node_type(declarator)) == QStringLiteral("variable_declarator")) {
-                    addVariableDeclarator(declarator);
+                    const QString name = nodeText(fieldNode(declarator, "name"), source);
+                    const TSNode valueNode = fieldNode(declarator, "value");
+                    const QString valueType = QString::fromUtf8(ts_node_type(valueNode));
+                    
+                    QVariantMap symbol;
+                    if (valueType == QStringLiteral("arrow_function")
+                        || valueType == QStringLiteral("function")
+                        || valueType == QStringLiteral("function_expression")) {
+                        symbol = makeSymbol(classifyFunctionName(name), name, nodeLine(declarator),
+                                                     valueType == QStringLiteral("function_expression")
+                                                         ? QStringLiteral("function expression")
+                                                         : (isExported ? QStringLiteral("exported") : QString()),
+                                                     {}, nodeSnippet(child, source));
+                    } else if (valueType == QStringLiteral("class")
+                               || valueType == QStringLiteral("class_expression")) {
+                        const TSNode body = fieldNode(valueNode, "body");
+                        symbol = makeSymbol(QStringLiteral("class"), name, nodeLine(declarator),
+                                                     isExported ? QStringLiteral("exported class expression") : QStringLiteral("class expression"), 
+                                                     parseJsClassMembers(body), nodeSnippet(child, source));
+                    } else if (valueType == QStringLiteral("object")) {
+                        symbol = makeSymbol(QStringLiteral("variable"), name, nodeLine(declarator),
+                                                     isExported ? QStringLiteral("exported object") : QStringLiteral("object"), 
+                                                     parseJsObjectMembers(valueNode), nodeSnippet(child, source));
+                    } else {
+                        symbol = makeSymbol(QStringLiteral("variable"), name, nodeLine(declarator));
+                        if (isExported) symbol.insert(QStringLiteral("detail"), QStringLiteral("exported"));
+                        symbol.insert(QStringLiteral("snippet"), nodeSnippet(child, source));
+                    }
+                    appendSymbolIfNew(symbol);
+
+                    // Check for require in variable declaration
+                    if (valueType == QStringLiteral("call_expression")) {
+                        const QString functionName = nodeText(fieldNode(valueNode, "function"), source);
+                        if (functionName == QStringLiteral("require")) {
+                            TSNode arguments = ts_node_child_by_field_name(valueNode, "arguments", 9);
+                            if (ts_node_named_child_count(arguments) > 0) {
+                                TSNode arg = ts_node_named_child(arguments, 0);
+                                const QString target = nodeValueText(arg, source);
+                                appendDependency(target, QStringLiteral("require"), nodeLine(valueNode));
+                            }
+                        }
+                    }
                 }
             }
         } else if (type == QStringLiteral("expression_statement")) {
             TSNode expression = ts_node_named_child(child, 0);
-            if (QString::fromUtf8(ts_node_type(expression)) == QStringLiteral("assignment_expression")) {
+            const QString exprType = QString::fromUtf8(ts_node_type(expression));
+            if (exprType == QStringLiteral("assignment_expression")) {
                 const QString left = nodeText(fieldNode(expression, "left"), source);
                 TSNode valueNode = fieldNode(expression, "right");
                 const QString valueType = QString::fromUtf8(ts_node_type(valueNode));
                 if (left == QStringLiteral("module.exports") && valueType == QStringLiteral("object")) {
                     const QVariantList members = parseJsObjectMembers(valueNode);
                     appendSymbolIfNew(makeSymbol(QStringLiteral("module"), left, nodeLine(expression),
-                                                 QStringLiteral("CommonJS export object"), members));
+                                                 QStringLiteral("CommonJS export object"), members, nodeSnippet(child, source)));
                     for (const QVariant &memberValue : members) {
                         QVariantMap member = memberValue.toMap();
                         member.insert(QStringLiteral("detail"), QStringLiteral("exported via module.exports"));
@@ -441,11 +589,11 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
                         || valueType == QStringLiteral("function")
                         || valueType == QStringLiteral("function_expression")) {
                         appendSymbolIfNew(makeSymbol(QStringLiteral("function"), exportedName, nodeLine(expression),
-                                                     QStringLiteral("CommonJS export")));
+                                                     QStringLiteral("CommonJS export"), {}, nodeSnippet(child, source)));
                     } else if (valueType == QStringLiteral("object")) {
                         const QVariantList members = parseJsObjectMembers(valueNode);
                         appendSymbolIfNew(makeSymbol(QStringLiteral("module"), exportedName, nodeLine(expression),
-                                                     QStringLiteral("CommonJS export object"), members));
+                                                     QStringLiteral("CommonJS export object"), members, nodeSnippet(child, source)));
                         for (const QVariant &memberValue : members) {
                             QVariantMap member = memberValue.toMap();
                             member.insert(QStringLiteral("detail"),
@@ -454,7 +602,39 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
                         }
                     } else {
                         appendSymbolIfNew(makeSymbol(QStringLiteral("variable"), exportedName, nodeLine(expression),
-                                                     QStringLiteral("CommonJS export")));
+                                                     QStringLiteral("CommonJS export"), {}, nodeSnippet(child, source)));
+                    }
+                }
+            } else if (exprType == QStringLiteral("call_expression")) {
+                const QString functionName = nodeText(fieldNode(expression, "function"), source);
+                if (functionName == QStringLiteral("require")) {
+                    TSNode arguments = ts_node_child_by_field_name(expression, "arguments", 9);
+                    if (ts_node_named_child_count(arguments) > 0) {
+                        TSNode arg = ts_node_named_child(arguments, 0);
+                        const QString target = nodeValueText(arg, source);
+                        appendDependency(target, QStringLiteral("require"), nodeLine(expression));
+                    }
+                } else if (functionName.contains(QStringLiteral("app.")) || functionName.contains(QStringLiteral("router."))) {
+                    // Express route detection
+                    const QString method = functionName.section(QLatin1Char('.'), -1).toUpper();
+                    const QStringList expressMethods = {
+                        QStringLiteral("GET"), QStringLiteral("POST"), QStringLiteral("PUT"), 
+                        QStringLiteral("PATCH"), QStringLiteral("DELETE"), QStringLiteral("USE"),
+                        QStringLiteral("OPTIONS"), QStringLiteral("HEAD")
+                    };
+                    if (expressMethods.contains(method)) {
+                        TSNode arguments = ts_node_child_by_field_name(expression, "arguments", 9);
+                        if (ts_node_named_child_count(arguments) > 0) {
+                            TSNode arg = ts_node_named_child(arguments, 0);
+                            const QString routePath = nodeValueText(arg, source);
+                            QVariantMap route;
+                            route.insert(QStringLiteral("owner"), functionName.section(QLatin1Char('.'), 0, 0));
+                            route.insert(QStringLiteral("method"), method);
+                            route.insert(QStringLiteral("path"), routePath);
+                            route.insert(QStringLiteral("line"), nodeLine(expression));
+                            route.insert(QStringLiteral("label"), method + QStringLiteral(" ") + routePath);
+                            routes.append(route);
+                        }
                     }
                 }
             }
@@ -466,8 +646,34 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
 
     QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), language);
     result.insert(QStringLiteral("symbols"), symbols);
-    result.insert(QStringLiteral("dependencies"), extractDependencyLinks(path, text));
-    result.insert(QStringLiteral("routes"), extractExpressRoutes(text));
+    
+    // Merge Tree-sitter dependencies with regex as fallback
+    QVariantList regexDeps = extractDependencyLinks(path, text);
+    for (const QVariant &dep : regexDeps) {
+        const QVariantMap d = dep.toMap();
+        if (!seenDependencies.contains(d.value(QStringLiteral("type")).toString() + QLatin1Char('|') + d.value(QStringLiteral("target")).toString())) {
+            dependencies.append(dep);
+        }
+    }
+    result.insert(QStringLiteral("dependencies"), dependencies);
+
+    // Merge Tree-sitter routes with regex as fallback
+    QVariantList regexRoutes = extractExpressRoutes(text);
+    for (const QVariant &route : regexRoutes) {
+        bool found = false;
+        const QVariantMap r = route.toMap();
+        for (const QVariant &tsRoute : routes) {
+            if (tsRoute.toMap().value(QStringLiteral("path")).toString() == r.value(QStringLiteral("path")).toString()
+                && tsRoute.toMap().value(QStringLiteral("method")).toString() == r.value(QStringLiteral("method")).toString()) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            routes.append(route);
+        }
+    }
+    result.insert(QStringLiteral("routes"), routes);
     result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
     if (QFileInfo(path).fileName() == QStringLiteral("index.js")) {
         const QString packagePath = QFileInfo(QDir(QFileInfo(path).dir()).filePath(QStringLiteral("package.json"))).absoluteFilePath();
@@ -898,7 +1104,8 @@ QVariantMap SymbolParser::parseCss(const QString &path, const QString &text) con
     while (classIt.hasNext()) {
         const auto match = classIt.next();
         const int line = text.left(match.capturedStart(0)).count(QLatin1Char('\n')) + 1;
-        symbols.append(makeSymbol(QStringLiteral("class"), match.captured(1), line));
+        const QString snippet = text.mid(match.capturedStart(0), 100).split(QLatin1Char('\n')).at(0) + QStringLiteral(" { ... }");
+        symbols.append(makeSymbol(QStringLiteral("class"), match.captured(1), line, QString(), {}, snippet));
     }
 
     QRegularExpression varPattern(QStringLiteral(R"((--[A-Za-z_-][\w-]*)\s*:)"));
@@ -906,7 +1113,8 @@ QVariantMap SymbolParser::parseCss(const QString &path, const QString &text) con
     while (varIt.hasNext()) {
         const auto match = varIt.next();
         const int line = text.left(match.capturedStart(0)).count(QLatin1Char('\n')) + 1;
-        symbols.append(makeSymbol(QStringLiteral("custom-property"), match.captured(1), line));
+        const QString snippet = text.mid(match.capturedStart(0), 100).split(QLatin1Char('\n')).at(0);
+        symbols.append(makeSymbol(QStringLiteral("custom-property"), match.captured(1), line, QString(), {}, snippet));
     }
 
     QVariantMap result;
@@ -991,22 +1199,14 @@ QString SymbolParser::detectLanguage(const QString &path)
     if (suffix == QStringLiteral("tsx")) {
         return QStringLiteral("tsx");
     }
+    if (suffix == QStringLiteral("ts") || suffix == QStringLiteral("mts")
+        || suffix == QStringLiteral("cts") || path.endsWith(QStringLiteral(".d.ts"))) {
+        return QStringLiteral("ts");
+    }
     if (suffix == QStringLiteral("json")) {
         return QStringLiteral("json");
     }
     return QStringLiteral("script");
-}
-
-QVariantMap SymbolParser::makeSymbol(const QString &kind, const QString &name, int line,
-                                     const QString &detail, const QVariantList &members)
-{
-    QVariantMap symbol;
-    symbol.insert(QStringLiteral("kind"), kind);
-    symbol.insert(QStringLiteral("name"), name);
-    symbol.insert(QStringLiteral("line"), line);
-    symbol.insert(QStringLiteral("detail"), detail);
-    symbol.insert(QStringLiteral("members"), members);
-    return symbol;
 }
 
 QVariantList SymbolParser::parseClassMembers(const QString &body, const QString &language)

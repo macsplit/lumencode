@@ -302,6 +302,19 @@ lumencode/fast:
 .PHONY : lumencode/fast
 
 #=============================================================================
+# Target rules for targets named lumencode-cli
+
+# Build rule for target.
+lumencode-cli: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 lumencode-cli
+.PHONY : lumencode-cli
+
+# fast build rule for target.
+lumencode-cli/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli.dir/build.make CMakeFiles/lumencode-cli.dir/build
+.PHONY : lumencode-cli/fast
+
+#=============================================================================
 # Target rules for targets named vendor-tree-sitter_autogen_timestamp_deps
 
 # Build rule for target.
@@ -483,6 +496,56 @@ lumencode_autogen/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode_autogen.dir/build.make CMakeFiles/lumencode_autogen.dir/build
 .PHONY : lumencode_autogen/fast
 
+#=============================================================================
+# Target rules for targets named lumencode-cli_autogen_timestamp_deps
+
+# Build rule for target.
+lumencode-cli_autogen_timestamp_deps: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 lumencode-cli_autogen_timestamp_deps
+.PHONY : lumencode-cli_autogen_timestamp_deps
+
+# fast build rule for target.
+lumencode-cli_autogen_timestamp_deps/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/build.make CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/build
+.PHONY : lumencode-cli_autogen_timestamp_deps/fast
+
+#=============================================================================
+# Target rules for targets named lumencode-cli_autogen
+
+# Build rule for target.
+lumencode-cli_autogen: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 lumencode-cli_autogen
+.PHONY : lumencode-cli_autogen
+
+# fast build rule for target.
+lumencode-cli_autogen/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli_autogen.dir/build.make CMakeFiles/lumencode-cli_autogen.dir/build
+.PHONY : lumencode-cli_autogen/fast
+
+lumencode-cli_autogen/mocs_compilation.o: lumencode-cli_autogen/mocs_compilation.cpp.o
+.PHONY : lumencode-cli_autogen/mocs_compilation.o
+
+# target to build an object file
+lumencode-cli_autogen/mocs_compilation.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli.dir/build.make CMakeFiles/lumencode-cli.dir/lumencode-cli_autogen/mocs_compilation.cpp.o
+.PHONY : lumencode-cli_autogen/mocs_compilation.cpp.o
+
+lumencode-cli_autogen/mocs_compilation.i: lumencode-cli_autogen/mocs_compilation.cpp.i
+.PHONY : lumencode-cli_autogen/mocs_compilation.i
+
+# target to preprocess a source file
+lumencode-cli_autogen/mocs_compilation.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli.dir/build.make CMakeFiles/lumencode-cli.dir/lumencode-cli_autogen/mocs_compilation.cpp.i
+.PHONY : lumencode-cli_autogen/mocs_compilation.cpp.i
+
+lumencode-cli_autogen/mocs_compilation.s: lumencode-cli_autogen/mocs_compilation.cpp.s
+.PHONY : lumencode-cli_autogen/mocs_compilation.s
+
+# target to generate assembly for a file
+lumencode-cli_autogen/mocs_compilation.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli.dir/build.make CMakeFiles/lumencode-cli.dir/lumencode-cli_autogen/mocs_compilation.cpp.s
+.PHONY : lumencode-cli_autogen/mocs_compilation.cpp.s
+
 lumencode_autogen/UVLADIE3JM/qrc_resources.o: lumencode_autogen/UVLADIE3JM/qrc_resources.cpp.o
 .PHONY : lumencode_autogen/UVLADIE3JM/qrc_resources.o
 
@@ -537,6 +600,7 @@ src/filesystemmodel.o: src/filesystemmodel.cpp.o
 # target to build an object file
 src/filesystemmodel.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode.dir/build.make CMakeFiles/lumencode.dir/src/filesystemmodel.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli.dir/build.make CMakeFiles/lumencode-cli.dir/src/filesystemmodel.cpp.o
 .PHONY : src/filesystemmodel.cpp.o
 
 src/filesystemmodel.i: src/filesystemmodel.cpp.i
@@ -545,6 +609,7 @@ src/filesystemmodel.i: src/filesystemmodel.cpp.i
 # target to preprocess a source file
 src/filesystemmodel.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode.dir/build.make CMakeFiles/lumencode.dir/src/filesystemmodel.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli.dir/build.make CMakeFiles/lumencode-cli.dir/src/filesystemmodel.cpp.i
 .PHONY : src/filesystemmodel.cpp.i
 
 src/filesystemmodel.s: src/filesystemmodel.cpp.s
@@ -553,7 +618,32 @@ src/filesystemmodel.s: src/filesystemmodel.cpp.s
 # target to generate assembly for a file
 src/filesystemmodel.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode.dir/build.make CMakeFiles/lumencode.dir/src/filesystemmodel.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli.dir/build.make CMakeFiles/lumencode-cli.dir/src/filesystemmodel.cpp.s
 .PHONY : src/filesystemmodel.cpp.s
+
+src/lumencode-cli.o: src/lumencode-cli.cpp.o
+.PHONY : src/lumencode-cli.o
+
+# target to build an object file
+src/lumencode-cli.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli.dir/build.make CMakeFiles/lumencode-cli.dir/src/lumencode-cli.cpp.o
+.PHONY : src/lumencode-cli.cpp.o
+
+src/lumencode-cli.i: src/lumencode-cli.cpp.i
+.PHONY : src/lumencode-cli.i
+
+# target to preprocess a source file
+src/lumencode-cli.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli.dir/build.make CMakeFiles/lumencode-cli.dir/src/lumencode-cli.cpp.i
+.PHONY : src/lumencode-cli.cpp.i
+
+src/lumencode-cli.s: src/lumencode-cli.cpp.s
+.PHONY : src/lumencode-cli.s
+
+# target to generate assembly for a file
+src/lumencode-cli.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli.dir/build.make CMakeFiles/lumencode-cli.dir/src/lumencode-cli.cpp.s
+.PHONY : src/lumencode-cli.cpp.s
 
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
@@ -585,6 +675,7 @@ src/projectcontroller.o: src/projectcontroller.cpp.o
 # target to build an object file
 src/projectcontroller.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode.dir/build.make CMakeFiles/lumencode.dir/src/projectcontroller.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli.dir/build.make CMakeFiles/lumencode-cli.dir/src/projectcontroller.cpp.o
 .PHONY : src/projectcontroller.cpp.o
 
 src/projectcontroller.i: src/projectcontroller.cpp.i
@@ -593,6 +684,7 @@ src/projectcontroller.i: src/projectcontroller.cpp.i
 # target to preprocess a source file
 src/projectcontroller.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode.dir/build.make CMakeFiles/lumencode.dir/src/projectcontroller.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli.dir/build.make CMakeFiles/lumencode-cli.dir/src/projectcontroller.cpp.i
 .PHONY : src/projectcontroller.cpp.i
 
 src/projectcontroller.s: src/projectcontroller.cpp.s
@@ -601,6 +693,7 @@ src/projectcontroller.s: src/projectcontroller.cpp.s
 # target to generate assembly for a file
 src/projectcontroller.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode.dir/build.make CMakeFiles/lumencode.dir/src/projectcontroller.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli.dir/build.make CMakeFiles/lumencode-cli.dir/src/projectcontroller.cpp.s
 .PHONY : src/projectcontroller.cpp.s
 
 src/symbolparser.o: src/symbolparser.cpp.o
@@ -609,6 +702,7 @@ src/symbolparser.o: src/symbolparser.cpp.o
 # target to build an object file
 src/symbolparser.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode.dir/build.make CMakeFiles/lumencode.dir/src/symbolparser.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli.dir/build.make CMakeFiles/lumencode-cli.dir/src/symbolparser.cpp.o
 .PHONY : src/symbolparser.cpp.o
 
 src/symbolparser.i: src/symbolparser.cpp.i
@@ -617,6 +711,7 @@ src/symbolparser.i: src/symbolparser.cpp.i
 # target to preprocess a source file
 src/symbolparser.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode.dir/build.make CMakeFiles/lumencode.dir/src/symbolparser.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli.dir/build.make CMakeFiles/lumencode-cli.dir/src/symbolparser.cpp.i
 .PHONY : src/symbolparser.cpp.i
 
 src/symbolparser.s: src/symbolparser.cpp.s
@@ -625,6 +720,7 @@ src/symbolparser.s: src/symbolparser.cpp.s
 # target to generate assembly for a file
 src/symbolparser.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode.dir/build.make CMakeFiles/lumencode.dir/src/symbolparser.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli.dir/build.make CMakeFiles/lumencode-cli.dir/src/symbolparser.cpp.s
 .PHONY : src/symbolparser.cpp.s
 
 third_party/tree-sitter-css/src/parser.o: third_party/tree-sitter-css/src/parser.c.o
@@ -1050,6 +1146,8 @@ help:
 	@echo "... test"
 	@echo "... KF5CoreAddons_QCH"
 	@echo "... fetch-translations"
+	@echo "... lumencode-cli_autogen"
+	@echo "... lumencode-cli_autogen_timestamp_deps"
 	@echo "... lumencode_autogen"
 	@echo "... lumencode_autogen_timestamp_deps"
 	@echo "... uninstall"
@@ -1066,12 +1164,16 @@ help:
 	@echo "... vendor-tree-sitter_autogen"
 	@echo "... vendor-tree-sitter_autogen_timestamp_deps"
 	@echo "... lumencode"
+	@echo "... lumencode-cli"
 	@echo "... vendor-tree-sitter"
 	@echo "... vendor-tree-sitter-css"
 	@echo "... vendor-tree-sitter-javascript"
 	@echo "... vendor-tree-sitter-php"
 	@echo "... vendor-tree-sitter-tsx"
 	@echo "... vendor-tree-sitter-typescript"
+	@echo "... lumencode-cli_autogen/mocs_compilation.o"
+	@echo "... lumencode-cli_autogen/mocs_compilation.i"
+	@echo "... lumencode-cli_autogen/mocs_compilation.s"
 	@echo "... lumencode_autogen/UVLADIE3JM/qrc_resources.o"
 	@echo "... lumencode_autogen/UVLADIE3JM/qrc_resources.i"
 	@echo "... lumencode_autogen/UVLADIE3JM/qrc_resources.s"
@@ -1081,6 +1183,9 @@ help:
 	@echo "... src/filesystemmodel.o"
 	@echo "... src/filesystemmodel.i"
 	@echo "... src/filesystemmodel.s"
+	@echo "... src/lumencode-cli.o"
+	@echo "... src/lumencode-cli.i"
+	@echo "... src/lumencode-cli.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"

@@ -70,6 +70,7 @@ all: CMakeFiles/vendor-tree-sitter-tsx.dir/all
 all: CMakeFiles/vendor-tree-sitter-php.dir/all
 all: CMakeFiles/vendor-tree-sitter-css.dir/all
 all: CMakeFiles/lumencode.dir/all
+all: CMakeFiles/lumencode-cli.dir/all
 .PHONY : all
 
 # The main recursive "preinstall" target.
@@ -87,6 +88,7 @@ clean: CMakeFiles/vendor-tree-sitter-tsx.dir/clean
 clean: CMakeFiles/vendor-tree-sitter-php.dir/clean
 clean: CMakeFiles/vendor-tree-sitter-css.dir/clean
 clean: CMakeFiles/lumencode.dir/clean
+clean: CMakeFiles/lumencode-cli.dir/clean
 clean: CMakeFiles/vendor-tree-sitter_autogen_timestamp_deps.dir/clean
 clean: CMakeFiles/vendor-tree-sitter_autogen.dir/clean
 clean: CMakeFiles/vendor-tree-sitter-javascript_autogen_timestamp_deps.dir/clean
@@ -101,6 +103,8 @@ clean: CMakeFiles/vendor-tree-sitter-css_autogen_timestamp_deps.dir/clean
 clean: CMakeFiles/vendor-tree-sitter-css_autogen.dir/clean
 clean: CMakeFiles/lumencode_autogen_timestamp_deps.dir/clean
 clean: CMakeFiles/lumencode_autogen.dir/clean
+clean: CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/clean
+clean: CMakeFiles/lumencode-cli_autogen.dir/clean
 .PHONY : clean
 
 #=============================================================================
@@ -189,7 +193,7 @@ CMakeFiles/vendor-tree-sitter.dir/all: CMakeFiles/vendor-tree-sitter_autogen_tim
 CMakeFiles/vendor-tree-sitter.dir/all: CMakeFiles/vendor-tree-sitter_autogen.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter.dir/build.make CMakeFiles/vendor-tree-sitter.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter.dir/build.make CMakeFiles/vendor-tree-sitter.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=13,14,15,16 "Built target vendor-tree-sitter"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=21,22,23,24 "Built target vendor-tree-sitter"
 .PHONY : CMakeFiles/vendor-tree-sitter.dir/all
 
 # Build rule for subdir invocation for target.
@@ -216,7 +220,7 @@ CMakeFiles/vendor-tree-sitter-javascript.dir/all: CMakeFiles/vendor-tree-sitter-
 CMakeFiles/vendor-tree-sitter-javascript.dir/all: CMakeFiles/vendor-tree-sitter-javascript_autogen.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-javascript.dir/build.make CMakeFiles/vendor-tree-sitter-javascript.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-javascript.dir/build.make CMakeFiles/vendor-tree-sitter-javascript.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=23,24,25,26,27 "Built target vendor-tree-sitter-javascript"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=31,32,33,34,35 "Built target vendor-tree-sitter-javascript"
 .PHONY : CMakeFiles/vendor-tree-sitter-javascript.dir/all
 
 # Build rule for subdir invocation for target.
@@ -243,7 +247,7 @@ CMakeFiles/vendor-tree-sitter-typescript.dir/all: CMakeFiles/vendor-tree-sitter-
 CMakeFiles/vendor-tree-sitter-typescript.dir/all: CMakeFiles/vendor-tree-sitter-typescript_autogen.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-typescript.dir/build.make CMakeFiles/vendor-tree-sitter-typescript.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-typescript.dir/build.make CMakeFiles/vendor-tree-sitter-typescript.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=41,42,43,44,45 "Built target vendor-tree-sitter-typescript"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=49,50,51,52,53 "Built target vendor-tree-sitter-typescript"
 .PHONY : CMakeFiles/vendor-tree-sitter-typescript.dir/all
 
 # Build rule for subdir invocation for target.
@@ -270,7 +274,7 @@ CMakeFiles/vendor-tree-sitter-tsx.dir/all: CMakeFiles/vendor-tree-sitter-tsx_aut
 CMakeFiles/vendor-tree-sitter-tsx.dir/all: CMakeFiles/vendor-tree-sitter-tsx_autogen.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-tsx.dir/build.make CMakeFiles/vendor-tree-sitter-tsx.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-tsx.dir/build.make CMakeFiles/vendor-tree-sitter-tsx.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=35,36,37,38,39 "Built target vendor-tree-sitter-tsx"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=43,44,45,46,47 "Built target vendor-tree-sitter-tsx"
 .PHONY : CMakeFiles/vendor-tree-sitter-tsx.dir/all
 
 # Build rule for subdir invocation for target.
@@ -297,7 +301,7 @@ CMakeFiles/vendor-tree-sitter-php.dir/all: CMakeFiles/vendor-tree-sitter-php_aut
 CMakeFiles/vendor-tree-sitter-php.dir/all: CMakeFiles/vendor-tree-sitter-php_autogen.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-php.dir/build.make CMakeFiles/vendor-tree-sitter-php.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-php.dir/build.make CMakeFiles/vendor-tree-sitter-php.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=29,30,31,32,33 "Built target vendor-tree-sitter-php"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=37,38,39,40,41 "Built target vendor-tree-sitter-php"
 .PHONY : CMakeFiles/vendor-tree-sitter-php.dir/all
 
 # Build rule for subdir invocation for target.
@@ -324,7 +328,7 @@ CMakeFiles/vendor-tree-sitter-css.dir/all: CMakeFiles/vendor-tree-sitter-css_aut
 CMakeFiles/vendor-tree-sitter-css.dir/all: CMakeFiles/vendor-tree-sitter-css_autogen.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-css.dir/build.make CMakeFiles/vendor-tree-sitter-css.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-css.dir/build.make CMakeFiles/vendor-tree-sitter-css.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=17,18,19,20,21 "Built target vendor-tree-sitter-css"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=25,26,27,28,29 "Built target vendor-tree-sitter-css"
 .PHONY : CMakeFiles/vendor-tree-sitter-css.dir/all
 
 # Build rule for subdir invocation for target.
@@ -377,6 +381,39 @@ CMakeFiles/lumencode.dir/clean:
 .PHONY : CMakeFiles/lumencode.dir/clean
 
 #=============================================================================
+# Target rules for target CMakeFiles/lumencode-cli.dir
+
+# All Build rule for target.
+CMakeFiles/lumencode-cli.dir/all: CMakeFiles/vendor-tree-sitter.dir/all
+CMakeFiles/lumencode-cli.dir/all: CMakeFiles/vendor-tree-sitter-javascript.dir/all
+CMakeFiles/lumencode-cli.dir/all: CMakeFiles/vendor-tree-sitter-typescript.dir/all
+CMakeFiles/lumencode-cli.dir/all: CMakeFiles/vendor-tree-sitter-tsx.dir/all
+CMakeFiles/lumencode-cli.dir/all: CMakeFiles/vendor-tree-sitter-php.dir/all
+CMakeFiles/lumencode-cli.dir/all: CMakeFiles/vendor-tree-sitter-css.dir/all
+CMakeFiles/lumencode-cli.dir/all: CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/all
+CMakeFiles/lumencode-cli.dir/all: CMakeFiles/lumencode-cli_autogen.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli.dir/build.make CMakeFiles/lumencode-cli.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli.dir/build.make CMakeFiles/lumencode-cli.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=12,13,14,15,16,17,18 "Built target lumencode-cli"
+.PHONY : CMakeFiles/lumencode-cli.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/lumencode-cli.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/user/Code/OpenSource/lumencode/build/CMakeFiles 43
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/lumencode-cli.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/user/Code/OpenSource/lumencode/build/CMakeFiles 0
+.PHONY : CMakeFiles/lumencode-cli.dir/rule
+
+# Convenience name for target.
+lumencode-cli: CMakeFiles/lumencode-cli.dir/rule
+.PHONY : lumencode-cli
+
+# clean rule for target.
+CMakeFiles/lumencode-cli.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli.dir/build.make CMakeFiles/lumencode-cli.dir/clean
+.PHONY : CMakeFiles/lumencode-cli.dir/clean
+
+#=============================================================================
 # Target rules for target CMakeFiles/vendor-tree-sitter_autogen_timestamp_deps.dir
 
 # All Build rule for target.
@@ -409,7 +446,7 @@ CMakeFiles/vendor-tree-sitter_autogen_timestamp_deps.dir/clean:
 CMakeFiles/vendor-tree-sitter_autogen.dir/all: CMakeFiles/vendor-tree-sitter_autogen_timestamp_deps.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter_autogen.dir/build.make CMakeFiles/vendor-tree-sitter_autogen.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter_autogen.dir/build.make CMakeFiles/vendor-tree-sitter_autogen.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=47 "Built target vendor-tree-sitter_autogen"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=55 "Built target vendor-tree-sitter_autogen"
 .PHONY : CMakeFiles/vendor-tree-sitter_autogen.dir/all
 
 # Build rule for subdir invocation for target.
@@ -461,7 +498,7 @@ CMakeFiles/vendor-tree-sitter-javascript_autogen_timestamp_deps.dir/clean:
 CMakeFiles/vendor-tree-sitter-javascript_autogen.dir/all: CMakeFiles/vendor-tree-sitter-javascript_autogen_timestamp_deps.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-javascript_autogen.dir/build.make CMakeFiles/vendor-tree-sitter-javascript_autogen.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-javascript_autogen.dir/build.make CMakeFiles/vendor-tree-sitter-javascript_autogen.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=28 "Built target vendor-tree-sitter-javascript_autogen"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=36 "Built target vendor-tree-sitter-javascript_autogen"
 .PHONY : CMakeFiles/vendor-tree-sitter-javascript_autogen.dir/all
 
 # Build rule for subdir invocation for target.
@@ -513,7 +550,7 @@ CMakeFiles/vendor-tree-sitter-typescript_autogen_timestamp_deps.dir/clean:
 CMakeFiles/vendor-tree-sitter-typescript_autogen.dir/all: CMakeFiles/vendor-tree-sitter-typescript_autogen_timestamp_deps.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-typescript_autogen.dir/build.make CMakeFiles/vendor-tree-sitter-typescript_autogen.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-typescript_autogen.dir/build.make CMakeFiles/vendor-tree-sitter-typescript_autogen.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=46 "Built target vendor-tree-sitter-typescript_autogen"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=54 "Built target vendor-tree-sitter-typescript_autogen"
 .PHONY : CMakeFiles/vendor-tree-sitter-typescript_autogen.dir/all
 
 # Build rule for subdir invocation for target.
@@ -565,7 +602,7 @@ CMakeFiles/vendor-tree-sitter-tsx_autogen_timestamp_deps.dir/clean:
 CMakeFiles/vendor-tree-sitter-tsx_autogen.dir/all: CMakeFiles/vendor-tree-sitter-tsx_autogen_timestamp_deps.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-tsx_autogen.dir/build.make CMakeFiles/vendor-tree-sitter-tsx_autogen.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-tsx_autogen.dir/build.make CMakeFiles/vendor-tree-sitter-tsx_autogen.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=40 "Built target vendor-tree-sitter-tsx_autogen"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=48 "Built target vendor-tree-sitter-tsx_autogen"
 .PHONY : CMakeFiles/vendor-tree-sitter-tsx_autogen.dir/all
 
 # Build rule for subdir invocation for target.
@@ -617,7 +654,7 @@ CMakeFiles/vendor-tree-sitter-php_autogen_timestamp_deps.dir/clean:
 CMakeFiles/vendor-tree-sitter-php_autogen.dir/all: CMakeFiles/vendor-tree-sitter-php_autogen_timestamp_deps.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-php_autogen.dir/build.make CMakeFiles/vendor-tree-sitter-php_autogen.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-php_autogen.dir/build.make CMakeFiles/vendor-tree-sitter-php_autogen.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=34 "Built target vendor-tree-sitter-php_autogen"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=42 "Built target vendor-tree-sitter-php_autogen"
 .PHONY : CMakeFiles/vendor-tree-sitter-php_autogen.dir/all
 
 # Build rule for subdir invocation for target.
@@ -669,7 +706,7 @@ CMakeFiles/vendor-tree-sitter-css_autogen_timestamp_deps.dir/clean:
 CMakeFiles/vendor-tree-sitter-css_autogen.dir/all: CMakeFiles/vendor-tree-sitter-css_autogen_timestamp_deps.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-css_autogen.dir/build.make CMakeFiles/vendor-tree-sitter-css_autogen.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vendor-tree-sitter-css_autogen.dir/build.make CMakeFiles/vendor-tree-sitter-css_autogen.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=22 "Built target vendor-tree-sitter-css_autogen"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=30 "Built target vendor-tree-sitter-css_autogen"
 .PHONY : CMakeFiles/vendor-tree-sitter-css_autogen.dir/all
 
 # Build rule for subdir invocation for target.
@@ -726,7 +763,7 @@ CMakeFiles/lumencode_autogen_timestamp_deps.dir/clean:
 CMakeFiles/lumencode_autogen.dir/all: CMakeFiles/lumencode_autogen_timestamp_deps.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode_autogen.dir/build.make CMakeFiles/lumencode_autogen.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode_autogen.dir/build.make CMakeFiles/lumencode_autogen.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=12 "Built target lumencode_autogen"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=20 "Built target lumencode_autogen"
 .PHONY : CMakeFiles/lumencode_autogen.dir/all
 
 # Build rule for subdir invocation for target.
@@ -744,6 +781,63 @@ lumencode_autogen: CMakeFiles/lumencode_autogen.dir/rule
 CMakeFiles/lumencode_autogen.dir/clean:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode_autogen.dir/build.make CMakeFiles/lumencode_autogen.dir/clean
 .PHONY : CMakeFiles/lumencode_autogen.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir
+
+# All Build rule for target.
+CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/all: CMakeFiles/vendor-tree-sitter.dir/all
+CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/all: CMakeFiles/vendor-tree-sitter-javascript.dir/all
+CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/all: CMakeFiles/vendor-tree-sitter-typescript.dir/all
+CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/all: CMakeFiles/vendor-tree-sitter-tsx.dir/all
+CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/all: CMakeFiles/vendor-tree-sitter-php.dir/all
+CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/all: CMakeFiles/vendor-tree-sitter-css.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/build.make CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/build.make CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num= "Built target lumencode-cli_autogen_timestamp_deps"
+.PHONY : CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/user/Code/OpenSource/lumencode/build/CMakeFiles 35
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/user/Code/OpenSource/lumencode/build/CMakeFiles 0
+.PHONY : CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/rule
+
+# Convenience name for target.
+lumencode-cli_autogen_timestamp_deps: CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/rule
+.PHONY : lumencode-cli_autogen_timestamp_deps
+
+# clean rule for target.
+CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/build.make CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/clean
+.PHONY : CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/lumencode-cli_autogen.dir
+
+# All Build rule for target.
+CMakeFiles/lumencode-cli_autogen.dir/all: CMakeFiles/lumencode-cli_autogen_timestamp_deps.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli_autogen.dir/build.make CMakeFiles/lumencode-cli_autogen.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli_autogen.dir/build.make CMakeFiles/lumencode-cli_autogen.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=19 "Built target lumencode-cli_autogen"
+.PHONY : CMakeFiles/lumencode-cli_autogen.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/lumencode-cli_autogen.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/user/Code/OpenSource/lumencode/build/CMakeFiles 36
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/lumencode-cli_autogen.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/user/Code/OpenSource/lumencode/build/CMakeFiles 0
+.PHONY : CMakeFiles/lumencode-cli_autogen.dir/rule
+
+# Convenience name for target.
+lumencode-cli_autogen: CMakeFiles/lumencode-cli_autogen.dir/rule
+.PHONY : lumencode-cli_autogen
+
+# clean rule for target.
+CMakeFiles/lumencode-cli_autogen.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lumencode-cli_autogen.dir/build.make CMakeFiles/lumencode-cli_autogen.dir/clean
+.PHONY : CMakeFiles/lumencode-cli_autogen.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

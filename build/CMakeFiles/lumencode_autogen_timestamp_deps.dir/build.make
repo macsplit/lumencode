@@ -66,18 +66,18 @@ include CMakeFiles/lumencode_autogen_timestamp_deps.dir/compiler_depend.make
 # Include the progress variables for this target.
 include CMakeFiles/lumencode_autogen_timestamp_deps.dir/progress.make
 
-CMakeFiles/lumencode_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt5Core.so.5.15.13
-CMakeFiles/lumencode_autogen_timestamp_deps: /usr/lib/qt5/bin/moc
-CMakeFiles/lumencode_autogen_timestamp_deps: lib/libvendor-tree-sitter-javascript.a
-CMakeFiles/lumencode_autogen_timestamp_deps: lib/libvendor-tree-sitter-css.a
-CMakeFiles/lumencode_autogen_timestamp_deps: lib/libvendor-tree-sitter-typescript.a
-CMakeFiles/lumencode_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt5QuickControls2.so.5.15.13
-CMakeFiles/lumencode_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt5Quick.so.5.15.13
-CMakeFiles/lumencode_autogen_timestamp_deps: lib/libvendor-tree-sitter-php.a
 CMakeFiles/lumencode_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5.15.13
-CMakeFiles/lumencode_autogen_timestamp_deps: lib/libvendor-tree-sitter-tsx.a
+CMakeFiles/lumencode_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt5Core.so.5.15.13
+CMakeFiles/lumencode_autogen_timestamp_deps: lib/libvendor-tree-sitter-typescript.a
+CMakeFiles/lumencode_autogen_timestamp_deps: /usr/lib/qt5/bin/moc
+CMakeFiles/lumencode_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt5QuickControls2.so.5.15.13
+CMakeFiles/lumencode_autogen_timestamp_deps: lib/libvendor-tree-sitter-css.a
+CMakeFiles/lumencode_autogen_timestamp_deps: lib/libvendor-tree-sitter-javascript.a
+CMakeFiles/lumencode_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt5Quick.so.5.15.13
 CMakeFiles/lumencode_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libKF5Kirigami2.so.5.115.0
+CMakeFiles/lumencode_autogen_timestamp_deps: lib/libvendor-tree-sitter-tsx.a
 CMakeFiles/lumencode_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libKF5CoreAddons.so.5.115.0
+CMakeFiles/lumencode_autogen_timestamp_deps: lib/libvendor-tree-sitter-php.a
 CMakeFiles/lumencode_autogen_timestamp_deps: lib/libvendor-tree-sitter.a
 
 lumencode_autogen_timestamp_deps: CMakeFiles/lumencode_autogen_timestamp_deps

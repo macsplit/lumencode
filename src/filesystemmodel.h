@@ -40,6 +40,7 @@ public:
     Q_INVOKABLE void setRootPath(const QString &path);
     Q_INVOKABLE void toggleExpanded(const QString &path);
     Q_INVOKABLE bool isExpanded(const QString &path) const;
+    QVariantMap collectStats() const;
 
 signals:
     void visibleEntriesChanged();

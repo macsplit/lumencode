@@ -71,7 +71,7 @@ CMakeFiles/vendor-tree-sitter_autogen: vendor-tree-sitter_autogen/timestamp
 vendor-tree-sitter_autogen/timestamp: /usr/lib/qt5/bin/moc
 vendor-tree-sitter_autogen/timestamp: CMakeFiles/vendor-tree-sitter_autogen.dir/compiler_depend.ts
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/user/Code/OpenSource/lumencode/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Automatic MOC for target vendor-tree-sitter"
-	/usr/bin/cmake -E cmake_autogen /home/user/Code/OpenSource/lumencode/build/CMakeFiles/vendor-tree-sitter_autogen.dir/AutogenInfo.json ""
+	/usr/bin/cmake -E cmake_autogen /home/user/Code/OpenSource/lumencode/build/CMakeFiles/vendor-tree-sitter_autogen.dir/AutogenInfo.json Debug
 	/usr/bin/cmake -E touch /home/user/Code/OpenSource/lumencode/build/vendor-tree-sitter_autogen/timestamp
 
 vendor-tree-sitter_autogen: CMakeFiles/vendor-tree-sitter_autogen
