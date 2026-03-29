@@ -155,6 +155,48 @@ static QVariantMap findCssClassSummaryEntry(const QString &cssPath, const QStrin
     return makeCssClassSummaryEntry(name, true, cssPath, line, snippet);
 }
 
+static int lineNumberAtOffset(const QString &text, int offset)
+{
+    return text.left(qMax(0, offset)).count(QLatin1Char('\n')) + 1;
+}
+
+static QString snippetFromLine(const QString &text, int lineNumber, int contextLines = 0)
+{
+    if (text.isEmpty() || lineNumber <= 0) {
+        return {};
+    }
+
+    const QStringList lines = text.split(QLatin1Char('\n'));
+    if (lineNumber > lines.size()) {
+        return {};
+    }
+
+    const int start = qMax(0, lineNumber - 1 - contextLines);
+    const int end = qMin(lines.size(), lineNumber + contextLines);
+    QString snippet = lines.mid(start, end - start).join(QLatin1Char('\n')).trimmed();
+    if (snippet.size() > 220) {
+        snippet = snippet.left(220).trimmed() + QStringLiteral(" ...");
+    }
+    return snippet;
+}
+
+static QVariantMap makeSourceContextItem(const QString &sourcePath,
+                                         const QString &sourceLanguage,
+                                         int line,
+                                         const QString &snippet,
+                                         const QString &detail = QString())
+{
+    QVariantMap item;
+    item.insert(QStringLiteral("sourcePath"), sourcePath);
+    item.insert(QStringLiteral("sourceLanguage"), sourceLanguage);
+    item.insert(QStringLiteral("line"), line);
+    item.insert(QStringLiteral("snippet"), snippet);
+    if (!detail.isEmpty()) {
+        item.insert(QStringLiteral("detail"), detail);
+    }
+    return item;
+}
+
 QVariantMap SymbolParser::makeSymbol(const QString &kind, const QString &name, int line,
                                      const QString &detail, const QVariantList &members,
                                      const QString &snippet)
@@ -235,6 +277,18 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
     }
     if (language == QStringLiteral("json")) {
         return parseJson(path, text);
+    }
+    if (language == QStringLiteral("python")) {
+        return parsePython(path, text);
+    }
+    if (language == QStringLiteral("cpp")) {
+        return parseCppLike(path, text, language);
+    }
+    if (language == QStringLiteral("java")) {
+        return parseJava(path, text);
+    }
+    if (language == QStringLiteral("csharp")) {
+        return parseCSharp(path, text);
     }
     return result;
 }
@@ -472,16 +526,17 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
     QVariantList routes;
     QSet<QString> seenDependencies;
 
-    auto appendDependency = [&](const QString &target, const QString &type, int line) {
+    auto appendDependency = [&](const QString &target, const QString &type, int line, const QString &snippet = QString()) {
         if (seenDependencies.contains(type + QLatin1Char('|') + target)) {
             return;
         }
         seenDependencies.insert(type + QLatin1Char('|') + target);
 
-        QVariantMap item;
+        QVariantMap item = makeSourceContextItem(path, language, line,
+                                                 snippet.isEmpty() ? snippetFromLine(text, line, 1) : snippet,
+                                                 QStringLiteral("%1 dependency").arg(type));
         item.insert(QStringLiteral("target"), target);
         item.insert(QStringLiteral("type"), type);
-        item.insert(QStringLiteral("line"), line);
         item.insert(QStringLiteral("label"), target);
 
         const QDir dir = QFileInfo(path).dir();
@@ -523,7 +578,7 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
         if (originalType == QStringLiteral("import_statement")) {
             const TSNode sourceNode = fieldNode(originalNode, "source");
             const QString target = nodeValueText(sourceNode, source);
-            appendDependency(target, QStringLiteral("import"), nodeLine(originalNode));
+            appendDependency(target, QStringLiteral("import"), nodeLine(originalNode), nodeSnippet(originalNode, source, 2));
             continue;
         }
 
@@ -531,7 +586,7 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
             const TSNode sourceNode = fieldNode(originalNode, "source");
             if (!ts_node_is_null(sourceNode)) {
                 const QString target = nodeValueText(sourceNode, source);
-                appendDependency(target, QStringLiteral("export"), nodeLine(originalNode));
+                appendDependency(target, QStringLiteral("export"), nodeLine(originalNode), nodeSnippet(originalNode, source, 2));
             }
         }
 
@@ -606,7 +661,7 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
                             if (ts_node_named_child_count(arguments) > 0) {
                                 TSNode arg = ts_node_named_child(arguments, 0);
                                 const QString target = nodeValueText(arg, source);
-                                appendDependency(target, QStringLiteral("require"), nodeLine(valueNode));
+                                appendDependency(target, QStringLiteral("require"), nodeLine(valueNode), nodeSnippet(valueNode, source, 2));
                             }
                         }
                     }
@@ -659,7 +714,7 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
                     if (ts_node_named_child_count(arguments) > 0) {
                         TSNode arg = ts_node_named_child(arguments, 0);
                         const QString target = nodeValueText(arg, source);
-                        appendDependency(target, QStringLiteral("require"), nodeLine(expression));
+                        appendDependency(target, QStringLiteral("require"), nodeLine(expression), nodeSnippet(expression, source, 2));
                     }
                 } else if (functionName.contains(QStringLiteral("app.")) || functionName.contains(QStringLiteral("router."))) {
                     // Express route detection
@@ -674,11 +729,12 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
                         if (ts_node_named_child_count(arguments) > 0) {
                             TSNode arg = ts_node_named_child(arguments, 0);
                             const QString routePath = nodeValueText(arg, source);
-                            QVariantMap route;
+                            QVariantMap route = makeSourceContextItem(path, language, nodeLine(expression),
+                                                                      nodeSnippet(expression, source, 2),
+                                                                      QStringLiteral("route"));
                             route.insert(QStringLiteral("owner"), functionName.section(QLatin1Char('.'), 0, 0));
                             route.insert(QStringLiteral("method"), method);
                             route.insert(QStringLiteral("path"), routePath);
-                            route.insert(QStringLiteral("line"), nodeLine(expression));
                             route.insert(QStringLiteral("label"), method + QStringLiteral(" ") + routePath);
                             routes.append(route);
                         }
@@ -789,6 +845,215 @@ QVariantMap SymbolParser::parseCssTreeSitter(const QString &path, const QString 
     QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("css"));
     result.insert(QStringLiteral("symbols"), symbols);
     result.insert(QStringLiteral("summary"), QStringLiteral("%1 selectors and variables").arg(symbols.size()));
+    return result;
+}
+
+QVariantMap SymbolParser::parsePython(const QString &path, const QString &text) const
+{
+    QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("python"));
+    QVariantList symbols;
+    QSet<QString> seenNames;
+
+    auto appendSymbol = [&](const QVariantMap &symbol) {
+        const QString name = symbol.value(QStringLiteral("name")).toString();
+        if (name.isEmpty() || seenNames.contains(name)) {
+            return;
+        }
+        seenNames.insert(name);
+        symbols.append(symbol);
+    };
+
+    QRegularExpression classPattern(QStringLiteral(R"(^([ \t]*)class\s+([A-Za-z_]\w*)(?:\([^)]*\))?\s*:)"),
+                                    QRegularExpression::MultilineOption);
+    auto classIt = classPattern.globalMatch(text);
+    while (classIt.hasNext()) {
+        const auto match = classIt.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        const QString indent = match.captured(1);
+        const QString name = match.captured(2);
+        QVariantList members;
+        QRegularExpression memberPattern(QStringLiteral(R"(^%1[ \t]+def\s+([A-Za-z_]\w*)\s*\()")
+                                             .arg(QRegularExpression::escape(indent)),
+                                         QRegularExpression::MultilineOption);
+        auto memberIt = memberPattern.globalMatch(text.mid(match.capturedEnd(0)));
+        while (memberIt.hasNext()) {
+            const auto member = memberIt.next();
+            const QString memberName = member.captured(1);
+            if (memberName.isEmpty()) {
+                continue;
+            }
+            const int memberLine = line + text.mid(match.capturedEnd(0), member.capturedStart(0)).count(QLatin1Char('\n')) + 1;
+            members.append(makeSymbol(QStringLiteral("method"), memberName, memberLine, QString(), {},
+                                      snippetFromLine(text, memberLine, 1)));
+        }
+        appendSymbol(makeSymbol(QStringLiteral("class"), name, line, QString(), members,
+                                snippetFromLine(text, line, 2)));
+    }
+
+    QRegularExpression functionPattern(QStringLiteral(R"(^([ \t]*)def\s+([A-Za-z_]\w*)\s*\()"),
+                                       QRegularExpression::MultilineOption);
+    auto functionIt = functionPattern.globalMatch(text);
+    while (functionIt.hasNext()) {
+        const auto match = functionIt.next();
+        if (!match.captured(1).isEmpty()) {
+            continue;
+        }
+        const QString name = match.captured(2);
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        appendSymbol(makeSymbol(QStringLiteral("function"), name, line, QString(), {},
+                                snippetFromLine(text, line, 2)));
+    }
+
+    result.insert(QStringLiteral("symbols"), symbols);
+    result.insert(QStringLiteral("dependencies"), extractPythonDependencies(text));
+    result.insert(QStringLiteral("routes"), extractPythonRoutes(path, text));
+    result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
+    result.insert(QStringLiteral("summary"), QStringLiteral("%1 top-level symbols").arg(symbols.size()));
+    return result;
+}
+
+QVariantMap SymbolParser::parseCppLike(const QString &path, const QString &text, const QString &language) const
+{
+    QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), language);
+    QVariantList symbols;
+    QSet<QString> seenNames;
+
+    auto appendSymbol = [&](const QVariantMap &symbol) {
+        const QString name = symbol.value(QStringLiteral("name")).toString();
+        if (name.isEmpty() || seenNames.contains(name)) {
+            return;
+        }
+        seenNames.insert(name);
+        symbols.append(symbol);
+    };
+
+    QRegularExpression classPattern(QStringLiteral(R"(^\s*(class|struct)\s+([A-Za-z_]\w*))"),
+                                    QRegularExpression::MultilineOption);
+    auto classIt = classPattern.globalMatch(text);
+    while (classIt.hasNext()) {
+        const auto match = classIt.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        appendSymbol(makeSymbol(match.captured(1) == QStringLiteral("struct") ? QStringLiteral("struct")
+                                                                              : QStringLiteral("class"),
+                                match.captured(2), line, QString(), {}, snippetFromLine(text, line, 2)));
+    }
+
+    QRegularExpression functionPattern(
+        QStringLiteral(R"(^\s*(?:template\s*<[^>]+>\s*)?(?:inline\s+|static\s+|virtual\s+|constexpr\s+|friend\s+)?(?:[\w:<>~*&]+\s+)+([A-Za-z_~]\w*)\s*\([^;{}]*\)\s*(?:const\s*)?(?:\{|$))"),
+        QRegularExpression::MultilineOption);
+    auto functionIt = functionPattern.globalMatch(text);
+    while (functionIt.hasNext()) {
+        const auto match = functionIt.next();
+        const QString name = match.captured(1);
+        if (name == QStringLiteral("if") || name == QStringLiteral("while") || name == QStringLiteral("switch")
+            || name == QStringLiteral("for") || name == QStringLiteral("catch")) {
+            continue;
+        }
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        appendSymbol(makeSymbol(QStringLiteral("function"), name, line, QString(), {},
+                                snippetFromLine(text, line, 2)));
+    }
+
+    result.insert(QStringLiteral("symbols"), symbols);
+    result.insert(QStringLiteral("dependencies"), extractCppDependencies(path, text));
+    result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
+    result.insert(QStringLiteral("summary"), QStringLiteral("%1 top-level symbols").arg(symbols.size()));
+    return result;
+}
+
+QVariantMap SymbolParser::parseJava(const QString &path, const QString &text) const
+{
+    QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("java"));
+    QVariantList symbols;
+
+    QRegularExpression classPattern(QStringLiteral(R"(^\s*(?:public|protected|private|abstract|final)?\s*(class|interface|enum)\s+([A-Za-z_]\w*))"),
+                                    QRegularExpression::MultilineOption);
+    auto classIt = classPattern.globalMatch(text);
+    while (classIt.hasNext()) {
+        const auto match = classIt.next();
+        const QString kind = match.captured(1) == QStringLiteral("interface") ? QStringLiteral("interface")
+                               : (match.captured(1) == QStringLiteral("enum") ? QStringLiteral("enum")
+                                                                               : QStringLiteral("class"));
+        const QString name = match.captured(2);
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        QVariantList members;
+        QRegularExpression methodPattern(
+            QStringLiteral(R"(^\s*(?:public|protected|private|static|final|abstract|synchronized|native|\s)+[\w<>\[\],.?]+\s+([A-Za-z_]\w*)\s*\([^;{}]*\)\s*(?:throws\s+[^{]+)?\{)"),
+            QRegularExpression::MultilineOption);
+        auto methodIt = methodPattern.globalMatch(text);
+        while (methodIt.hasNext()) {
+            const auto method = methodIt.next();
+            const QString methodName = method.captured(1);
+            if (methodName == name) {
+                continue;
+            }
+            const int methodLine = lineNumberAtOffset(text, method.capturedStart(0));
+            members.append(makeSymbol(QStringLiteral("method"), methodName, methodLine, QString(), {},
+                                      snippetFromLine(text, methodLine, 1)));
+        }
+        symbols.append(makeSymbol(kind, name, line, QString(), members, snippetFromLine(text, line, 3)));
+    }
+
+    result.insert(QStringLiteral("symbols"), symbols);
+    result.insert(QStringLiteral("dependencies"), extractJavaDependencies(text));
+    result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
+    result.insert(QStringLiteral("summary"), QStringLiteral("%1 top-level symbols").arg(symbols.size()));
+    return result;
+}
+
+QVariantMap SymbolParser::parseCSharp(const QString &path, const QString &text) const
+{
+    QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("csharp"));
+    QVariantList symbols;
+    QSet<QString> seenNames;
+
+    auto appendSymbol = [&](const QVariantMap &symbol) {
+        const QString name = symbol.value(QStringLiteral("name")).toString();
+        if (name.isEmpty() || seenNames.contains(name)) {
+            return;
+        }
+        seenNames.insert(name);
+        symbols.append(symbol);
+    };
+
+    QRegularExpression typePattern(
+        QStringLiteral(R"(^\s*(?:public|protected|private|internal|abstract|sealed|partial|static|\s)*(class|interface|record|struct|enum)\s+([A-Za-z_]\w*))"),
+        QRegularExpression::MultilineOption);
+    auto typeIt = typePattern.globalMatch(text);
+    while (typeIt.hasNext()) {
+        const auto match = typeIt.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        appendSymbol(makeSymbol(match.captured(1), match.captured(2), line, QString(), {},
+                                snippetFromLine(text, line, 3)));
+    }
+
+    QRegularExpression methodPattern(
+        QStringLiteral(R"(^\s*(?:public|protected|private|internal|static|async|virtual|override|sealed|partial|\s)+[\w<>\[\],.?]+\s+([A-Za-z_]\w*)\s*\([^;{}]*\)\s*\{)"),
+        QRegularExpression::MultilineOption);
+    auto methodIt = methodPattern.globalMatch(text);
+    while (methodIt.hasNext()) {
+        const auto match = methodIt.next();
+        const QString name = match.captured(1);
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        appendSymbol(makeSymbol(QStringLiteral("method"), name, line, QString(), {},
+                                snippetFromLine(text, line, 2)));
+    }
+
+    QRegularExpression topLevelVarPattern(QStringLiteral(R"(^\s*var\s+([A-Za-z_]\w*)\s*=)"),
+                                          QRegularExpression::MultilineOption);
+    auto varIt = topLevelVarPattern.globalMatch(text);
+    while (varIt.hasNext()) {
+        const auto match = varIt.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        appendSymbol(makeSymbol(QStringLiteral("variable"), match.captured(1), line, QString(), {},
+                                snippetFromLine(text, line, 1)));
+    }
+
+    result.insert(QStringLiteral("symbols"), symbols);
+    result.insert(QStringLiteral("dependencies"), extractCSharpDependencies(text));
+    result.insert(QStringLiteral("routes"), extractAspNetRoutes(path, text));
+    result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
+    result.insert(QStringLiteral("summary"), QStringLiteral("%1 top-level symbols").arg(symbols.size()));
     return result;
 }
 
@@ -1051,17 +1316,19 @@ QVariantMap SymbolParser::parseHtml(const QString &path, const QString &text) co
     QSet<QString> linkedCssFiles;
     bool hasLocalCssSource = false;
 
-    auto collectLink = [&](const QString &target, const QString &type) {
+    auto collectLink = [&](const QString &target, const QString &type, int line, const QString &snippet) {
         const bool isLocalTarget = target.startsWith(QStringLiteral("./"))
             || target.startsWith(QStringLiteral("../"))
             || target.startsWith(QLatin1Char('/'))
             || (!target.contains(QStringLiteral("://")) && !target.startsWith(QStringLiteral("//")));
         const QString resolved = isLocalTarget ? QDir::cleanPath(dir.filePath(target)) : QString();
-        QVariantMap item;
+        QVariantMap item = makeSourceContextItem(path, QStringLiteral("html"), line, snippet,
+                                                 QStringLiteral("%1 link").arg(type));
         item.insert(QStringLiteral("label"), QFileInfo(target).fileName().isEmpty() ? target : QFileInfo(target).fileName());
         item.insert(QStringLiteral("target"), target);
-        item.insert(QStringLiteral("path"), resolved);
         item.insert(QStringLiteral("type"), type);
+        item.insert(QStringLiteral("path"), resolved);
+        item.insert(QStringLiteral("targetPath"), resolved);
         item.insert(QStringLiteral("exists"), isLocalTarget ? QFileInfo::exists(resolved) : true);
         links.append(item);
         if (type == QStringLiteral("stylesheet") && isLocalTarget && QFileInfo::exists(resolved)) {
@@ -1072,16 +1339,22 @@ QVariantMap SymbolParser::parseHtml(const QString &path, const QString &text) co
 
     auto scripts = scriptPattern.globalMatch(text);
     while (scripts.hasNext()) {
-        collectLink(scripts.next().captured(1), QStringLiteral("script"));
+        const auto match = scripts.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        collectLink(match.captured(1), QStringLiteral("script"), line, snippetFromLine(text, line, 1));
     }
 
     auto styles = stylePattern.globalMatch(text);
     while (styles.hasNext()) {
-        collectLink(styles.next().captured(1), QStringLiteral("stylesheet"));
+        const auto match = styles.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        collectLink(match.captured(1), QStringLiteral("stylesheet"), line, snippetFromLine(text, line, 1));
     }
     auto styles2 = alternateStylePattern.globalMatch(text);
     while (styles2.hasNext()) {
-        collectLink(styles2.next().captured(1), QStringLiteral("stylesheet"));
+        const auto match = styles2.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        collectLink(match.captured(1), QStringLiteral("stylesheet"), line, snippetFromLine(text, line, 1));
     }
 
     const QStringList usedClasses = extractHtmlClasses(text);
@@ -1264,6 +1537,21 @@ QString SymbolParser::detectLanguage(const QString &path)
     if (suffix == QStringLiteral("json")) {
         return QStringLiteral("json");
     }
+    if (suffix == QStringLiteral("py")) {
+        return QStringLiteral("python");
+    }
+    if (suffix == QStringLiteral("java")) {
+        return QStringLiteral("java");
+    }
+    if (suffix == QStringLiteral("cs")) {
+        return QStringLiteral("csharp");
+    }
+    if (suffix == QStringLiteral("c") || suffix == QStringLiteral("cc")
+        || suffix == QStringLiteral("cpp") || suffix == QStringLiteral("cxx")
+        || suffix == QStringLiteral("h") || suffix == QStringLiteral("hh")
+        || suffix == QStringLiteral("hpp") || suffix == QStringLiteral("hxx")) {
+        return QStringLiteral("cpp");
+    }
     return QStringLiteral("script");
 }
 
@@ -1420,6 +1708,7 @@ QVariantList SymbolParser::extractDependencyLinks(const QString &path, const QSt
     QSet<QString> seen;
     const QFileInfo fileInfo(path);
     const QDir dir = fileInfo.dir();
+    const QString language = detectLanguage(path);
 
     auto appendLink = [&](const QString &target, const QString &type, int line) {
         if (seen.contains(type + QLatin1Char('|') + target)) {
@@ -1427,10 +1716,10 @@ QVariantList SymbolParser::extractDependencyLinks(const QString &path, const QSt
         }
         seen.insert(type + QLatin1Char('|') + target);
 
-        QVariantMap item;
+        QVariantMap item = makeSourceContextItem(path, language, line, snippetFromLine(text, line, 1),
+                                                 QStringLiteral("%1 dependency").arg(type));
         item.insert(QStringLiteral("target"), target);
         item.insert(QStringLiteral("type"), type);
-        item.insert(QStringLiteral("line"), line);
         item.insert(QStringLiteral("label"), target);
 
         if (target.startsWith(QStringLiteral("./")) || target.startsWith(QStringLiteral("../"))) {
@@ -1442,8 +1731,16 @@ QVariantList SymbolParser::extractDependencyLinks(const QString &path, const QSt
                 resolved + QStringLiteral(".json"),
                 resolved + QStringLiteral(".ts"),
                 resolved + QStringLiteral(".tsx"),
+                resolved + QStringLiteral(".py"),
+                resolved + QStringLiteral(".php"),
+                resolved + QStringLiteral(".java"),
+                resolved + QStringLiteral(".cs"),
+                resolved + QStringLiteral(".cpp"),
+                resolved + QStringLiteral(".hpp"),
                 QDir(resolved).filePath(QStringLiteral("index.js")),
-                QDir(resolved).filePath(QStringLiteral("index.ts"))
+                QDir(resolved).filePath(QStringLiteral("index.ts")),
+                QDir(resolved).filePath(QStringLiteral("index.tsx")),
+                QDir(resolved).filePath(QStringLiteral("__init__.py"))
             };
             for (const QString &candidate : candidates) {
                 if (QFileInfo::exists(candidate)) {
@@ -1481,6 +1778,133 @@ QVariantList SymbolParser::extractDependencyLinks(const QString &path, const QSt
     return links;
 }
 
+QVariantList SymbolParser::extractPythonDependencies(const QString &text)
+{
+    QVariantList links;
+    QSet<QString> seen;
+    auto appendDependency = [&](const QString &target, int line) {
+        if (target.isEmpty() || seen.contains(target)) {
+            return;
+        }
+        seen.insert(target);
+        QVariantMap item;
+        item.insert(QStringLiteral("target"), target);
+        item.insert(QStringLiteral("type"), QStringLiteral("import"));
+        item.insert(QStringLiteral("line"), line);
+        item.insert(QStringLiteral("label"), target);
+        item.insert(QStringLiteral("path"), QString());
+        item.insert(QStringLiteral("exists"), true);
+        item.insert(QStringLiteral("snippet"), snippetFromLine(text, line, 0));
+        links.append(item);
+    };
+
+    QRegularExpression importPattern(QStringLiteral(R"(^\s*import\s+([A-Za-z0-9_., ]+))"),
+                                     QRegularExpression::MultilineOption);
+    auto importIt = importPattern.globalMatch(text);
+    while (importIt.hasNext()) {
+        const auto match = importIt.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        const QStringList names = match.captured(1).split(QLatin1Char(','), Qt::SkipEmptyParts);
+        for (const QString &name : names) {
+            appendDependency(name.trimmed().section(QLatin1String(" as "), 0, 0), line);
+        }
+    }
+
+    QRegularExpression fromPattern(QStringLiteral(R"(^\s*from\s+([A-Za-z0-9_.]+)\s+import\s+)"),
+                                   QRegularExpression::MultilineOption);
+    auto fromIt = fromPattern.globalMatch(text);
+    while (fromIt.hasNext()) {
+        const auto match = fromIt.next();
+        appendDependency(match.captured(1), lineNumberAtOffset(text, match.capturedStart(0)));
+    }
+
+    return links;
+}
+
+QVariantList SymbolParser::extractCppDependencies(const QString &path, const QString &text)
+{
+    QVariantList links;
+    QSet<QString> seen;
+    const QDir dir = QFileInfo(path).dir();
+    QRegularExpression includePattern(QStringLiteral(R"(^\s*#include\s*[<"]([^>"]+)[>"])"),
+                                      QRegularExpression::MultilineOption);
+    auto includeIt = includePattern.globalMatch(text);
+    while (includeIt.hasNext()) {
+        const auto match = includeIt.next();
+        const QString target = match.captured(1);
+        if (seen.contains(target)) {
+            continue;
+        }
+        seen.insert(target);
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        QVariantMap item = makeSourceContextItem(path, QStringLiteral("cpp"), line, snippetFromLine(text, line, 0),
+                                                 QStringLiteral("include"));
+        item.insert(QStringLiteral("target"), target);
+        item.insert(QStringLiteral("type"), QStringLiteral("include"));
+        item.insert(QStringLiteral("label"), target);
+        const QString resolved = QDir::cleanPath(dir.filePath(target));
+        item.insert(QStringLiteral("path"), QFileInfo::exists(resolved) ? resolved : QString());
+        item.insert(QStringLiteral("exists"), QFileInfo::exists(resolved) || !target.contains(QLatin1Char('/')));
+        links.append(item);
+    }
+    return links;
+}
+
+QVariantList SymbolParser::extractJavaDependencies(const QString &text)
+{
+    QVariantList links;
+    QSet<QString> seen;
+    QRegularExpression importPattern(QStringLiteral(R"(^\s*import\s+([A-Za-z0-9_.*]+)\s*;)"),
+                                     QRegularExpression::MultilineOption);
+    auto importIt = importPattern.globalMatch(text);
+    while (importIt.hasNext()) {
+        const auto match = importIt.next();
+        const QString target = match.captured(1);
+        if (seen.contains(target)) {
+            continue;
+        }
+        seen.insert(target);
+        QVariantMap item;
+        item.insert(QStringLiteral("target"), target);
+        item.insert(QStringLiteral("type"), QStringLiteral("import"));
+        item.insert(QStringLiteral("line"), lineNumberAtOffset(text, match.capturedStart(0)));
+        item.insert(QStringLiteral("label"), target);
+        item.insert(QStringLiteral("path"), QString());
+        item.insert(QStringLiteral("exists"), true);
+        item.insert(QStringLiteral("snippet"), snippetFromLine(text, item.value(QStringLiteral("line")).toInt(), 0));
+        links.append(item);
+    }
+    return links;
+}
+
+QVariantList SymbolParser::extractCSharpDependencies(const QString &text)
+{
+    QVariantList links;
+    QSet<QString> seen;
+    QRegularExpression usingPattern(QStringLiteral(R"(^\s*using\s+([A-Za-z0-9_.]+)\s*;)"),
+                                    QRegularExpression::MultilineOption);
+    auto usingIt = usingPattern.globalMatch(text);
+    while (usingIt.hasNext()) {
+        const auto match = usingIt.next();
+        const QString target = match.captured(1);
+        if (seen.contains(target)) {
+            continue;
+        }
+        seen.insert(target);
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        QVariantMap item;
+        item.insert(QStringLiteral("target"), target);
+        item.insert(QStringLiteral("type"), QStringLiteral("using"));
+        item.insert(QStringLiteral("line"), line);
+        item.insert(QStringLiteral("label"), target);
+        item.insert(QStringLiteral("path"), QString());
+        item.insert(QStringLiteral("exists"), true);
+        item.insert(QStringLiteral("snippet"), snippetFromLine(text, line, 0));
+        links.append(item);
+    }
+    return links;
+}
+
 QVariantList SymbolParser::extractExpressRoutes(const QString &text)
 {
     QVariantList routes;
@@ -1496,7 +1920,92 @@ QVariantList SymbolParser::extractExpressRoutes(const QString &text)
         route.insert(QStringLiteral("method"), match.captured(2).toUpper());
         route.insert(QStringLiteral("path"), match.captured(3));
         route.insert(QStringLiteral("line"), line);
+        route.insert(QStringLiteral("snippet"), snippetFromLine(text, line, 1));
+        route.insert(QStringLiteral("detail"), QStringLiteral("route"));
         route.insert(QStringLiteral("label"), match.captured(2).toUpper() + QStringLiteral(" ") + match.captured(3));
+        routes.append(route);
+    }
+    return routes;
+}
+
+QVariantList SymbolParser::extractPythonRoutes(const QString &path, const QString &text)
+{
+    QVariantList routes;
+    QRegularExpression routePattern(
+        QStringLiteral(R"(^\s*@(?:\w+\.)?route\s*\(\s*['"]([^'"]+)['"](?:\s*,\s*methods\s*=\s*\[([^\]]*)\])?)"),
+        QRegularExpression::MultilineOption);
+    auto routeIt = routePattern.globalMatch(text);
+    while (routeIt.hasNext()) {
+        const auto match = routeIt.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        QString method = QStringLiteral("GET");
+        if (!match.captured(2).trimmed().isEmpty()) {
+            method = match.captured(2).trimmed();
+            method.remove(QLatin1Char('\''));
+            method.remove(QLatin1Char('"'));
+        }
+        QVariantMap route = makeSourceContextItem(path, QStringLiteral("python"), line, snippetFromLine(text, line, 1),
+                                                  QStringLiteral("route"));
+        route.insert(QStringLiteral("owner"), QStringLiteral("app"));
+        route.insert(QStringLiteral("method"), method);
+        route.insert(QStringLiteral("path"), match.captured(1));
+        route.insert(QStringLiteral("label"), method + QStringLiteral(" ") + match.captured(1));
+        routes.append(route);
+    }
+
+    QRegularExpression fastApiPattern(
+        QStringLiteral(R"(^\s*@(?:\w+\.)?(get|post|put|patch|delete|options|head)\s*\(\s*['"]([^'"]+)['"])"),
+        QRegularExpression::MultilineOption | QRegularExpression::CaseInsensitiveOption);
+    auto fastApiIt = fastApiPattern.globalMatch(text);
+    while (fastApiIt.hasNext()) {
+        const auto match = fastApiIt.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        const QString method = match.captured(1).toUpper();
+        QVariantMap route = makeSourceContextItem(path, QStringLiteral("python"), line, snippetFromLine(text, line, 1),
+                                                  QStringLiteral("route"));
+        route.insert(QStringLiteral("owner"), QStringLiteral("app"));
+        route.insert(QStringLiteral("method"), method);
+        route.insert(QStringLiteral("path"), match.captured(2));
+        route.insert(QStringLiteral("label"), method + QStringLiteral(" ") + match.captured(2));
+        routes.append(route);
+    }
+
+    return routes;
+}
+
+QVariantList SymbolParser::extractAspNetRoutes(const QString &path, const QString &text)
+{
+    QVariantList routes;
+    QRegularExpression routePattern(
+        QStringLiteral(R"(\bapp\.(MapGet|MapPost|MapPut|MapPatch|MapDelete|MapMethods|MapControllerRoute)\s*\(([\s\S]*?)\))"));
+    auto routeIt = routePattern.globalMatch(text);
+    while (routeIt.hasNext()) {
+        const auto match = routeIt.next();
+        const QString routeType = match.captured(1);
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        QString method = routeType.mid(3).toUpper();
+        QString routePath;
+        QRegularExpression quotedPath(QStringLiteral(R"(["]([^"]+)["])"));
+        auto pathMatch = quotedPath.match(match.captured(2));
+        if (pathMatch.hasMatch()) {
+            routePath = pathMatch.captured(1);
+        }
+        if (routeType == QStringLiteral("MapControllerRoute")) {
+            method = QStringLiteral("ROUTE");
+            QRegularExpression patternField(QStringLiteral("pattern\\s*:\\s*\"([^\"]+)\""));
+            const auto patternMatch = patternField.match(match.captured(2));
+            if (patternMatch.hasMatch()) {
+                routePath = patternMatch.captured(1);
+            } else if (routePath.isEmpty()) {
+                routePath = QStringLiteral("{controller=Home}/{action=Index}/{id?}");
+            }
+        }
+        QVariantMap route = makeSourceContextItem(path, QStringLiteral("csharp"), line, snippetFromLine(text, line, 1),
+                                                  QStringLiteral("route"));
+        route.insert(QStringLiteral("owner"), QStringLiteral("app"));
+        route.insert(QStringLiteral("method"), method);
+        route.insert(QStringLiteral("path"), routePath);
+        route.insert(QStringLiteral("label"), method + QStringLiteral(" ") + routePath);
         routes.append(route);
     }
     return routes;
@@ -1543,6 +2052,29 @@ QVariantList SymbolParser::findRelatedFiles(const QString &path)
     if (fileName == QStringLiteral("index.js") || fileName == QStringLiteral("index.ts")) {
         appendRelated(dir.filePath(QStringLiteral("package.json")), QStringLiteral("package"));
         appendRelated(dir.filePath(QStringLiteral("public_html/index.html")), QStringLiteral("frontend"));
+    }
+
+    if (fileName.endsWith(QStringLiteral(".cpp")) || fileName.endsWith(QStringLiteral(".cc"))
+        || fileName.endsWith(QStringLiteral(".cxx"))) {
+        appendRelated(dir.filePath(baseName + QStringLiteral(".h")), QStringLiteral("header"));
+        appendRelated(dir.filePath(baseName + QStringLiteral(".hpp")), QStringLiteral("header"));
+    }
+
+    if (fileName.endsWith(QStringLiteral(".h")) || fileName.endsWith(QStringLiteral(".hpp"))
+        || fileName.endsWith(QStringLiteral(".hh")) || fileName.endsWith(QStringLiteral(".hxx"))) {
+        appendRelated(dir.filePath(baseName + QStringLiteral(".cpp")), QStringLiteral("implementation"));
+        appendRelated(dir.filePath(baseName + QStringLiteral(".cc")), QStringLiteral("implementation"));
+        appendRelated(dir.filePath(baseName + QStringLiteral(".cxx")), QStringLiteral("implementation"));
+    }
+
+    if (fileName.endsWith(QStringLiteral(".py"))) {
+        appendRelated(dir.filePath(QStringLiteral("test_%1.py").arg(baseName)), QStringLiteral("test"));
+        appendRelated(dir.filePath(QStringLiteral("%1_test.py").arg(baseName)), QStringLiteral("test"));
+        appendRelated(dir.filePath(QStringLiteral("tests/test_%1.py").arg(baseName)), QStringLiteral("test"));
+    }
+
+    if (fileName.endsWith(QStringLiteral(".cs"))) {
+        appendRelated(dir.filePath(QStringLiteral("%1.csproj").arg(dir.dirName())), QStringLiteral("project"));
     }
 
     if (fileName == QStringLiteral("package.json")) {

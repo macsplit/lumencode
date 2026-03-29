@@ -48,8 +48,7 @@ The crawler must:
 
 - recurse directories without blocking the UI
 - ignore `.git`
-- ignore Python and C++ source trees by default
-- focus on these file types: `js`, `jsx`, `ts`, `tsx`, `php`, `html`, `css`, `json`
+- focus on these file types: `js`, `jsx`, `ts`, `tsx`, `php`, `html`, `css`, `json`, `py`, `c`, `cc`, `cpp`, `cxx`, `h`, `hpp`, `java`, `cs`
 
 ### 3.3 Symbol Extraction
 
@@ -89,6 +88,24 @@ JSON:
 
 - `package.json` scripts, entrypoint, dependency lists, with a project summary.
 - OpenAPI-style path and operation summaries, with method and description as snippets.
+
+Python:
+
+- Top-level functions, classes, and class methods.
+- Import extraction and conservative Flask/FastAPI-style route extraction.
+
+C/C++:
+
+- Includes, top-level classes/structs, and top-level functions.
+- Header/implementation related-file linking.
+
+Java:
+
+- Imports, top-level classes/interfaces/enums, and method extraction.
+
+C#:
+
+- `using` imports, top-level types, top-level statements/variables, and basic ASP.NET route extraction from `Program.cs` style apps.
 
 ### 3.4 Neon Link Features
 
@@ -183,12 +200,13 @@ Phase 2. Better project structure
 
 - Improve CommonJS and Node service understanding. **(Completed: Tree-sitter integration for better accuracy and export surfacing)**
 - Improve project-level summaries and dependency navigation. **(Completed: Project summary implemented, improved dependency resolution)**
+- Broaden parser coverage for common non-web languages used in mixed repos. **(Completed: Python, C/C++, Java, and C# heuristic support added)**
 - Improve test linkage and route understanding. **(Completed: Basic Express route detection)**
 
 Phase 3. Source inspection
 
 - Add a bottom pane for syntax-highlighted source snippets. **(Completed with internal highlighting and diagnostics)**
-- Sync selected symbols and routes to source lines. **(Partially completed: symbols and CSS class entries update the lower pane)**
+- Sync selected symbols and routes to source lines. **(Expanded: symbols, CSS class entries, dependencies, routes, and quick links now share the snippet-selection path)**
 - Add lint-aware or parser-aware snippet context where feasible. **(Partially completed: conservative parser-aware diagnostics are present)**
 
 Phase 4. General polish

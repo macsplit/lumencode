@@ -53,6 +53,13 @@ int entryScore(const QString &rootPath, const QString &path, const QString &name
     int score = 0;
 
     const QStringList preferredRoots = {
+        QStringLiteral("src/main.cpp"),
+        QStringLiteral("src/main.cc"),
+        QStringLiteral("src/main.cxx"),
+        QStringLiteral("src/main.c"),
+        QStringLiteral("src/main.py"),
+        QStringLiteral("src/main.java"),
+        QStringLiteral("src/program.cs"),
         QStringLiteral("src/main.tsx"),
         QStringLiteral("src/main.ts"),
         QStringLiteral("src/main.jsx"),
@@ -63,8 +70,16 @@ int entryScore(const QString &rootPath, const QString &path, const QString &name
         QStringLiteral("src/index.js"),
         QStringLiteral("main.ts"),
         QStringLiteral("main.js"),
+        QStringLiteral("main.cpp"),
+        QStringLiteral("main.cc"),
+        QStringLiteral("main.cxx"),
+        QStringLiteral("main.c"),
+        QStringLiteral("main.py"),
+        QStringLiteral("main.java"),
+        QStringLiteral("program.cs"),
         QStringLiteral("app.ts"),
         QStringLiteral("app.js"),
+        QStringLiteral("app.py"),
         QStringLiteral("index.ts"),
         QStringLiteral("index.js")
     };
@@ -87,6 +102,15 @@ int entryScore(const QString &rootPath, const QString &path, const QString &name
     if (lowerName == QStringLiteral("main.ts") || lowerName == QStringLiteral("main.js")
         || lowerName == QStringLiteral("main.tsx") || lowerName == QStringLiteral("main.jsx")) {
         score += 120;
+    } else if (lowerName == QStringLiteral("main.cpp") || lowerName == QStringLiteral("main.cc")
+               || lowerName == QStringLiteral("main.cxx") || lowerName == QStringLiteral("main.c")) {
+        score += 120;
+    } else if (lowerName == QStringLiteral("program.cs")) {
+        score += 115;
+    } else if (lowerName == QStringLiteral("main.py") || lowerName == QStringLiteral("app.py")) {
+        score += 105;
+    } else if (lowerName == QStringLiteral("main.java")) {
+        score += 100;
     } else if (lowerName == QStringLiteral("app.ts") || lowerName == QStringLiteral("app.js")) {
         score += 90;
     } else if (lowerName == QStringLiteral("index.ts") || lowerName == QStringLiteral("index.js")
@@ -143,6 +167,51 @@ QString detectPackageEntry(const QString &rootPath)
             if (QFileInfo::exists(candidate)) {
                 return candidate;
             }
+        }
+    }
+
+    return {};
+}
+
+QString detectConventionalEntry(const QString &rootPath)
+{
+    const QStringList preferredEntries = {
+        QStringLiteral("src/main.cpp"),
+        QStringLiteral("src/main.cc"),
+        QStringLiteral("src/main.cxx"),
+        QStringLiteral("src/main.c"),
+        QStringLiteral("src/main.py"),
+        QStringLiteral("src/main.java"),
+        QStringLiteral("src/Program.cs"),
+        QStringLiteral("src/program.cs"),
+        QStringLiteral("src/main.tsx"),
+        QStringLiteral("src/main.ts"),
+        QStringLiteral("src/main.jsx"),
+        QStringLiteral("src/main.js"),
+        QStringLiteral("src/index.tsx"),
+        QStringLiteral("src/index.ts"),
+        QStringLiteral("src/index.jsx"),
+        QStringLiteral("src/index.js"),
+        QStringLiteral("main.cpp"),
+        QStringLiteral("main.cc"),
+        QStringLiteral("main.cxx"),
+        QStringLiteral("main.c"),
+        QStringLiteral("main.py"),
+        QStringLiteral("main.java"),
+        QStringLiteral("Program.cs"),
+        QStringLiteral("program.cs"),
+        QStringLiteral("app.py"),
+        QStringLiteral("app.js"),
+        QStringLiteral("app.ts"),
+        QStringLiteral("index.js"),
+        QStringLiteral("index.ts"),
+        QStringLiteral("index.html"),
+    };
+
+    for (const QString &entry : preferredEntries) {
+        const QString candidate = normalizeProjectEntry(rootPath, entry);
+        if (!candidate.isEmpty() && QFileInfo::exists(candidate)) {
+            return candidate;
         }
     }
 
@@ -404,6 +473,21 @@ QString FileSystemModel::detectFileType(const QString &path, bool isDir)
     if (suffix == QStringLiteral("ts") || suffix == QStringLiteral("js")) {
         return QStringLiteral("script");
     }
+    if (suffix == QStringLiteral("py")) {
+        return QStringLiteral("python");
+    }
+    if (suffix == QStringLiteral("cpp") || suffix == QStringLiteral("cc")
+        || suffix == QStringLiteral("cxx") || suffix == QStringLiteral("c")
+        || suffix == QStringLiteral("h") || suffix == QStringLiteral("hpp")
+        || suffix == QStringLiteral("hh") || suffix == QStringLiteral("hxx")) {
+        return QStringLiteral("cpp");
+    }
+    if (suffix == QStringLiteral("java")) {
+        return QStringLiteral("java");
+    }
+    if (suffix == QStringLiteral("cs")) {
+        return QStringLiteral("csharp");
+    }
     if (QFileInfo(path).fileName() == QStringLiteral("package.json")) {
         return QStringLiteral("package");
     }
@@ -422,10 +506,7 @@ bool FileSystemModel::shouldIgnoreDirectory(const QString &name)
         || lower == QStringLiteral(".venv")
         || lower == QStringLiteral("node_modules")
         || lower == QStringLiteral("build")
-        || lower == QStringLiteral("dist")
-        || lower == QStringLiteral("cpp")
-        || lower == QStringLiteral("c++")
-        || lower == QStringLiteral("python");
+        || lower == QStringLiteral("dist");
 }
 
 bool FileSystemModel::shouldIncludeFile(const QString &suffix)
@@ -439,6 +520,17 @@ bool FileSystemModel::shouldIncludeFile(const QString &suffix)
         QStringLiteral("php"),
         QStringLiteral("html"),
         QStringLiteral("css"),
+        QStringLiteral("py"),
+        QStringLiteral("c"),
+        QStringLiteral("cc"),
+        QStringLiteral("cpp"),
+        QStringLiteral("cxx"),
+        QStringLiteral("h"),
+        QStringLiteral("hh"),
+        QStringLiteral("hpp"),
+        QStringLiteral("hxx"),
+        QStringLiteral("java"),
+        QStringLiteral("cs"),
     };
     return allowed.contains(suffix);
 }
@@ -448,6 +540,9 @@ QVariantMap FileSystemModel::collectStats() const
     QVariantMap stats;
     QMap<QString, int> typeCounts;
     QString mainEntry = detectPackageEntry(m_rootPath);
+    if (mainEntry.isEmpty()) {
+        mainEntry = detectConventionalEntry(m_rootPath);
+    }
     int totalFiles = 0;
     int bestEntryScore = std::numeric_limits<int>::min();
 

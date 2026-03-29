@@ -122,3 +122,17 @@ Important product-direction notes for next time:
 - the next major usability improvement should be broader lower-pane context wiring and better diagnostics/highlighting
 - Node/CommonJS structure support exists but needs refinement to become genuinely useful
 - documentation now reflects the current project direction instead of the original bootstrap brief
+
+## 2026-03-30 (continued)
+
+- **Core/GUI Parity Follow-up:**
+    - Added `selectedSnippet` to CLI state output so CLI payloads stay aligned with the GUI lower-pane contract.
+    - Added interactive `selectSymbolByData` support in `lumencode-cli` so lower-pane payloads for routes, dependencies, and quick links can be exercised without the GUI.
+    - Wired dependency, route, and quick-link selections in QML into the shared snippet-selection path instead of file-only navigation.
+- **Broader Language Support:**
+    - Expanded filesystem scanning to include Python, C/C++, Java, and C# files.
+    - Added heuristic parsing for Python, C/C++, Java, and C# symbols plus import/include metadata.
+    - Added conservative Flask/FastAPI and ASP.NET route extraction.
+    - Added related-file support for C/C++ headers and Python/C# test/project neighbors.
+- **Project Summary Improvements:**
+    - Added a conventional-entrypoint pass so obvious roots like `src/main.cpp`, `app.py`, and `Program.cs` are preferred before generic fallback scoring.

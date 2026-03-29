@@ -18,6 +18,10 @@ private:
     QVariantMap parsePhpTreeSitter(const QString &path, const QString &text) const;
     QVariantMap parseScriptLikeTreeSitter(const QString &path, const QString &text, const QString &language) const;
     QVariantMap parseCssTreeSitter(const QString &path, const QString &text) const;
+    QVariantMap parsePython(const QString &path, const QString &text) const;
+    QVariantMap parseCppLike(const QString &path, const QString &text, const QString &language) const;
+    QVariantMap parseJava(const QString &path, const QString &text) const;
+    QVariantMap parseCSharp(const QString &path, const QString &text) const;
 
     QVariantMap parsePhp(const QString &path, const QString &text) const;
     QVariantMap parseScriptLike(const QString &path, const QString &text, bool reactMode) const;
@@ -35,7 +39,13 @@ private:
     static QStringList extractHtmlClasses(const QString &text);
     static QStringList extractCssClasses(const QString &text);
     static QVariantList extractDependencyLinks(const QString &path, const QString &text);
+    static QVariantList extractPythonDependencies(const QString &text);
+    static QVariantList extractCppDependencies(const QString &path, const QString &text);
+    static QVariantList extractJavaDependencies(const QString &text);
+    static QVariantList extractCSharpDependencies(const QString &text);
     static QVariantList extractExpressRoutes(const QString &text);
+    static QVariantList extractPythonRoutes(const QString &path, const QString &text);
+    static QVariantList extractAspNetRoutes(const QString &path, const QString &text);
     static QVariantList findRelatedFiles(const QString &path);
     static QVariantMap extractPackageSummary(const QString &path, const QString &text);
 };

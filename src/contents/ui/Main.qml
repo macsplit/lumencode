@@ -441,9 +441,19 @@ Kirigami.ApplicationWindow {
                                         width: parent.width
                                         text: modelData.type + ": " + modelData.label + (modelData.line ? " (L" + modelData.line + ")" : "")
                                         font.pointSize: root.compactSmallFontSize
-                                        enabled: !!modelData.path && modelData.exists
+                                        enabled: !!modelData.snippet || (!!modelData.path && modelData.exists)
                                         onClicked: {
-                                            if (modelData.path && modelData.exists) {
+                                            if (modelData.snippet) {
+                                                project.selectSymbolByData({
+                                                    "kind": "dependency",
+                                                    "name": modelData.label || modelData.target || "",
+                                                    "sourcePath": project.selectedFileData.path || "",
+                                                    "sourceLanguage": project.selectedFileData.language || "",
+                                                    "line": modelData.line || 0,
+                                                    "snippet": modelData.snippet || "",
+                                                    "detail": modelData.detail || (modelData.type ? modelData.type + " dependency" : "dependency")
+                                                })
+                                            } else if (modelData.path && modelData.exists) {
                                                 project.selectPath(modelData.path)
                                             }
                                         }
@@ -464,27 +474,23 @@ Kirigami.ApplicationWindow {
                                 Repeater {
                                     model: project.selectedFileData.routes || []
 
-                                    delegate: RowLayout {
+                                    delegate: Button {
                                         required property var modelData
                                         width: parent.width
-
-                                        Label {
-                                            text: modelData.method
-                                            color: Kirigami.Theme.highlightColor
-                                            font.pointSize: root.compactSmallFontSize
-                                        }
-
-                                        Label {
-                                            Layout.fillWidth: true
-                                            text: modelData.path
-                                            elide: Text.ElideMiddle
-                                            font.pointSize: root.compactFontSize
-                                        }
-
-                                        Label {
-                                            text: "L" + modelData.line
-                                            color: Kirigami.Theme.disabledTextColor
-                                            font.pointSize: root.compactSmallFontSize
+                                        text: (modelData.method || "ROUTE") + " "
+                                              + (modelData.path || "")
+                                              + (modelData.line ? " (L" + modelData.line + ")" : "")
+                                        font.pointSize: root.compactSmallFontSize
+                                        onClicked: {
+                                            project.selectSymbolByData({
+                                                "kind": "route",
+                                                "name": modelData.label || ((modelData.method || "ROUTE") + " " + (modelData.path || "")),
+                                                "sourcePath": project.selectedFileData.path || "",
+                                                "sourceLanguage": project.selectedFileData.language || "",
+                                                "line": modelData.line || 0,
+                                                "snippet": modelData.snippet || "",
+                                                "detail": modelData.detail || "route"
+                                            })
                                         }
                                     }
                                 }
@@ -609,9 +615,15 @@ Kirigami.ApplicationWindow {
                                         text: modelData.type + ": " + modelData.label + (modelData.exists ? "" : " (missing)")
                                         font.pointSize: root.compactSmallFontSize
                                         onClicked: {
-                                            if (modelData.exists) {
-                                                project.selectPath(modelData.path)
-                                            }
+                                            project.selectSymbolByData({
+                                                "kind": "quick-link",
+                                                "name": modelData.label || modelData.target || "",
+                                                "sourcePath": project.selectedFileData.path || "",
+                                                "sourceLanguage": project.selectedFileData.language || "",
+                                                "line": modelData.line || 0,
+                                                "snippet": modelData.snippet || "",
+                                                "detail": modelData.detail || (modelData.exists ? "linked asset" : "missing linked asset")
+                                            })
                                         }
                                     }
                                 }

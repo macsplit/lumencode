@@ -36,6 +36,7 @@ void printState(ProjectController &controller) {
     output["selectedFileData"] = QJsonObject::fromVariantMap(controller.selectedFileData());
     output["selectedSymbol"] = QJsonObject::fromVariantMap(controller.selectedSymbol());
     output["selectedSymbolMembers"] = QJsonArray::fromVariantList(controller.selectedSymbolMembers());
+    output["selectedSnippet"] = QJsonObject::fromVariantMap(controller.selectedSnippet());
 
     FileSystemModel *fsModel = qobject_cast<FileSystemModel*>(controller.fileSystemModel());
     if (fsModel) {
@@ -117,6 +118,8 @@ int main(int argc, char *argv[])
                 controller.selectPath(resolveCliPath(params["path"].toString(), controller.rootPath()));
             } else if (command == "selectSymbol") {
                 controller.selectSymbol(params["index"].toInt());
+            } else if (command == "selectSymbolByData") {
+                controller.selectSymbolByData(params.toVariantMap());
             } else if (command == "toggleExpanded") {
                  FileSystemModel *fsModel = qobject_cast<FileSystemModel*>(controller.fileSystemModel());
                  if (fsModel) {

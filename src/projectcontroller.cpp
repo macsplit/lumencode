@@ -62,6 +62,18 @@ QString normalizeSnippetLanguage(const QString &language)
     if (language == QStringLiteral("json")) {
         return QStringLiteral("json");
     }
+    if (language == QStringLiteral("python")) {
+        return QStringLiteral("python");
+    }
+    if (language == QStringLiteral("cpp")) {
+        return QStringLiteral("cpp");
+    }
+    if (language == QStringLiteral("java")) {
+        return QStringLiteral("java");
+    }
+    if (language == QStringLiteral("csharp")) {
+        return QStringLiteral("csharp");
+    }
     return QString();
 }
 
@@ -347,6 +359,35 @@ QSet<QString> keywordSet(const QString &language)
     }
     if (language == QStringLiteral("json")) {
         return {QStringLiteral("true"), QStringLiteral("false"), QStringLiteral("null")};
+    }
+    if (language == QStringLiteral("python")) {
+        return {QStringLiteral("def"), QStringLiteral("class"), QStringLiteral("return"),
+                QStringLiteral("if"), QStringLiteral("elif"), QStringLiteral("else"),
+                QStringLiteral("for"), QStringLiteral("while"), QStringLiteral("import"),
+                QStringLiteral("from"), QStringLiteral("as"), QStringLiteral("try"),
+                QStringLiteral("except"), QStringLiteral("finally"), QStringLiteral("with"),
+                QStringLiteral("lambda"), QStringLiteral("async"), QStringLiteral("await"),
+                QStringLiteral("True"), QStringLiteral("False"), QStringLiteral("None")};
+    }
+    if (language == QStringLiteral("cpp")) {
+        return {QStringLiteral("#include"), QStringLiteral("class"), QStringLiteral("struct"),
+                QStringLiteral("namespace"), QStringLiteral("template"), QStringLiteral("return"),
+                QStringLiteral("if"), QStringLiteral("else"), QStringLiteral("for"),
+                QStringLiteral("while"), QStringLiteral("switch"), QStringLiteral("case"),
+                QStringLiteral("public"), QStringLiteral("private"), QStringLiteral("protected"),
+                QStringLiteral("const"), QStringLiteral("static"), QStringLiteral("virtual"),
+                QStringLiteral("using"), QStringLiteral("auto"), QStringLiteral("nullptr")};
+    }
+    if (language == QStringLiteral("java") || language == QStringLiteral("csharp")) {
+        return {QStringLiteral("class"), QStringLiteral("interface"), QStringLiteral("enum"),
+                QStringLiteral("record"), QStringLiteral("public"), QStringLiteral("private"),
+                QStringLiteral("protected"), QStringLiteral("static"), QStringLiteral("return"),
+                QStringLiteral("if"), QStringLiteral("else"), QStringLiteral("for"),
+                QStringLiteral("while"), QStringLiteral("switch"), QStringLiteral("case"),
+                QStringLiteral("new"), QStringLiteral("using"), QStringLiteral("import"),
+                QStringLiteral("namespace"), QStringLiteral("throws"), QStringLiteral("async"),
+                QStringLiteral("await"), QStringLiteral("null"), QStringLiteral("true"),
+                QStringLiteral("false")};
     }
     return {QStringLiteral("function"), QStringLiteral("class"), QStringLiteral("const"),
             QStringLiteral("let"), QStringLiteral("var"), QStringLiteral("return"),
@@ -783,13 +824,17 @@ QVariantMap ProjectController::makeSymbolSnippet(const QVariantMap &symbol, cons
     snippet.insert(QStringLiteral("kind"), symbol.value(QStringLiteral("kind")).toString());
     snippet.insert(QStringLiteral("name"), symbol.value(QStringLiteral("name")).toString());
     snippet.insert(QStringLiteral("path"),
-                   symbol.value(QStringLiteral("path")).toString().isEmpty()
+                   symbol.value(QStringLiteral("sourcePath")).toString().isEmpty()
+                       ? (symbol.value(QStringLiteral("path")).toString().isEmpty()
                        ? fileData.value(QStringLiteral("path")).toString()
-                       : symbol.value(QStringLiteral("path")).toString());
+                       : symbol.value(QStringLiteral("path")).toString())
+                       : symbol.value(QStringLiteral("sourcePath")).toString());
     snippet.insert(QStringLiteral("language"),
-                   symbol.value(QStringLiteral("language")).toString().isEmpty()
+                   symbol.value(QStringLiteral("sourceLanguage")).toString().isEmpty()
+                       ? (symbol.value(QStringLiteral("language")).toString().isEmpty()
                        ? fileData.value(QStringLiteral("language")).toString()
-                       : symbol.value(QStringLiteral("language")).toString());
+                       : symbol.value(QStringLiteral("language")).toString())
+                       : symbol.value(QStringLiteral("sourceLanguage")).toString());
     snippet.insert(QStringLiteral("line"), symbol.value(QStringLiteral("line")).toInt());
     snippet.insert(QStringLiteral("snippet"), symbol.value(QStringLiteral("snippet")).toString());
     snippet.insert(QStringLiteral("detail"), symbol.value(QStringLiteral("detail")).toString());

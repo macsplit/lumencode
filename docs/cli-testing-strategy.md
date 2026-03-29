@@ -27,6 +27,10 @@ Test the `SymbolParser` against diverse file types to ensure correct symbol extr
 - **TypeScript/JavaScript/JSX/TSX**: Utilized `it-tools` project (`src/router.ts`) for testing ES module imports, exports, and `vue-router` structure. Also tested CommonJS (`module.exports`) using `APIScraping/digest/urltomarkdown/url_to_markdown_processor.js`.
 - **HTML/CSS**: Tested with `Android2023/www/index.html` and associated CSS.
 - **JSON**: Tested `package.json` for scripts and dependencies, and OpenAPI JSON for route definitions.
+- **Python**: Tested Flask-style routes and imports using `HardwareIoT/whisper-web-service/app.py`.
+- **C/C++**: Tested function/include extraction using `Coding/dummy_languages/dummy.cpp`.
+- **Java**: Tested class/method/import extraction using `Coding/dummy_languages/dummy.java`.
+- **C#**: Tested top-level ASP.NET-style program files using `dotnet/TimeTracker/Program.cs`.
 
 ### 2. State Persistence & Sequencing
 In interactive mode, verify that commands correctly update the internal state and that subsequent commands operate on that updated state.
@@ -67,6 +71,7 @@ Use the CLI to create a suite of "golden" JSON outputs for known projects. Futur
 - `setRootPath`: `{"path": "..."}`
 - `selectPath`: `{"path": "..."}`
 - `selectSymbol`: `{"index": <int>}`
+- `selectSymbolByData`: Pass a payload object matching the GUI snippet-selection contract.
 - `toggleExpanded`: `{"path": "..."}`
 - `getState`: (No params)
 - `getProjectSummary`: (No params)
@@ -75,5 +80,6 @@ Use the CLI to create a suite of "golden" JSON outputs for known projects. Futur
 ## Current Notes
 
 - The CLI remains the best way to regression-test parsing and payload structure without launching the GUI.
+- The CLI can now exercise lower-pane source-context payloads directly through `selectSymbolByData`, making dependency/route/quick-link regressions testable without QML interaction.
 - The GUI now adds extra presentation behavior on top of the shared backend data, including lower-pane snippet rendering, compact snippet diagnostics, and CSS class drill-down behavior.
 - Full GUI parity should not be assumed for purely visual concerns such as splitter layout, lightweight syntax coloring, or rich-text snippet presentation.

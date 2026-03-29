@@ -16,7 +16,7 @@ What currently works:
 - Browsing a project tree with a dense three-pane explorer and a resizable lower source pane.
 - Resizing the top panes and lower source pane with draggable splitters.
 - Opening files into overview/detail panes with a compact left control rail and project-root display as `/`.
-- Extracting detailed symbols for PHP, JS, TS, TSX, CSS, HTML, and JSON.
+- Extracting detailed symbols for PHP, JS, TS, TSX, CSS, HTML, JSON, Python, C/C++, Java, and C#.
 - Using Tree-sitter for PHP, JS, TS, TSX, and CSS parsing where integrated.
 - Showing syntax-colored lower-pane snippets with internal highlighting rather than an external highlighting dependency.
 - Showing parser-aware diagnostics for supported snippet languages, while suppressing false errors for intentionally truncated previews.
@@ -30,6 +30,7 @@ What currently works:
   - related-file linking
   - `package.json` scripts, entrypoint, and dependency summaries
 - A functional standalone CLI tool (`lumencode-cli`) for scripted analysis and regression checks.
+- CLI state now exposes the active lower-pane snippet payload, and interactive mode can select arbitrary source-context payloads for GUI-parity checks.
 - Project-level summaries including file type counts and main entry-point detection.
 - Stable-enough backend payloads for the current QML bindings.
 
@@ -71,6 +72,7 @@ Phase 4. Broader project understanding
 - Improve Node/CommonJS and service-repo structure understanding further.
 - Refine HTML/CSS class analysis to reduce noisy matches/mismatches.
 - Improve project-level summaries for package metadata, tests, and API artifacts.
+- Continue refining entrypoint selection on broad multi-project roots.
 
 ## Known Issues
 
