@@ -156,14 +156,6 @@ Kirigami.ApplicationWindow {
                     }
                 }
 
-                Label {
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                    horizontalAlignment: Text.AlignHCenter
-                    color: Kirigami.Theme.disabledTextColor
-                    font.pointSize: root.compactSmallFontSize
-                    text: "This build targets the current Qt5/KF5 Kirigami stack and uses bundled parser sources inside the repository."
-                }
             }
         }
     }
@@ -182,7 +174,7 @@ Kirigami.ApplicationWindow {
                 SplitView {
                     SplitView.fillWidth: true
                     SplitView.fillHeight: true
-                    SplitView.preferredHeight: root.height * 0.66
+                    SplitView.preferredHeight: root.height * 0.58
                     orientation: Qt.Horizontal
 
                     RowLayout {

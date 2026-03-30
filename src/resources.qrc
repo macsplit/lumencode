@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>contents/ui/Main.qml</file>
+        <file>icons/lumencode.svg</file>
     </qresource>
 </RCC>

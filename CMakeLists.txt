@@ -19,6 +19,8 @@ include(KDECompilerSettings NO_POLICY_SCOPE)
 find_package(Qt5 5.15 REQUIRED COMPONENTS Core Quick QuickControls2 Widgets)
 find_package(KF5 REQUIRED COMPONENTS Kirigami2 CoreAddons)
 
+configure_file(lumencode.desktop.in lumencode.desktop @ONLY)
+
 add_library(vendor-tree-sitter STATIC
     third_party/tree-sitter/lib/src/lib.c
 )
@@ -159,3 +161,5 @@ target_link_libraries(lumencode-cli
 )
 
 install(TARGETS lumencode lumencode-cli ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/lumencode.desktop DESTINATION ${KDE_INSTALL_APPDIR})
+install(FILES src/icons/lumencode.svg DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps RENAME lumencode.svg)

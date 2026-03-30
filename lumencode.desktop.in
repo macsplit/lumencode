@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=LumenCode
+GenericName=Structural Code Explorer
+Comment=Inspect project structure and source snippets
+Exec=lumencode
+Icon=lumencode
+Terminal=false
+Categories=Development;IDE;Qt;
+StartupNotify=true

@@ -1,4 +1,5 @@
 #include <QApplication>
+#include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 
@@ -10,6 +11,8 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     app.setApplicationName(QStringLiteral("LumenCode"));
     app.setOrganizationName(QStringLiteral("OpenSource"));
+    app.setDesktopFileName(QStringLiteral("lumencode"));
+    app.setWindowIcon(QIcon(QStringLiteral(":/icons/lumencode.svg")));
 
     qmlRegisterType<ProjectController>("Lumencode", 1, 0, "ProjectController");
 
