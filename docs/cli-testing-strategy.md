@@ -7,7 +7,7 @@ This document outlines the `lumencode-cli` tool created to enable robust, "like-
 The `lumencode-cli` is a standalone executable that exercises the same core libraries as the main `lumencode` application:
 - `ProjectController`: High-level application state and logic.
 - `FileSystemModel`: Directory scanning, filtering, and tree structure.
-- `SymbolParser`: Language-specific symbol and metadata extraction, now significantly enhanced with Tree-sitter for core languages (JS/TS, PHP, CSS) and retaining heuristics for others.
+- `SymbolParser`: Language-specific symbol and metadata extraction, now using Tree-sitter for JS/TS/TSX, PHP, CSS, Python, Rust, Java, and C#, while retaining heuristics where coverage is still incomplete.
 
 By using the same underlying classes, the CLI provides an accurate representation of what the GUI would display, making it ideal for automated testing and rapid iteration on parsing features.
 
@@ -28,9 +28,11 @@ Test the `SymbolParser` against diverse file types to ensure correct symbol extr
 - **HTML/CSS**: Tested with `Android2023/www/index.html` and associated CSS.
 - **JSON**: Tested `package.json` for scripts and dependencies, and OpenAPI JSON for route definitions.
 - **Python**: Tested Flask-style routes and imports using `HardwareIoT/whisper-web-service/app.py`.
+- **Rust**: Tested `impl`, `mod`, `use`, and bounded snippets using `Gaming/sokoban-emoji/src/main.rs`.
 - **C/C++**: Tested function/include extraction using `Coding/dummy_languages/dummy.cpp`.
-- **Java**: Tested class/method/import extraction using `Coding/dummy_languages/dummy.java`.
-- **C#**: Tested top-level ASP.NET-style program files using `dotnet/TimeTracker/Program.cs`.
+- **Java**: Tested Tree-sitter-backed class/member/import extraction using `Coding/dummy_languages/dummy.java` and `Coding/Android-WebView-Example/app/src/main/java/com/books/webview/MainActivity.java`.
+- **C#**: Tested Tree-sitter-backed type/member/import extraction using `dotnet/TimeTracker/Models/TimesModel.cs` and top-level ASP.NET-style program files using `dotnet/TimeTracker/Program.cs`.
+- **Objective-C**: Tested heuristic class/import extraction using `TimeSystem/DesignApp/platforms/ios/Time Designer/Classes/MainViewController.m`.
 
 ### 2. State Persistence & Sequencing
 In interactive mode, verify that commands correctly update the internal state and that subsequent commands operate on that updated state.
@@ -82,4 +84,5 @@ Use the CLI to create a suite of "golden" JSON outputs for known projects. Futur
 - The CLI remains the best way to regression-test parsing and payload structure without launching the GUI.
 - The CLI can now exercise lower-pane source-context payloads directly through `selectSymbolByData`, making dependency/route/quick-link regressions testable without QML interaction.
 - The GUI now adds extra presentation behavior on top of the shared backend data, including lower-pane snippet rendering, compact snippet diagnostics, and CSS class drill-down behavior.
+- Project-summary regressions are also worth checking through the CLI because `mainEntry` scoring is still evolving for mixed-language roots.
 - Full GUI parity should not be assumed for purely visual concerns such as splitter layout, lightweight syntax coloring, or rich-text snippet presentation.

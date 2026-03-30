@@ -52,6 +52,34 @@ LumenCode vendors parser sources directly in `third_party/` so the application c
 - License: MIT
 - License file retained at: `third_party/tree-sitter-css/LICENSE`
 
+### Tree-sitter Python Grammar
+
+- Source: https://github.com/tree-sitter/tree-sitter-python
+- Vendored path: `third_party/tree-sitter-python`
+- License: MIT
+- License file retained at: `third_party/tree-sitter-python/LICENSE`
+
+### Tree-sitter Rust Grammar
+
+- Source: https://github.com/tree-sitter/tree-sitter-rust
+- Vendored path: `third_party/tree-sitter-rust`
+- License: MIT
+- License file retained at: `third_party/tree-sitter-rust/LICENSE`
+
+### Tree-sitter Java Grammar
+
+- Source: https://github.com/tree-sitter/tree-sitter-java
+- Vendored path: `third_party/tree-sitter-java`
+- License: MIT
+- License file retained at: `third_party/tree-sitter-java/LICENSE`
+
+### Tree-sitter C# Grammar
+
+- Source: https://github.com/tree-sitter/tree-sitter-c-sharp
+- Vendored path: `third_party/tree-sitter-c-sharp`
+- License: MIT
+- License file retained at: `third_party/tree-sitter-c-sharp/LICENSE`
+
 ## Additional Upstream Notices
 
 The vendored Tree-sitter core also retains upstream Unicode-related notice files inside its source tree, including:
@@ -64,5 +92,5 @@ Those upstream notice files remain in place as part of the vendored source.
 
 - LumenCode links bundled Tree-sitter runtime and grammar sources directly from `third_party/`
 - No external Tree-sitter runtime package is required at build time or run time
-- Current AST-backed parsing is wired for JavaScript, TypeScript, TSX, PHP, and CSS
+- Current AST-backed parsing is wired for JavaScript, TypeScript, TSX, PHP, CSS, Python, Rust, Java, and C#
 - HTML quick-link extraction remains heuristic for now, even though the official HTML grammar is also vendored and documented here

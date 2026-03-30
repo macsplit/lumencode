@@ -87,7 +87,7 @@ CSS:
 Python:
 
 - Top-level functions, decorated functions, classes, and class methods.
-- Flask/FastAPI-style route extraction remains available.
+- Imports and conservative Flask/FastAPI-style route extraction remain available.
 - Tree-sitter-backed snippets now preserve decorator context and class/method boundaries.
 
 Rust:
@@ -95,39 +95,33 @@ Rust:
 - Top-level `mod`, `fn`, `struct`, `enum`, `trait`, and `impl` items.
 - `impl` and trait members are extracted from the AST with bounded snippets.
 - `use` and external `mod` declarations are surfaced as dependencies.
+- Grouped `use` imports retain full snippets while showing shorter dependency labels in the UI.
 
 JSON:
 
 - `package.json` scripts, entrypoint, dependency lists, with a project summary.
 - OpenAPI-style path and operation summaries, with method and description as snippets.
 
-Python:
-
-- Top-level functions, classes, and class methods.
-- Import extraction and conservative Flask/FastAPI-style route extraction.
-
 C/C++:
 
 - Includes, top-level classes/structs, and top-level functions.
 - Header/implementation related-file linking.
+- Parsing remains heuristic.
 
 Java:
 
-- Imports, top-level classes/interfaces/enums, and method extraction.
+- Tree-sitter-backed imports, top-level classes/interfaces/enums/records, constructors, methods, and field/property extraction.
 
 C#:
 
-- `using` imports, top-level types, top-level statements/variables, and basic ASP.NET route extraction from `Program.cs` style apps.
-
-Rust:
-
-- `use` and `mod` dependency extraction.
-- Top-level `fn`, `struct`, `enum`, `trait`, and `impl` extraction.
+- Tree-sitter-backed `using` imports, top-level types, constructors, methods, fields, and properties.
+- Top-level statements/variables and basic ASP.NET route extraction from `Program.cs` style apps remain available.
 
 Objective-C:
 
 - `#import` dependency extraction.
 - `@implementation` class extraction with per-class Objective-C method summaries.
+- Parsing remains heuristic.
 
 ### 3.4 Neon Link Features
 
@@ -190,7 +184,7 @@ Symbol visual language:
 - `Kirigami.ApplicationWindow`
 - Picker-first flow with a dedicated path-selection screen.
 - Central content built from split views, cards, and list views.
-- Thin left control rail for global actions.
+- Thin left control rail for global actions, file-opening shortcuts, and settings.
 - Embedded bottom source pane for snippets and line-focused inspection.
 
 ## 6. Parser Strategy
@@ -205,6 +199,7 @@ Release 1 parser strategy:
 ## 7. Known Problems
 
 - Some extracted structure is still shallow or misleading on real projects.
+- Project summary entrypoint selection is better for conventional roots, but still imperfect on broad multi-project trees.
 - HTML/CSS class comparison can still be noisy on complex HTML documents.
 - The current snippet highlighter is intentionally lightweight and not language-complete.
 - Current diagnostics are parser-aware but not equivalent to full external linting.
@@ -222,20 +217,20 @@ Phase 2. Better project structure
 
 - Improve CommonJS and Node service understanding. **(Completed: Tree-sitter integration for better accuracy and export surfacing)**
 - Improve project-level summaries and dependency navigation. **(Completed: Project summary implemented, improved dependency resolution)**
-- Broaden parser coverage for common non-web languages used in mixed repos. **(Completed: Python, C/C++, Java, C#, Rust, and Objective-C heuristic support added)**
-- Improve test linkage and route understanding. **(Completed: Basic Express route detection)**
+- Broaden parser coverage for common non-web languages used in mixed repos. **(Completed: Python and Rust are AST-backed; Java and C# are now AST-backed; C/C++ and Objective-C remain heuristic)**
+- Improve test linkage and route understanding. **(Expanded: Express, Flask/FastAPI-style, and basic ASP.NET route extraction are present)**
 
 Phase 3. Source inspection
 
 - Add a bottom pane for syntax-highlighted source snippets. **(Completed with internal highlighting and diagnostics)**
 - Sync selected symbols and routes to source lines. **(Expanded: symbols, CSS class entries, dependencies, routes, and quick links now share the snippet-selection path)**
-- Add lint-aware or parser-aware snippet context where feasible. **(Partially completed: conservative parser-aware diagnostics are present)**
+- Add lint-aware or parser-aware snippet context where feasible. **(Partially completed: conservative parser-aware diagnostics are present, and AST-backed snippets now cover more languages)**
 
 Phase 4. General polish
 
 - Add search/filtering.
-- Improve density and readability.
-- Refine navigation and jump behavior.
+- Improve density and readability. **(Partially completed: denser explorer layout and larger default source pane landed)**
+- Refine navigation and jump behavior. **(Partially completed: open-in-folder, open-in-editor, settings, and desktop launcher integration landed)**
 
 ## 9. Non-Goals
 

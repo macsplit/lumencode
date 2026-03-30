@@ -16,8 +16,9 @@ What currently works:
 - Browsing a project tree with a dense three-pane explorer and a resizable lower source pane.
 - Resizing the top panes and lower source pane with draggable splitters.
 - Opening files into overview/detail panes with a compact left control rail and project-root display as `/`.
+- Using the left control rail for back navigation, open-in-folder, open-in-editor, and settings.
 - Extracting detailed symbols for PHP, JS, TS, TSX, CSS, HTML, JSON, Python, C/C++, Java, C#, Rust, and Objective-C.
-- Using Tree-sitter for PHP, JS, TS, TSX, CSS, Rust, and Python parsing where integrated.
+- Using Tree-sitter for PHP, JS, TS, TSX, CSS, Python, Rust, Java, and C# parsing where integrated.
 - Showing syntax-colored lower-pane snippets with internal highlighting rather than an external highlighting dependency.
 - Showing parser-aware diagnostics for supported snippet languages, while suppressing false errors for intentionally truncated previews.
 - Showing file previews in the lower pane when a file itself is selected.
@@ -32,6 +33,7 @@ What currently works:
 - A functional standalone CLI tool (`lumencode-cli`) for scripted analysis and regression checks.
 - CLI state now exposes the active lower-pane snippet payload, and interactive mode can select arbitrary source-context payloads for GUI-parity checks.
 - Project-level summaries including file type counts and main entry-point detection.
+- Installing a desktop launcher and scalable app icon through `cmake --install`.
 - Stable-enough backend payloads for the current QML bindings.
 
 ## Build
@@ -58,14 +60,14 @@ Phase 1. Stabilization
 Phase 2. Better source inspection
 
 - Improve snippet diagnostics beyond the current lightweight parser-aware checks.
-- Add better context selection for dependencies, routes, and quick links in the lower pane.
-- Support clearer line-focused navigation from overview/detail items into the lower pane.
+- Continue improving context selection for dependencies, routes, and quick links in the lower pane.
+- Support clearer line-focused navigation and open-in-editor behavior from overview/detail items into the lower pane.
 
 Phase 3. Better usability
 
 - Search/filter across files and symbols.
 - Improve visual hierarchy and information density further without sacrificing clarity.
-- Expand the left global control rail beyond the current back action.
+- Continue refining the left global control rail and settings surface.
 
 Phase 4. Broader project understanding
 
@@ -77,6 +79,7 @@ Phase 4. Broader project understanding
 ## Known Issues
 
 - Some extracted structure is still shallow or misleading on real projects.
+- Some project `mainEntry` guesses are still imperfect on broad mixed-language roots.
 - HTML/CSS class comparison can still be noisy on complex HTML documents.
 - Syntax highlighting is currently an internal lightweight implementation, not a full external highlighter.
 - Snippet diagnostics are intentionally conservative for truncated previews and are not a full linter.

@@ -141,3 +141,12 @@ Important product-direction notes for next time:
     - Added Objective-C / Objective-C++ scanning and heuristic parsing for `#import`, `@implementation`, and per-class method extraction.
     - Vendored official Tree-sitter Rust and Python grammars and routed both languages through AST-backed symbol extraction before heuristic fallback.
     - Rust snippets now come from AST node bounds, which fixes prior bleed between adjacent functions inside `impl` blocks.
+    - Vendored official Tree-sitter Java and C# grammars and routed both languages through AST-backed symbol extraction before heuristic fallback.
+    - Tightened Java field extraction so initializer values are no longer surfaced as fake members.
+    - Switched Java and C# import / using payloads to AST-backed line and snippet capture.
+- **Project Summary Follow-up:**
+    - Added recursive Android-oriented conventional entry detection so `MainActivity.java` is preferred over tests or assets on Android app roots.
+- **Desktop / Utility Actions:**
+    - Added a bundled app icon plus desktop launcher installation through `cmake --install`.
+    - Expanded the left control rail with open-in-folder, open-in-editor, and settings actions.
+    - Added a persisted preferred-editor setting with `%f` substitution and system-default fallback.
