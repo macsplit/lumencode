@@ -28,7 +28,9 @@ Kirigami.ApplicationWindow {
     property int compactFontSize: Math.max(9, Kirigami.Theme.defaultFont.pointSize - 1)
     property int compactSmallFontSize: Math.max(8, compactFontSize - 1)
     property bool hasSelectionPath: !!project.selectedPath
-    property bool hasCurrentFile: !!project.selectedSnippet.path && project.selectedSnippet.kind !== "folder"
+    property bool hasCurrentFile: !!project.selectedSnippet.path
+                                  && (project.selectedFileData.language || "") !== "folder"
+                                  && project.selectedSnippet.kind !== "folder"
 
     function iconForFileType(fileType, isDir) {
         if (isDir) {
