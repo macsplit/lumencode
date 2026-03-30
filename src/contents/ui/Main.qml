@@ -27,7 +27,16 @@ Kirigami.ApplicationWindow {
     property int compactRowSpacing: Math.max(3, Math.round(Kirigami.Units.smallSpacing * 0.5))
     property int compactFontSize: Math.max(9, Kirigami.Theme.defaultFont.pointSize - 1)
     property int compactSmallFontSize: Math.max(8, compactFontSize - 1)
+    property int treeIndentStep: Math.max(Kirigami.Units.smallSpacing * 2, Math.round(Kirigami.Units.gridUnit * 0.8))
+    property int treeDisclosureWidth: Math.round(Kirigami.Units.gridUnit * 1.1)
     property bool hasSelectionPath: !!project.selectedPath
+    property bool hasDetailPaneContent: !!project.selectedSymbol.detail
+                                         || (project.selectedFileData.dependencies || []).length > 0
+                                         || (project.selectedFileData.routes || []).length > 0
+                                         || (project.selectedFileData.relatedFiles || []).length > 0
+                                         || (!!project.selectedFileData.packageSummary
+                                             && (!!project.selectedFileData.packageSummary.name
+                                                 || (project.selectedFileData.packageSummary.dependencies || []).length > 0))
     property bool hasCurrentFile: !!project.selectedSnippet.path
                                   && (project.selectedFileData.language || "") !== "folder"
                                   && project.selectedSnippet.kind !== "folder"
@@ -281,8 +290,48 @@ Kirigami.ApplicationWindow {
                             Layout.fillHeight: true
 
                             contentItem: ListView {
+                                id: explorerList
                                 clip: true
                                 model: fileModel ? fileModel.visibleEntries : []
+                                property real preservedContentY: 0
+                                property bool restorePending: false
+
+                                function requestScrollRestore() {
+                                    preservedContentY = contentY
+                                    restorePending = true
+                                }
+
+                                function restoreScrollPosition() {
+                                    if (!restorePending) {
+                                        return
+                                    }
+
+                                    var maxY = Math.max(0, contentHeight - height)
+                                    contentY = Math.max(0, Math.min(preservedContentY, maxY))
+                                    restorePending = false
+                                }
+
+                                onModelChanged: {
+                                    if (restorePending) {
+                                        Qt.callLater(restoreScrollPosition)
+                                    }
+                                }
+
+                                onContentHeightChanged: {
+                                    if (restorePending) {
+                                        Qt.callLater(restoreScrollPosition)
+                                    }
+                                }
+
+                                Connections {
+                                    target: fileModel ? fileModel : null
+
+                                    function onVisibleEntriesChanged() {
+                                        if (explorerList.restorePending) {
+                                            Qt.callLater(explorerList.restoreScrollPosition)
+                                        }
+                                    }
+                                }
 
                                 delegate: ItemDelegate {
                                     required property var modelData
@@ -300,7 +349,7 @@ Kirigami.ApplicationWindow {
                                         spacing: root.compactRowSpacing
 
                                         Item {
-                                            Layout.preferredWidth: modelData.depth * root.compactMargin
+                                            Layout.preferredWidth: modelData.depth * root.treeIndentStep
                                             Layout.fillHeight: true
                                         }
 
@@ -309,9 +358,19 @@ Kirigami.ApplicationWindow {
                                             text: modelData.expanded ? "-" : "+"
                                             font.pointSize: root.compactSmallFontSize
                                             padding: 0
-                                            implicitWidth: Kirigami.Units.gridUnit * 1.1
+                                            implicitWidth: root.treeDisclosureWidth
                                             implicitHeight: Kirigami.Units.gridUnit * 0.9
-                                            onClicked: fileModel.toggleExpanded(modelData.path)
+                                            Layout.preferredWidth: root.treeDisclosureWidth
+                                            onClicked: {
+                                                explorerList.requestScrollRestore()
+                                                fileModel.toggleExpanded(modelData.path)
+                                            }
+                                        }
+
+                                        Item {
+                                            visible: !modelData.isDir || !modelData.hasChildren
+                                            Layout.preferredWidth: root.treeDisclosureWidth
+                                            Layout.fillHeight: true
                                         }
 
                                         Kirigami.Icon {
@@ -332,6 +391,7 @@ Kirigami.ApplicationWindow {
                                     onClicked: {
                                         project.selectPath(modelData.path)
                                         if (modelData.isDir) {
+                                            explorerList.requestScrollRestore()
                                             fileModel.toggleExpanded(modelData.path)
                                         }
                                     }
@@ -417,6 +477,50 @@ Kirigami.ApplicationWindow {
                                             font.pointSize: root.compactSmallFontSize
                                             onClicked: project.selectSymbolByData(modelData)
                                         }
+
+                                        Repeater {
+                                            model: modelData.members || []
+
+                                            delegate: Kirigami.AbstractCard {
+                                                required property var modelData
+                                                Layout.fillWidth: true
+                                                leftPadding: Kirigami.Units.smallSpacing
+
+                                                contentItem: ColumnLayout {
+                                                    spacing: root.compactRowSpacing
+
+                                                    RowLayout {
+                                                        Layout.fillWidth: true
+
+                                                        Label {
+                                                            text: modelData.kind
+                                                            color: Kirigami.Theme.disabledTextColor
+                                                            font.pointSize: root.compactSmallFontSize
+                                                        }
+
+                                                        Label {
+                                                            Layout.fillWidth: true
+                                                            text: modelData.name
+                                                            font.bold: true
+                                                            elide: Text.ElideMiddle
+                                                            font.pointSize: root.compactFontSize
+                                                        }
+
+                                                        Label {
+                                                            text: "L" + modelData.line
+                                                            color: Kirigami.Theme.disabledTextColor
+                                                            font.pointSize: root.compactSmallFontSize
+                                                        }
+                                                    }
+
+                                                    Button {
+                                                        text: "Inspect"
+                                                        font.pointSize: root.compactSmallFontSize
+                                                        onClicked: project.selectSymbolByData(modelData)
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -424,9 +528,10 @@ Kirigami.ApplicationWindow {
                     }
 
                     Kirigami.AbstractCard {
+                        visible: root.hasDetailPaneContent
                         SplitView.fillHeight: true
-                        SplitView.preferredWidth: root.width * 0.34
-                        SplitView.minimumWidth: Kirigami.Units.gridUnit * 10
+                        SplitView.preferredWidth: root.hasDetailPaneContent ? root.width * 0.34 : 0
+                        SplitView.minimumWidth: root.hasDetailPaneContent ? Kirigami.Units.gridUnit * 10 : 0
 
                         contentItem: ScrollView {
                             clip: true
@@ -513,6 +618,9 @@ Kirigami.ApplicationWindow {
                                                     "sourceLanguage": project.selectedFileData.language || "",
                                                     "line": modelData.line || 0,
                                                     "snippet": modelData.snippet || "",
+                                                    "snippetKind": modelData.snippetKind || "",
+                                                    "diagnosticsMode": modelData.diagnosticsMode || "",
+                                                    "skipDiagnostics": modelData.skipDiagnostics || false,
                                                     "detail": modelData.detail || (modelData.type ? modelData.type + " dependency" : "dependency")
                                                 })
                                             } else if (modelData.path && modelData.exists) {
@@ -551,6 +659,9 @@ Kirigami.ApplicationWindow {
                                                 "sourceLanguage": project.selectedFileData.language || "",
                                                 "line": modelData.line || 0,
                                                 "snippet": modelData.snippet || "",
+                                                "snippetKind": modelData.snippetKind || "",
+                                                "diagnosticsMode": modelData.diagnosticsMode || "",
+                                                "skipDiagnostics": modelData.skipDiagnostics || false,
                                                 "detail": modelData.detail || "route"
                                             })
                                         }

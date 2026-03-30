@@ -10,12 +10,16 @@ The `lumencode-cli` is a standalone executable that exercises the same core libr
 - `SymbolParser`: Language-specific symbol and metadata extraction, now using Tree-sitter for JS/TS/TSX, PHP, CSS, Python, Rust, Java, and C#, while retaining heuristics where coverage is still incomplete.
 
 By using the same underlying classes, the CLI provides an accurate representation of what the GUI would display, making it ideal for automated testing and rapid iteration on parsing features.
+The CLI is also now part of the runtime safety story: the GUI routes file analysis through `lumencode-cli --dump-file`, so parser crashes are contained to the helper process rather than taking down the main app.
 
 ## Features
 
 - **One-shot Mode**: Analyze a project root, select a file, and extract symbols, dependencies, routes, and source snippets in a single command.
+- **Crash-Isolated Dump Mode**: `--dump-file <path>` parses exactly one file and prints the same analysis JSON used by the GUI-safe selection path.
 - **Persistent Interactive Mode (`-i`)**: Maintains application state across multiple JSON-based commands on `stdin`.
 - **JSON Output**: All state changes and analysis results are emitted as compact JSON for easy machine processing, including source snippets for symbols.
+- **Snippet Contract Validation**: Interactive state includes `selectedSnippet`, exposing `snippetKind` and `diagnosticsMode` so excerpt-vs-parseable behavior can be tested without QML.
+- **Corpus Sweep Harness**: `tools/regression_sweep.py` samples projects under `/home/user/Code`, drives interactive selection, and checks snippet, diagnostics, and member-shape invariants across many files.
 
 ## Testing Strategy
 
@@ -49,11 +53,24 @@ Ensure that the JSON output from the CLI matches the data expected by the QML co
 ### 4. Regression Testing
 Use the CLI to create a suite of "golden" JSON outputs for known projects. Future changes to the parser can be automatically verified against these baselines.
 
+### 5. Safety Regression Testing
+Exercise pathological inputs and failure-containment paths:
+
+- Deep or wide directory trees, verifying bounded crawl behavior instead of unbounded recursion.
+- Large files, verifying parser refusal/truncation summaries instead of full in-memory analysis.
+- Known parser repros, verifying that `--dump-file` exits cleanly or fails in isolation without crashing the GUI.
+- Snippet-contract probes, verifying that excerpts do not emit diagnostics and declaration snippets do not inherit leading braces, access labels, or control-flow keywords as fake members.
+
 ## Usage Examples
 
 ### One-shot analysis
 ```bash
 ./build/bin/lumencode-cli . -p src/symbolparser.cpp
+```
+
+### Crash-isolated single-file dump
+```bash
+./build/bin/lumencode-cli --dump-file /home/user/Code/APIScraping/crossword/cross.js
 ```
 
 ### Interactive session
@@ -82,7 +99,10 @@ Use the CLI to create a suite of "golden" JSON outputs for known projects. Futur
 ## Current Notes
 
 - The CLI remains the best way to regression-test parsing and payload structure without launching the GUI.
+- `--dump-file` is now the preferred repro path for parser crashes because it matches the helper process used by the GUI selection flow.
 - The CLI can now exercise lower-pane source-context payloads directly through `selectSymbolByData`, making dependency/route/quick-link regressions testable without QML interaction.
+- `tools/regression_sweep.py` currently serves as the broad local corpus harness for snippet-contract and payload-shape regressions.
 - The GUI now adds extra presentation behavior on top of the shared backend data, including lower-pane snippet rendering, compact snippet diagnostics, and CSS class drill-down behavior.
 - Project-summary regressions are also worth checking through the CLI because `mainEntry` scoring is still evolving for mixed-language roots.
 - Full GUI parity should not be assumed for purely visual concerns such as splitter layout, lightweight syntax coloring, or rich-text snippet presentation.
+- Remaining native parser rehabilitation should proceed through the CLI first: collect a crashing file, minimize the repro, verify whether the fault is in LumenCode integration or an upstream grammar/runtime, and only then reduce the fallback/isolation layers for that language.

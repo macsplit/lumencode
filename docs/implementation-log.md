@@ -61,6 +61,37 @@
     - Confirmed that no syntax-highlighting dependency is currently linked in `CMakeLists.txt`.
     - Confirmed that no lint or parser-diagnostic payload is currently exposed through `ProjectController`.
 
+- **Stability, Fallback, and Regression Work:**
+    - Preserved explorer scroll position across left-tree redraws and fixed visible child indentation after folder expansion.
+    - Updated the overview pane so PHP class members render as nested cards instead of disappearing into the detail pane.
+    - Auto-collapsed the right detail pane when the selection has no unique context.
+    - Added bounded filesystem crawl safeguards:
+      - max tree depth `64`
+      - max scanned nodes `50000`
+      - max included entries per directory `2000`
+      - synthetic `[skipped: ...]` children when limits are hit
+    - Added parser-side graceful degradation for large inputs:
+      - large files are summarized instead of fully parsed
+      - lower-pane file previews are truncated instead of unbounded
+      - auxiliary reads such as CSS/HTML support paths are capped
+    - Moved GUI file analysis onto a crash-isolated helper path by routing selection through `lumencode-cli --dump-file`.
+    - Introduced an explicit lower-pane snippet contract using `snippetKind` and `diagnosticsMode`, replacing ad hoc assumptions about whether snippets are parseable.
+    - Marked dependency, route, fallback-symbol, and file-preview payloads with the new snippet contract so diagnostics are only attempted on standalone constructs.
+    - Hardened JS fallback parsing to:
+      - bypass unstable native parsing for plain JS/JSX where needed
+      - emit snippets for variables/functions/classes
+      - anchor declaration snippets cleanly
+      - avoid treating control-flow keywords as object/class members
+    - Tightened fallback snippet extraction in C++, Java, and C# so declarations no longer inherit leading braces or access labels.
+    - Anchored PHP class regexes to real declarations so comments do not create fake classes.
+    - Added `tools/regression_sweep.py`, a corpus-based CLI harness that samples files under `/home/user/Code`, drives `selectPath`/`selectSymbolByData`, and validates snippet and diagnostics invariants.
+    - Used the sweep harness to reproduce and close regressions across:
+      - JS fallback snippets with leading `}`
+      - false parser warnings on excerpt snippets
+      - C# and C++ declaration previews with leaked surrounding context
+      - PHP false-positive class detection from comments
+      - JS object/member extraction producing fake `if` / `for` members
+
 ## 2026-03-31
 
 - **Explorer UI Refactor:**
@@ -89,14 +120,12 @@
 
 ## Next Session Starting Point
 
-- Expand lower-pane selection behavior beyond files, symbols, and CSS class entries.
-  - dependencies
-  - routes
-  - quick links
+- Continue broadening the CLI regression corpus and assertion set.
 - Improve snippet highlighting fidelity or adopt a stronger highlighting dependency if one is available locally later.
 - Improve diagnostics beyond the current conservative parser-aware checks.
 - Re-run GUI verification on a real display session and capture any remaining QML/runtime issues.
 - Continue reducing noisy HTML/CSS and Node/CommonJS output on real repositories.
+- Start native parser rehabilitation only after working from minimized crash repros through `lumencode-cli --dump-file`, keeping the current helper isolation and fallbacks in place until each language path is proven stable.
 
 ## Wrap-Up State
 
@@ -115,6 +144,7 @@ Known runtime/UI problems:
 - highlighting is intentionally lightweight and not yet language-complete
 - diagnostics are conservative and not equivalent to a full linter
 - some lower-pane context sources are still not wired
+- some languages still rely on heuristic fallback paths for stability on hostile files
 
 Important product-direction notes for next time:
 
@@ -122,6 +152,7 @@ Important product-direction notes for next time:
 - the next major usability improvement should be broader lower-pane context wiring and better diagnostics/highlighting
 - Node/CommonJS structure support exists but needs refinement to become genuinely useful
 - documentation now reflects the current project direction instead of the original bootstrap brief
+- helper-process isolation and the regression sweep now form part of the intended safety architecture, not just temporary debugging tools
 
 ## 2026-03-30 (continued)
 

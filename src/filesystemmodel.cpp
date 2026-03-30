@@ -6,9 +6,14 @@
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <algorithm>
 #include <limits>
 
 namespace {
+
+constexpr int kMaxTreeDepth = 64;
+constexpr int kMaxScannedNodes = 50000;
+constexpr int kMaxEntriesPerDirectory = 2000;
 
 QString normalizeProjectEntry(const QString &rootPath, const QString &value)
 {
@@ -389,7 +394,8 @@ void FileSystemModel::setRootPath(const QString &path)
     beginResetModel();
     m_nodesByPath.clear();
     m_expandedPaths.clear();
-    Node *newRoot = scanDirectory(info.absoluteFilePath(), nullptr);
+    m_scannedNodeCount = 0;
+    Node *newRoot = scanDirectory(info.absoluteFilePath(), nullptr, 0);
     resetTree(newRoot);
     m_rootPath = info.absoluteFilePath();
     m_expandedPaths.insert(m_rootPath);
@@ -436,7 +442,26 @@ void FileSystemModel::deleteNode(Node *node)
     delete node;
 }
 
-FileSystemModel::Node *FileSystemModel::scanDirectory(const QString &path, Node *parent)
+FileSystemModel::Node *FileSystemModel::appendSyntheticChild(Node *parent, const QString &name,
+                                                             const QString &suffixTag, bool isDir)
+{
+    if (!parent) {
+        return nullptr;
+    }
+
+    auto *child = new Node;
+    child->name = name;
+    child->path = parent->path + QStringLiteral("/.__lumencode_%1").arg(suffixTag);
+    child->isDir = isDir;
+    child->parent = parent;
+    child->fileType = isDir ? QStringLiteral("folder") : QStringLiteral("file");
+    m_nodesByPath.insert(child->path, child);
+    parent->children.append(child);
+    ++m_scannedNodeCount;
+    return child;
+}
+
+FileSystemModel::Node *FileSystemModel::scanDirectory(const QString &path, Node *parent, int depth)
 {
     QFileInfo info(path);
     auto *node = new Node;
@@ -446,22 +471,76 @@ FileSystemModel::Node *FileSystemModel::scanDirectory(const QString &path, Node 
     node->parent = parent;
     node->fileType = QStringLiteral("folder");
     m_nodesByPath.insert(node->path, node);
+    ++m_scannedNodeCount;
 
-    QDir dir(node->path);
-    const QFileInfoList entries = dir.entryInfoList(QDir::NoDotAndDotDot | QDir::AllDirs | QDir::Files,
-                                                    QDir::DirsFirst | QDir::Name | QDir::IgnoreCase);
-    for (const QFileInfo &entry : entries) {
+    if (depth >= kMaxTreeDepth) {
+        appendSyntheticChild(node, QStringLiteral("[skipped: maximum folder depth reached]"),
+                             QStringLiteral("depth-limit"));
+        return node;
+    }
+
+    if (m_scannedNodeCount >= kMaxScannedNodes) {
+        appendSyntheticChild(node, QStringLiteral("[skipped: project tree limit reached]"),
+                             QStringLiteral("node-limit"));
+        return node;
+    }
+
+    QList<QFileInfo> directoryEntries;
+    QList<QFileInfo> fileEntries;
+    int includedEntries = 0;
+    bool perDirectoryLimitReached = false;
+    QDirIterator it(node->path, QDir::NoDotAndDotDot | QDir::AllDirs | QDir::Files | QDir::Readable,
+                    QDirIterator::NoIteratorFlags);
+    while (it.hasNext()) {
+        it.next();
+        const QFileInfo entry = it.fileInfo();
         if (entry.isDir()) {
             if (shouldIgnoreDirectory(entry.fileName())) {
                 continue;
             }
-            node->children.append(scanDirectory(entry.absoluteFilePath(), node));
+
+            if (includedEntries >= kMaxEntriesPerDirectory) {
+                perDirectoryLimitReached = true;
+                break;
+            }
+            directoryEntries.append(entry);
+            ++includedEntries;
             continue;
         }
 
         const QString suffix = entry.suffix().toLower();
         if (!shouldIncludeFile(suffix)) {
             continue;
+        }
+
+        if (includedEntries >= kMaxEntriesPerDirectory) {
+            perDirectoryLimitReached = true;
+            break;
+        }
+        fileEntries.append(entry);
+        ++includedEntries;
+    }
+
+    auto byName = [](const QFileInfo &lhs, const QFileInfo &rhs) {
+        return QString::compare(lhs.fileName(), rhs.fileName(), Qt::CaseInsensitive) < 0;
+    };
+    std::sort(directoryEntries.begin(), directoryEntries.end(), byName);
+    std::sort(fileEntries.begin(), fileEntries.end(), byName);
+
+    for (const QFileInfo &entry : directoryEntries) {
+        if (m_scannedNodeCount >= kMaxScannedNodes) {
+            appendSyntheticChild(node, QStringLiteral("[skipped: project tree limit reached]"),
+                                 QStringLiteral("node-limit"));
+            return node;
+        }
+        node->children.append(scanDirectory(entry.absoluteFilePath(), node, depth + 1));
+    }
+
+    for (const QFileInfo &entry : fileEntries) {
+        if (m_scannedNodeCount >= kMaxScannedNodes) {
+            appendSyntheticChild(node, QStringLiteral("[skipped: project tree limit reached]"),
+                                 QStringLiteral("node-limit"));
+            return node;
         }
 
         auto *child = new Node;
@@ -472,6 +551,12 @@ FileSystemModel::Node *FileSystemModel::scanDirectory(const QString &path, Node 
         child->fileType = detectFileType(child->path, false);
         m_nodesByPath.insert(child->path, child);
         node->children.append(child);
+        ++m_scannedNodeCount;
+    }
+
+    if (perDirectoryLimitReached && m_scannedNodeCount < kMaxScannedNodes) {
+        appendSyntheticChild(node, QStringLiteral("[skipped: too many entries in this folder]"),
+                             QStringLiteral("entry-limit"));
     }
 
     return node;

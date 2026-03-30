@@ -57,6 +57,7 @@ signals:
 
 private:
     QVariantMap makeFileSnippet() const;
+    QVariantMap parseFileSafely(const QString &path) const;
     static QVariantMap makeSymbolSnippet(const QVariantMap &symbol, const QVariantMap &fileData);
     static QVariantMap enrichSnippetPayload(const QVariantMap &snippet);
     void saveLastOpenedPath(const QString &path) const;

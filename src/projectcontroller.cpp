@@ -3,12 +3,14 @@
 #include "filesystemmodel.h"
 #include "symbolparser.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QDesktopServices>
 #include <QJsonDocument>
+#include <QJsonObject>
 #include <QJsonParseError>
 #include <QProcess>
 #include <QRegularExpression>
@@ -35,6 +37,55 @@ const TSLanguage *tree_sitter_c_sharp(void);
 }
 
 namespace {
+
+constexpr qint64 kMaxPreviewBytes = 256 * 1024;
+const QString kSnippetKindFilePreview = QStringLiteral("file_preview");
+const QString kSnippetKindExactConstruct = QStringLiteral("exact_construct");
+const QString kSnippetKindBlockExcerpt = QStringLiteral("block_excerpt");
+const QString kSnippetKindLineExcerpt = QStringLiteral("line_excerpt");
+const QString kSnippetKindContextExcerpt = QStringLiteral("context_excerpt");
+const QString kDiagnosticsModeParseSnippet = QStringLiteral("parse_snippet");
+const QString kDiagnosticsModeNone = QStringLiteral("none");
+
+bool isContextualSnippetKind(const QString &snippetKind)
+{
+    return snippetKind == kSnippetKindFilePreview
+        || snippetKind == kSnippetKindLineExcerpt
+        || snippetKind == kSnippetKindContextExcerpt;
+}
+
+bool isNonStandaloneMemberKind(const QString &kind)
+{
+    static const QSet<QString> kinds = {
+        QStringLiteral("method"),
+        QStringLiteral("constructor"),
+        QStringLiteral("property"),
+        QStringLiteral("field"),
+        QStringLiteral("constant"),
+        QStringLiteral("variant")
+    };
+    return kinds.contains(kind);
+}
+
+bool shouldParseSnippetByDefault(const QString &language, const QString &kind, const QString &snippetKind)
+{
+    if (isContextualSnippetKind(snippetKind)) {
+        return false;
+    }
+
+    if (isNonStandaloneMemberKind(kind)) {
+        if (language == QStringLiteral("php")
+            || language == QStringLiteral("java")
+            || language == QStringLiteral("csharp")
+            || language == QStringLiteral("rust")
+            || language == QStringLiteral("objc")
+            || language == QStringLiteral("cpp")) {
+            return false;
+        }
+    }
+
+    return true;
+}
 
 struct SnippetAnalysis {
     QString displayCode;
@@ -668,14 +719,21 @@ QString loadFilePreviewSnippet(const QString &path)
         return QString();
     }
 
-    const QString text = QString::fromUtf8(file.readAll());
+    const bool truncatedBySize = info.size() > kMaxPreviewBytes;
+    const QByteArray previewBytes = truncatedBySize ? file.read(kMaxPreviewBytes) : file.readAll();
+    const QString text = QString::fromUtf8(previewBytes);
     const QStringList lines = text.split(QLatin1Char('\n'));
     const int maxLines = 40;
-    if (lines.size() <= maxLines) {
+    if (lines.size() <= maxLines && !truncatedBySize) {
         return text;
     }
 
-    return lines.mid(0, maxLines).join(QLatin1Char('\n')) + QStringLiteral("\n...");
+    QString preview = lines.mid(0, maxLines).join(QLatin1Char('\n'));
+    if (truncatedBySize) {
+        preview += QStringLiteral("\n... [preview truncated: file too large to load fully]");
+        return preview;
+    }
+    return preview + QStringLiteral("\n...");
 }
 
 } // namespace
@@ -793,7 +851,7 @@ void ProjectController::selectPath(const QString &path)
         m_selectedFileData = SymbolParser::makeResultSkeleton(path, info.fileName().isEmpty() ? path : info.fileName(), QStringLiteral("folder"));
         m_selectedFileData.insert(QStringLiteral("summary"), QStringLiteral("Directory"));
     } else {
-        m_selectedFileData = m_symbolParser->parseFile(path);
+        m_selectedFileData = parseFileSafely(path);
     }
 
     m_selectedSymbol = {};
@@ -801,6 +859,55 @@ void ProjectController::selectPath(const QString &path)
     emit selectedFileDataChanged();
     emit selectedSymbolChanged();
     emit selectedSnippetChanged();
+}
+
+QVariantMap ProjectController::parseFileSafely(const QString &path) const
+{
+    const QFileInfo info(path);
+    QVariantMap fallback = SymbolParser::makeResultSkeleton(path,
+                                                            info.fileName().isEmpty() ? path : info.fileName(),
+                                                            QString());
+
+    const QString helperPath = QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("lumencode-cli"));
+    if (!QFileInfo::exists(helperPath)) {
+        fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper not found"));
+        return fallback;
+    }
+
+    QProcess helper;
+    helper.start(helperPath, {QStringLiteral("--dump-file"), path});
+    if (!helper.waitForStarted(3000)) {
+        fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper could not start"));
+        return fallback;
+    }
+
+    if (!helper.waitForFinished(15000)) {
+        helper.kill();
+        helper.waitForFinished(1000);
+        fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper timed out"));
+        return fallback;
+    }
+
+    if (helper.exitStatus() != QProcess::NormalExit || helper.exitCode() != 0) {
+        fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper failed"));
+        return fallback;
+    }
+
+    QJsonParseError error;
+    const QJsonDocument doc = QJsonDocument::fromJson(helper.readAllStandardOutput(), &error);
+    if (doc.isNull() || !doc.isObject()) {
+        fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper returned invalid data"));
+        return fallback;
+    }
+
+    QVariantMap result = doc.object().toVariantMap();
+    if (!result.contains(QStringLiteral("path"))) {
+        result.insert(QStringLiteral("path"), path);
+    }
+    if (!result.contains(QStringLiteral("fileName"))) {
+        result.insert(QStringLiteral("fileName"), info.fileName().isEmpty() ? path : info.fileName());
+    }
+    return result;
 }
 
 void ProjectController::selectSymbol(int index)
@@ -943,6 +1050,8 @@ QVariantMap ProjectController::makeFileSnippet() const
     snippet.insert(QStringLiteral("line"), 0);
     snippet.insert(QStringLiteral("snippet"), loadFilePreviewSnippet(path));
     snippet.insert(QStringLiteral("detail"), m_selectedFileData.value(QStringLiteral("summary")).toString());
+    snippet.insert(QStringLiteral("snippetKind"), kSnippetKindFilePreview);
+    snippet.insert(QStringLiteral("diagnosticsMode"), kDiagnosticsModeNone);
     return enrichSnippetPayload(snippet);
 }
 
@@ -966,6 +1075,15 @@ QVariantMap ProjectController::makeSymbolSnippet(const QVariantMap &symbol, cons
     snippet.insert(QStringLiteral("line"), symbol.value(QStringLiteral("line")).toInt());
     snippet.insert(QStringLiteral("snippet"), symbol.value(QStringLiteral("snippet")).toString());
     snippet.insert(QStringLiteral("detail"), symbol.value(QStringLiteral("detail")).toString());
+    if (symbol.contains(QStringLiteral("snippetKind"))) {
+        snippet.insert(QStringLiteral("snippetKind"), symbol.value(QStringLiteral("snippetKind")).toString());
+    }
+    if (symbol.contains(QStringLiteral("diagnosticsMode"))) {
+        snippet.insert(QStringLiteral("diagnosticsMode"), symbol.value(QStringLiteral("diagnosticsMode")).toString());
+    }
+    if (symbol.value(QStringLiteral("skipDiagnostics")).toBool()) {
+        snippet.insert(QStringLiteral("diagnosticsMode"), kDiagnosticsModeNone);
+    }
     return enrichSnippetPayload(snippet);
 }
 
@@ -976,8 +1094,24 @@ QVariantMap ProjectController::enrichSnippetPayload(const QVariantMap &snippet)
     const QString rawSnippet = snippet.value(QStringLiteral("snippet")).toString();
     const int baseLine = qMax(1, snippet.value(QStringLiteral("line")).toInt());
     const SnippetAnalysis analysis = analyzeSnippet(rawSnippet);
+    QString snippetKind = snippet.value(QStringLiteral("snippetKind")).toString();
+    if (snippetKind.isEmpty()) {
+        snippetKind = rawSnippet.isEmpty() ? kSnippetKindFilePreview : kSnippetKindExactConstruct;
+    }
+    QString diagnosticsMode = snippet.value(QStringLiteral("diagnosticsMode")).toString();
+    if (diagnosticsMode.isEmpty()) {
+        diagnosticsMode = snippet.value(QStringLiteral("skipDiagnostics")).toBool()
+            ? kDiagnosticsModeNone
+            : (shouldParseSnippetByDefault(normalizedLanguage,
+                                           snippet.value(QStringLiteral("kind")).toString(),
+                                           snippetKind)
+                ? kDiagnosticsModeParseSnippet
+                : kDiagnosticsModeNone);
+    }
 
     enriched.insert(QStringLiteral("language"), normalizedLanguage);
+    enriched.insert(QStringLiteral("snippetKind"), snippetKind);
+    enriched.insert(QStringLiteral("diagnosticsMode"), diagnosticsMode);
     enriched.insert(QStringLiteral("tabWidthSpaces"), 2);
     enriched.insert(QStringLiteral("isTruncated"), analysis.truncated);
     enriched.insert(QStringLiteral("displaySnippet"), expandTabs(analysis.displayCode, 2));
@@ -986,6 +1120,8 @@ QVariantMap ProjectController::enrichSnippetPayload(const QVariantMap &snippet)
                         ? QStringLiteral("<pre style=\"margin:0;font-family:monospace;white-space:pre;color:#616e88;\">Select a symbol to inspect its source snippet.</pre>")
                         : buildSnippetHtml(analysis.displayCode, normalizedLanguage, analysis.truncationMarker));
     enriched.insert(QStringLiteral("diagnostics"),
-                    snippetDiagnostics(normalizedLanguage, analysis.lintCode, baseLine, analysis.truncated));
+                    diagnosticsMode == kDiagnosticsModeNone
+                        ? QVariantList{}
+                        : snippetDiagnostics(normalizedLanguage, analysis.lintCode, baseLine, analysis.truncated));
     return enriched;
 }

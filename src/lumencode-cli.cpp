@@ -11,6 +11,7 @@
 
 #include "projectcontroller.h"
 #include "filesystemmodel.h"
+#include "symbolparser.h"
 
 static QString resolveCliPath(const QString &rawPath, const QString &basePath)
 {
@@ -78,7 +79,21 @@ int main(int argc, char *argv[])
                                          QStringLiteral("Start in interactive mode reading JSON commands from stdin."));
     parser.addOption(interactiveOption);
 
+    QCommandLineOption dumpFileOption(QStringList() << "dump-file",
+                                      QStringLiteral("Parse a single file and print only its analysis JSON."),
+                                      QStringLiteral("path"));
+    parser.addOption(dumpFileOption);
+
     parser.process(app);
+
+    if (parser.isSet(dumpFileOption)) {
+        const QString targetPath = resolveCliPath(parser.value(dumpFileOption), QDir::currentPath());
+        SymbolParser symbolParser;
+        const QVariantMap parsed = symbolParser.parseFile(targetPath);
+        const QJsonDocument doc(QJsonObject::fromVariantMap(parsed));
+        std::cout << doc.toJson(QJsonDocument::Compact).toStdString() << std::endl;
+        return 0;
+    }
 
     ProjectController controller;
 

@@ -13,8 +13,11 @@ public:
     QVariantMap parseFile(const QString &path) const;
 
     static QVariantMap makeResultSkeleton(const QString &path, const QString &fileName, const QString &language);
+    static QString formatByteSize(qint64 bytes);
 
 private:
+    static QVariantMap makeOversizedFileResult(const QString &path, const QString &language,
+                                               qint64 size, qint64 limit);
     QVariantMap parsePhpTreeSitter(const QString &path, const QString &text) const;
     QVariantMap parseScriptLikeTreeSitter(const QString &path, const QString &text, const QString &language) const;
     QVariantMap parseCssTreeSitter(const QString &path, const QString &text) const;

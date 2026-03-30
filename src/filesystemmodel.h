@@ -61,12 +61,14 @@ private:
     QSet<QString> m_expandedPaths;
     QVariantList m_visibleEntries;
     QHash<QString, Node *> m_nodesByPath;
+    int m_scannedNodeCount = 0;
 
     void resetTree(Node *newRoot);
     void deleteNode(Node *node);
-    Node *scanDirectory(const QString &path, Node *parent);
+    Node *scanDirectory(const QString &path, Node *parent, int depth = 0);
     void refreshVisibleEntries();
     void appendVisible(Node *node, int depth);
+    Node *appendSyntheticChild(Node *parent, const QString &name, const QString &suffixTag, bool isDir = false);
     static QString detectFileType(const QString &path, bool isDir);
     static bool shouldIgnoreDirectory(const QString &name);
     static bool shouldIncludeFile(const QString &suffix);
