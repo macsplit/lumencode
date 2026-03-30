@@ -19,6 +19,7 @@ class ProjectController : public QObject
     Q_PROPERTY(QVariantMap selectedSymbol READ selectedSymbol NOTIFY selectedSymbolChanged)
     Q_PROPERTY(QVariantList selectedSymbolMembers READ selectedSymbolMembers NOTIFY selectedSymbolChanged)
     Q_PROPERTY(QVariantMap selectedSnippet READ selectedSnippet NOTIFY selectedSnippetChanged)
+    Q_PROPERTY(QString preferredEditor READ preferredEditor WRITE setPreferredEditor NOTIFY preferredEditorChanged)
 
 public:
     explicit ProjectController(QObject *parent = nullptr);
@@ -33,12 +34,16 @@ public:
     QVariantMap selectedSymbol() const;
     QVariantList selectedSymbolMembers() const;
     QVariantMap selectedSnippet() const;
+    QString preferredEditor() const;
     Q_INVOKABLE QString lastOpenedPath() const;
 
     Q_INVOKABLE void setRootPath(const QString &path);
     Q_INVOKABLE void selectPath(const QString &path);
     Q_INVOKABLE void selectSymbol(int index);
     Q_INVOKABLE void selectSymbolByData(const QVariantMap &symbol);
+    Q_INVOKABLE void setPreferredEditor(const QString &command);
+    Q_INVOKABLE bool openCurrentInFolder() const;
+    Q_INVOKABLE bool openCurrentInEditor() const;
     Q_INVOKABLE QString pickFolder() const;
     Q_INVOKABLE bool restoreLastOpenedPath();
 
@@ -48,17 +53,20 @@ signals:
     void selectedFileDataChanged();
     void selectedSymbolChanged();
     void selectedSnippetChanged();
+    void preferredEditorChanged();
 
 private:
     QVariantMap makeFileSnippet() const;
     static QVariantMap makeSymbolSnippet(const QVariantMap &symbol, const QVariantMap &fileData);
     static QVariantMap enrichSnippetPayload(const QVariantMap &snippet);
     void saveLastOpenedPath(const QString &path) const;
+    QString currentOpenableFilePath() const;
 
     FileSystemModel *m_fileSystemModel = nullptr;
     SymbolParser *m_symbolParser = nullptr;
     QString m_rootPath;
     QString m_selectedPath;
+    QString m_preferredEditor;
     QVariantMap m_selectedFileData;
     QVariantMap m_selectedSymbol;
     QVariantMap m_selectedSnippet;

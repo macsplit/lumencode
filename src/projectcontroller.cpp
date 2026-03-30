@@ -7,12 +7,15 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QDesktopServices>
 #include <QJsonDocument>
 #include <QJsonParseError>
+#include <QProcess>
 #include <QRegularExpression>
 #include <QSettings>
 #include <QSet>
 #include <QStringList>
+#include <QUrl>
 #include <QVector>
 
 #include <cstring>
@@ -27,6 +30,8 @@ const TSLanguage *tree_sitter_php(void);
 const TSLanguage *tree_sitter_css(void);
 const TSLanguage *tree_sitter_rust(void);
 const TSLanguage *tree_sitter_python(void);
+const TSLanguage *tree_sitter_java(void);
+const TSLanguage *tree_sitter_c_sharp(void);
 }
 
 namespace {
@@ -101,6 +106,12 @@ TSLanguage *languageForSnippet(const QString &language)
     }
     if (language == QStringLiteral("python")) {
         return const_cast<TSLanguage *>(tree_sitter_python());
+    }
+    if (language == QStringLiteral("java")) {
+        return const_cast<TSLanguage *>(tree_sitter_java());
+    }
+    if (language == QStringLiteral("csharp")) {
+        return const_cast<TSLanguage *>(tree_sitter_c_sharp());
     }
     if (language == QStringLiteral("js") || language == QStringLiteral("jsx")) {
         return const_cast<TSLanguage *>(tree_sitter_javascript());
@@ -675,6 +686,8 @@ ProjectController::ProjectController(QObject *parent)
     , m_symbolParser(new SymbolParser(this))
 {
     m_rootPath = QDir::currentPath();
+    QSettings settings;
+    m_preferredEditor = settings.value(QStringLiteral("settings/preferredEditor")).toString().trimmed();
 }
 
 ProjectController::~ProjectController() = default;
@@ -732,6 +745,11 @@ QVariantList ProjectController::selectedSymbolMembers() const
 QVariantMap ProjectController::selectedSnippet() const
 {
     return m_selectedSnippet;
+}
+
+QString ProjectController::preferredEditor() const
+{
+    return m_preferredEditor;
 }
 
 QString ProjectController::lastOpenedPath() const
@@ -809,6 +827,67 @@ void ProjectController::selectSymbolByData(const QVariantMap &symbol)
     emit selectedSnippetChanged();
 }
 
+void ProjectController::setPreferredEditor(const QString &command)
+{
+    const QString normalized = command.trimmed();
+    if (m_preferredEditor == normalized) {
+        return;
+    }
+    m_preferredEditor = normalized;
+    QSettings settings;
+    settings.setValue(QStringLiteral("settings/preferredEditor"), m_preferredEditor);
+    emit preferredEditorChanged();
+}
+
+bool ProjectController::openCurrentInFolder() const
+{
+    QString path = currentOpenableFilePath();
+    if (path.isEmpty()) {
+        path = m_selectedPath;
+    }
+    if (path.isEmpty()) {
+        return false;
+    }
+
+    const QFileInfo info(path);
+    const QString folderPath = info.isDir() ? info.absoluteFilePath() : info.absolutePath();
+    return !folderPath.isEmpty() && QDesktopServices::openUrl(QUrl::fromLocalFile(folderPath));
+}
+
+bool ProjectController::openCurrentInEditor() const
+{
+    const QString filePath = currentOpenableFilePath();
+    if (filePath.isEmpty()) {
+        return false;
+    }
+
+    if (m_preferredEditor.isEmpty()) {
+        return QDesktopServices::openUrl(QUrl::fromLocalFile(filePath));
+    }
+
+    QStringList command = QProcess::splitCommand(m_preferredEditor);
+    if (command.isEmpty()) {
+        return false;
+    }
+
+    QString program = command.takeFirst();
+    bool substituted = false;
+    if (program.contains(QStringLiteral("%f"))) {
+        program.replace(QStringLiteral("%f"), filePath);
+        substituted = true;
+    }
+    for (QString &arg : command) {
+        if (arg.contains(QStringLiteral("%f"))) {
+            arg.replace(QStringLiteral("%f"), filePath);
+            substituted = true;
+        }
+    }
+    if (!substituted) {
+        command.append(filePath);
+    }
+    return QProcess::startDetached(program, command);
+}
+
 QString ProjectController::pickFolder() const
 {
     return QFileDialog::getExistingDirectory(nullptr,
@@ -833,6 +912,23 @@ void ProjectController::saveLastOpenedPath(const QString &path) const
 {
     QSettings settings;
     settings.setValue(QStringLiteral("session/lastOpenedPath"), path);
+}
+
+QString ProjectController::currentOpenableFilePath() const
+{
+    const QStringList candidates = {
+        m_selectedSnippet.value(QStringLiteral("path")).toString(),
+        m_selectedPath,
+        m_selectedFileData.value(QStringLiteral("path")).toString()
+    };
+
+    for (const QString &candidate : candidates) {
+        const QFileInfo info(candidate);
+        if (info.exists() && info.isFile()) {
+            return info.absoluteFilePath();
+        }
+    }
+    return {};
 }
 
 QVariantMap ProjectController::makeFileSnippet() const

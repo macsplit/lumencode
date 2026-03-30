@@ -20,6 +20,8 @@ private:
     QVariantMap parseCssTreeSitter(const QString &path, const QString &text) const;
     QVariantMap parsePythonTreeSitter(const QString &path, const QString &text) const;
     QVariantMap parseRustTreeSitter(const QString &path, const QString &text) const;
+    QVariantMap parseJavaTreeSitter(const QString &path, const QString &text) const;
+    QVariantMap parseCSharpTreeSitter(const QString &path, const QString &text) const;
     QVariantMap parsePython(const QString &path, const QString &text) const;
     QVariantMap parseCppLike(const QString &path, const QString &text, const QString &language) const;
     QVariantMap parseJava(const QString &path, const QString &text) const;

@@ -27,6 +27,8 @@ Kirigami.ApplicationWindow {
     property int compactRowSpacing: Math.max(3, Math.round(Kirigami.Units.smallSpacing * 0.5))
     property int compactFontSize: Math.max(9, Kirigami.Theme.defaultFont.pointSize - 1)
     property int compactSmallFontSize: Math.max(8, compactFontSize - 1)
+    property bool hasSelectionPath: !!project.selectedPath
+    property bool hasCurrentFile: !!project.selectedSnippet.path && project.selectedSnippet.kind !== "folder"
 
     function iconForFileType(fileType, isDir) {
         if (isDir) {
@@ -166,6 +168,45 @@ Kirigami.ApplicationWindow {
         Kirigami.Page {
             title: "Explorer"
 
+            Dialog {
+                id: settingsDialog
+                modal: true
+                x: Math.round((root.width - width) / 2)
+                y: Math.round((root.height - height) / 2)
+                width: Math.min(root.width - Kirigami.Units.gridUnit * 6, Kirigami.Units.gridUnit * 24)
+                title: "Settings"
+                standardButtons: Dialog.Ok | Dialog.Cancel
+
+                onOpened: editorCommandField.text = project.preferredEditor || ""
+                onAccepted: project.preferredEditor = editorCommandField.text
+
+                contentItem: ColumnLayout {
+                    spacing: root.compactSpacing
+
+                    Label {
+                        Layout.fillWidth: true
+                        text: "Preferred text editor command"
+                        font.bold: true
+                        font.pointSize: root.compactFontSize
+                    }
+
+                    TextField {
+                        id: editorCommandField
+                        Layout.fillWidth: true
+                        placeholderText: "kate %f"
+                        font.pointSize: root.compactFontSize
+                    }
+
+                    Label {
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        color: Kirigami.Theme.disabledTextColor
+                        font.pointSize: root.compactSmallFontSize
+                        text: "Leave blank to use the system default. Use %f to insert the current file path."
+                    }
+                }
+            }
+
             SplitView {
                 anchors.fill: parent
                 anchors.margins: root.compactMargin
@@ -198,6 +239,33 @@ Kirigami.ApplicationWindow {
                                     display: AbstractButton.IconOnly
                                     font.pointSize: root.compactSmallFontSize
                                     onClicked: root.goToPicker()
+                                }
+
+                                ToolButton {
+                                    Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
+                                    icon.name: "document-open-folder"
+                                    display: AbstractButton.IconOnly
+                                    font.pointSize: root.compactSmallFontSize
+                                    enabled: root.hasSelectionPath
+                                    onClicked: project.openCurrentInFolder()
+                                }
+
+                                ToolButton {
+                                    Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
+                                    icon.name: "document-edit"
+                                    display: AbstractButton.IconOnly
+                                    font.pointSize: root.compactSmallFontSize
+                                    enabled: root.hasCurrentFile
+                                    onClicked: project.openCurrentInEditor()
+                                }
+
+                                ToolButton {
+                                    Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
+                                    icon.name: "settings-configure"
+                                    display: AbstractButton.IconOnly
+                                    font.pointSize: root.compactSmallFontSize
+                                    enabled: true
+                                    onClicked: settingsDialog.open()
                                 }
 
                                 Item {

@@ -1,6 +1,7 @@
 #include "filesystemmodel.h"
 
 #include <QDir>
+#include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
@@ -48,6 +49,13 @@ int entryScore(const QString &rootPath, const QString &path, const QString &name
         || lowerRelative.startsWith(QStringLiteral("test/"))
         || lowerRelative.startsWith(QStringLiteral("docs/"))) {
         return std::numeric_limits<int>::min() / 2;
+    }
+
+    if (lowerRelative.contains(QStringLiteral("/src/test/"))
+        || lowerRelative.contains(QStringLiteral("/src/androidtest/"))
+        || lowerRelative.contains(QStringLiteral("/tests/"))
+        || lowerRelative.contains(QStringLiteral("/test/"))) {
+        return std::numeric_limits<int>::min() / 3;
     }
 
     int score = 0;
@@ -98,8 +106,22 @@ int entryScore(const QString &rootPath, const QString &path, const QString &name
     if (lowerRelative.startsWith(QStringLiteral("src/"))) {
         score += 80;
     }
+    if (lowerRelative.contains(QStringLiteral("/src/main/"))) {
+        score += 95;
+    }
+    if (lowerRelative.contains(QStringLiteral("/src/main/java/"))
+        || lowerRelative.contains(QStringLiteral("/src/main/kotlin/"))
+        || lowerRelative.contains(QStringLiteral("/src/main/csharp/"))
+        || lowerRelative.contains(QStringLiteral("/src/main/cs/"))) {
+        score += 45;
+    }
     if (!lowerRelative.contains(QLatin1Char('/'))) {
         score += 30;
+    }
+    if (lowerRelative.contains(QStringLiteral("/assets/"))
+        || lowerRelative.contains(QStringLiteral("/wwwroot/"))
+        || lowerRelative.contains(QStringLiteral("/www/"))) {
+        score -= 40;
     }
 
     const int slashCount = lowerRelative.count(QLatin1Char('/'));
@@ -121,6 +143,8 @@ int entryScore(const QString &rootPath, const QString &path, const QString &name
         score += 105;
     } else if (lowerName == QStringLiteral("main.java")) {
         score += 100;
+    } else if (lowerName == QStringLiteral("mainactivity.java")) {
+        score += 96;
     } else if (lowerName == QStringLiteral("app.ts") || lowerName == QStringLiteral("app.js")) {
         score += 90;
     } else if (lowerName == QStringLiteral("index.ts") || lowerName == QStringLiteral("index.js")
@@ -227,6 +251,22 @@ QString detectConventionalEntry(const QString &rootPath)
     for (const QString &entry : preferredEntries) {
         const QString candidate = normalizeProjectEntry(rootPath, entry);
         if (!candidate.isEmpty() && QFileInfo::exists(candidate)) {
+            return candidate;
+        }
+    }
+
+    QDirIterator it(rootPath, QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        const QString candidate = it.next();
+        const QString lowerRelative = QDir(rootPath).relativeFilePath(candidate).toLower();
+        if (lowerRelative.contains(QStringLiteral("/src/test/"))
+            || lowerRelative.contains(QStringLiteral("/src/androidtest/"))
+            || lowerRelative.contains(QStringLiteral("/tests/"))
+            || lowerRelative.contains(QStringLiteral("/test/"))) {
+            continue;
+        }
+        if (lowerRelative.contains(QStringLiteral("/src/main/java/"))
+            && lowerRelative.endsWith(QStringLiteral("mainactivity.java"))) {
             return candidate;
         }
     }
