@@ -1,6 +1,10 @@
-# lumencode-swift
+# LumenCode (Swift)
 
 Swift and SwiftUI port of `lumencode`, with a native C++ bridge for analysis logic and a separate internal CLI harness for tight development loops.
+
+## Screenshot
+
+![Lumencode-swift Screenshot](Screenshots/screenshot.png)
 
 ## What is in this repo
 
@@ -108,3 +112,4 @@ The Swift app now has:
 - a native analysis bridge
 
 It is still behind the Kirigami original in parser depth, detail richness, and some interface behavior.
+
