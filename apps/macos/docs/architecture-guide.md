@@ -48,11 +48,11 @@ It is not supposed to contain the deep parsing logic.
 
 Files:
 
-- [Models.swift](/Users/user/Code/Coding/lumencode-swift/Sources/LumencodeCore/Models.swift)
-- [NativeBridge.swift](/Users/user/Code/Coding/lumencode-swift/Sources/LumencodeCore/NativeBridge.swift)
-- [ProjectScanner.swift](/Users/user/Code/Coding/lumencode-swift/Sources/LumencodeCore/ProjectScanner.swift)
-- [ProjectRelationships.swift](/Users/user/Code/Coding/lumencode-swift/Sources/LumencodeCore/ProjectRelationships.swift)
-- [WorkspaceSupport.swift](/Users/user/Code/Coding/lumencode-swift/Sources/LumencodeCore/WorkspaceSupport.swift)
+- [Models.swift](../Sources/LumencodeCore/Models.swift)
+- [NativeBridge.swift](../Sources/LumencodeCore/NativeBridge.swift)
+- [ProjectScanner.swift](../Sources/LumencodeCore/ProjectScanner.swift)
+- [ProjectRelationships.swift](../Sources/LumencodeCore/ProjectRelationships.swift)
+- [WorkspaceSupport.swift](../Sources/LumencodeCore/WorkspaceSupport.swift)
 
 This is the layer that keeps the app and CLI in sync.
 
@@ -70,8 +70,8 @@ This is the “brain in Swift”.
 
 Files:
 
-- [lumencode_bridge.cpp](/Users/user/Code/Coding/lumencode-swift/Sources/LumencodeNativeBridge/lumencode_bridge.cpp)
-- [lumencode_bridge.h](/Users/user/Code/Coding/lumencode-swift/Sources/LumencodeNativeBridge/include/lumencode_bridge.h)
+- [lumencode_bridge.cpp](../Sources/LumencodeNativeBridge/lumencode_bridge.cpp)
+- [lumencode_bridge.h](../Sources/LumencodeNativeBridge/include/lumencode_bridge.h)
 
 This is where the actual file understanding happens.
 
@@ -95,7 +95,7 @@ So JSON is the clean hand-off point between native parsing and Swift UI logic.
 
 File:
 
-- [main.swift](/Users/user/Code/Coding/lumencode-swift/Sources/LumencodeCLI/main.swift)
+- [main.swift](../Sources/LumencodeCLI/main.swift)
 
 This is not mainly for end users.
 
@@ -223,7 +223,7 @@ So in practice, backend parity improvements usually create visible UI improvemen
 
 ## Related documents
 
-- [Development Plan](/Users/user/Code/Coding/lumencode-swift/docs/development-plan.md)
-- [Parity Guide](/Users/user/Code/Coding/lumencode-swift/docs/parity-guide.md)
-- [Licensing and Derivation](/Users/user/Code/Coding/lumencode-swift/docs/licensing-and-derivation.md)
-- [Vendor Update Notes](/Users/user/Code/Coding/lumencode-swift/docs/vendor-update-notes.md)
+- [Development Plan](../docs/development-plan.md)
+- [Parity Guide](../docs/parity-guide.md)
+- [Licensing and Derivation](../docs/licensing-and-derivation.md)
+- [Vendor Update Notes](../docs/vendor-update-notes.md)
