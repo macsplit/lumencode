@@ -27,7 +27,7 @@ That separation matters because it lets us improve the parser without rebuilding
 
 File:
 
-- [LumencodeApp.swift](/Users/user/Code/Coding/lumencode-swift/Sources/LumencodeSwiftApp/LumencodeApp.swift)
+- [LumencodeApp.swift](../Sources/LumencodeSwiftApp/LumencodeApp.swift)
 
 This is the part that shows:
 
