@@ -1,6 +1,8 @@
 # LumenCode (Swift)
 
-Swift and SwiftUI port of `lumencode`, with a native C++ bridge for analysis logic and a separate internal CLI harness for tight development loops.
+A macOS tool for source code exploration.
+
+*This version is a Swift and SwiftUI port of `lumencode`, with a native C++ bridge for analysis logic and a separate internal CLI harness for tight development loops.*
 
 ## Screenshot
 
