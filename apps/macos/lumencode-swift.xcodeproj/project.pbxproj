@@ -1,0 +1,420 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* LumencodeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* LumencodeApp.swift */; };
+		A10000000000000000000002 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* Models.swift */; };
+		A10000000000000000000003 /* NativeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* NativeBridge.swift */; };
+		A10000000000000000000004 /* ProjectScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* ProjectScanner.swift */; };
+		A10000000000000000000005 /* WorkspaceSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* WorkspaceSupport.swift */; };
+		A10000000000000000000020 /* ProjectRelationships.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000028 /* ProjectRelationships.swift */; };
+		A10000000000000000000006 /* lumencode_bridge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* lumencode_bridge.cpp */; };
+		A10000000000000000000007 /* lumencode.svg.png in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* lumencode.svg.png */; };
+		A10000000000000000000008 /* lib.c in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* lib.c */; };
+		A10000000000000000000009 /* parser.c in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* parser.c */; };
+		A1000000000000000000000A /* scanner.c in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012 /* scanner.c */; };
+		A1000000000000000000000B /* LumenCode.icns in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* LumenCode.icns */; };
+		A1000000000000000000000C /* parser_java.c in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000014 /* parser_java.c */; };
+		A1000000000000000000000D /* parser_c_sharp.c in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000015 /* parser_c_sharp.c */; };
+		A1000000000000000000000E /* scanner_c_sharp.c in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000016 /* scanner_c_sharp.c */; };
+		A1000000000000000000000F /* parser_javascript.c in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000017 /* parser_javascript.c */; };
+		A10000000000000000000010 /* scanner_javascript.c in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000018 /* scanner_javascript.c */; };
+		A10000000000000000000011 /* parser_typescript.c in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000019 /* parser_typescript.c */; };
+		A10000000000000000000012 /* scanner_typescript.c in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001A /* scanner_typescript.c */; };
+		A10000000000000000000013 /* parser_tsx.c in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001B /* parser_tsx.c */; };
+		A10000000000000000000014 /* scanner_tsx.c in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001C /* scanner_tsx.c */; };
+		A10000000000000000000015 /* parser_php.c in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001D /* parser_php.c */; };
+		A10000000000000000000016 /* scanner_php.c in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001E /* scanner_php.c */; };
+		A10000000000000000000017 /* parser_css.c in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001F /* parser_css.c */; };
+		A10000000000000000000018 /* scanner_css.c in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000020 /* scanner_css.c */; };
+		A10000000000000000000019 /* parser_python.c in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000021 /* parser_python.c */; };
+		A1000000000000000000001A /* scanner_python.c in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000022 /* scanner_python.c */; };
+		A1000000000000000000001B /* parser_rust.c in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000023 /* parser_rust.c */; };
+		A1000000000000000000001C /* scanner_rust.c in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000024 /* scanner_rust.c */; };
+		A1000000000000000000001D /* parser_html.c in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000025 /* parser_html.c */; };
+		A1000000000000000000001E /* scanner_html.c in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000026 /* scanner_html.c */; };
+		A1000000000000000000001F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000027 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A20000000000000000000001 /* LumencodeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LumencodeApp.swift; sourceTree = "<group>"; };
+		A20000000000000000000002 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		A20000000000000000000003 /* NativeBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeBridge.swift; sourceTree = "<group>"; };
+		A20000000000000000000004 /* ProjectScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectScanner.swift; sourceTree = "<group>"; };
+		A20000000000000000000005 /* WorkspaceSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceSupport.swift; sourceTree = "<group>"; };
+		A20000000000000000000028 /* ProjectRelationships.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectRelationships.swift; sourceTree = "<group>"; };
+		A20000000000000000000006 /* lumencode_bridge.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = lumencode_bridge.cpp; sourceTree = "<group>"; };
+		A20000000000000000000007 /* LumencodeSwift-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "LumencodeSwift-Bridging-Header.h"; sourceTree = "<group>"; };
+		A20000000000000000000008 /* lumencode.svg.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "lumencode.svg.png"; sourceTree = "<group>"; };
+		A20000000000000000000009 /* LumenCode.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "LumenCode.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000010 /* lib.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-runtime/lib/src/lib.c; sourceTree = "<group>"; };
+		A20000000000000000000011 /* parser.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-swift/src/parser.c; sourceTree = "<group>"; };
+		A20000000000000000000012 /* scanner.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-swift/src/scanner.c; sourceTree = "<group>"; };
+		A20000000000000000000013 /* LumenCode.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = LumenCode.icns; sourceTree = "<group>"; };
+		A20000000000000000000014 /* parser_java.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-java/src/parser.c; sourceTree = "<group>"; };
+		A20000000000000000000015 /* parser_c_sharp.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-c-sharp/src/parser.c; sourceTree = "<group>"; };
+		A20000000000000000000016 /* scanner_c_sharp.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-c-sharp/src/scanner.c; sourceTree = "<group>"; };
+		A20000000000000000000027 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A20000000000000000000017 /* parser_javascript.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-javascript/src/parser.c; sourceTree = "<group>"; };
+		A20000000000000000000018 /* scanner_javascript.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-javascript/src/scanner.c; sourceTree = "<group>"; };
+		A20000000000000000000019 /* parser_typescript.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-typescript/typescript/src/parser.c; sourceTree = "<group>"; };
+		A2000000000000000000001A /* scanner_typescript.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-typescript/typescript/src/scanner.c; sourceTree = "<group>"; };
+		A2000000000000000000001B /* parser_tsx.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-typescript/tsx/src/parser.c; sourceTree = "<group>"; };
+		A2000000000000000000001C /* scanner_tsx.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-typescript/tsx/src/scanner.c; sourceTree = "<group>"; };
+		A2000000000000000000001D /* parser_php.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-php/php/src/parser.c; sourceTree = "<group>"; };
+		A2000000000000000000001E /* scanner_php.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-php/php/src/scanner.c; sourceTree = "<group>"; };
+		A2000000000000000000001F /* parser_css.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-css/src/parser.c; sourceTree = "<group>"; };
+		A20000000000000000000020 /* scanner_css.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-css/src/scanner.c; sourceTree = "<group>"; };
+		A20000000000000000000021 /* parser_python.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-python/src/parser.c; sourceTree = "<group>"; };
+		A20000000000000000000022 /* scanner_python.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-python/src/scanner.c; sourceTree = "<group>"; };
+		A20000000000000000000023 /* parser_rust.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-rust/src/parser.c; sourceTree = "<group>"; };
+		A20000000000000000000024 /* scanner_rust.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-rust/src/scanner.c; sourceTree = "<group>"; };
+		A20000000000000000000025 /* parser_html.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-html/src/parser.c; sourceTree = "<group>"; };
+		A20000000000000000000026 /* scanner_html.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = Vendor/tree-sitter-html/src/scanner.c; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A30000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A40000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A40000000000000000000002 /* Sources */,
+				A40000000000000000000003 /* Xcode */,
+				A40000000000000000000004 /* Resources */,
+				A40000000000000000000005 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A40000000000000000000002 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				A40000000000000000000006 /* LumencodeSwiftApp */,
+				A40000000000000000000007 /* LumencodeCore */,
+				A40000000000000000000008 /* LumencodeNativeBridge */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000003 /* Xcode */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000007 /* LumencodeSwift-Bridging-Header.h */,
+			);
+			path = Xcode;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000004 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000008 /* lumencode.svg.png */,
+				A20000000000000000000013 /* LumenCode.icns */,
+			);
+			path = "Sources/LumencodeSwiftApp/Resources";
+			sourceTree = "<group>";
+		};
+		A40000000000000000000005 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000009 /* LumenCode.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000006 /* LumencodeSwiftApp */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000001 /* LumencodeApp.swift */,
+				A20000000000000000000027 /* Assets.xcassets */,
+			);
+			path = LumencodeSwiftApp;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000007 /* LumencodeCore */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000002 /* Models.swift */,
+				A20000000000000000000003 /* NativeBridge.swift */,
+				A20000000000000000000004 /* ProjectScanner.swift */,
+				A20000000000000000000028 /* ProjectRelationships.swift */,
+				A20000000000000000000005 /* WorkspaceSupport.swift */,
+			);
+			path = LumencodeCore;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000008 /* LumencodeNativeBridge */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000006 /* lumencode_bridge.cpp */,
+				A20000000000000000000010 /* lib.c */,
+				A20000000000000000000011 /* parser.c */,
+				A20000000000000000000012 /* scanner.c */,
+				A20000000000000000000014 /* parser_java.c */,
+				A20000000000000000000015 /* parser_c_sharp.c */,
+				A20000000000000000000016 /* scanner_c_sharp.c */,
+				A20000000000000000000017 /* parser_javascript.c */,
+				A20000000000000000000018 /* scanner_javascript.c */,
+				A20000000000000000000019 /* parser_typescript.c */,
+				A2000000000000000000001A /* scanner_typescript.c */,
+				A2000000000000000000001B /* parser_tsx.c */,
+				A2000000000000000000001C /* scanner_tsx.c */,
+				A2000000000000000000001D /* parser_php.c */,
+				A2000000000000000000001E /* scanner_php.c */,
+				A2000000000000000000001F /* parser_css.c */,
+				A20000000000000000000020 /* scanner_css.c */,
+				A20000000000000000000021 /* parser_python.c */,
+				A20000000000000000000022 /* scanner_python.c */,
+				A20000000000000000000023 /* parser_rust.c */,
+				A20000000000000000000024 /* scanner_rust.c */,
+				A20000000000000000000025 /* parser_html.c */,
+				A20000000000000000000026 /* scanner_html.c */,
+			);
+			path = LumencodeNativeBridge;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A50000000000000000000001 /* lumencode-swift */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A60000000000000000000001 /* Build configuration list for PBXNativeTarget "lumencode-swift" */;
+			buildPhases = (
+				A30000000000000000000001 /* Frameworks */,
+				A70000000000000000000001 /* Sources */,
+				A70000000000000000000002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "lumencode-swift";
+			productName = LumenCode;
+			productReference = A20000000000000000000009 /* LumenCode.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A80000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2601;
+				LastUpgradeCheck = 2601;
+				TargetAttributes = {
+					A50000000000000000000001 = {
+						CreatedOnToolsVersion = 26.1;
+					};
+				};
+			};
+			buildConfigurationList = A60000000000000000000002 /* Build configuration list for PBXProject "lumencode-swift" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A40000000000000000000001;
+			productRefGroup = A40000000000000000000005 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A50000000000000000000001 /* lumencode-swift */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A70000000000000000000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000000000000000000001F /* Assets.xcassets in Resources */,
+				A1000000000000000000000B /* LumenCode.icns in Resources */,
+				A10000000000000000000007 /* lumencode.svg.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A70000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000008 /* lib.c in Sources */,
+				A10000000000000000000009 /* parser.c in Sources */,
+				A1000000000000000000000A /* scanner.c in Sources */,
+				A1000000000000000000000C /* parser_java.c in Sources */,
+				A1000000000000000000000D /* parser_c_sharp.c in Sources */,
+				A1000000000000000000000E /* scanner_c_sharp.c in Sources */,
+				A1000000000000000000000F /* parser_javascript.c in Sources */,
+				A10000000000000000000010 /* scanner_javascript.c in Sources */,
+				A10000000000000000000011 /* parser_typescript.c in Sources */,
+				A10000000000000000000012 /* scanner_typescript.c in Sources */,
+				A10000000000000000000013 /* parser_tsx.c in Sources */,
+				A10000000000000000000014 /* scanner_tsx.c in Sources */,
+				A10000000000000000000015 /* parser_php.c in Sources */,
+				A10000000000000000000016 /* scanner_php.c in Sources */,
+				A10000000000000000000017 /* parser_css.c in Sources */,
+				A10000000000000000000018 /* scanner_css.c in Sources */,
+				A10000000000000000000019 /* parser_python.c in Sources */,
+				A1000000000000000000001A /* scanner_python.c in Sources */,
+				A1000000000000000000001B /* parser_rust.c in Sources */,
+				A1000000000000000000001C /* scanner_rust.c in Sources */,
+				A1000000000000000000001D /* parser_html.c in Sources */,
+				A1000000000000000000001E /* scanner_html.c in Sources */,
+				A10000000000000000000006 /* lumencode_bridge.cpp in Sources */,
+				A10000000000000000000001 /* LumencodeApp.swift in Sources */,
+				A10000000000000000000002 /* Models.swift in Sources */,
+				A10000000000000000000003 /* NativeBridge.swift in Sources */,
+				A10000000000000000000004 /* ProjectScanner.swift in Sources */,
+				A10000000000000000000020 /* ProjectRelationships.swift in Sources */,
+				A10000000000000000000005 /* WorkspaceSupport.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A90000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GENERATE_INFOPLIST_FILE = NO;
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/include",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-runtime/lib/include",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-runtime/lib/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-swift/include",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-swift/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-java/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-c-sharp/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-javascript/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-typescript/typescript/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-typescript/tsx/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-php/php/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-css/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-python/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-rust/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-html/src",
+				);
+				INFOPLIST_FILE = Xcode/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "uk.co.hanken.lumencode";
+				PRODUCT_NAME = LumenCode;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "Xcode/LumencodeSwift-Bridging-Header.h";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		A90000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GENERATE_INFOPLIST_FILE = NO;
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/include",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-runtime/lib/include",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-runtime/lib/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-swift/include",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-swift/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-java/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-c-sharp/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-javascript/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-typescript/typescript/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-typescript/tsx/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-php/php/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-css/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-python/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-rust/src",
+					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-html/src",
+				);
+				INFOPLIST_FILE = Xcode/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "uk.co.hanken.lumencode";
+				PRODUCT_NAME = LumenCode;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "Xcode/LumencodeSwift-Bridging-Header.h";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		A90000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		A90000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A60000000000000000000001 /* Build configuration list for PBXNativeTarget "lumencode-swift" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A90000000000000000000001 /* Debug */,
+				A90000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A60000000000000000000002 /* Build configuration list for PBXProject "lumencode-swift" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A90000000000000000000003 /* Debug */,
+				A90000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A80000000000000000000001 /* Project object */;
+}
