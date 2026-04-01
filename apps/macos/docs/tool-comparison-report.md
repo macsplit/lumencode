@@ -73,7 +73,7 @@ It is a useful benchmark for “small but practical source explorer”.
 | Feature | LumenCode | Understand | Sourcetrail | CodeQuery |
 |---|---|---|---|---|
 | macOS support | Yes | Yes | Yes | Yes |
-| Linux support | Not yet | Yes | Yes | Yes |
+| Linux support | Other Version | Yes | Yes | Yes |
 | Works offline | Yes | Yes | Yes | Yes |
 | GUI source explorer | Yes | Yes | Yes | Yes |
 | CLI/internal harness | Yes, intentionally | API and automation focused | Not a major focus | Separate indexing and GUI workflow |
