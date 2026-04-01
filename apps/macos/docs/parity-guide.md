@@ -26,7 +26,7 @@ Parser parity work now includes vendored Tree-sitter code. Keep the provenance b
 
 Reference:
 
-- [Licensing and Derivation](/Users/user/Code/Coding/lumencode-swift/docs/licensing-and-derivation.md)
+- [Licensing and Derivation](licensing-and-derivation.md)
 
 ## What must stay in parity
 
