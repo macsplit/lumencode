@@ -21,7 +21,7 @@ Swift and SwiftUI port of `lumencode`, with a native C++ bridge for analysis log
 
 For the GUI app, open:
 
-- `/Users/user/Code/Coding/lumencode-swift/lumencode-swift.xcodeproj`
+- `lumencode-swift/lumencode-swift.xcodeproj`
 
 Then in Xcode:
 
@@ -41,7 +41,7 @@ The CLI is intentionally not the end-user product. It exists so backend and anal
 Build:
 
 ```zsh
-cd /Users/user/Code/Coding/lumencode-swift
+cd /lumencode-swift
 swift build
 ```
 
@@ -78,12 +78,12 @@ swift run lumencode-swift-cli --dump-file /path/to/file.swift
 
 ## Key documents
 
-- [Architecture Guide](/Users/user/Code/Coding/lumencode-swift/docs/architecture-guide.md)
-- [Development Plan](/Users/user/Code/Coding/lumencode-swift/docs/development-plan.md)
-- [Parity Guide](/Users/user/Code/Coding/lumencode-swift/docs/parity-guide.md)
-- [Tool Comparison Report](/Users/user/Code/Coding/lumencode-swift/docs/tool-comparison-report.md)
-- [Licensing and Derivation](/Users/user/Code/Coding/lumencode-swift/docs/licensing-and-derivation.md)
-- [Vendor Update Notes](/Users/user/Code/Coding/lumencode-swift/docs/vendor-update-notes.md)
+- [Architecture Guide](docs/architecture-guide.md)
+- [Development Plan](docs/development-plan.md)
+- [Parity Guide](docs/parity-guide.md)
+- [Tool Comparison Report](docs/tool-comparison-report.md)
+- [Licensing and Derivation](docs/licensing-and-derivation.md)
+- [Vendor Update Notes](docs/vendor-update-notes.md)
 
 ## Vendored parser policy
 
