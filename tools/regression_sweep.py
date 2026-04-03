@@ -9,25 +9,29 @@ from collections import defaultdict
 from pathlib import Path
 
 
-REPO_ROOT = Path("/home/user/Code/OpenSource/lumencode")
+REPO_ROOT = Path(__file__).resolve().parents[1]
 CLI_PATH = REPO_ROOT / "build" / "bin" / "lumencode-cli"
 CODE_ROOT = Path("/home/user/Code")
 
 SUPPORTED_EXTENSIONS = {
     ".php", ".js", ".jsx", ".ts", ".tsx", ".py", ".java", ".cs", ".rs",
     ".cpp", ".cc", ".cxx", ".c", ".h", ".hpp", ".hh", ".m", ".mm",
-    ".html", ".css", ".json",
+    ".html", ".css", ".json", ".swift",
 }
 
 EXCLUDED_PARTS = {
     ".git", "node_modules", "dist", "build", "bin", "obj", ".gradle", ".idea",
     ".vscode", "coverage", "vendor", "third_party", "Archive", "venv",
-    "site-packages", "__pycache__", ".claude", "article_cache",
+    "site-packages", "__pycache__", ".claude", "article_cache", ".swiftpm",
+    ".build",
+    "DerivedData",
 }
 
 PRIMARY_KINDS = {"function", "method", "constructor", "class", "variable", "property", "module"}
 PRIMARY_SNIPPET_KINDS = {"line_excerpt", "block_excerpt", "exact_construct"}
 INVALID_MEMBER_NAMES = {"if", "for", "while", "switch", "catch", "function", "return", "else", "do", "try"}
+RELATION_EXPECTED_LANGUAGES = {"javascript", "typescript", "tsx", "php", "swift"}
+CALLABLE_KINDS = {"function", "method", "constructor"}
 
 
 def run_cli_dump(file_path: Path) -> dict:
@@ -91,15 +95,16 @@ def extension_priority(path: Path) -> tuple[int, str]:
         ".js": 1,
         ".ts": 2,
         ".tsx": 3,
-        ".py": 4,
-        ".cs": 5,
-        ".java": 6,
-        ".cpp": 7,
-        ".h": 8,
-        ".rs": 9,
-        ".html": 10,
-        ".css": 11,
-        ".json": 12,
+        ".swift": 4,
+        ".py": 5,
+        ".cs": 6,
+        ".java": 7,
+        ".cpp": 8,
+        ".h": 9,
+        ".rs": 10,
+        ".html": 11,
+        ".css": 12,
+        ".json": 13,
     }
     return (priority.get(path.suffix.lower(), 99), str(path))
 
@@ -130,6 +135,29 @@ def add_issue(issues: list[dict], issue_type: str, file_path: Path, **payload) -
     entry = {"type": issue_type, "file": str(file_path)}
     entry.update(payload)
     issues.append(entry)
+
+
+def count_relations(symbols: list[dict]) -> tuple[int, int]:
+    calls = 0
+    called_by = 0
+    stack = list(symbols)
+    while stack:
+        symbol = stack.pop()
+        calls += len(symbol.get("calls", []) or [])
+        called_by += len(symbol.get("calledBy", []) or [])
+        stack.extend(symbol.get("members", []) or [])
+    return calls, called_by
+
+
+def count_callable_symbols(symbols: list[dict]) -> int:
+    total = 0
+    stack = list(symbols)
+    while stack:
+        symbol = stack.pop()
+        if symbol.get("kind", "") in CALLABLE_KINDS:
+            total += 1
+        stack.extend(symbol.get("members", []) or [])
+    return total
 
 
 def validate_selected_snippet(file_path: Path, state: dict, issues: list[dict], context: str) -> None:
@@ -169,6 +197,13 @@ def inspect_file(file_path: Path, issues: list[dict]) -> None:
     symbols = parsed.get("symbols", []) or []
     dependencies = parsed.get("dependencies", []) or []
     routes = parsed.get("routes", []) or []
+    language = (parsed.get("language", "") or "").lower()
+
+    if language in RELATION_EXPECTED_LANGUAGES and symbols:
+        calls_count, called_by_count = count_relations(symbols)
+        callable_count = count_callable_symbols(symbols)
+        if callable_count >= 2 and calls_count == 0 and called_by_count == 0:
+            add_issue(issues, "missing_relations_for_language", file_path, language=language, symbol_count=len(symbols), callable_count=callable_count)
 
     for symbol in symbols[:6]:
         kind = symbol.get("kind", "")
@@ -273,6 +308,8 @@ def main() -> int:
         "limit_per_project": args.limit_per_project,
         "max_files": args.max_files,
         "issues_found": len(issues),
+        "repo_root": str(REPO_ROOT),
+        "cli_path": str(CLI_PATH),
         "files": [str(path) for path in files],
         "issues": issues,
     }

@@ -66,6 +66,9 @@ int entryScore(const QString &rootPath, const QString &path, const QString &name
     int score = 0;
 
     const QStringList preferredRoots = {
+        QStringLiteral("sources/main.swift"),
+        QStringLiteral("sources/lumencodeswift/main.swift"),
+        QStringLiteral("package.swift"),
         QStringLiteral("src/main.cpp"),
         QStringLiteral("src/main.cc"),
         QStringLiteral("src/main.cxx"),
@@ -132,7 +135,11 @@ int entryScore(const QString &rootPath, const QString &path, const QString &name
     const int slashCount = lowerRelative.count(QLatin1Char('/'));
     score -= slashCount * 8;
 
-    if (lowerName == QStringLiteral("main.ts") || lowerName == QStringLiteral("main.js")
+    if (lowerName == QStringLiteral("main.swift")) {
+        score += 120;
+    } else if (lowerName == QStringLiteral("package.swift")) {
+        score += 100;
+    } else if (lowerName == QStringLiteral("main.ts") || lowerName == QStringLiteral("main.js")
         || lowerName == QStringLiteral("main.tsx") || lowerName == QStringLiteral("main.jsx")) {
         score += 120;
     } else if (lowerName == QStringLiteral("main.cpp") || lowerName == QStringLiteral("main.cc")
@@ -215,6 +222,9 @@ QString detectPackageEntry(const QString &rootPath)
 QString detectConventionalEntry(const QString &rootPath)
 {
     const QStringList preferredEntries = {
+        QStringLiteral("Sources/main.swift"),
+        QStringLiteral("Sources/LumencodeSwift/main.swift"),
+        QStringLiteral("Package.swift"),
         QStringLiteral("src/main.cpp"),
         QStringLiteral("src/main.cc"),
         QStringLiteral("src/main.cxx"),
@@ -626,6 +636,9 @@ QString FileSystemModel::detectFileType(const QString &path, bool isDir)
     if (suffix == QStringLiteral("java")) {
         return QStringLiteral("java");
     }
+    if (suffix == QStringLiteral("swift")) {
+        return QStringLiteral("swift");
+    }
     if (suffix == QStringLiteral("cs")) {
         return QStringLiteral("csharp");
     }
@@ -648,12 +661,15 @@ bool FileSystemModel::shouldIgnoreDirectory(const QString &name)
 {
     const QString lower = name.toLower();
     return lower == QStringLiteral(".git")
+        || lower == QStringLiteral(".build")
+        || lower == QStringLiteral(".swiftpm")
         || lower == QStringLiteral("__pycache__")
         || lower == QStringLiteral("venv")
         || lower == QStringLiteral(".venv")
         || lower == QStringLiteral("node_modules")
         || lower == QStringLiteral("build")
-        || lower == QStringLiteral("dist");
+        || lower == QStringLiteral("dist")
+        || lower == QStringLiteral("deriveddata");
 }
 
 bool FileSystemModel::shouldIncludeFile(const QString &suffix)
@@ -677,6 +693,7 @@ bool FileSystemModel::shouldIncludeFile(const QString &suffix)
         QStringLiteral("hpp"),
         QStringLiteral("hxx"),
         QStringLiteral("java"),
+        QStringLiteral("swift"),
         QStringLiteral("cs"),
         QStringLiteral("rs"),
         QStringLiteral("m"),

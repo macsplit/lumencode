@@ -43,7 +43,10 @@ Current layout behavior:
 - The back action lives in the left control rail instead of a top toolbar.
 - Explorer expand/collapse must preserve scroll position instead of jumping back to the top.
 - Child entries must remain visibly indented under expanded folders.
-- The right detail pane may collapse when the current selection has no unique context beyond what is already shown elsewhere.
+- The right detail pane remains present at all times as the stable inspector surface.
+- Top-level symbol blocks in the center pane are clickable as whole cards.
+- Nested member rows in the center pane are individually clickable and must provide their own hover state.
+- Arrow glyphs in the center pane are affordances only, not exclusive click targets.
 
 ### 3.2 Filesystem Rules
 
@@ -52,6 +55,7 @@ The crawler must:
 - recurse directories without blocking the UI
 - ignore `.git`
 - focus on these file types: `js`, `jsx`, `ts`, `tsx`, `php`, `html`, `css`, `json`, `py`, `c`, `cc`, `cpp`, `cxx`, `h`, `hpp`, `java`, `cs`, `rs`, `m`, `mm`
+- focus on these file types: `js`, `jsx`, `ts`, `tsx`, `php`, `html`, `css`, `json`, `py`, `c`, `cc`, `cpp`, `cxx`, `h`, `hpp`, `java`, `cs`, `rs`, `m`, `mm`, `swift`
 - fail gracefully on hostile trees by applying bounded recursion and bounded entry counts instead of unbounded scans
 
 Current crawler safeguards:
@@ -107,6 +111,13 @@ Rust:
 - `impl` and trait members are extracted from the AST with bounded snippets.
 - `use` and external `mod` declarations are surfaced as dependencies.
 - Grouped `use` imports retain full snippets while showing shorter dependency labels in the UI.
+
+Swift:
+
+- Top-level classes, structs, enums, protocols, actors, extensions, functions, and variables.
+- Nested members extracted from the AST with bounded snippets.
+- Intra-file call topology for callable declarations.
+- Swift workspace scanning recognizes `Package.swift` and conventional SwiftPM entry locations.
 
 JSON:
 
@@ -179,6 +190,20 @@ Contract rules:
 - Only standalone parseable snippets should request diagnostics.
 - Dependencies, routes, quick links, and fallback parser excerpts must forward this contract unchanged from backend to QML.
 
+### 3.7 Relationship Detail
+
+Where available, symbol detail should include:
+
+- nested members
+- `Calls`
+- `Called By`
+
+Current expectation:
+
+- relationship sections are shown in the right pane when the backend provides them
+- relationship entries are clickable and reuse the shared selection payload path
+- parity is still incomplete across languages and files, so missing or asymmetric relations are currently a known limitation rather than a UI bug
+
 ## 4. UX
 
 ### 4.1 Visual Style
@@ -207,8 +232,8 @@ Symbol visual language:
 ### 5.1 Backend
 
 - `FileSystemModel`: Recursive tree model exposed to QML, now includes file type counts and main entry point detection in its summary, with bounded scanning safeguards for large trees.
-- `SymbolParser`: Parser service using bundled Tree-sitter grammars with heuristic fallback where useful; enhanced for snippets, exports, snippet-contract metadata, and improved dependency/route extraction.
-- `ProjectController`: Bridge object managing selection, parsing, quick links, and derived models, now providing project summary data and normalizing lower-pane snippet payloads.
+- `SymbolParser`: Parser service using bundled Tree-sitter grammars with heuristic fallback where useful; enhanced for snippets, exports, snippet-contract metadata, improved dependency/route extraction, Swift parsing, and relation payloads.
+- `ProjectController`: Bridge object managing selection, parsing, quick links, relation augmentation, and derived models, now providing project summary data and normalizing lower-pane snippet payloads.
 - `lumencode-cli`: Shared testing and isolation surface for one-shot analysis, interactive state testing, and crash-contained per-file parsing.
 
 ### 5.2 Frontend
@@ -224,6 +249,7 @@ Symbol visual language:
 Release 1 parser strategy:
 
 - Use bundled Tree-sitter runtime and vendored official grammars where integrated.
+- Keep bundled parser sources fully tracked in-repo so first-clone builds do not depend on broken submodule state.
 - Preserve heuristic extraction for specific convenience features where AST coverage is not yet wired.
 - Return stable structured data objects, including source snippets.
 - Keep parser entry points language-specific.
@@ -233,6 +259,7 @@ Release 1 parser strategy:
 
 - Some extracted structure is still shallow or misleading on real projects.
 - Some parser paths are intentionally bypassed or downgraded to heuristic fallback on specific hostile inputs to preserve application stability.
+- Relationship data is still incomplete; `Calls` and `Called By` are not yet consistently reciprocal after cross-symbol navigation.
 - Project summary entrypoint selection is better for conventional roots, but still imperfect on broad multi-project trees.
 - HTML/CSS class comparison can still be noisy on complex HTML documents.
 - The current snippet highlighter is intentionally lightweight and not language-complete.
@@ -247,6 +274,7 @@ Phase 1. Stabilization
 - Normalize file detail payloads so every section is always safe to bind.
 - Reduce noisy or misleading structural output.
 - Continue corpus-driven CLI regression sweeps across heterogeneous real projects.
+- Lock down the current pane layout and continue improving interaction density without changing the basic inspector model.
 
 Phase 2. Better project structure
 
@@ -258,6 +286,7 @@ Phase 2. Better project structure
 Phase 3. Source inspection
 
 - Add a bottom pane for syntax-highlighted source snippets. **(Completed with internal highlighting and diagnostics)**
+- Continue AST-backed parity work, especially relationship extraction, before adding broader new UI concepts.
 - Sync selected symbols and routes to source lines. **(Expanded: symbols, CSS class entries, dependencies, routes, and quick links now share the snippet-selection path)**
 - Add lint-aware or parser-aware snippet context where feasible. **(Partially completed: conservative parser-aware diagnostics are present, and AST-backed snippets now cover more languages)**
 - Continue improving snippet extraction quality so declarations are anchored cleanly and do not inherit leading braces, access labels, or unrelated context.

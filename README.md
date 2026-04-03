@@ -19,8 +19,11 @@ What currently works:
 - Preserving explorer scroll position across expand/collapse redraws and keeping child rows visibly indented.
 - Using the left control rail for back navigation, open-in-folder, open-in-editor, and settings.
 - Extracting detailed symbols for PHP, JS, TS, TSX, CSS, HTML, JSON, Python, C/C++, Java, C#, Rust, and Objective-C.
-- Using Tree-sitter for PHP, JS, TS, TSX, CSS, Python, Rust, Java, and C# parsing where integrated.
-- Automatically collapsing the right detail pane when a selection has no unique context to show.
+- Extracting Swift symbols and members with a Tree-sitter-backed parser path.
+- Using Tree-sitter for PHP, JS, TS, TSX, CSS, Python, Rust, Java, C#, and Swift parsing where integrated.
+- Keeping the right detail pane permanently visible as a stable inspector surface.
+- Showing a denser middle-pane overview with clickable top-level symbols and clickable nested member rows.
+- Showing `Calls` and `Called By` sections in the right detail pane where relationship data is available.
 - Showing syntax-colored lower-pane snippets with internal highlighting rather than an external highlighting dependency.
 - Showing parser-aware diagnostics for supported snippet languages, while suppressing false errors for intentionally truncated previews.
 - Showing file previews in the lower pane when a file itself is selected.
@@ -37,9 +40,11 @@ What currently works:
 - A crash-isolated file-analysis path: GUI selection now shells out to `lumencode-cli --dump-file`, so parser crashes terminate the helper instead of the main app.
 - CLI state now exposes the active lower-pane snippet payload, and interactive mode can select arbitrary source-context payloads for GUI-parity checks.
 - A regression sweep harness at `tools/regression_sweep.py` that samples local projects, drives the CLI selection path, and validates snippet/diagnostic contracts across languages.
+- The regression sweep now runs against the current checkout path, includes Swift files, and performs basic relation-presence checks for supported languages.
 - Project-level summaries including file type counts and main entry-point detection.
 - Installing a desktop launcher and scalable app icon through `cmake --install`.
 - Stable-enough backend payloads for the current QML bindings.
+- A self-contained repository layout for bundled parsers, so fresh clones no longer depend on broken gitlink/submodule state.
 - Graceful failure paths for hostile inputs:
   - directory crawl limits for recursion depth, scanned nodes, and per-folder entries
   - parser-side large-file refusal with readable summaries
@@ -66,6 +71,7 @@ Phase 1. Stabilization
 - Harden all selection payloads so every detail section is safe to bind.
 - Reduce misleading or noisy structural output on real projects.
 - Continue broad CLI-driven regression sweeps against mixed real-world projects under `/home/user/Code`.
+- Continue AST-backed parity work language by language, using CLI-first verification before GUI iteration.
 
 Phase 2. Better source inspection
 
@@ -73,6 +79,7 @@ Phase 2. Better source inspection
 - Continue improving context selection for dependencies, routes, and quick links in the lower pane.
 - Support clearer line-focused navigation and open-in-editor behavior from overview/detail items into the lower pane.
 - Rehabilitate the native Tree-sitter-backed parser paths language by language, using the new crash-isolated CLI flow and minimized repro files. Keep fallback and helper isolation in place until those native paths prove stable.
+- Tighten relationship extraction so `Calls` and `Called By` behave consistently and reciprocally across supported languages.
 
 Phase 3. Better usability
 
@@ -91,11 +98,12 @@ Phase 4. Broader project understanding
 
 - Some extracted structure is still shallow or misleading on real projects.
 - Some languages still rely on heuristic fallback paths for parts of the overview, especially when native parser paths have been bypassed for stability.
+- `Calls` / `Called By` support has improved, but is still incomplete and not always reciprocal after drilling across symbols.
 - Some project `mainEntry` guesses are still imperfect on broad mixed-language roots.
 - HTML/CSS class comparison can still be noisy on complex HTML documents.
 - Syntax highlighting is currently an internal lightweight implementation, not a full external highlighter.
 - Snippet diagnostics are intentionally conservative for truncated previews and are not a full linter.
-- The UI is materially improved, but still needs a stabilization and polish pass.
+- The UI is materially improved and the current pane layout should be treated as the baseline, but still needs a stabilization and polish pass.
 
 Licensing note:
 

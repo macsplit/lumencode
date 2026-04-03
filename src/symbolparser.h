@@ -19,6 +19,7 @@ private:
     static QVariantMap makeOversizedFileResult(const QString &path, const QString &language,
                                                qint64 size, qint64 limit);
     QVariantMap parsePhpTreeSitter(const QString &path, const QString &text) const;
+    QVariantMap parseSwiftTreeSitter(const QString &path, const QString &text) const;
     QVariantMap parseScriptLikeTreeSitter(const QString &path, const QString &text, const QString &language) const;
     QVariantMap parseCssTreeSitter(const QString &path, const QString &text) const;
     QVariantMap parsePythonTreeSitter(const QString &path, const QString &text) const;

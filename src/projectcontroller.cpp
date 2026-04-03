@@ -5,9 +5,11 @@
 
 #include <QCoreApplication>
 #include <QDir>
+#include <QDirIterator>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QHash>
 #include <QDesktopServices>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -85,6 +87,272 @@ bool shouldParseSnippetByDefault(const QString &language, const QString &kind, c
     }
 
     return true;
+}
+
+bool isScriptLikeLanguage(const QString &language)
+{
+    return language == QStringLiteral("script")
+        || language == QStringLiteral("jsx")
+        || language == QStringLiteral("ts")
+        || language == QStringLiteral("tsx")
+        || language == QStringLiteral("code");
+}
+
+bool shouldSkipRelationshipDirectory(const QString &name)
+{
+    const QString lower = name.toLower();
+    return lower == QStringLiteral(".git")
+        || lower == QStringLiteral("node_modules")
+        || lower == QStringLiteral("dist")
+        || lower == QStringLiteral("build")
+        || lower == QStringLiteral(".next")
+        || lower == QStringLiteral(".nuxt")
+        || lower == QStringLiteral("coverage");
+}
+
+bool isRelationshipCandidateFile(const QString &path)
+{
+    const QString suffix = QFileInfo(path).suffix().toLower();
+    return suffix == QStringLiteral("js")
+        || suffix == QStringLiteral("jsx")
+        || suffix == QStringLiteral("ts")
+        || suffix == QStringLiteral("tsx")
+        || suffix == QStringLiteral("mjs")
+        || suffix == QStringLiteral("cjs");
+}
+
+QSet<QString> relationNamesFromSnippet(const QString &snippet)
+{
+    static const QVector<QRegularExpression> patterns = {
+        QRegularExpression(QStringLiteral(R"(\b([A-Za-z_][A-Za-z0-9_]*)\s*\()")),
+        QRegularExpression(QStringLiteral(R"(\.\s*([A-Za-z_][A-Za-z0-9_]*)\s*\()"))
+    };
+
+    QSet<QString> names;
+    for (const QRegularExpression &pattern : patterns) {
+        auto it = pattern.globalMatch(snippet);
+        while (it.hasNext()) {
+            const QRegularExpressionMatch match = it.next();
+            names.insert(match.captured(1));
+        }
+    }
+    return names;
+}
+
+QVariantMap makeRelationFromSymbol(const QVariantMap &symbol,
+                                   const QString &fallbackPath,
+                                   const QString &fallbackLanguage)
+{
+    QVariantMap relation;
+    relation.insert(QStringLiteral("kind"), symbol.value(QStringLiteral("kind")).toString());
+    relation.insert(QStringLiteral("name"), symbol.value(QStringLiteral("name")).toString());
+    relation.insert(QStringLiteral("line"), symbol.value(QStringLiteral("line")).toInt());
+    relation.insert(QStringLiteral("detail"), symbol.value(QStringLiteral("detail")).toString());
+    relation.insert(QStringLiteral("snippet"), symbol.value(QStringLiteral("snippet")).toString());
+    relation.insert(QStringLiteral("path"),
+                    symbol.value(QStringLiteral("path")).toString().isEmpty()
+                        ? fallbackPath
+                        : symbol.value(QStringLiteral("path")).toString());
+    relation.insert(QStringLiteral("language"),
+                    symbol.value(QStringLiteral("language")).toString().isEmpty()
+                        ? fallbackLanguage
+                        : symbol.value(QStringLiteral("language")).toString());
+    relation.insert(QStringLiteral("snippetKind"), symbol.value(QStringLiteral("snippetKind")).toString());
+    relation.insert(QStringLiteral("diagnosticsMode"), symbol.value(QStringLiteral("diagnosticsMode")).toString());
+    return relation;
+}
+
+void collectSymbolRelations(const QVariantList &symbols,
+                            const QString &fallbackPath,
+                            const QString &fallbackLanguage,
+                            QHash<QString, QVariantMap> &relationsByName)
+{
+    for (const QVariant &entry : symbols) {
+        const QVariantMap symbol = entry.toMap();
+        const QString name = symbol.value(QStringLiteral("name")).toString();
+        if (!name.isEmpty()) {
+            relationsByName.insert(name, makeRelationFromSymbol(symbol, fallbackPath, fallbackLanguage));
+        }
+
+        const QVariantList members = symbol.value(QStringLiteral("members")).toList();
+        if (!members.isEmpty()) {
+            collectSymbolRelations(members, fallbackPath, fallbackLanguage, relationsByName);
+        }
+    }
+}
+
+QVariantList augmentSymbolsWithRelationships(const QVariantList &symbols,
+                                             const QHash<QString, QVariantMap> &importedSymbols,
+                                             const QVector<QPair<QString, QVariantMap>> &incomingSymbols)
+{
+    QVariantList augmented;
+    augmented.reserve(symbols.size());
+
+    for (const QVariant &entry : symbols) {
+        QVariantMap symbol = entry.toMap();
+        symbol.insert(QStringLiteral("members"),
+                      augmentSymbolsWithRelationships(symbol.value(QStringLiteral("members")).toList(),
+                                                      importedSymbols,
+                                                      incomingSymbols));
+
+        QVariantList calls = symbol.value(QStringLiteral("calls")).toList();
+        QVariantList calledBy = symbol.value(QStringLiteral("calledBy")).toList();
+        QSet<QString> existingCalls;
+        QSet<QString> existingCallers;
+
+        for (const QVariant &callEntry : std::as_const(calls)) {
+            existingCalls.insert(callEntry.toMap().value(QStringLiteral("name")).toString());
+        }
+        for (const QVariant &callerEntry : std::as_const(calledBy)) {
+            existingCallers.insert(callerEntry.toMap().value(QStringLiteral("name")).toString());
+        }
+
+        const QSet<QString> outgoingNames = relationNamesFromSnippet(symbol.value(QStringLiteral("snippet")).toString());
+        for (const QString &name : outgoingNames) {
+            if (existingCalls.contains(name) || !importedSymbols.contains(name)) {
+                continue;
+            }
+            QVariantMap relation = importedSymbols.value(name);
+            relation.insert(QStringLiteral("detail"), QStringLiteral("calls imported symbol"));
+            calls.append(relation);
+            existingCalls.insert(name);
+        }
+
+        const QString symbolName = symbol.value(QStringLiteral("name")).toString();
+        if (!symbolName.isEmpty()) {
+            for (const auto &incoming : incomingSymbols) {
+                const QVariantMap relation = incoming.second;
+                const QString relationName = relation.value(QStringLiteral("name")).toString();
+                if (existingCallers.contains(relationName)) {
+                    continue;
+                }
+                if (!relationNamesFromSnippet(relation.value(QStringLiteral("snippet")).toString()).contains(symbolName)) {
+                    continue;
+                }
+                QVariantMap caller = relation;
+                caller.insert(QStringLiteral("detail"), QStringLiteral("called by imported usage"));
+                calledBy.append(caller);
+                existingCallers.insert(relationName);
+            }
+        }
+
+        symbol.insert(QStringLiteral("calls"), calls);
+        symbol.insert(QStringLiteral("calledBy"), calledBy);
+        augmented.append(symbol);
+    }
+
+    return augmented;
+}
+
+QVariantMap augmentAnalysisWithRelationships(const QVariantMap &analysis,
+                                             const QString &rootPath,
+                                             const std::function<QVariantMap(const QString &)> &loadAnalysis)
+{
+    if (rootPath.isEmpty()) {
+        return analysis;
+    }
+
+    const QString language = analysis.value(QStringLiteral("language")).toString();
+    const QString selectedPath = analysis.value(QStringLiteral("path")).toString();
+    if (!isScriptLikeLanguage(language) || selectedPath.isEmpty()) {
+        return analysis;
+    }
+
+    QHash<QString, QVariantMap> cache;
+    cache.insert(selectedPath, analysis);
+
+    auto cachedAnalysis = [&](const QString &path) -> QVariantMap {
+        const QString absolute = QFileInfo(path).absoluteFilePath();
+        if (cache.contains(absolute)) {
+            return cache.value(absolute);
+        }
+        const QVariantMap loaded = loadAnalysis(absolute);
+        if (!loaded.isEmpty()) {
+            cache.insert(absolute, loaded);
+        }
+        return loaded;
+    };
+
+    QHash<QString, QVariantMap> importedSymbols;
+    const QVariantList dependencies = analysis.value(QStringLiteral("dependencies")).toList();
+    for (const QVariant &entry : dependencies) {
+        const QVariantMap dependency = entry.toMap();
+        const QString type = dependency.value(QStringLiteral("type")).toString();
+        const QString dependencyPath = dependency.value(QStringLiteral("path")).toString();
+        if ((type != QStringLiteral("import") && type != QStringLiteral("require")) || dependencyPath.isEmpty()) {
+            continue;
+        }
+
+        const QVariantMap importedAnalysis = cachedAnalysis(dependencyPath);
+        if (importedAnalysis.isEmpty()) {
+            continue;
+        }
+
+        collectSymbolRelations(importedAnalysis.value(QStringLiteral("symbols")).toList(),
+                               importedAnalysis.value(QStringLiteral("path")).toString(),
+                               importedAnalysis.value(QStringLiteral("language")).toString(),
+                               importedSymbols);
+    }
+
+    QVector<QPair<QString, QVariantMap>> incomingSymbols;
+    QDirIterator it(rootPath,
+                    QDir::Files | QDir::NoDotAndDotDot,
+                    QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        const QString candidatePath = QFileInfo(it.next()).absoluteFilePath();
+        if (candidatePath == selectedPath) {
+            continue;
+        }
+        if (!isRelationshipCandidateFile(candidatePath)) {
+            continue;
+        }
+
+        bool skip = false;
+        QString relative = QDir(rootPath).relativeFilePath(candidatePath);
+        const QStringList segments = relative.split(QLatin1Char('/'), Qt::SkipEmptyParts);
+        for (const QString &segment : segments) {
+            if (shouldSkipRelationshipDirectory(segment)) {
+                skip = true;
+                break;
+            }
+        }
+        if (skip) {
+            continue;
+        }
+
+        const QVariantMap candidateAnalysis = cachedAnalysis(candidatePath);
+        if (candidateAnalysis.isEmpty()) {
+            continue;
+        }
+
+        bool dependsOnSelected = false;
+        const QVariantList candidateDependencies = candidateAnalysis.value(QStringLiteral("dependencies")).toList();
+        for (const QVariant &dependencyEntry : candidateDependencies) {
+            if (QFileInfo(dependencyEntry.toMap().value(QStringLiteral("path")).toString()).absoluteFilePath() == selectedPath) {
+                dependsOnSelected = true;
+                break;
+            }
+        }
+        if (!dependsOnSelected) {
+            continue;
+        }
+
+        QHash<QString, QVariantMap> relations;
+        collectSymbolRelations(candidateAnalysis.value(QStringLiteral("symbols")).toList(),
+                               candidateAnalysis.value(QStringLiteral("path")).toString(),
+                               candidateAnalysis.value(QStringLiteral("language")).toString(),
+                               relations);
+        for (auto relIt = relations.cbegin(); relIt != relations.cend(); ++relIt) {
+            incomingSymbols.append(qMakePair(candidatePath, relIt.value()));
+        }
+    }
+
+    QVariantMap augmented = analysis;
+    augmented.insert(QStringLiteral("symbols"),
+                     augmentSymbolsWithRelationships(analysis.value(QStringLiteral("symbols")).toList(),
+                                                     importedSymbols,
+                                                     incomingSymbols));
+    return augmented;
 }
 
 struct SnippetAnalysis {
@@ -863,51 +1131,56 @@ void ProjectController::selectPath(const QString &path)
 
 QVariantMap ProjectController::parseFileSafely(const QString &path) const
 {
-    const QFileInfo info(path);
-    QVariantMap fallback = SymbolParser::makeResultSkeleton(path,
-                                                            info.fileName().isEmpty() ? path : info.fileName(),
-                                                            QString());
+    auto parseWithHelper = [](const QString &targetPath) -> QVariantMap {
+        const QFileInfo info(targetPath);
+        QVariantMap fallback = SymbolParser::makeResultSkeleton(targetPath,
+                                                                info.fileName().isEmpty() ? targetPath : info.fileName(),
+                                                                QString());
 
-    const QString helperPath = QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("lumencode-cli"));
-    if (!QFileInfo::exists(helperPath)) {
-        fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper not found"));
-        return fallback;
-    }
+        const QString helperPath = QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("lumencode-cli"));
+        if (!QFileInfo::exists(helperPath)) {
+            fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper not found"));
+            return fallback;
+        }
 
-    QProcess helper;
-    helper.start(helperPath, {QStringLiteral("--dump-file"), path});
-    if (!helper.waitForStarted(3000)) {
-        fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper could not start"));
-        return fallback;
-    }
+        QProcess helper;
+        helper.start(helperPath, {QStringLiteral("--dump-file"), targetPath});
+        if (!helper.waitForStarted(3000)) {
+            fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper could not start"));
+            return fallback;
+        }
 
-    if (!helper.waitForFinished(15000)) {
-        helper.kill();
-        helper.waitForFinished(1000);
-        fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper timed out"));
-        return fallback;
-    }
+        if (!helper.waitForFinished(15000)) {
+            helper.kill();
+            helper.waitForFinished(1000);
+            fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper timed out"));
+            return fallback;
+        }
 
-    if (helper.exitStatus() != QProcess::NormalExit || helper.exitCode() != 0) {
-        fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper failed"));
-        return fallback;
-    }
+        if (helper.exitStatus() != QProcess::NormalExit || helper.exitCode() != 0) {
+            fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper failed"));
+            return fallback;
+        }
 
-    QJsonParseError error;
-    const QJsonDocument doc = QJsonDocument::fromJson(helper.readAllStandardOutput(), &error);
-    if (doc.isNull() || !doc.isObject()) {
-        fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper returned invalid data"));
-        return fallback;
-    }
+        QJsonParseError error;
+        const QJsonDocument doc = QJsonDocument::fromJson(helper.readAllStandardOutput(), &error);
+        if (doc.isNull() || !doc.isObject()) {
+            fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper returned invalid data"));
+            return fallback;
+        }
 
-    QVariantMap result = doc.object().toVariantMap();
-    if (!result.contains(QStringLiteral("path"))) {
-        result.insert(QStringLiteral("path"), path);
-    }
-    if (!result.contains(QStringLiteral("fileName"))) {
-        result.insert(QStringLiteral("fileName"), info.fileName().isEmpty() ? path : info.fileName());
-    }
-    return result;
+        QVariantMap result = doc.object().toVariantMap();
+        if (!result.contains(QStringLiteral("path"))) {
+            result.insert(QStringLiteral("path"), targetPath);
+        }
+        if (!result.contains(QStringLiteral("fileName"))) {
+            result.insert(QStringLiteral("fileName"), info.fileName().isEmpty() ? targetPath : info.fileName());
+        }
+        return result;
+    };
+
+    const QVariantMap result = parseWithHelper(path);
+    return augmentAnalysisWithRelationships(result, m_rootPath, parseWithHelper);
 }
 
 void ProjectController::selectSymbol(int index)

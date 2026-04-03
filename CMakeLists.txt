@@ -108,6 +108,18 @@ target_include_directories(vendor-tree-sitter-python
         third_party/tree-sitter-python/src
 )
 
+add_library(vendor-tree-sitter-swift STATIC
+    third_party/tree-sitter-swift/src/parser.c
+    third_party/tree-sitter-swift/src/scanner.c
+)
+target_include_directories(vendor-tree-sitter-swift
+    PUBLIC
+        third_party/tree-sitter/lib/include
+    PRIVATE
+        third_party/tree-sitter-swift/src
+        third_party/tree-sitter-swift/include
+)
+
 add_library(vendor-tree-sitter-java STATIC
     third_party/tree-sitter-java/src/parser.c
 )
@@ -155,6 +167,7 @@ target_link_libraries(lumencode
     vendor-tree-sitter-css
     vendor-tree-sitter-rust
     vendor-tree-sitter-python
+    vendor-tree-sitter-swift
     vendor-tree-sitter-java
     vendor-tree-sitter-c-sharp
 )
@@ -181,6 +194,7 @@ target_link_libraries(lumencode-cli
     vendor-tree-sitter-css
     vendor-tree-sitter-rust
     vendor-tree-sitter-python
+    vendor-tree-sitter-swift
     vendor-tree-sitter-java
     vendor-tree-sitter-c-sharp
 )

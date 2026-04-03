@@ -16,6 +16,7 @@
 #include <tree_sitter/api.h>
 
 extern "C" {
+const TSLanguage *tree_sitter_swift(void);
 const TSLanguage *tree_sitter_javascript(void);
 const TSLanguage *tree_sitter_typescript(void);
 const TSLanguage *tree_sitter_tsx(void);
@@ -71,6 +72,9 @@ static TSLanguage *languageForName(const QString &language)
 {
     if (language == QStringLiteral("php")) {
         return const_cast<TSLanguage *>(tree_sitter_php());
+    }
+    if (language == QStringLiteral("swift")) {
+        return const_cast<TSLanguage *>(tree_sitter_swift());
     }
     if (language == QStringLiteral("css")) {
         return const_cast<TSLanguage *>(tree_sitter_css());
@@ -162,6 +166,245 @@ static QString nodeValueText(TSNode node, const QByteArray &source)
         }
     }
     return raw;
+}
+
+static QString firstIdentifier(const QString &text)
+{
+    static const QRegularExpression pattern(QStringLiteral(R"(([A-Za-z_][A-Za-z0-9_]*))"));
+    const QRegularExpressionMatch match = pattern.match(text);
+    return match.hasMatch() ? match.captured(1) : QString();
+}
+
+static QString firstVariableName(const QString &text)
+{
+    static const QRegularExpression pattern(QStringLiteral(R"(\$([A-Za-z_][A-Za-z0-9_]*))"));
+    const QRegularExpressionMatch match = pattern.match(text);
+    return match.hasMatch() ? QStringLiteral("$") + match.captured(1) : QString();
+}
+
+static QString lastIdentifier(const QString &text)
+{
+    static const QRegularExpression pattern(QStringLiteral(R"(([A-Za-z_][A-Za-z0-9_]*)\s*$)"));
+    const QRegularExpressionMatch match = pattern.match(text.trimmed());
+    return match.hasMatch() ? match.captured(1) : QString();
+}
+
+static QString symbolKey(const QVariantMap &symbol)
+{
+    return QStringLiteral("%1|%2|%3")
+        .arg(symbol.value(QStringLiteral("kind")).toString(),
+             symbol.value(QStringLiteral("name")).toString())
+        .arg(symbol.value(QStringLiteral("line")).toInt());
+}
+
+static QVariantMap relationFromSymbol(const QVariantMap &symbol)
+{
+    QVariantMap relation;
+    relation.insert(QStringLiteral("kind"), symbol.value(QStringLiteral("kind")).toString());
+    relation.insert(QStringLiteral("name"), symbol.value(QStringLiteral("name")).toString());
+    relation.insert(QStringLiteral("line"), symbol.value(QStringLiteral("line")).toInt());
+    relation.insert(QStringLiteral("detail"), symbol.value(QStringLiteral("detail")).toString());
+    relation.insert(QStringLiteral("snippet"), symbol.value(QStringLiteral("snippet")).toString());
+    relation.insert(QStringLiteral("calls"), QVariantList{});
+    relation.insert(QStringLiteral("calledBy"), QVariantList{});
+    return relation;
+}
+
+static void collectSymbolsByKey(const QVariantList &symbols,
+                                QHash<QString, QVariantMap> &byKey,
+                                QHash<QString, QStringList> &keysByName)
+{
+    for (const QVariant &entry : symbols) {
+        const QVariantMap symbol = entry.toMap();
+        const QString key = symbolKey(symbol);
+        const QString name = symbol.value(QStringLiteral("name")).toString();
+        if (!key.isEmpty() && !name.isEmpty()) {
+            byKey.insert(key, symbol);
+            keysByName[name].append(key);
+        }
+        collectSymbolsByKey(symbol.value(QStringLiteral("members")).toList(), byKey, keysByName);
+    }
+}
+
+static void appendUniqueRelation(QHash<QString, QVariantList> &edgeMap,
+                                 const QString &ownerKey,
+                                 const QVariantMap &relation,
+                                 const QString &detail)
+{
+    QVariantMap adjusted = relation;
+    adjusted.insert(QStringLiteral("detail"), detail);
+    QVariantList list = edgeMap.value(ownerKey);
+    for (const QVariant &entry : std::as_const(list)) {
+        const QVariantMap existing = entry.toMap();
+        if (existing.value(QStringLiteral("name")).toString() == adjusted.value(QStringLiteral("name")).toString()
+            && existing.value(QStringLiteral("line")).toInt() == adjusted.value(QStringLiteral("line")).toInt()) {
+            return;
+        }
+    }
+    list.append(adjusted);
+    edgeMap.insert(ownerKey, list);
+}
+
+static QVariantList applyRelationsToSymbols(const QVariantList &symbols,
+                                           const QHash<QString, QVariantList> &callsByKey,
+                                           const QHash<QString, QVariantList> &calledByByKey)
+{
+    QVariantList result;
+    result.reserve(symbols.size());
+    for (const QVariant &entry : symbols) {
+        QVariantMap symbol = entry.toMap();
+        const QString key = symbolKey(symbol);
+        symbol.insert(QStringLiteral("members"),
+                      applyRelationsToSymbols(symbol.value(QStringLiteral("members")).toList(),
+                                              callsByKey,
+                                              calledByByKey));
+        if (callsByKey.contains(key)) {
+            symbol.insert(QStringLiteral("calls"), callsByKey.value(key));
+        }
+        if (calledByByKey.contains(key)) {
+            symbol.insert(QStringLiteral("calledBy"), calledByByKey.value(key));
+        }
+        result.append(symbol);
+    }
+    return result;
+}
+
+static QString swiftDeclarationKind(TSNode node, const QByteArray &source)
+{
+    const QString type = QString::fromUtf8(ts_node_type(node));
+    if (type == QStringLiteral("protocol_declaration")) {
+        return QStringLiteral("protocol");
+    }
+    if (type == QStringLiteral("typealias_declaration")) {
+        return QStringLiteral("typealias");
+    }
+    if (type == QStringLiteral("associatedtype_declaration")) {
+        return QStringLiteral("associatedtype");
+    }
+    if (type == QStringLiteral("init_declaration")) {
+        return QStringLiteral("initializer");
+    }
+    if (type == QStringLiteral("deinit_declaration")) {
+        return QStringLiteral("deinitializer");
+    }
+    if (type == QStringLiteral("function_declaration") || type == QStringLiteral("protocol_function_declaration")) {
+        return QStringLiteral("function");
+    }
+    if (type == QStringLiteral("property_declaration") || type == QStringLiteral("protocol_property_declaration")) {
+        return QStringLiteral("property");
+    }
+    if (type == QStringLiteral("class_declaration")) {
+        const QString declarationKind = nodeText(fieldNode(node, "declaration_kind"), source).trimmed().toLower();
+        return declarationKind.isEmpty() ? QStringLiteral("type") : declarationKind;
+    }
+    return QStringLiteral("symbol");
+}
+
+static QString swiftDeclarationName(TSNode node, const QByteArray &source)
+{
+    const QString type = QString::fromUtf8(ts_node_type(node));
+    if (type == QStringLiteral("init_declaration")) {
+        return QStringLiteral("init");
+    }
+    if (type == QStringLiteral("deinit_declaration")) {
+        return QStringLiteral("deinit");
+    }
+
+    const QString nameText = nodeText(fieldNode(node, "name"), source).trimmed();
+    if (!nameText.isEmpty()) {
+        if (type == QStringLiteral("property_declaration") || type == QStringLiteral("protocol_property_declaration")) {
+            const QString variableName = firstVariableName(nameText);
+            return variableName.isEmpty() ? firstIdentifier(nameText) : variableName;
+        }
+        return firstIdentifier(nameText);
+    }
+
+    const QString snippet = nodeText(node, source);
+    if (type == QStringLiteral("property_declaration") || type == QStringLiteral("protocol_property_declaration")) {
+        const QString variableName = firstVariableName(snippet);
+        return variableName.isEmpty() ? firstIdentifier(snippet) : variableName;
+    }
+    return firstIdentifier(snippet);
+}
+
+static QString swiftCallableKeyForNode(TSNode node,
+                                       const QByteArray &source,
+                                       const QHash<QString, QVariantMap> &byKey)
+{
+    const QString type = QString::fromUtf8(ts_node_type(node));
+    if (type != QStringLiteral("function_declaration")
+        && type != QStringLiteral("protocol_function_declaration")
+        && type != QStringLiteral("init_declaration")
+        && type != QStringLiteral("deinit_declaration")
+        && type != QStringLiteral("method_declaration")) {
+        return QString();
+    }
+
+    QVariantMap probe;
+    probe.insert(QStringLiteral("kind"), type == QStringLiteral("method_declaration")
+                                       ? QStringLiteral("method")
+                                       : swiftDeclarationKind(node, source));
+    probe.insert(QStringLiteral("name"),
+                 type == QStringLiteral("method_declaration")
+                     ? firstIdentifier(nodeText(fieldNode(node, "name"), source).trimmed())
+                     : swiftDeclarationName(node, source));
+    probe.insert(QStringLiteral("line"), nodeLine(node));
+    const QString key = symbolKey(probe);
+    return byKey.contains(key) ? key : QString();
+}
+
+static QString swiftCallTargetName(TSNode node, const QByteArray &source)
+{
+    if (QString::fromUtf8(ts_node_type(node)) != QStringLiteral("call_expression")) {
+        return QString();
+    }
+
+    QString raw = nodeText(fieldNode(node, "called_expression"), source).trimmed();
+    if (raw.isEmpty()) {
+        raw = nodeText(fieldNode(node, "function"), source).trimmed();
+    }
+    if (raw.isEmpty() && ts_node_named_child_count(node) > 0) {
+        raw = nodeText(ts_node_named_child(node, 0), source).trimmed();
+    }
+    return lastIdentifier(raw);
+}
+
+static QString phpCallableKeyForNode(TSNode node,
+                                     const QByteArray &source,
+                                     const QHash<QString, QVariantMap> &byKey)
+{
+    const QString type = QString::fromUtf8(ts_node_type(node));
+    if (type != QStringLiteral("function_definition") && type != QStringLiteral("method_declaration")) {
+        return QString();
+    }
+
+    QVariantMap probe;
+    probe.insert(QStringLiteral("kind"), type == QStringLiteral("method_declaration")
+                                       ? QStringLiteral("method")
+                                       : QStringLiteral("function"));
+    probe.insert(QStringLiteral("name"), firstIdentifier(nodeText(fieldNode(node, "name"), source).trimmed()));
+    probe.insert(QStringLiteral("line"), nodeLine(node));
+    const QString key = symbolKey(probe);
+    return byKey.contains(key) ? key : QString();
+}
+
+static QString phpCallTargetName(TSNode node, const QByteArray &source)
+{
+    const QString type = QString::fromUtf8(ts_node_type(node));
+    if (type != QStringLiteral("function_call_expression")
+        && type != QStringLiteral("member_call_expression")
+        && type != QStringLiteral("scoped_call_expression")) {
+        return QString();
+    }
+
+    QString raw = nodeText(fieldNode(node, "function"), source).trimmed();
+    if (raw.isEmpty()) {
+        raw = nodeText(fieldNode(node, "name"), source).trimmed();
+    }
+    if (raw.isEmpty() && ts_node_named_child_count(node) > 0) {
+        raw = nodeText(ts_node_named_child(node, 0), source).trimmed();
+    }
+    return lastIdentifier(raw);
 }
 
 static QVariantMap makeCssClassSummaryEntry(const QString &name, bool matched,
@@ -382,6 +625,8 @@ QVariantMap SymbolParser::makeSymbol(const QString &kind, const QString &name, i
     result.insert(QStringLiteral("detail"), detail);
     result.insert(QStringLiteral("members"), members);
     result.insert(QStringLiteral("snippet"), snippet);
+    result.insert(QStringLiteral("calls"), QVariantList{});
+    result.insert(QStringLiteral("calledBy"), QVariantList{});
     return result;
 }
 
@@ -456,6 +701,15 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
         }
         return parsePhp(path, text);
     }
+    if (language == QStringLiteral("swift")) {
+        const QVariantMap treeSitterResult = parseSwiftTreeSitter(path, text);
+        if (!treeSitterResult.value(QStringLiteral("symbols")).toList().isEmpty()) {
+            return treeSitterResult;
+        }
+        QVariantMap fallback = makeResultSkeleton(path, info.fileName(), language);
+        fallback.insert(QStringLiteral("summary"), QStringLiteral("No Swift symbols extracted"));
+        return fallback;
+    }
     if (language == QStringLiteral("html")) {
         return parseHtml(path, text);
     }
@@ -520,6 +774,127 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
     if (language == QStringLiteral("objc")) {
         return parseObjectiveC(path, text, language);
     }
+    return result;
+}
+
+QVariantMap SymbolParser::parseSwiftTreeSitter(const QString &path, const QString &text) const
+{
+    QVariantList symbols;
+    const QByteArray source = text.toUtf8();
+    TSLanguage *language = languageForName(QStringLiteral("swift"));
+    if (!language) {
+        return makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("swift"));
+    }
+
+    TSParser *parser = ts_parser_new();
+    if (!parser || !ts_parser_set_language(parser, language)) {
+        if (parser) {
+            ts_parser_delete(parser);
+        }
+        return makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("swift"));
+    }
+
+    TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
+    TSNode root = ts_tree_root_node(tree);
+
+    std::function<QVariantList(TSNode)> parseSwiftBodyMembers = [&](TSNode body) {
+        QVariantList members;
+        if (ts_node_is_null(body)) {
+            return members;
+        }
+
+        const uint32_t count = ts_node_named_child_count(body);
+        for (uint32_t i = 0; i < count; ++i) {
+            TSNode child = ts_node_named_child(body, i);
+            const QString type = QString::fromUtf8(ts_node_type(child));
+            if (type == QStringLiteral("class_declaration")
+                || type == QStringLiteral("protocol_declaration")
+                || type == QStringLiteral("function_declaration")
+                || type == QStringLiteral("protocol_function_declaration")
+                || type == QStringLiteral("init_declaration")
+                || type == QStringLiteral("deinit_declaration")
+                || type == QStringLiteral("property_declaration")
+                || type == QStringLiteral("protocol_property_declaration")
+                || type == QStringLiteral("typealias_declaration")
+                || type == QStringLiteral("associatedtype_declaration")) {
+                const QString kind = swiftDeclarationKind(child, source);
+                const QString name = swiftDeclarationName(child, source);
+                QVariantList childMembers;
+                if (type == QStringLiteral("class_declaration") || type == QStringLiteral("protocol_declaration")) {
+                    childMembers = parseSwiftBodyMembers(fieldNode(child, "body"));
+                }
+                members.append(makeSymbol(kind, name, nodeLine(child), QString(), childMembers, nodeSnippet(child, source)));
+            }
+        }
+        return members;
+    };
+
+    const uint32_t count = ts_node_named_child_count(root);
+    for (uint32_t i = 0; i < count; ++i) {
+        TSNode child = ts_node_named_child(root, i);
+        const QString type = QString::fromUtf8(ts_node_type(child));
+        if (type == QStringLiteral("class_declaration")
+            || type == QStringLiteral("protocol_declaration")
+            || type == QStringLiteral("function_declaration")
+            || type == QStringLiteral("property_declaration")
+            || type == QStringLiteral("typealias_declaration")) {
+            QVariantList members;
+            if (type == QStringLiteral("class_declaration") || type == QStringLiteral("protocol_declaration")) {
+                members = parseSwiftBodyMembers(fieldNode(child, "body"));
+            }
+            symbols.append(makeSymbol(swiftDeclarationKind(child, source),
+                                      swiftDeclarationName(child, source),
+                                      nodeLine(child),
+                                      QString(),
+                                      members,
+                                      nodeSnippet(child, source)));
+        }
+    }
+
+    if (!symbols.isEmpty()) {
+        QHash<QString, QVariantMap> byKey;
+        QHash<QString, QStringList> keysByName;
+        QHash<QString, QVariantList> callsByKey;
+        QHash<QString, QVariantList> calledByByKey;
+        collectSymbolsByKey(symbols, byKey, keysByName);
+
+        std::function<void(TSNode, const QString &)> visit = [&](TSNode node, const QString &currentKey) {
+            QString activeKey = currentKey;
+            const QString nodeKey = swiftCallableKeyForNode(node, source, byKey);
+            if (!nodeKey.isEmpty()) {
+                activeKey = nodeKey;
+            }
+
+            if (!activeKey.isEmpty() && QString::fromUtf8(ts_node_type(node)) == QStringLiteral("call_expression")) {
+                const QString targetName = swiftCallTargetName(node, source);
+                const QStringList candidateKeys = keysByName.value(targetName);
+                if (!targetName.isEmpty() && candidateKeys.size() == 1) {
+                    const QString targetKey = candidateKeys.constFirst();
+                    if (targetKey != activeKey && byKey.contains(targetKey)) {
+                        appendUniqueRelation(callsByKey, activeKey, relationFromSymbol(byKey.value(targetKey)), QStringLiteral("calls"));
+                        appendUniqueRelation(calledByByKey, targetKey, relationFromSymbol(byKey.value(activeKey)), QStringLiteral("called by"));
+                    }
+                }
+            }
+
+            const uint32_t childCount = ts_node_named_child_count(node);
+            for (uint32_t index = 0; index < childCount; ++index) {
+                visit(ts_node_named_child(node, index), activeKey);
+            }
+        };
+
+        visit(root, QString());
+        symbols = applyRelationsToSymbols(symbols, callsByKey, calledByByKey);
+    }
+
+    ts_tree_delete(tree);
+    ts_parser_delete(parser);
+
+    QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("swift"));
+    result.insert(QStringLiteral("symbols"), symbols);
+    result.insert(QStringLiteral("dependencies"), extractDependencyLinks(path, text));
+    result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
+    result.insert(QStringLiteral("summary"), QStringLiteral("%1 top-level symbols").arg(symbols.size()));
     return result;
 }
 
@@ -610,6 +985,46 @@ QVariantMap SymbolParser::parsePhpTreeSitter(const QString &path, const QString 
                 symbols.append(makeSymbol(QStringLiteral("constant"), match.captured(1), nodeLine(child), QString(), {}, fullSnippet));
             }
         }
+    }
+
+    if (!symbols.isEmpty()) {
+        QHash<QString, QVariantMap> byKey;
+        QHash<QString, QStringList> keysByName;
+        QHash<QString, QVariantList> callsByKey;
+        QHash<QString, QVariantList> calledByByKey;
+        collectSymbolsByKey(symbols, byKey, keysByName);
+
+        std::function<void(TSNode, const QString &)> visit = [&](TSNode node, const QString &currentKey) {
+            QString activeKey = currentKey;
+            const QString nodeKey = phpCallableKeyForNode(node, source, byKey);
+            if (!nodeKey.isEmpty()) {
+                activeKey = nodeKey;
+            }
+
+            const QString nodeType = QString::fromUtf8(ts_node_type(node));
+            if (!activeKey.isEmpty()
+                && (nodeType == QStringLiteral("function_call_expression")
+                    || nodeType == QStringLiteral("member_call_expression")
+                    || nodeType == QStringLiteral("scoped_call_expression"))) {
+                const QString targetName = phpCallTargetName(node, source);
+                const QStringList candidateKeys = keysByName.value(targetName);
+                if (!targetName.isEmpty() && candidateKeys.size() == 1) {
+                    const QString targetKey = candidateKeys.constFirst();
+                    if (targetKey != activeKey && byKey.contains(targetKey)) {
+                        appendUniqueRelation(callsByKey, activeKey, relationFromSymbol(byKey.value(targetKey)), QStringLiteral("calls"));
+                        appendUniqueRelation(calledByByKey, targetKey, relationFromSymbol(byKey.value(activeKey)), QStringLiteral("called by"));
+                    }
+                }
+            }
+
+            const uint32_t childCount = ts_node_named_child_count(node);
+            for (uint32_t index = 0; index < childCount; ++index) {
+                visit(ts_node_named_child(node, index), activeKey);
+            }
+        };
+
+        visit(root, QString());
+        symbols = applyRelationsToSymbols(symbols, callsByKey, calledByByKey);
     }
 
     ts_tree_delete(tree);
@@ -2694,6 +3109,9 @@ QString SymbolParser::detectLanguage(const QString &path)
     }
     if (suffix == QStringLiteral("java")) {
         return QStringLiteral("java");
+    }
+    if (suffix == QStringLiteral("swift")) {
+        return QStringLiteral("swift");
     }
     if (suffix == QStringLiteral("cs")) {
         return QStringLiteral("csharp");

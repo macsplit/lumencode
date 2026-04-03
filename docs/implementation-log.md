@@ -1,5 +1,27 @@
 # Implementation Log
 
+## 2026-04-03
+
+- **Repository Repair:**
+    - Replaced broken parser gitlinks in `third_party/` with fully tracked vendored source trees so fresh clones configure and build correctly.
+    - Added bundled Tree-sitter Swift sources to the repository.
+- **Parser / Backend Work:**
+    - Added Tree-sitter-backed Swift parsing, including top-level symbols, nested members, and bounded snippets.
+    - Added intra-file `Calls` / `Called By` extraction for Swift and PHP.
+    - Extended project-side relationship augmentation so the detail pane can surface more useful caller/callee context.
+    - Updated filesystem scanning to include Swift files and ignore common Swift build artifacts such as `.build`, `.swiftpm`, and `DerivedData`.
+- **CLI / Regression Work:**
+    - Updated `tools/regression_sweep.py` to use the current repository path dynamically instead of a stale hard-coded checkout.
+    - Expanded the sweep to include Swift files and lightweight relation-presence checks.
+    - Re-validated the backend against real local Swift and PHP files through `lumencode-cli --dump-file`.
+- **Explorer UI Lockdown:**
+    - Made the right detail pane permanently visible as the stable inspector surface.
+    - Added clickable `Calls` / `Called By` sections in the detail pane.
+    - Reworked the center-pane interaction model so top-level symbols are full-card click targets and nested members are individually hoverable/clickable rows.
+    - Restored spacing between outer symbol blocks while keeping nested rows visually distinct and denser than the prior card-in-card layout.
+- **Known Remaining Gap:**
+    - Relationship traversal is improved but not finished; navigating through `Called By` entries does not always produce the corresponding reciprocal `Calls` view yet.
+
 ## 2026-03-29
 
 - Checked local environment constraints

@@ -30,13 +30,21 @@ Kirigami.ApplicationWindow {
     property int treeIndentStep: Math.max(Kirigami.Units.smallSpacing * 2, Math.round(Kirigami.Units.gridUnit * 0.8))
     property int treeDisclosureWidth: Math.round(Kirigami.Units.gridUnit * 1.1)
     property bool hasSelectionPath: !!project.selectedPath
-    property bool hasDetailPaneContent: !!project.selectedSymbol.detail
+    property bool hasDetailPaneContent: !!project.selectedSymbol.name
+                                         || !!project.selectedSymbol.detail
+                                         || (project.selectedSymbolMembers || []).length > 0
+                                         || (project.selectedSymbol.calls || []).length > 0
+                                         || (project.selectedSymbol.calledBy || []).length > 0
                                          || (project.selectedFileData.dependencies || []).length > 0
                                          || (project.selectedFileData.routes || []).length > 0
                                          || (project.selectedFileData.relatedFiles || []).length > 0
+                                         || (project.selectedFileData.quickLinks || []).length > 0
                                          || (!!project.selectedFileData.packageSummary
                                              && (!!project.selectedFileData.packageSummary.name
                                                  || (project.selectedFileData.packageSummary.dependencies || []).length > 0))
+                                         || (!!project.selectedFileData.cssSummary
+                                             && (((project.selectedFileData.cssSummary.usedClasses || []).length > 0)
+                                                 || ((project.selectedFileData.cssSummary.availableClasses || []).length > 0)))
     property bool hasCurrentFile: !!project.selectedSnippet.path
                                   && (project.selectedFileData.language || "") !== "folder"
                                   && project.selectedSnippet.kind !== "folder"
@@ -439,110 +447,163 @@ Kirigami.ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
                                 clip: true
+                                spacing: root.compactSpacing
                                 model: project.selectedFileData.symbols || []
 
                                 delegate: Kirigami.AbstractCard {
                                     required property var modelData
                                     width: ListView.view.width
+                                    onClicked: project.selectSymbolByData(modelData)
+                                    hoverEnabled: true
 
                                     contentItem: ColumnLayout {
                                         spacing: root.compactRowSpacing
 
-                                        RowLayout {
+                                        Rectangle {
                                             Layout.fillWidth: true
+                                            radius: Math.round(Kirigami.Units.smallSpacing * 0.8)
+                                            color: parentCard.hovered ? "#1a2330" : "transparent"
+                                            border.width: 1
+                                            border.color: parentCard.hovered ? Kirigami.Theme.highlightColor : "#243041"
 
-                                            Label {
-                                                text: modelData.kind
-                                                color: Kirigami.Theme.highlightColor
-                                                font.pointSize: root.compactSmallFontSize
+                                            implicitHeight: parentRow.implicitHeight + Kirigami.Units.smallSpacing
+
+                                            RowLayout {
+                                                id: parentRow
+                                                anchors.fill: parent
+                                                anchors.leftMargin: Kirigami.Units.smallSpacing
+                                                anchors.rightMargin: Kirigami.Units.smallSpacing
+                                                spacing: root.compactRowSpacing
+
+                                                Label {
+                                                    text: modelData.kind
+                                                    color: Kirigami.Theme.highlightColor
+                                                    font.pointSize: root.compactSmallFontSize
+                                                }
+
+                                                Label {
+                                                    Layout.fillWidth: true
+                                                    text: modelData.name
+                                                    font.bold: true
+                                                    elide: Text.ElideMiddle
+                                                    font.pointSize: root.compactFontSize
+                                                }
+
+                                                Label {
+                                                    text: "L" + modelData.line
+                                                    color: Kirigami.Theme.disabledTextColor
+                                                    font.pointSize: root.compactSmallFontSize
+                                                }
+
+                                                Label {
+                                                    text: ">"
+                                                    color: Kirigami.Theme.disabledTextColor
+                                                    font.pointSize: root.compactFontSize
+                                                    opacity: parentCard.hovered ? 1.0 : 0.7
+                                                }
                                             }
-
-                                            Label {
-                                                Layout.fillWidth: true
-                                                text: modelData.name
-                                                font.bold: true
-                                                elide: Text.ElideMiddle
-                                                font.pointSize: root.compactFontSize
-                                            }
-
-                                            Label {
-                                                text: "L" + modelData.line
-                                                color: Kirigami.Theme.disabledTextColor
-                                                font.pointSize: root.compactSmallFontSize
-                                            }
-                                        }
-
-                                        Button {
-                                            text: "Inspect"
-                                            font.pointSize: root.compactSmallFontSize
-                                            onClicked: project.selectSymbolByData(modelData)
                                         }
 
                                         Repeater {
                                             model: modelData.members || []
 
-                                            delegate: Kirigami.AbstractCard {
+                                            delegate: Item {
                                                 required property var modelData
                                                 Layout.fillWidth: true
-                                                leftPadding: Kirigami.Units.smallSpacing
+                                                implicitHeight: memberRow.implicitHeight + root.compactRowSpacing * 2
 
-                                                contentItem: ColumnLayout {
+                                                Rectangle {
+                                                    anchors.fill: parent
+                                                    radius: Math.round(Kirigami.Units.smallSpacing * 0.8)
+                                                    color: memberMouse.containsMouse ? "#1a2330" : "#141b24"
+                                                    border.width: 1
+                                                    border.color: memberMouse.containsMouse ? Kirigami.Theme.highlightColor : "#243041"
+                                                }
+
+                                                RowLayout {
+                                                    id: memberRow
+                                                    anchors.left: parent.left
+                                                    anchors.right: parent.right
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.leftMargin: Kirigami.Units.smallSpacing
+                                                    anchors.rightMargin: Kirigami.Units.smallSpacing
                                                     spacing: root.compactRowSpacing
 
-                                                    RowLayout {
-                                                        Layout.fillWidth: true
-
-                                                        Label {
-                                                            text: modelData.kind
-                                                            color: Kirigami.Theme.disabledTextColor
-                                                            font.pointSize: root.compactSmallFontSize
-                                                        }
-
-                                                        Label {
-                                                            Layout.fillWidth: true
-                                                            text: modelData.name
-                                                            font.bold: true
-                                                            elide: Text.ElideMiddle
-                                                            font.pointSize: root.compactFontSize
-                                                        }
-
-                                                        Label {
-                                                            text: "L" + modelData.line
-                                                            color: Kirigami.Theme.disabledTextColor
-                                                            font.pointSize: root.compactSmallFontSize
-                                                        }
-                                                    }
-
-                                                    Button {
-                                                        text: "Inspect"
+                                                    Label {
+                                                        text: modelData.kind
+                                                        color: Kirigami.Theme.disabledTextColor
                                                         font.pointSize: root.compactSmallFontSize
-                                                        onClicked: project.selectSymbolByData(modelData)
                                                     }
+
+                                                    Label {
+                                                        Layout.fillWidth: true
+                                                        text: modelData.name
+                                                        font.bold: true
+                                                        elide: Text.ElideMiddle
+                                                        font.pointSize: root.compactFontSize
+                                                    }
+
+                                                    Label {
+                                                        text: "L" + modelData.line
+                                                        color: Kirigami.Theme.disabledTextColor
+                                                        font.pointSize: root.compactSmallFontSize
+                                                    }
+
+                                                    Label {
+                                                        text: ">"
+                                                        color: Kirigami.Theme.disabledTextColor
+                                                        font.pointSize: root.compactFontSize
+                                                        opacity: memberMouse.containsMouse ? 1.0 : 0.7
+                                                    }
+
+                                                }
+
+                                                MouseArea {
+                                                    id: memberMouse
+                                                    anchors.fill: parent
+                                                    hoverEnabled: true
+                                                    cursorShape: Qt.PointingHandCursor
+                                                    onClicked: project.selectSymbolByData(modelData)
                                                 }
                                             }
                                         }
                                     }
+
+                                    id: parentCard
                                 }
                             }
                         }
                     }
 
                     Kirigami.AbstractCard {
-                        visible: root.hasDetailPaneContent
                         SplitView.fillHeight: true
-                        SplitView.preferredWidth: root.hasDetailPaneContent ? root.width * 0.34 : 0
-                        SplitView.minimumWidth: root.hasDetailPaneContent ? Kirigami.Units.gridUnit * 10 : 0
+                        SplitView.preferredWidth: root.width * 0.34
+                        SplitView.minimumWidth: Kirigami.Units.gridUnit * 10
 
                         contentItem: ScrollView {
+                            id: detailScroll
                             clip: true
+                            contentWidth: detailScroll.availableWidth
+                            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
                             ColumnLayout {
-                                width: parent.width
+                                width: detailScroll.availableWidth
                                 spacing: root.compactSpacing
 
                                 Kirigami.Heading {
                                     text: "Detail"
                                     level: 2
+                                }
+
+                                Text {
+                                    visible: !root.hasDetailPaneContent
+                                    width: detailScroll.availableWidth
+                                    Layout.fillWidth: true
+                                    wrapMode: Text.WordWrap
+                                    textFormat: Text.PlainText
+                                    color: Kirigami.Theme.disabledTextColor
+                                    font: Kirigami.Theme.smallFont
+                                    text: "Select a symbol, dependency, route, or related file to inspect it here."
                                 }
 
                                 Label {
@@ -564,27 +625,95 @@ Kirigami.ApplicationWindow {
                                 Repeater {
                                     model: project.selectedSymbolMembers || []
 
-                                    delegate: RowLayout {
+                                    delegate: Button {
                                         required property var modelData
                                         width: parent.width
-
-                                        Label {
-                                            text: modelData.kind
-                                            color: Kirigami.Theme.highlightColor
-                                            font.pointSize: root.compactSmallFontSize
+                                        text: (modelData.kind || "symbol")
+                                              + ": " + (modelData.name || "")
+                                              + (modelData.line ? " (L" + modelData.line + ")" : "")
+                                        font.pointSize: root.compactSmallFontSize
+                                        onClicked: {
+                                            project.selectSymbolByData(modelData)
                                         }
+                                    }
+                                }
 
-                                        Label {
-                                            Layout.fillWidth: true
-                                            text: modelData.name
-                                            elide: Text.ElideMiddle
-                                            font.pointSize: root.compactFontSize
+                                Kirigami.Separator {
+                                    visible: (project.selectedSymbol.calls || []).length > 0
+                                    Layout.fillWidth: true
+                                }
+
+                                Kirigami.Heading {
+                                    visible: (project.selectedSymbol.calls || []).length > 0
+                                    text: "Calls"
+                                    level: 3
+                                }
+
+                                Repeater {
+                                    model: project.selectedSymbol.calls || []
+
+                                    delegate: Button {
+                                        required property var modelData
+                                        width: parent.width
+                                        text: (modelData.kind || "symbol") + ": "
+                                              + (modelData.name || "")
+                                              + (modelData.line ? " (L" + modelData.line + ")" : "")
+                                        font.pointSize: root.compactSmallFontSize
+                                        enabled: !!modelData.snippet || !!modelData.path
+                                        onClicked: {
+                                            project.selectSymbolByData({
+                                                "kind": modelData.kind || "symbol",
+                                                "name": modelData.name || "",
+                                                "path": modelData.path || "",
+                                                "language": modelData.language || "",
+                                                "sourcePath": modelData.path || "",
+                                                "sourceLanguage": modelData.language || "",
+                                                "line": modelData.line || 0,
+                                                "snippet": modelData.snippet || "",
+                                                "snippetKind": modelData.snippetKind || "",
+                                                "diagnosticsMode": modelData.diagnosticsMode || "",
+                                                "detail": modelData.detail || "call"
+                                            })
                                         }
+                                    }
+                                }
 
-                                        Label {
-                                            text: "L" + modelData.line
-                                            color: Kirigami.Theme.disabledTextColor
-                                            font.pointSize: root.compactSmallFontSize
+                                Kirigami.Separator {
+                                    visible: (project.selectedSymbol.calledBy || []).length > 0
+                                    Layout.fillWidth: true
+                                }
+
+                                Kirigami.Heading {
+                                    visible: (project.selectedSymbol.calledBy || []).length > 0
+                                    text: "Called By"
+                                    level: 3
+                                }
+
+                                Repeater {
+                                    model: project.selectedSymbol.calledBy || []
+
+                                    delegate: Button {
+                                        required property var modelData
+                                        width: parent.width
+                                        text: (modelData.kind || "symbol") + ": "
+                                              + (modelData.name || "")
+                                              + (modelData.line ? " (L" + modelData.line + ")" : "")
+                                        font.pointSize: root.compactSmallFontSize
+                                        enabled: !!modelData.snippet || !!modelData.path
+                                        onClicked: {
+                                            project.selectSymbolByData({
+                                                "kind": modelData.kind || "symbol",
+                                                "name": modelData.name || "",
+                                                "path": modelData.path || "",
+                                                "language": modelData.language || "",
+                                                "sourcePath": modelData.path || "",
+                                                "sourceLanguage": modelData.language || "",
+                                                "line": modelData.line || 0,
+                                                "snippet": modelData.snippet || "",
+                                                "snippetKind": modelData.snippetKind || "",
+                                                "diagnosticsMode": modelData.diagnosticsMode || "",
+                                                "detail": modelData.detail || "caller"
+                                            })
                                         }
                                     }
                                 }
