@@ -52,6 +52,8 @@ What currently works:
 - A baseline fixture suite under `tests/fixtures/baseline/` with a manifest-driven set of small language-specific projects for deterministic regression coverage.
 - The regression sweep now supports `--fixtures-only`, validates relation round-trips through the interactive selection path, and treats the fixture suite as the first stability gate before broader real-repo sweeps.
 - Same-file `Calls` / `Called By` parity checks now cover Swift, PHP, JS/TS, Python, Rust, Java, and C# in the baseline fixture suite.
+- Analysis payloads now carry explicit provenance (`analysisSourceMode`, `analysisConfidence`, symbol/item `sourceMode`, `confidence`) so AST-derived and heuristic-derived results can be distinguished.
+- TS/TSX now keep partial Tree-sitter output when the tree contains errors and supplement it with heuristic recovery instead of falling back file-wide.
 - Project-level summaries including file type counts and main entry-point detection.
 - Installing a desktop launcher and scalable app icon through `cmake --install`.
 - Stable-enough backend payloads for the current QML bindings.
@@ -86,6 +88,7 @@ Phase 1. Stabilization
 - Continue broad CLI-driven regression sweeps against mixed real-world projects under `/home/user/Code`.
 - Keep growing the baseline fixture suite so each supported language or language-cluster has a small structural repro project checked into the repo.
 - Continue AST-backed parity work language by language, using CLI-first verification before GUI iteration.
+- Continue the new authority/recovery refactor language by language: AST should remain authoritative, with heuristics only supplementing broken or uncovered cases.
 - Move callable signature extraction from parser-layer snippet heuristics to grammar-specific AST fields language by language, now that `parameters` / `returns` are part of the backend symbol contract.
 - Keep pragmatic heuristic coverage for valuable local languages such as QML where a dedicated grammar path is not yet integrated, instead of leaving them unsupported.
 - Continue converting cross-file relationship work from name/snippet luck into explicit binding-aware or asset-aware models, especially for web projects.
@@ -120,6 +123,7 @@ Phase 4. Broader project understanding
 
 - Some extracted structure is still shallow or misleading on real projects.
 - Some languages still rely on heuristic fallback paths for parts of the overview, especially when native parser paths have been bypassed for stability. Plain JS/JSX currently still use the heuristic parser path for stability, while TS/TSX remain Tree-sitter-backed.
+- The parser now emits provenance and can return mixed recovered analyses, but this tiered recovery model is only implemented deliberately for TS/TSX so far. Other Tree-sitter languages still mostly behave as file-wide AST-or-heuristic paths.
 - Callable signatures (`parameters` / `returns`) are now emitted by the backend symbol payload instead of being derived in the UI/controller layer, but several languages still populate those fields through parser-layer signature heuristics rather than true AST field extraction.
 - QML is now supported as a first-class language in the explorer and CLI, but it currently uses heuristic structural extraction rather than a dedicated AST-backed parser.
 - `Calls` / `Called By` support has improved and relation clicks now rehydrate into full destination symbols, but the overall graph is still incomplete and not yet uniformly reciprocal across all languages and project shapes.

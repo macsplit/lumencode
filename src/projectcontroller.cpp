@@ -206,6 +206,8 @@ QVariantMap makeRelationFromSymbol(const QVariantMap &symbol,
                         : symbol.value(QStringLiteral("language")).toString());
     relation.insert(QStringLiteral("snippetKind"), symbol.value(QStringLiteral("snippetKind")).toString());
     relation.insert(QStringLiteral("diagnosticsMode"), symbol.value(QStringLiteral("diagnosticsMode")).toString());
+    relation.insert(QStringLiteral("sourceMode"), symbol.value(QStringLiteral("sourceMode")).toString());
+    relation.insert(QStringLiteral("confidence"), symbol.value(QStringLiteral("confidence")).toString());
     return relation;
 }
 

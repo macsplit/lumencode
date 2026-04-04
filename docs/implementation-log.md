@@ -2,6 +2,17 @@
 
 ## 2026-04-04
 
+- **Parser Authority / Recovery Refactor (Phase 1):**
+    - Added parser-owned provenance fields at both file and symbol/item level, including `analysisSourceMode`, `analysisConfidence`, `analysisHasAstErrors`, `analysisPartial`, `analysisNotices`, plus per-item `sourceMode` and `confidence`.
+    - Changed provenance annotation so mixed analyses preserve item-level authority instead of flattening everything into one fake source mode.
+    - Implemented the first deliberate partial-AST recovery path for TS/TSX:
+      - keep partial Tree-sitter output even when the tree contains errors
+      - supplement it with heuristic recovery instead of replacing the whole file analysis
+      - return `analysisSourceMode: recovered` with a warning notice and partial-analysis flag
+    - Added a checked-in broken TypeScript fixture to lock down that recovered-analysis contract through the CLI regression harness.
+    - Extended `tools/regression_sweep.py` so fixtures can assert `analysisSourceMode`, `analysisPartial`, and analysis notices, not just symbol presence.
+    - Left the broader authority refactor intentionally incomplete: the same recovered-analysis model still needs to be applied language by language across the other Tree-sitter-backed parsers.
+
 - **Callable Signature Contract Refactor:**
     - Added `parameters` and `returns` to callable symbol payloads as backend-owned fields instead of controller-only UI enrichment.
     - Moved callable signature extraction into `SymbolParser`, so CLI dumps, async GUI analysis, direct symbol selection, and relation rehydration all see the same signature data.
@@ -56,7 +67,7 @@
 - **Known Remaining Gap:**
     - Relation traversal is substantially better, but overall relation completeness still needs work across languages and cross-file shapes.
     - Swift functions still often leave the right inspector feeling sparse; useful additional symbol detail should be added later once backend payloads are more trustworthy.
-    - The next iteration should likely focus on richer useful inspector payloads for sparse Swift/function selections and on continuing to replace name/snippet-based relation luck with explicit AST- or model-driven logic.
+    - The next iteration should continue the authority/recovery refactor language by language, most likely starting with Python, before circling back to richer useful inspector payloads for sparse Swift/function selections.
     - Surfaced warnings are expected now under bounded degradation, but each one should still be treated as a lead for future optimization or parser/integration investigation rather than dismissed as inevitable.
 
 ## 2026-04-03

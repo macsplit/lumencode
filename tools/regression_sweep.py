@@ -432,6 +432,21 @@ def inspect_fixture_case(case: dict, issues: list[dict]) -> None:
         if actual < int(file_expectations["package_scripts"]):
             add_issue(issues, "fixture_missing_package_scripts", file_path, case=case_name, expected=file_expectations["package_scripts"], actual=actual)
 
+    if "analysis_source_mode" in file_expectations:
+        actual = parsed.get("analysisSourceMode", "")
+        if actual != file_expectations["analysis_source_mode"]:
+            add_issue(issues, "fixture_wrong_analysis_source_mode", file_path, case=case_name, expected=file_expectations["analysis_source_mode"], actual=actual)
+
+    if "analysis_partial" in file_expectations:
+        actual = bool(parsed.get("analysisPartial", False))
+        if actual != bool(file_expectations["analysis_partial"]):
+            add_issue(issues, "fixture_wrong_analysis_partial", file_path, case=case_name, expected=file_expectations["analysis_partial"], actual=actual)
+
+    if "analysis_notices" in file_expectations:
+        actual = len(parsed.get("analysisNotices", []) or [])
+        if actual < int(file_expectations["analysis_notices"]):
+            add_issue(issues, "fixture_missing_analysis_notices", file_path, case=case_name, expected=file_expectations["analysis_notices"], actual=actual)
+
     for expectation in expected_symbols:
         symbol = find_symbol(symbols, expectation["name"], expectation.get("kind"))
         if not symbol:

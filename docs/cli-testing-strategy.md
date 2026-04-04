@@ -22,12 +22,14 @@ The GUI now layers bounded asynchronous analysis on top of that helper path, so 
 - **Persistent Interactive Mode (`-i`)**: Maintains application state across multiple JSON-based commands on `stdin`.
 - **JSON Output**: All state changes and analysis results are emitted as compact JSON for easy machine processing, including source snippets for symbols.
 - **Callable Signature Payloads**: Backend symbol JSON now includes `parameters` and `returns` for callable symbols, so CLI and GUI inspect the same signature data.
+- **Provenance Payloads**: Backend file and symbol JSON now includes authority/confidence fields, so fixture and corpus runs can distinguish AST-derived, heuristic-derived, and mixed recovered analyses.
 - **Snippet Contract Validation**: Interactive state includes `selectedSnippet`, exposing `snippetKind` and `diagnosticsMode` so excerpt-vs-parseable behavior can be tested without QML.
 - **Corpus Sweep Harness**: `tools/regression_sweep.py` samples projects under `/home/user/Code`, drives interactive selection, and checks snippet, diagnostics, and member-shape invariants across many files.
 - **Fixture Baselines**: `tests/fixtures/baseline/manifest.json` defines a checked-in multi-language fixture corpus for deterministic regression runs.
 - **Relation Checks**: The sweep now includes relation-presence checks and relation round-trip checks for languages where `Calls` / `Called By` should exist, while tolerating files that do not contain enough callable symbols to make that meaningful.
 - **Fixture Relation Coverage**: The checked-in fixture corpus now asserts concrete relation pairs for JS, TS, PHP, Swift, Python, Rust, Java, and C# rather than only symbol presence.
 - **Web Reciprocity Coverage**: The fixture corpus also asserts reciprocal HTML/CSS and HTML/script asset relationships so web-file inspector behavior stays deterministic.
+- **Recovery-Mode Coverage**: The fixture corpus now includes a broken TypeScript case that asserts the `recovered` analysis contract instead of silently accepting file-wide fallback behavior.
 
 ## Testing Strategy
 
@@ -79,6 +81,7 @@ Exercise pathological inputs and failure-containment paths:
 - Known parser repros, verifying that `--dump-file` exits cleanly or fails in isolation without crashing the GUI.
 - Snippet-contract probes, verifying that excerpts do not emit diagnostics and declaration snippets do not inherit leading braces, access labels, or control-flow keywords as fake members.
 - Over-budget relationship scans, verifying that the GUI would surface partial-analysis warnings rather than hanging or silently dropping data.
+- Broken-but-recoverable parser inputs, verifying that AST-backed languages keep usable AST output, add explicit partial-analysis notices, and only supplement with heuristics where needed.
 
 ## Usage Examples
 
@@ -137,6 +140,7 @@ python3 tools/regression_sweep.py --max-files 24 --limit-per-project 3
 - The harness now also locks down reciprocal web-asset inspector behavior through checked-in fixtures instead of relying on ad hoc local repos.
 - The harness now also includes a baseline QML fixture so QML support is validated through the same CLI-first regression loop as the other language clusters.
 - Signature fields should now be verified through CLI payloads first, because the parser owns `parameters` / `returns` and the GUI should only render them.
+- Provenance and recovery-mode fields should now also be verified through CLI payloads first, because the backend now owns the authority contract and the GUI should only surface it.
 - The GUI now adds extra presentation behavior on top of the shared backend data, including lower-pane snippet rendering, compact snippet diagnostics, and CSS class drill-down behavior.
 - The GUI also adds async loading behavior and overview warnings on top of the shared backend data. When those warnings appear in normal use, they should be treated as prompts to investigate whether the limit is appropriate or the underlying algorithm is too expensive.
 - Project-summary regressions are also worth checking through the CLI because `mainEntry` scoring is still evolving for mixed-language roots.
@@ -145,4 +149,5 @@ python3 tools/regression_sweep.py --max-files 24 --limit-per-project 3
 - Web-asset reciprocity is now a deliberate separate model: HTML/CSS/script links should be validated through `quickLinks` and CSS summaries, not through synthetic call edges.
 - Python now uses an AST walk for same-file call relations because bounded snippets were not sufficient on docstring-heavy real files. Similar upgrades are still on the table for other languages if the corpus sweep exposes the same pattern.
 - Callable signatures are parser-owned now, but some languages still populate them via parser-layer signature heuristics rather than grammar-node extraction. Future regression work should distinguish those two cases once provenance/confidence fields exist.
+- The parser now emits provenance/confidence fields, but the tiered authority model is only deliberate for TS/TSX so far. Future regression work should widen the broken-code fixture corpus as that recovery pattern is applied to more languages.
 - Remaining native parser rehabilitation should proceed through the CLI first: collect a crashing file, minimize the repro, verify whether the fault is in LumenCode integration or an upstream grammar/runtime, and only then reduce the fallback/isolation layers for that language.

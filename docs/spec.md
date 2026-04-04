@@ -224,6 +224,14 @@ Current expectation:
 - parity is still incomplete across languages and files, so missing or asymmetric relations are currently a known limitation rather than a UI bug
 - non-call web relationships should be modeled explicitly through quick links and CSS summaries rather than being forced into `Calls` / `Called By`
 
+Analysis provenance contract:
+
+- file analysis payloads may expose `analysisSourceMode` as `ast`, `heuristic`, or `recovered`
+- file analysis payloads may expose `analysisConfidence` as a coarse trust signal
+- file analysis payloads may expose `analysisHasAstErrors`, `analysisPartial`, and `analysisNotices`
+- symbols and flat source-context items may expose `sourceMode` and `confidence`
+- mixed analyses must preserve item-level provenance instead of flattening everything into a single fake authority
+
 Callable signature contract:
 
 - typed languages should prefer declared parameter types and declared return types
@@ -245,6 +253,12 @@ Warnings are part of the product contract, not decorative text:
 
 - they mean the app stayed responsive and bounded its work
 - they should still be treated as a debugging signal, because the cause may be algorithmic weakness or poor processing strategy rather than only repo size
+
+Current parser authority model:
+
+- AST output is the intended authority where a Tree-sitter path exists
+- TS/TSX now keep partial AST output even when the tree has errors and supplement it with heuristic recovery, returning a `recovered` analysis rather than a file-wide fallback
+- the long-term direction is to apply that same authority/recovery pattern across the other Tree-sitter-backed languages instead of treating parsing as a file-wide pass/fail switch
 
 ## 4. UX
 

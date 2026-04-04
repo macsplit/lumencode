@@ -83,6 +83,27 @@
       ]
     },
     {
+      "name": "ts_partial_recovery",
+      "root": "tests/fixtures/baseline/ts_recovery",
+      "file": "broken.ts",
+      "file_expectations": {
+        "analysis_source_mode": "recovered",
+        "analysis_partial": true,
+        "analysis_notices": 1
+      },
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "helperBroken"
+        },
+        {
+          "kind": "function",
+          "name": "wrapperBroken",
+          "calls": ["helperBroken"]
+        }
+      ]
+    },
+    {
       "name": "php_basic_same_file",
       "root": "tests/fixtures/baseline/php_basic",
       "file": "helper.php",
