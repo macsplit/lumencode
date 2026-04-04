@@ -30,6 +30,7 @@ The GUI now layers bounded asynchronous analysis on top of that helper path, so 
 - **Fixture Relation Coverage**: The checked-in fixture corpus now asserts concrete relation pairs for JS, TS, PHP, Swift, Python, Rust, Java, and C# rather than only symbol presence.
 - **Web Reciprocity Coverage**: The fixture corpus also asserts reciprocal HTML/CSS and HTML/script asset relationships so web-file inspector behavior stays deterministic.
 - **Recovery-Mode Coverage**: The fixture corpus now includes broken TypeScript, Python, Java, C#, Rust, and PHP cases that assert the `recovered` analysis contract instead of silently accepting file-wide fallback behavior.
+- **Minified-Asset Coverage**: `--dump-file` is now also the right repro path for probable bundled/minified assets, because those files may be deliberately skipped with an explicit warning summary rather than parsed structurally.
 
 ## Testing Strategy
 
@@ -137,6 +138,7 @@ python3 tools/regression_sweep.py --max-files 24 --limit-per-project 3
 - `tools/regression_sweep.py` now also supports a manifest-driven fixture suite. `--fixtures-only` should be the quickest regression check before broader corpus runs.
 - `tools/regression_sweep.py` now resolves the active checkout path dynamically, so it can be run from `Coding/lumencode` without editing hard-coded repository paths.
 - The harness now follows relation targets through `selectSymbolByData` and verifies that reverse edges are present on the selected destination symbol.
+- The fixture harness now treats `--dump-file` as the authoritative file-analysis source and only uses interactive mode for controller-backed behaviors such as cross-file relation augmentation and selection round-trips.
 - The harness now also locks down reciprocal web-asset inspector behavior through checked-in fixtures instead of relying on ad hoc local repos.
 - The harness now also includes a baseline QML fixture so QML support is validated through the same CLI-first regression loop as the other language clusters.
 - Signature fields should now be verified through CLI payloads first, because the parser owns `parameters` / `returns` and the GUI should only render them.
@@ -150,6 +152,7 @@ python3 tools/regression_sweep.py --max-files 24 --limit-per-project 3
 - Python now uses an AST walk for same-file call relations because bounded snippets were not sufficient on docstring-heavy real files. Similar upgrades are still on the table for other languages if the corpus sweep exposes the same pattern.
 - Callable signatures are parser-owned now, but some languages still populate them via parser-layer signature heuristics rather than grammar-node extraction. Future regression work should distinguish those two cases once provenance/confidence fields exist.
 - The parser now emits provenance/confidence fields, and the tiered authority model is deliberate for TS/TSX, Python, Java, C#, Rust, and PHP. Future regression work should widen the broken-code fixture corpus again only when the same recovery pattern is applied to the remaining Tree-sitter languages.
+- The first generic range-aware recovery probe was backed out after instability across grammars, so future recovery work should enter through small language-specific steps rather than a parser-wide error-range walker.
 - Recovered-analysis regressions should now also watch for duplicate merged symbols or stale relation targets, not just the presence of a `recovered` file-level state.
 - Controller-side relationship warnings should now also be checked against file value: low-surface script files should not trigger expensive incoming relationship scans just because they are script-like.
 - Remaining native parser rehabilitation should proceed through the CLI first: collect a crashing file, minimize the repro, verify whether the fault is in LumenCode integration or an upstream grammar/runtime, and only then reduce the fallback/isolation layers for that language.

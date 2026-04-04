@@ -39,10 +39,60 @@ static QVariantList toVariantList(const QStringList &values)
 
 constexpr qint64 kMaxParsableFileBytes = 2 * 1024 * 1024;
 constexpr qint64 kMaxAuxiliaryFileBytes = 512 * 1024;
+constexpr qint64 kMinifiedDetectionBytes = 16 * 1024;
 
 static bool shouldSkipFileBySize(const QFileInfo &info, qint64 limit)
 {
     return info.exists() && info.isFile() && info.size() > limit;
+}
+
+static bool languageSupportsMinifiedSkip(const QString &language)
+{
+    return language == QStringLiteral("script")
+        || language == QStringLiteral("jsx")
+        || language == QStringLiteral("ts")
+        || language == QStringLiteral("tsx")
+        || language == QStringLiteral("css");
+}
+
+static bool looksLikeMinifiedSource(const QString &path, const QString &language, const QString &text)
+{
+    if (!languageSupportsMinifiedSkip(language) || text.size() < kMinifiedDetectionBytes) {
+        return false;
+    }
+
+    const QString fileName = QFileInfo(path).fileName().toLower();
+    if (fileName.contains(QStringLiteral(".min.")) || fileName.endsWith(QStringLiteral("-min.js"))
+        || fileName.endsWith(QStringLiteral("-min.css"))) {
+        return true;
+    }
+
+    const QStringList lines = text.split(QLatin1Char('\n'));
+    if (lines.isEmpty()) {
+        return false;
+    }
+
+    int longestLine = 0;
+    int nonEmptyLines = 0;
+    int totalNonEmptyChars = 0;
+    for (const QString &line : lines) {
+        const QString trimmed = line.trimmed();
+        if (trimmed.isEmpty()) {
+            continue;
+        }
+        ++nonEmptyLines;
+        longestLine = qMax(longestLine, trimmed.size());
+        totalNonEmptyChars += trimmed.size();
+    }
+
+    if (nonEmptyLines == 0) {
+        return false;
+    }
+
+    const double averageLineLength = static_cast<double>(totalNonEmptyChars) / static_cast<double>(nonEmptyLines);
+    return longestLine >= 4000
+        || (longestLine >= 2000 && averageLineLength >= 350.0)
+        || (nonEmptyLines <= 8 && averageLineLength >= 1200.0);
 }
 
 static QString nodeText(TSNode node, const QByteArray &source)
@@ -1911,6 +1961,20 @@ QVariantMap SymbolParser::makeOversizedFileResult(const QString &path, const QSt
     return result;
 }
 
+static QVariantMap makeMinifiedFileResult(const QString &path,
+                                          const QString &language,
+                                          qint64 size)
+{
+    QVariantMap result = SymbolParser::makeResultSkeleton(path, QFileInfo(path).fileName(), language);
+    result.insert(QStringLiteral("summary"),
+                  QStringLiteral("Analysis skipped: file appears to be minified or bundled (%1 bytes)")
+                      .arg(QString::number(size)));
+    appendParserAnalysisNotice(result,
+                               QStringLiteral("warning"),
+                               QStringLiteral("Structural analysis was skipped because this file appears to be minified or bundled source."));
+    return result;
+}
+
 SymbolParser::SymbolParser(QObject *parent)
     : QObject(parent)
 {
@@ -1939,6 +2003,12 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
     }
 
     const QString text = QString::fromUtf8(file.readAll());
+
+    if (looksLikeMinifiedSource(path, language, text)) {
+        return finalizeResult(makeMinifiedFileResult(path, language, info.size()),
+                              QStringLiteral("heuristic"),
+                              QStringLiteral("low"));
+    }
 
     if (language == QStringLiteral("php")) {
         const QVariantMap treeSitterResult = parsePhpTreeSitter(path, text);

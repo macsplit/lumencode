@@ -67,6 +67,15 @@ def run_cli_commands(commands: list[dict]) -> dict:
     return states[-1]
 
 
+def run_selected_file_state(root: Path, file_path: Path, polls: int = 8) -> dict:
+    commands = [
+        {"command": "setRootPath", "params": {"path": str(root)}},
+        {"command": "selectPath", "params": {"path": str(file_path)}},
+    ]
+    commands.extend({"command": "getState"} for _ in range(polls))
+    return run_cli_commands(commands)
+
+
 def relative_parts(path: Path) -> tuple[str, ...]:
     return path.relative_to(CODE_ROOT).parts
 
@@ -382,17 +391,24 @@ def inspect_fixture_case(case: dict, issues: list[dict]) -> None:
     case_name = case.get("name", str(file_path))
 
     try:
-        state = run_cli_commands([
-            {"command": "setRootPath", "params": {"path": str(root)}},
-            {"command": "selectPath", "params": {"path": str(file_path)}},
-        ])
+        parsed = run_cli_dump(file_path)
     except Exception as exc:
         add_issue(issues, "fixture_selection_failure", file_path, case=case_name, message=str(exc))
         return
 
-    parsed = state.get("selectedFileData", {}) or {}
-    symbols = parsed.get("symbols", []) or []
     expected_symbols = case.get("expectations", [])
+    needs_augmented_state = any(expectation.get("calls") or expectation.get("calledBy")
+                                for expectation in expected_symbols)
+    if needs_augmented_state:
+        try:
+            state = run_selected_file_state(root, file_path)
+            selected_file_data = state.get("selectedFileData", {}) or {}
+            if selected_file_data.get("symbols"):
+                parsed = selected_file_data
+        except Exception:
+            pass
+
+    symbols = parsed.get("symbols", []) or []
     file_expectations = case.get("file_expectations", {})
 
     if not symbols and expected_symbols:

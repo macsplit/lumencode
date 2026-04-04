@@ -245,6 +245,7 @@ The app should degrade visibly and predictably under load:
 - file analysis runs out-of-process through `lumencode-cli --dump-file`
 - file and cross-file analysis in the GUI run asynchronously so the UI remains responsive
 - oversized files are skipped with explicit summaries instead of being parsed anyway
+- obvious minified or bundled script/CSS assets may also be skipped with explicit summaries instead of being treated as normal source
 - file previews are truncated with visible markers instead of loading unbounded content
 - project-level relationship expansion is budgeted by time and by number of secondary file analyses
 - when a budget is hit, the result is returned as partial and surfaced through overview warnings instead of silently dropping data
@@ -259,6 +260,7 @@ Current parser authority model:
 - AST output is the intended authority where a Tree-sitter path exists
 - TS/TSX, Python, Java, C#, Rust, and PHP now keep partial AST output even when the tree has errors and supplement it with heuristic recovery, returning a `recovered` analysis rather than a file-wide fallback
 - Swift and CSS still mostly behave as file-wide AST-or-heuristic paths because the current recovery handshake is not yet implemented there
+- a first generic attempt at AST error-range harvesting was intentionally backed out after cross-grammar instability; future range-aware recovery work should be language-specific and fixture-gated
 - recovered analyses should normalize merged symbol trees and relation targets against the surviving canonical symbol set so obvious AST/heuristic duplicates do not leak directly into the UI
 - the long-term direction is to apply that same authority/recovery pattern across the other Tree-sitter-backed languages instead of treating parsing as a file-wide pass/fail switch
 

@@ -52,6 +52,7 @@
     - Confirmed the fixture baseline still passes after the async hardening and bounded-analysis changes.
     - Added a low-value relationship gate in `ProjectController` so variable-only script files no longer trigger the expensive incoming relationship scan just because they are script-like.
     - This specifically reduces misleading timeout/partial warnings on setup-style files that are unlikely to expose meaningful imported symbol relationships.
+    - Added parser-side minified/bundled asset detection for script-like files and CSS, so obvious `.min.*` or newline-starved vendor assets are skipped with explicit warning summaries instead of being explored like first-party source.
 
 - **Relation Navigation / Backend Work:**
     - Fixed relation click handling in `ProjectController` so selecting `Calls` / `Called By` entries rehydrates into the actual destination symbol instead of leaving the inspector on a thin edge payload.
@@ -69,7 +70,12 @@
     - Added a checked-in baseline fixture suite under `tests/fixtures/baseline/` with a manifest-driven set of compact structural test projects spanning JS, TS, PHP, Swift, Python, Rust, Java, C#, C++, Objective-C, HTML/CSS, and `package.json`.
     - Extended `tools/regression_sweep.py` with `--fixture-manifest` and `--fixtures-only`.
     - Added relation round-trip checks to the regression harness by driving `selectSymbolByData` through the interactive CLI and verifying reverse edges on the selected destination symbol.
+    - Fixed the fixture harness so it uses `--dump-file` as the authoritative file-analysis source and reserves interactive CLI state for controller-backed behaviors such as cross-file augmentation and relation round-trips.
     - Revalidated the current backend with both fixture-only runs and wider local-corpus sweeps under `/home/user/Code`, ending this session with `issues_found: 0` on both passes.
+- **Range-Aware Recovery Follow-up:**
+    - Started a first parser-wide attempt at AST error-range harvesting as groundwork for range-aware recovery.
+    - Backed that attempt out in the same session after it proved unstable across several grammars.
+    - Kept the repository on the known-good file-level recovered-analysis behavior and recorded range-aware recovery as the next step, but only via narrower language-specific work and fixture-gated rollout.
 - **Known Remaining Gap:**
     - Relation traversal is substantially better, but overall relation completeness still needs work across languages and cross-file shapes.
     - Swift functions still often leave the right inspector feeling sparse; useful additional symbol detail should be added later once backend payloads are more trustworthy.

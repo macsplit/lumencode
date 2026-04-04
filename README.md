@@ -57,6 +57,7 @@ What currently works:
 - Python, Java, C#, Rust, and PHP now also return deliberate `recovered` analyses on broken-but-parseable files instead of flipping wholesale to heuristic fallback.
 - Recovered analyses now normalize merged symbol trees and relation targets so obvious AST/heuristic duplicates are reduced before reaching the UI.
 - Low-value script files with no meaningful callable/API surface now skip the expensive incoming relationship scan, reducing spurious partial-analysis warnings on variable-only setup scripts.
+- Obvious minified or bundled script/CSS assets are now skipped deliberately with an explicit warning result instead of being treated as normal source and polluting structural analysis.
 - Project-level summaries including file type counts and main entry-point detection.
 - Installing a desktop launcher and scalable app icon through `cmake --install`.
 - Stable-enough backend payloads for the current QML bindings.
@@ -92,6 +93,7 @@ Phase 1. Stabilization
 - Keep growing the baseline fixture suite so each supported language or language-cluster has a small structural repro project checked into the repo.
 - Continue AST-backed parity work language by language, using CLI-first verification before GUI iteration.
 - Continue the new authority/recovery refactor language by language: AST should remain authoritative, with heuristics only supplementing broken or uncovered cases.
+- Re-enter range-aware recovery cautiously from the current stable base: start language-by-language and keep the fixture suite green before widening any AST error-range logic across grammars.
 - Move callable signature extraction from parser-layer snippet heuristics to grammar-specific AST fields language by language, now that `parameters` / `returns` are part of the backend symbol contract.
 - Keep pragmatic heuristic coverage for valuable local languages such as QML where a dedicated grammar path is not yet integrated, instead of leaving them unsupported.
 - Continue converting cross-file relationship work from name/snippet luck into explicit binding-aware or asset-aware models, especially for web projects.
@@ -127,10 +129,12 @@ Phase 4. Broader project understanding
 - Some extracted structure is still shallow or misleading on real projects.
 - Some languages still rely on heuristic fallback paths for parts of the overview, especially when native parser paths have been bypassed for stability. Plain JS/JSX currently still use the heuristic parser path for stability, while TS/TSX remain Tree-sitter-backed.
 - The parser now emits provenance and can return mixed recovered analyses. TS/TSX, Python, Java, C#, Rust, and PHP use that model deliberately; Swift and CSS still mostly behave as file-wide AST-or-heuristic paths.
+- The first attempt at generic AST error-range harvesting was backed out because it was not stable enough across grammars; range-aware recovery remains a next-step goal, not a finished contract.
 - Callable signatures (`parameters` / `returns`) are now emitted by the backend symbol payload instead of being derived in the UI/controller layer, but several languages still populate those fields through parser-layer signature heuristics rather than true AST field extraction.
 - QML is now supported as a first-class language in the explorer and CLI, but it currently uses heuristic structural extraction rather than a dedicated AST-backed parser.
 - `Calls` / `Called By` support has improved and relation clicks now rehydrate into full destination symbols, but the overall graph is still incomplete and not yet uniformly reciprocal across all languages and project shapes.
 - The new overview warnings are part of the intended safety model. They mean the app stayed responsive and returned a bounded result, but they should still be treated as prompts to inspect why that bound was hit.
+- Some script or stylesheet files are now intentionally skipped as probable minified/bundled assets; that is deliberate product behavior, not a parser failure.
 - Some project `mainEntry` guesses are still imperfect on broad mixed-language roots.
 - HTML/CSS class comparison can still be noisy on complex HTML documents.
 - Reciprocal web-asset links are now intentional product behavior, but they currently only scan nearby HTML files and do not yet model broader templating or multi-root asset pipelines.
