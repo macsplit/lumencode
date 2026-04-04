@@ -12,6 +12,7 @@ The `lumencode-cli` is a standalone executable that exercises the same core libr
 
 By using the same underlying classes, the CLI provides an accurate representation of what the GUI would display, making it ideal for automated testing and rapid iteration on parsing features.
 The CLI is also now part of the runtime safety story: the GUI routes file analysis through `lumencode-cli --dump-file`, so parser crashes are contained to the helper process rather than taking down the main app.
+The GUI now layers bounded asynchronous analysis on top of that helper path, so runtime verification should think in terms of both helper isolation and controller-side work budgets.
 
 ## Features
 
@@ -70,6 +71,7 @@ Exercise pathological inputs and failure-containment paths:
 - Large files, verifying parser refusal/truncation summaries instead of full in-memory analysis.
 - Known parser repros, verifying that `--dump-file` exits cleanly or fails in isolation without crashing the GUI.
 - Snippet-contract probes, verifying that excerpts do not emit diagnostics and declaration snippets do not inherit leading braces, access labels, or control-flow keywords as fake members.
+- Over-budget relationship scans, verifying that the GUI would surface partial-analysis warnings rather than hanging or silently dropping data.
 
 ## Usage Examples
 
@@ -126,6 +128,7 @@ python3 tools/regression_sweep.py --max-files 24 --limit-per-project 3
 - `tools/regression_sweep.py` now resolves the active checkout path dynamically, so it can be run from `Coding/lumencode` without editing hard-coded repository paths.
 - The harness now follows relation targets through `selectSymbolByData` and verifies that reverse edges are present on the selected destination symbol.
 - The GUI now adds extra presentation behavior on top of the shared backend data, including lower-pane snippet rendering, compact snippet diagnostics, and CSS class drill-down behavior.
+- The GUI also adds async loading behavior and overview warnings on top of the shared backend data. When those warnings appear in normal use, they should be treated as prompts to investigate whether the limit is appropriate or the underlying algorithm is too expensive.
 - Project-summary regressions are also worth checking through the CLI because `mainEntry` scoring is still evolving for mixed-language roots.
 - Full GUI parity should not be assumed for purely visual concerns such as splitter layout, lightweight syntax coloring, or rich-text snippet presentation.
 - Relation parity should also not be assumed yet; `Calls` and `Called By` payloads are materially better than before, but remain incomplete and sometimes asymmetric on real projects.

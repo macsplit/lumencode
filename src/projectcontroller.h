@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QFutureWatcher>
 #include <QVariantList>
 #include <QVariantMap>
 
@@ -19,6 +20,7 @@ class ProjectController : public QObject
     Q_PROPERTY(QVariantMap selectedSymbol READ selectedSymbol NOTIFY selectedSymbolChanged)
     Q_PROPERTY(QVariantList selectedSymbolMembers READ selectedSymbolMembers NOTIFY selectedSymbolChanged)
     Q_PROPERTY(QVariantMap selectedSnippet READ selectedSnippet NOTIFY selectedSnippetChanged)
+    Q_PROPERTY(bool analysisInProgress READ analysisInProgress NOTIFY analysisInProgressChanged)
     Q_PROPERTY(QString preferredEditor READ preferredEditor WRITE setPreferredEditor NOTIFY preferredEditorChanged)
 
 public:
@@ -34,6 +36,7 @@ public:
     QVariantMap selectedSymbol() const;
     QVariantList selectedSymbolMembers() const;
     QVariantMap selectedSnippet() const;
+    bool analysisInProgress() const;
     QString preferredEditor() const;
     Q_INVOKABLE QString lastOpenedPath() const;
 
@@ -53,9 +56,12 @@ signals:
     void selectedFileDataChanged();
     void selectedSymbolChanged();
     void selectedSnippetChanged();
+    void analysisInProgressChanged();
     void preferredEditorChanged();
 
 private:
+    void beginAsyncAnalysis(const QString &path, const QVariantMap &pendingSymbol = QVariantMap{});
+    void applyResolvedSelection(const QVariantMap &symbol);
     QVariantMap makeFileSnippet() const;
     QVariantMap parseFileSafely(const QString &path) const;
     static QVariantMap makeSymbolSnippet(const QVariantMap &symbol, const QVariantMap &fileData);
@@ -71,4 +77,8 @@ private:
     QVariantMap m_selectedFileData;
     QVariantMap m_selectedSymbol;
     QVariantMap m_selectedSnippet;
+    QVariantMap m_pendingSelectedSymbol;
+    QFutureWatcher<QVariantMap> *m_analysisWatcher = nullptr;
+    int m_analysisRequestId = 0;
+    bool m_analysisInProgress = false;
 };

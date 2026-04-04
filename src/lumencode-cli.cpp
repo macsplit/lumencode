@@ -1,16 +1,19 @@
-#include <QCoreApplication>
 #include <QCommandLineParser>
+#include <QCoreApplication>
 #include <QDir>
+#include <QElapsedTimer>
+#include <QEventLoop>
 #include <QFileInfo>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QJsonArray>
-#include <QDebug>
 #include <QTextStream>
+#include <QThread>
+
 #include <iostream>
 
-#include "projectcontroller.h"
 #include "filesystemmodel.h"
+#include "projectcontroller.h"
 #include "symbolparser.h"
 
 static QString resolveCliPath(const QString &rawPath, const QString &basePath)
@@ -28,7 +31,23 @@ static QString resolveCliPath(const QString &rawPath, const QString &basePath)
     return QFileInfo(QDir(effectiveBase).filePath(rawPath)).absoluteFilePath();
 }
 
-void printState(ProjectController &controller) {
+static bool waitForAnalysis(ProjectController &controller, int timeoutMs = 20000)
+{
+    if (!controller.analysisInProgress()) {
+        return true;
+    }
+
+    QElapsedTimer timer;
+    timer.start();
+    while (controller.analysisInProgress() && timer.elapsed() < timeoutMs) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        QThread::msleep(10);
+    }
+    return !controller.analysisInProgress();
+}
+
+static void printState(ProjectController &controller)
+{
     QJsonObject output;
     output["rootPath"] = controller.rootPath();
     output["projectSummary"] = QJsonObject::fromVariantMap(controller.projectSummary());
@@ -38,18 +57,19 @@ void printState(ProjectController &controller) {
     output["selectedSymbol"] = QJsonObject::fromVariantMap(controller.selectedSymbol());
     output["selectedSymbolMembers"] = QJsonArray::fromVariantList(controller.selectedSymbolMembers());
     output["selectedSnippet"] = QJsonObject::fromVariantMap(controller.selectedSnippet());
+    output["analysisInProgress"] = controller.analysisInProgress();
 
-    FileSystemModel *fsModel = qobject_cast<FileSystemModel*>(controller.fileSystemModel());
+    FileSystemModel *fsModel = qobject_cast<FileSystemModel *>(controller.fileSystemModel());
     if (fsModel) {
         QJsonArray entries;
         const QVariantList visible = fsModel->visibleEntries();
-        for (const QVariant &v : visible) {
-            entries.append(QJsonObject::fromVariantMap(v.toMap()));
+        for (const QVariant &value : visible) {
+            entries.append(QJsonObject::fromVariantMap(value.toMap()));
         }
         output["fileSystem"] = entries;
     }
 
-    QJsonDocument doc(output);
+    const QJsonDocument doc(output);
     std::cout << doc.toJson(QJsonDocument::Compact).toStdString() << std::endl;
 }
 
@@ -63,8 +83,9 @@ int main(int argc, char *argv[])
     parser.setApplicationDescription(QStringLiteral("CLI interface for LumenCode project analysis"));
     parser.addHelpOption();
     parser.addVersionOption();
-    parser.addPositionalArgument(QStringLiteral("rootPath"), QStringLiteral("The root path of the project to analyze (optional in interactive mode)"));
-    
+    parser.addPositionalArgument(QStringLiteral("rootPath"),
+                                 QStringLiteral("The root path of the project to analyze (optional in interactive mode)"));
+
     QCommandLineOption selectPathOption(QStringList() << "p" << "path",
                                         QStringLiteral("Select a specific path for analysis."),
                                         QStringLiteral("path"));
@@ -102,8 +123,10 @@ int main(int argc, char *argv[])
         const QString rootPath = QFileInfo(args.at(0)).absoluteFilePath();
         if (QFileInfo::exists(rootPath) && QFileInfo(rootPath).isDir()) {
             controller.setRootPath(rootPath);
+            waitForAnalysis(controller);
         } else if (!parser.isSet(interactiveOption)) {
-            std::cerr << "Error: Project root path does not exist or is not a directory: " << rootPath.toStdString() << std::endl;
+            std::cerr << "Error: Project root path does not exist or is not a directory: "
+                      << rootPath.toStdString() << std::endl;
             return 1;
         }
     } else if (!parser.isSet(interactiveOption)) {
@@ -114,51 +137,56 @@ int main(int argc, char *argv[])
     if (parser.isSet(interactiveOption)) {
         QTextStream qin(stdin);
         while (true) {
-            QString line = qin.readLine();
-            if (line.isNull()) break;
-            
-            QJsonDocument doc = QJsonDocument::fromJson(line.toUtf8());
+            const QString line = qin.readLine();
+            if (line.isNull()) {
+                break;
+            }
+
+            const QJsonDocument doc = QJsonDocument::fromJson(line.toUtf8());
             if (doc.isNull() || !doc.isObject()) {
                 std::cerr << "Invalid JSON command" << std::endl;
                 continue;
             }
-            
-            QJsonObject cmdObj = doc.object();
-            QString command = cmdObj["command"].toString();
-            QJsonObject params = cmdObj["params"].toObject();
-            
-            if (command == "setRootPath") {
+
+            const QJsonObject cmdObj = doc.object();
+            const QString command = cmdObj["command"].toString();
+            const QJsonObject params = cmdObj["params"].toObject();
+
+            if (command == QStringLiteral("setRootPath")) {
                 controller.setRootPath(resolveCliPath(params["path"].toString(), QDir::currentPath()));
-            } else if (command == "selectPath") {
+                waitForAnalysis(controller);
+            } else if (command == QStringLiteral("selectPath")) {
                 controller.selectPath(resolveCliPath(params["path"].toString(), controller.rootPath()));
-            } else if (command == "selectSymbol") {
+                waitForAnalysis(controller);
+            } else if (command == QStringLiteral("selectSymbol")) {
                 controller.selectSymbol(params["index"].toInt());
-            } else if (command == "selectSymbolByData") {
+            } else if (command == QStringLiteral("selectSymbolByData")) {
                 controller.selectSymbolByData(params.toVariantMap());
-            } else if (command == "toggleExpanded") {
-                 FileSystemModel *fsModel = qobject_cast<FileSystemModel*>(controller.fileSystemModel());
-                 if (fsModel) {
-                     fsModel->toggleExpanded(resolveCliPath(params["path"].toString(), controller.rootPath()));
-                 }
-            } else if (command == "exit") {
+                waitForAnalysis(controller);
+            } else if (command == QStringLiteral("toggleExpanded")) {
+                FileSystemModel *fsModel = qobject_cast<FileSystemModel *>(controller.fileSystemModel());
+                if (fsModel) {
+                    fsModel->toggleExpanded(resolveCliPath(params["path"].toString(), controller.rootPath()));
+                }
+            } else if (command == QStringLiteral("exit")) {
                 break;
-            } else if (command == "getState" || command == "getProjectSummary") {
-                // Just print state
+            } else if (command == QStringLiteral("getState") || command == QStringLiteral("getProjectSummary")) {
+                // Print current state below.
             } else {
                 std::cerr << "Unknown command: " << command.toStdString() << std::endl;
             }
-            
+
             printState(controller);
         }
         return 0;
     }
 
-    // One-shot mode logic
     if (parser.isSet(selectPathOption)) {
         controller.selectPath(resolveCliPath(parser.value(selectPathOption), controller.rootPath()));
+        waitForAnalysis(controller);
         if (parser.isSet(selectSymbolOption)) {
-            bool ok;
-            int symbolIndex = parser.value(selectSymbolOption).toInt(&ok);
+            bool ok = false;
+            const int symbolIndex = parser.value(selectSymbolOption).toInt(&ok);
             if (ok) {
                 controller.selectSymbol(symbolIndex);
             }
@@ -166,6 +194,5 @@ int main(int argc, char *argv[])
     }
 
     printState(controller);
-
     return 0;
 }

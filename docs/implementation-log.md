@@ -2,6 +2,14 @@
 
 ## 2026-04-04
 
+- **Robustness / Overload Hardening:**
+    - Added controller-side budgets for project relationship augmentation, including a time budget and limits on imported and incoming file analyses.
+    - Added explicit `analysisNotices` and partial-analysis summaries so bounded work now surfaces as visible warnings instead of silent sparse output.
+    - Normalized helper failure cases such as missing helper, helper timeout, helper failure, invalid helper output, and oversized-file refusal into the same surfaced notice model.
+    - Moved GUI file and cross-file relation analysis onto an asynchronous background path using `QtConcurrent`, with stale-result protection so rapid navigation does not apply obsolete completions.
+    - Added overview-pane loading affordances so users see when analysis is in progress instead of assuming empty or half-filled panes are bugs.
+    - Confirmed the fixture baseline still passes after the async hardening and bounded-analysis changes.
+
 - **Relation Navigation / Backend Work:**
     - Fixed relation click handling in `ProjectController` so selecting `Calls` / `Called By` entries rehydrates into the actual destination symbol instead of leaving the inspector on a thin edge payload.
     - This restored reciprocal relation visibility in the common case where the destination symbol already has its own relation data, especially when navigating through Swift files.
@@ -22,6 +30,7 @@
 - **Known Remaining Gap:**
     - Relation traversal is substantially better, but overall relation completeness still needs work across languages and cross-file shapes.
     - Swift functions still often leave the right inspector feeling sparse; useful additional symbol detail should be added later once backend payloads are more trustworthy.
+    - Surfaced warnings are expected now under bounded degradation, but each one should still be treated as a lead for future optimization or parser/integration investigation rather than dismissed as inevitable.
 
 ## 2026-04-03
 

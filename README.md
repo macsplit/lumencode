@@ -38,6 +38,7 @@ What currently works:
   - `package.json` scripts, entrypoint, and dependency summaries
 - A functional standalone CLI tool (`lumencode-cli`) for scripted analysis and regression checks.
 - A crash-isolated file-analysis path: GUI selection now shells out to `lumencode-cli --dump-file`, so parser crashes terminate the helper instead of the main app.
+- An asynchronous GUI analysis flow: file and cross-file symbol selection now analyze in the background instead of blocking the UI thread.
 - CLI state now exposes the active lower-pane snippet payload, and interactive mode can select arbitrary source-context payloads for GUI-parity checks.
 - A regression sweep harness at `tools/regression_sweep.py` that samples local projects, drives the CLI selection path, and validates snippet/diagnostic contracts across languages.
 - A baseline fixture suite under `tests/fixtures/baseline/` with a manifest-driven set of small language-specific projects for deterministic regression coverage.
@@ -51,6 +52,8 @@ What currently works:
   - directory crawl limits for recursion depth, scanned nodes, and per-folder entries
   - parser-side large-file refusal with readable summaries
   - truncated file previews instead of unbounded lower-pane loads
+  - bounded relationship augmentation with visible partial-analysis notices instead of silent degradation
+  - explicit loading and warning states in the overview pane when analysis is still running or has been cut short
 
 ## Build
 
@@ -75,6 +78,7 @@ Phase 1. Stabilization
 - Continue broad CLI-driven regression sweeps against mixed real-world projects under `/home/user/Code`.
 - Keep growing the baseline fixture suite so each supported language or language-cluster has a small structural repro project checked into the repo.
 - Continue AST-backed parity work language by language, using CLI-first verification before GUI iteration.
+- Treat surfaced analysis warnings as investigation leads, not just acceptable noise: some will indicate algorithmic or integration weaknesses rather than merely large inputs.
 
 Phase 2. Better source inspection
 
@@ -104,6 +108,7 @@ Phase 4. Broader project understanding
 - Some extracted structure is still shallow or misleading on real projects.
 - Some languages still rely on heuristic fallback paths for parts of the overview, especially when native parser paths have been bypassed for stability. Plain JS/JSX currently still use the heuristic parser path for stability, while TS/TSX remain Tree-sitter-backed.
 - `Calls` / `Called By` support has improved and relation clicks now rehydrate into full destination symbols, but the overall graph is still incomplete and not yet uniformly reciprocal across all languages and project shapes.
+- The new overview warnings are part of the intended safety model. They mean the app stayed responsive and returned a bounded result, but they should still be treated as prompts to inspect why that bound was hit.
 - Some project `mainEntry` guesses are still imperfect on broad mixed-language roots.
 - HTML/CSS class comparison can still be noisy on complex HTML documents.
 - Syntax highlighting is currently an internal lightweight implementation, not a full external highlighter.

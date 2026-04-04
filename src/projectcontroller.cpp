@@ -6,6 +6,7 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QDirIterator>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -15,6 +16,7 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <QProcess>
+#include <QtConcurrent>
 #include <QRegularExpression>
 #include <QSettings>
 #include <QSet>
@@ -41,6 +43,12 @@ const TSLanguage *tree_sitter_c_sharp(void);
 namespace {
 
 constexpr qint64 kMaxPreviewBytes = 256 * 1024;
+constexpr int kHelperStartTimeoutMs = 3000;
+constexpr int kHelperSelectedFileTimeoutMs = 15000;
+constexpr int kHelperRelationshipTimeoutMs = 2500;
+constexpr int kRelationshipBudgetMs = 1500;
+constexpr int kRelationshipImportedFileLimit = 24;
+constexpr int kRelationshipIncomingAnalysisLimit = 48;
 const QString kSnippetKindFilePreview = QStringLiteral("file_preview");
 const QString kSnippetKindExactConstruct = QStringLiteral("exact_construct");
 const QString kSnippetKindBlockExcerpt = QStringLiteral("block_excerpt");
@@ -160,6 +168,141 @@ QVariantMap makeRelationFromSymbol(const QVariantMap &symbol,
     relation.insert(QStringLiteral("snippetKind"), symbol.value(QStringLiteral("snippetKind")).toString());
     relation.insert(QStringLiteral("diagnosticsMode"), symbol.value(QStringLiteral("diagnosticsMode")).toString());
     return relation;
+}
+
+QVariantMap makeAnalysisNotice(const QString &severity, const QString &message)
+{
+    QVariantMap notice;
+    notice.insert(QStringLiteral("severity"), severity);
+    notice.insert(QStringLiteral("message"), message);
+    return notice;
+}
+
+void appendAnalysisNotice(QVariantMap &analysis, const QString &severity, const QString &message, bool partial = true)
+{
+    QVariantList notices = analysis.value(QStringLiteral("analysisNotices")).toList();
+    for (const QVariant &entry : std::as_const(notices)) {
+        const QVariantMap existing = entry.toMap();
+        if (existing.value(QStringLiteral("severity")).toString() == severity
+            && existing.value(QStringLiteral("message")).toString() == message) {
+            if (partial) {
+                analysis.insert(QStringLiteral("analysisPartial"), true);
+            }
+            return;
+        }
+    }
+
+    notices.append(makeAnalysisNotice(severity, message));
+    analysis.insert(QStringLiteral("analysisNotices"), notices);
+    if (partial) {
+        analysis.insert(QStringLiteral("analysisPartial"), true);
+    }
+}
+
+void appendSummarySuffix(QVariantMap &analysis, const QString &suffix)
+{
+    QString summary = analysis.value(QStringLiteral("summary")).toString().trimmed();
+    if (summary.isEmpty()) {
+        analysis.insert(QStringLiteral("summary"), suffix);
+        return;
+    }
+    if (!summary.contains(suffix)) {
+        summary += QStringLiteral(" ") + suffix;
+        analysis.insert(QStringLiteral("summary"), summary.trimmed());
+    }
+}
+
+QVariantMap augmentAnalysisWithRelationships(const QVariantMap &analysis,
+                                             const QString &rootPath,
+                                             const std::function<QVariantMap(const QString &)> &loadAnalysis);
+
+QVariantMap parseAnalysisViaHelper(const QString &targetPath, int finishTimeoutMs)
+{
+    const QFileInfo info(targetPath);
+    QVariantMap fallback = SymbolParser::makeResultSkeleton(targetPath,
+                                                            info.fileName().isEmpty() ? targetPath : info.fileName(),
+                                                            QString());
+
+    const QString helperPath = QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("lumencode-cli"));
+    if (!QFileInfo::exists(helperPath)) {
+        fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper not found"));
+        appendAnalysisNotice(fallback, QStringLiteral("error"),
+                             QStringLiteral("Parser helper is missing, so structural analysis is unavailable."));
+        return fallback;
+    }
+
+    QProcess helper;
+    helper.start(helperPath, {QStringLiteral("--dump-file"), targetPath});
+    if (!helper.waitForStarted(kHelperStartTimeoutMs)) {
+        fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper could not start"));
+        appendAnalysisNotice(fallback, QStringLiteral("warning"),
+                             QStringLiteral("Parser helper could not start for this file."));
+        return fallback;
+    }
+
+    if (!helper.waitForFinished(finishTimeoutMs)) {
+        helper.kill();
+        helper.waitForFinished(1000);
+        fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper timed out"));
+        appendAnalysisNotice(fallback, QStringLiteral("warning"),
+                             QStringLiteral("Parser helper timed out before analysis completed."));
+        return fallback;
+    }
+
+    if (helper.exitStatus() != QProcess::NormalExit || helper.exitCode() != 0) {
+        fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper failed"));
+        appendAnalysisNotice(fallback, QStringLiteral("warning"),
+                             QStringLiteral("Parser helper exited unsuccessfully while analyzing this file."));
+        return fallback;
+    }
+
+    QJsonParseError error;
+    const QJsonDocument doc = QJsonDocument::fromJson(helper.readAllStandardOutput(), &error);
+    if (doc.isNull() || !doc.isObject()) {
+        fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper returned invalid data"));
+        appendAnalysisNotice(fallback, QStringLiteral("warning"),
+                             QStringLiteral("Parser helper returned invalid analysis data."));
+        return fallback;
+    }
+
+    QVariantMap result = doc.object().toVariantMap();
+    if (!result.contains(QStringLiteral("path"))) {
+        result.insert(QStringLiteral("path"), targetPath);
+    }
+    if (!result.contains(QStringLiteral("fileName"))) {
+        result.insert(QStringLiteral("fileName"), info.fileName().isEmpty() ? targetPath : info.fileName());
+    }
+    const QString summary = result.value(QStringLiteral("summary")).toString();
+    if (summary.startsWith(QStringLiteral("Analysis skipped: file is too large"))) {
+        appendAnalysisNotice(result, QStringLiteral("warning"),
+                             QStringLiteral("File analysis was skipped because the file exceeds the configured size limit."));
+    }
+    return result;
+}
+
+QVariantMap makeLoadingAnalysisResult(const QString &path)
+{
+    const QFileInfo info(path);
+    QVariantMap result = SymbolParser::makeResultSkeleton(path,
+                                                          info.fileName().isEmpty() ? path : info.fileName(),
+                                                          QString());
+    result.insert(QStringLiteral("summary"), QStringLiteral("Analyzing file..."));
+    appendAnalysisNotice(result, QStringLiteral("info"),
+                         QStringLiteral("Structural analysis is running in the background."), false);
+    return result;
+}
+
+QVariantMap parseFileSafelyForRoot(const QString &path, const QString &rootPath)
+{
+    auto parseWithHelper = [](const QString &targetPath, int finishTimeoutMs) -> QVariantMap {
+        return parseAnalysisViaHelper(targetPath, finishTimeoutMs);
+    };
+
+    const QVariantMap result = parseWithHelper(path, kHelperSelectedFileTimeoutMs);
+    const auto relationshipLoader = [&](const QString &targetPath) -> QVariantMap {
+        return parseWithHelper(targetPath, kHelperRelationshipTimeoutMs);
+    };
+    return augmentAnalysisWithRelationships(result, rootPath, relationshipLoader);
 }
 
 int relationKindPriority(const QString &kind)
@@ -291,9 +434,15 @@ QVariantMap augmentAnalysisWithRelationships(const QVariantMap &analysis,
 
     const QString language = analysis.value(QStringLiteral("language")).toString();
     const QString selectedPath = analysis.value(QStringLiteral("path")).toString();
-    if (!isScriptLikeLanguage(language) || selectedPath.isEmpty()) {
+    if (!isScriptLikeLanguage(language)
+        || selectedPath.isEmpty()
+        || analysis.value(QStringLiteral("symbols")).toList().isEmpty()) {
         return analysis;
     }
+
+    QVariantMap augmented = analysis;
+    QElapsedTimer timer;
+    timer.start();
 
     QHash<QString, QVariantMap> cache;
     cache.insert(selectedPath, analysis);
@@ -311,8 +460,22 @@ QVariantMap augmentAnalysisWithRelationships(const QVariantMap &analysis,
     };
 
     QHash<QString, QVariantMap> importedSymbols;
+    int importedAnalysesLoaded = 0;
     const QVariantList dependencies = analysis.value(QStringLiteral("dependencies")).toList();
     for (const QVariant &entry : dependencies) {
+        if (timer.elapsed() >= kRelationshipBudgetMs) {
+            appendAnalysisNotice(augmented, QStringLiteral("warning"),
+                                 QStringLiteral("Relationship graph truncated after hitting the analysis time budget."));
+            appendSummarySuffix(augmented, QStringLiteral("Relationship graph partial."));
+            break;
+        }
+        if (importedAnalysesLoaded >= kRelationshipImportedFileLimit) {
+            appendAnalysisNotice(augmented, QStringLiteral("warning"),
+                                 QStringLiteral("Relationship graph truncated after scanning many imported files."));
+            appendSummarySuffix(augmented, QStringLiteral("Relationship graph partial."));
+            break;
+        }
+
         const QVariantMap dependency = entry.toMap();
         const QString type = dependency.value(QStringLiteral("type")).toString();
         const QString dependencyPath = dependency.value(QStringLiteral("path")).toString();
@@ -321,6 +484,7 @@ QVariantMap augmentAnalysisWithRelationships(const QVariantMap &analysis,
         }
 
         const QVariantMap importedAnalysis = cachedAnalysis(dependencyPath);
+        ++importedAnalysesLoaded;
         if (importedAnalysis.isEmpty()) {
             continue;
         }
@@ -332,10 +496,17 @@ QVariantMap augmentAnalysisWithRelationships(const QVariantMap &analysis,
     }
 
     QVector<QPair<QString, QVariantMap>> incomingSymbols;
+    int incomingAnalysesLoaded = 0;
     QDirIterator it(rootPath,
                     QDir::Files | QDir::NoDotAndDotDot,
                     QDirIterator::Subdirectories);
     while (it.hasNext()) {
+        if (timer.elapsed() >= kRelationshipBudgetMs) {
+            appendAnalysisNotice(augmented, QStringLiteral("warning"),
+                                 QStringLiteral("Incoming relationship scan stopped after hitting the analysis time budget."));
+            appendSummarySuffix(augmented, QStringLiteral("Relationship graph partial."));
+            break;
+        }
         const QString candidatePath = QFileInfo(it.next()).absoluteFilePath();
         if (candidatePath == selectedPath) {
             continue;
@@ -357,7 +528,15 @@ QVariantMap augmentAnalysisWithRelationships(const QVariantMap &analysis,
             continue;
         }
 
+        if (incomingAnalysesLoaded >= kRelationshipIncomingAnalysisLimit) {
+            appendAnalysisNotice(augmented, QStringLiteral("warning"),
+                                 QStringLiteral("Incoming relationship scan stopped after reaching the file analysis limit."));
+            appendSummarySuffix(augmented, QStringLiteral("Relationship graph partial."));
+            break;
+        }
+
         const QVariantMap candidateAnalysis = cachedAnalysis(candidatePath);
+        ++incomingAnalysesLoaded;
         if (candidateAnalysis.isEmpty()) {
             continue;
         }
@@ -384,7 +563,6 @@ QVariantMap augmentAnalysisWithRelationships(const QVariantMap &analysis,
         }
     }
 
-    QVariantMap augmented = analysis;
     augmented.insert(QStringLiteral("symbols"),
                      augmentSymbolsWithRelationships(analysis.value(QStringLiteral("symbols")).toList(),
                                                      importedSymbols,
@@ -1148,6 +1326,11 @@ QVariantMap ProjectController::selectedSnippet() const
     return m_selectedSnippet;
 }
 
+bool ProjectController::analysisInProgress() const
+{
+    return m_analysisInProgress;
+}
+
 QString ProjectController::preferredEditor() const
 {
     return m_preferredEditor;
@@ -1181,6 +1364,17 @@ void ProjectController::selectPath(const QString &path)
 
     const QFileInfo info(path);
     if (!info.exists()) {
+        ++m_analysisRequestId;
+        m_pendingSelectedSymbol = {};
+        if (m_analysisWatcher) {
+            m_analysisWatcher->disconnect(this);
+            m_analysisWatcher->deleteLater();
+            m_analysisWatcher = nullptr;
+        }
+        if (m_analysisInProgress) {
+            m_analysisInProgress = false;
+            emit analysisInProgressChanged();
+        }
         m_selectedFileData = SymbolParser::makeResultSkeleton(path, info.fileName().isEmpty() ? path : info.fileName(), QString());
         m_selectedSymbol = {};
         m_selectedSnippet = makeFileSnippet();
@@ -1191,71 +1385,33 @@ void ProjectController::selectPath(const QString &path)
     }
 
     if (info.isDir()) {
+        ++m_analysisRequestId;
+        m_pendingSelectedSymbol = {};
+        if (m_analysisWatcher) {
+            m_analysisWatcher->disconnect(this);
+            m_analysisWatcher->deleteLater();
+            m_analysisWatcher = nullptr;
+        }
+        if (m_analysisInProgress) {
+            m_analysisInProgress = false;
+            emit analysisInProgressChanged();
+        }
         m_selectedFileData = SymbolParser::makeResultSkeleton(path, info.fileName().isEmpty() ? path : info.fileName(), QStringLiteral("folder"));
         m_selectedFileData.insert(QStringLiteral("summary"), QStringLiteral("Directory"));
-    } else {
-        m_selectedFileData = parseFileSafely(path);
+        m_selectedSymbol = {};
+        m_selectedSnippet = makeFileSnippet();
+        emit selectedFileDataChanged();
+        emit selectedSymbolChanged();
+        emit selectedSnippetChanged();
+        return;
     }
 
-    m_selectedSymbol = {};
-    m_selectedSnippet = makeFileSnippet();
-    emit selectedFileDataChanged();
-    emit selectedSymbolChanged();
-    emit selectedSnippetChanged();
+    beginAsyncAnalysis(path);
 }
 
 QVariantMap ProjectController::parseFileSafely(const QString &path) const
 {
-    auto parseWithHelper = [](const QString &targetPath) -> QVariantMap {
-        const QFileInfo info(targetPath);
-        QVariantMap fallback = SymbolParser::makeResultSkeleton(targetPath,
-                                                                info.fileName().isEmpty() ? targetPath : info.fileName(),
-                                                                QString());
-
-        const QString helperPath = QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("lumencode-cli"));
-        if (!QFileInfo::exists(helperPath)) {
-            fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper not found"));
-            return fallback;
-        }
-
-        QProcess helper;
-        helper.start(helperPath, {QStringLiteral("--dump-file"), targetPath});
-        if (!helper.waitForStarted(3000)) {
-            fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper could not start"));
-            return fallback;
-        }
-
-        if (!helper.waitForFinished(15000)) {
-            helper.kill();
-            helper.waitForFinished(1000);
-            fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper timed out"));
-            return fallback;
-        }
-
-        if (helper.exitStatus() != QProcess::NormalExit || helper.exitCode() != 0) {
-            fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper failed"));
-            return fallback;
-        }
-
-        QJsonParseError error;
-        const QJsonDocument doc = QJsonDocument::fromJson(helper.readAllStandardOutput(), &error);
-        if (doc.isNull() || !doc.isObject()) {
-            fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper returned invalid data"));
-            return fallback;
-        }
-
-        QVariantMap result = doc.object().toVariantMap();
-        if (!result.contains(QStringLiteral("path"))) {
-            result.insert(QStringLiteral("path"), targetPath);
-        }
-        if (!result.contains(QStringLiteral("fileName"))) {
-            result.insert(QStringLiteral("fileName"), info.fileName().isEmpty() ? targetPath : info.fileName());
-        }
-        return result;
-    };
-
-    const QVariantMap result = parseWithHelper(path);
-    return augmentAnalysisWithRelationships(result, m_rootPath, parseWithHelper);
+    return parseFileSafelyForRoot(path, m_rootPath);
 }
 
 void ProjectController::selectSymbol(int index)
@@ -1274,28 +1430,17 @@ void ProjectController::selectSymbol(int index)
 
 void ProjectController::selectSymbolByData(const QVariantMap &symbol)
 {
-    QVariantMap resolved = symbol;
     const QString currentPath = QFileInfo(m_selectedFileData.value(QStringLiteral("path")).toString()).absoluteFilePath();
     const QString targetPath = symbolTargetPath(symbol, currentPath);
 
     if (!targetPath.isEmpty() && targetPath != currentPath) {
         m_selectedPath = targetPath;
         emit selectedPathChanged();
-        m_selectedFileData = parseFileSafely(targetPath);
-        emit selectedFileDataChanged();
+        beginAsyncAnalysis(targetPath, symbol);
+        return;
     }
 
-    const QVariantMap hydrated = findSymbolInList(m_selectedFileData.value(QStringLiteral("symbols")).toList(), symbol);
-    if (!hydrated.isEmpty()) {
-        resolved = hydrated;
-    }
-
-    m_selectedSymbol = resolved;
-    m_selectedSnippet = m_selectedSymbol.isEmpty()
-        ? makeFileSnippet()
-        : makeSymbolSnippet(m_selectedSymbol, m_selectedFileData);
-    emit selectedSymbolChanged();
-    emit selectedSnippetChanged();
+    applyResolvedSelection(symbol);
 }
 
 void ProjectController::setPreferredEditor(const QString &command)
@@ -1308,6 +1453,83 @@ void ProjectController::setPreferredEditor(const QString &command)
     QSettings settings;
     settings.setValue(QStringLiteral("settings/preferredEditor"), m_preferredEditor);
     emit preferredEditorChanged();
+}
+
+void ProjectController::beginAsyncAnalysis(const QString &path, const QVariantMap &pendingSymbol)
+{
+    ++m_analysisRequestId;
+    const int requestId = m_analysisRequestId;
+    const QString rootPath = m_rootPath;
+
+    if (m_analysisWatcher) {
+        m_analysisWatcher->disconnect(this);
+        m_analysisWatcher->deleteLater();
+        m_analysisWatcher = nullptr;
+    }
+
+    m_pendingSelectedSymbol = pendingSymbol;
+    m_selectedFileData = makeLoadingAnalysisResult(path);
+    m_selectedSymbol = {};
+    m_selectedSnippet = makeFileSnippet();
+    emit selectedFileDataChanged();
+    emit selectedSymbolChanged();
+    emit selectedSnippetChanged();
+
+    if (!m_analysisInProgress) {
+        m_analysisInProgress = true;
+        emit analysisInProgressChanged();
+    }
+
+    auto *watcher = new QFutureWatcher<QVariantMap>(this);
+    m_analysisWatcher = watcher;
+    connect(watcher, &QFutureWatcher<QVariantMap>::finished, this, [this, watcher, requestId]() {
+        const QVariantMap result = watcher->result();
+        watcher->deleteLater();
+        if (m_analysisWatcher == watcher) {
+            m_analysisWatcher = nullptr;
+        }
+        if (requestId != m_analysisRequestId) {
+            return;
+        }
+
+        m_selectedFileData = result;
+        emit selectedFileDataChanged();
+
+        if (!m_pendingSelectedSymbol.isEmpty()) {
+            applyResolvedSelection(m_pendingSelectedSymbol);
+            m_pendingSelectedSymbol = {};
+        } else {
+            m_selectedSymbol = {};
+            m_selectedSnippet = makeFileSnippet();
+            emit selectedSymbolChanged();
+            emit selectedSnippetChanged();
+        }
+
+        if (m_analysisInProgress) {
+            m_analysisInProgress = false;
+            emit analysisInProgressChanged();
+        }
+    });
+
+    watcher->setFuture(QtConcurrent::run([path, rootPath]() {
+        return parseFileSafelyForRoot(path, rootPath);
+    }));
+}
+
+void ProjectController::applyResolvedSelection(const QVariantMap &symbol)
+{
+    QVariantMap resolved = symbol;
+    const QVariantMap hydrated = findSymbolInList(m_selectedFileData.value(QStringLiteral("symbols")).toList(), symbol);
+    if (!hydrated.isEmpty()) {
+        resolved = hydrated;
+    }
+
+    m_selectedSymbol = resolved;
+    m_selectedSnippet = m_selectedSymbol.isEmpty()
+        ? makeFileSnippet()
+        : makeSymbolSnippet(m_selectedSymbol, m_selectedFileData);
+    emit selectedSymbolChanged();
+    emit selectedSnippetChanged();
 }
 
 bool ProjectController::openCurrentInFolder() const

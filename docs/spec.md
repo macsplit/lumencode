@@ -47,6 +47,7 @@ Current layout behavior:
 - Top-level symbol blocks in the center pane are clickable as whole cards.
 - Nested member rows in the center pane are individually clickable and must provide their own hover state.
 - Arrow glyphs in the center pane are affordances only, not exclusive click targets.
+- The overview pane must surface loading and bounded-analysis warnings explicitly rather than silently showing sparse or incomplete data.
 
 ### 3.2 Filesystem Rules
 
@@ -204,6 +205,22 @@ Current expectation:
 - relationship entries are clickable and reuse the shared selection payload path
 - parity is still incomplete across languages and files, so missing or asymmetric relations are currently a known limitation rather than a UI bug
 
+### 3.8 Robustness Contract
+
+The app should degrade visibly and predictably under load:
+
+- file analysis runs out-of-process through `lumencode-cli --dump-file`
+- file and cross-file analysis in the GUI run asynchronously so the UI remains responsive
+- oversized files are skipped with explicit summaries instead of being parsed anyway
+- file previews are truncated with visible markers instead of loading unbounded content
+- project-level relationship expansion is budgeted by time and by number of secondary file analyses
+- when a budget is hit, the result is returned as partial and surfaced through overview warnings instead of silently dropping data
+
+Warnings are part of the product contract, not decorative text:
+
+- they mean the app stayed responsive and bounded its work
+- they should still be treated as a debugging signal, because the cause may be algorithmic weakness or poor processing strategy rather than only repo size
+
 ## 4. UX
 
 ### 4.1 Visual Style
@@ -233,7 +250,7 @@ Symbol visual language:
 
 - `FileSystemModel`: Recursive tree model exposed to QML, now includes file type counts and main entry point detection in its summary, with bounded scanning safeguards for large trees.
 - `SymbolParser`: Parser service using bundled Tree-sitter grammars with heuristic fallback where useful; enhanced for snippets, exports, snippet-contract metadata, improved dependency/route extraction, Swift parsing, and relation payloads.
-- `ProjectController`: Bridge object managing selection, parsing, quick links, relation augmentation, and derived models, now providing project summary data and normalizing lower-pane snippet payloads.
+- `ProjectController`: Bridge object managing selection, parsing, quick links, relation augmentation, derived models, bounded background analysis, and normalized lower-pane snippet payloads.
 - `lumencode-cli`: Shared testing and isolation surface for one-shot analysis, interactive state testing, and crash-contained per-file parsing.
 
 ### 5.2 Frontend

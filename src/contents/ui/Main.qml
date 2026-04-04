@@ -416,9 +416,24 @@ Kirigami.ApplicationWindow {
                         contentItem: ColumnLayout {
                             spacing: root.compactSpacing
 
-                            Kirigami.Heading {
-                                text: "Overview"
-                                level: 2
+                            RowLayout {
+                                Layout.fillWidth: true
+
+                                Kirigami.Heading {
+                                    text: "Overview"
+                                    level: 2
+                                }
+
+                                Item {
+                                    Layout.fillWidth: true
+                                }
+
+                                BusyIndicator {
+                                    visible: project.analysisInProgress
+                                    running: visible
+                                    implicitWidth: Kirigami.Units.iconSizes.smallMedium
+                                    implicitHeight: Kirigami.Units.iconSizes.smallMedium
+                                }
                             }
 
                             Label {
@@ -433,6 +448,28 @@ Kirigami.ApplicationWindow {
                                 color: Kirigami.Theme.disabledTextColor
                                 wrapMode: Text.WordWrap
                                 font.pointSize: root.compactSmallFontSize
+                            }
+
+                            Label {
+                                visible: project.analysisInProgress
+                                text: "Analysis in progress. Symbols and relationships will appear when ready."
+                                color: Kirigami.Theme.disabledTextColor
+                                wrapMode: Text.WordWrap
+                                font.pointSize: root.compactSmallFontSize
+                            }
+
+                            Repeater {
+                                model: project.selectedFileData.analysisNotices || []
+
+                                delegate: Label {
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    wrapMode: Text.WordWrap
+                                    color: root.diagnosticColor(modelData.severity)
+                                    font.pointSize: root.compactSmallFontSize
+                                    text: (modelData.severity ? modelData.severity.toUpperCase() + ": " : "")
+                                          + (modelData.message || "")
+                                }
                             }
 
                             Label {

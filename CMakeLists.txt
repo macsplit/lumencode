@@ -16,7 +16,7 @@ include(KDEInstallDirs)
 include(KDECMakeSettings)
 include(KDECompilerSettings NO_POLICY_SCOPE)
 
-find_package(Qt5 5.15 REQUIRED COMPONENTS Core Quick QuickControls2 Widgets)
+find_package(Qt5 5.15 REQUIRED COMPONENTS Core Concurrent Quick QuickControls2 Widgets)
 find_package(KF5 REQUIRED COMPONENTS Kirigami2 CoreAddons)
 
 configure_file(lumencode.desktop.in lumencode.desktop @ONLY)
@@ -154,6 +154,7 @@ add_executable(lumencode
 
 target_link_libraries(lumencode
     Qt5::Core
+    Qt5::Concurrent
     Qt5::Quick
     Qt5::QuickControls2
     Qt5::Widgets
@@ -184,6 +185,7 @@ add_executable(lumencode-cli
 
 target_link_libraries(lumencode-cli
     Qt5::Core
+    Qt5::Concurrent
     Qt5::Widgets
     KF5::CoreAddons
     vendor-tree-sitter
