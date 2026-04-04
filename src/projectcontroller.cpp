@@ -355,6 +355,44 @@ QVariantMap augmentAnalysisWithRelationships(const QVariantMap &analysis,
     return augmented;
 }
 
+QVariantMap findSymbolInList(const QVariantList &symbols, const QVariantMap &needle)
+{
+    const QString targetName = needle.value(QStringLiteral("name")).toString();
+    const QString targetKind = needle.value(QStringLiteral("kind")).toString();
+    const int targetLine = needle.value(QStringLiteral("line")).toInt();
+
+    for (const QVariant &entry : symbols) {
+        const QVariantMap symbol = entry.toMap();
+        if (symbol.value(QStringLiteral("name")).toString() == targetName
+            && symbol.value(QStringLiteral("kind")).toString() == targetKind
+            && symbol.value(QStringLiteral("line")).toInt() == targetLine) {
+            return symbol;
+        }
+
+        const QVariantMap nested = findSymbolInList(symbol.value(QStringLiteral("members")).toList(), needle);
+        if (!nested.isEmpty()) {
+            return nested;
+        }
+    }
+
+    return {};
+}
+
+QString symbolTargetPath(const QVariantMap &symbol, const QString &fallbackPath)
+{
+    const QString sourcePath = symbol.value(QStringLiteral("sourcePath")).toString();
+    if (!sourcePath.isEmpty()) {
+        return QFileInfo(sourcePath).absoluteFilePath();
+    }
+
+    const QString path = symbol.value(QStringLiteral("path")).toString();
+    if (!path.isEmpty()) {
+        return QFileInfo(path).absoluteFilePath();
+    }
+
+    return QFileInfo(fallbackPath).absoluteFilePath();
+}
+
 struct SnippetAnalysis {
     QString displayCode;
     QString lintCode;
@@ -1199,7 +1237,23 @@ void ProjectController::selectSymbol(int index)
 
 void ProjectController::selectSymbolByData(const QVariantMap &symbol)
 {
-    m_selectedSymbol = symbol;
+    QVariantMap resolved = symbol;
+    const QString currentPath = QFileInfo(m_selectedFileData.value(QStringLiteral("path")).toString()).absoluteFilePath();
+    const QString targetPath = symbolTargetPath(symbol, currentPath);
+
+    if (!targetPath.isEmpty() && targetPath != currentPath) {
+        m_selectedPath = targetPath;
+        emit selectedPathChanged();
+        m_selectedFileData = parseFileSafely(targetPath);
+        emit selectedFileDataChanged();
+    }
+
+    const QVariantMap hydrated = findSymbolInList(m_selectedFileData.value(QStringLiteral("symbols")).toList(), symbol);
+    if (!hydrated.isEmpty()) {
+        resolved = hydrated;
+    }
+
+    m_selectedSymbol = resolved;
     m_selectedSnippet = m_selectedSymbol.isEmpty()
         ? makeFileSnippet()
         : makeSymbolSnippet(m_selectedSymbol, m_selectedFileData);

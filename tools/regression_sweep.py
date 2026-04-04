@@ -187,6 +187,69 @@ def validate_selected_snippet(file_path: Path, state: dict, issues: list[dict], 
             add_issue(issues, "snippet_starts_with_access_label", file_path, context=context, kind=kind, snippet=snippet_text[:200])
 
 
+def select_relation_state(file_path: Path, parsed: dict, relation: dict) -> dict:
+    payload = {
+        "kind": relation.get("kind", "symbol"),
+        "name": relation.get("name", ""),
+        "path": relation.get("path", relation.get("sourcePath", "")),
+        "sourcePath": relation.get("path", relation.get("sourcePath", "")),
+        "language": relation.get("language", relation.get("sourceLanguage", "")),
+        "sourceLanguage": relation.get("language", relation.get("sourceLanguage", "")),
+        "line": relation.get("line", 0),
+        "snippet": relation.get("snippet", ""),
+        "snippetKind": relation.get("snippetKind", ""),
+        "diagnosticsMode": relation.get("diagnosticsMode", ""),
+        "detail": relation.get("detail", ""),
+    }
+    return run_cli_commands([
+        {"command": "setRootPath", "params": {"path": str(file_root_for(file_path))}},
+        {"command": "selectPath", "params": {"path": str(file_path)}},
+        {"command": "selectSymbolByData", "params": payload},
+    ])
+
+
+def relation_names(symbol: dict, field: str) -> set[str]:
+    return {
+        entry.get("name", "")
+        for entry in (symbol.get(field, []) or [])
+        if entry.get("name", "")
+    }
+
+
+def validate_relation_roundtrip(file_path: Path, parsed: dict, owner: dict, issues: list[dict], context: str) -> None:
+    owner_name = owner.get("name", "")
+    if not owner_name:
+        return
+
+    for field, reverse_field in (("calls", "calledBy"), ("calledBy", "calls")):
+        relations = owner.get(field, []) or []
+        for relation in relations[:2]:
+            try:
+                state = select_relation_state(file_path, parsed, relation)
+            except Exception as exc:
+                add_issue(issues, "relation_selection_failure", file_path, context=context, relation_type=field, name=relation.get("name", ""), message=str(exc))
+                continue
+
+            selected_symbol = state.get("selectedSymbol", {}) or {}
+            if not selected_symbol:
+                add_issue(issues, "relation_selection_empty", file_path, context=context, relation_type=field, name=relation.get("name", ""))
+                continue
+
+            reverse_names = relation_names(selected_symbol, reverse_field)
+            if owner_name not in reverse_names:
+                add_issue(
+                    issues,
+                    "relation_roundtrip_missing_reverse",
+                    file_path,
+                    context=context,
+                    relation_type=field,
+                    reverse_type=reverse_field,
+                    owner=owner_name,
+                    target=relation.get("name", ""),
+                    target_line=selected_symbol.get("line", 0),
+                )
+
+
 def inspect_file(file_path: Path, issues: list[dict]) -> None:
     try:
         parsed = run_cli_dump(file_path)
@@ -222,6 +285,9 @@ def inspect_file(file_path: Path, issues: list[dict]) -> None:
         except Exception as exc:
             add_issue(issues, "symbol_selection_failure", file_path, kind=kind, name=symbol.get("name", ""), message=str(exc))
 
+        if language in RELATION_EXPECTED_LANGUAGES:
+            validate_relation_roundtrip(file_path, parsed, symbol, issues, context=f"symbol:{symbol.get('name', '')}")
+
         members = symbol.get("members", []) or []
         for member in members:
             if member.get("name", "") in INVALID_MEMBER_NAMES:
@@ -236,6 +302,8 @@ def inspect_file(file_path: Path, issues: list[dict]) -> None:
                 validate_selected_snippet(file_path, state, issues, context=f"member:{member.get('name', '')}")
             except Exception as exc:
                 add_issue(issues, "member_selection_failure", file_path, kind=member.get("kind", ""), name=member.get("name", ""), message=str(exc))
+            if language in RELATION_EXPECTED_LANGUAGES:
+                validate_relation_roundtrip(file_path, parsed, member, issues, context=f"member:{member.get('name', '')}")
 
     for dep in dependencies[:4]:
         if dep.get("snippet") and dep.get("diagnosticsMode") == "" and dep.get("skipDiagnostics") is False:
