@@ -121,6 +121,30 @@
       ]
     },
     {
+      "name": "php_partial_recovery",
+      "root": "tests/fixtures/baseline/php_recovery",
+      "file": "Broken.php",
+      "file_expectations": {
+        "analysis_source_mode": "recovered",
+        "analysis_partial": true,
+        "analysis_notices": 1
+      },
+      "expectations": [
+        {
+          "kind": "class",
+          "name": "BrokenWorker"
+        },
+        {
+          "kind": "method",
+          "name": "helperValue"
+        },
+        {
+          "kind": "method",
+          "name": "runValue"
+        }
+      ]
+    },
+    {
       "name": "swift_basic_same_file",
       "root": "tests/fixtures/baseline/swift_basic",
       "file": "App.swift",
@@ -218,6 +242,31 @@
           "kind": "function",
           "name": "helper_rs",
           "calledBy": ["greet", "main"]
+        }
+      ]
+    },
+    {
+      "name": "rust_partial_recovery",
+      "root": "tests/fixtures/baseline/rust_recovery",
+      "file": "broken.rs",
+      "file_expectations": {
+        "analysis_source_mode": "recovered",
+        "analysis_partial": true,
+        "analysis_notices": 1
+      },
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "helper_broken_rs"
+        },
+        {
+          "kind": "function",
+          "name": "wrapper_broken_rs",
+          "calls": ["helper_broken_rs"]
+        },
+        {
+          "kind": "struct",
+          "name": "WorkerBrokenRs"
         }
       ]
     },

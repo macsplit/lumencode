@@ -257,7 +257,8 @@ Warnings are part of the product contract, not decorative text:
 Current parser authority model:
 
 - AST output is the intended authority where a Tree-sitter path exists
-- TS/TSX, Python, Java, and C# now keep partial AST output even when the tree has errors and supplement it with heuristic recovery, returning a `recovered` analysis rather than a file-wide fallback
+- TS/TSX, Python, Java, C#, Rust, and PHP now keep partial AST output even when the tree has errors and supplement it with heuristic recovery, returning a `recovered` analysis rather than a file-wide fallback
+- Swift and CSS still mostly behave as file-wide AST-or-heuristic paths because the current recovery handshake is not yet implemented there
 - recovered analyses should normalize merged symbol trees and relation targets against the surviving canonical symbol set so obvious AST/heuristic duplicates do not leak directly into the UI
 - the long-term direction is to apply that same authority/recovery pattern across the other Tree-sitter-backed languages instead of treating parsing as a file-wide pass/fail switch
 

@@ -1942,7 +1942,19 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
 
     if (language == QStringLiteral("php")) {
         const QVariantMap treeSitterResult = parsePhpTreeSitter(path, text);
-        if (!treeSitterResult.value(QStringLiteral("symbols")).toList().isEmpty()) {
+        const bool hasAstErrors = treeSitterResult.value(QStringLiteral("analysisHasAstErrors")).toBool();
+        const bool hasAstContent = analysisHasMeaningfulContent(treeSitterResult);
+        if (hasAstErrors) {
+            const QVariantMap finalizedAst = finalizeResult(treeSitterResult, QStringLiteral("ast"));
+            const QVariantMap finalizedHeuristic = finalizeResult(parsePhp(path, text), QStringLiteral("heuristic"));
+            return annotateAnalysisWithProvenance(
+                mergeRecoveredAnalysis(finalizedAst,
+                                       finalizedHeuristic,
+                                       QStringLiteral("Heuristic recovery supplemented partial AST analysis.")),
+                QStringLiteral("recovered"),
+                QStringLiteral("medium"));
+        }
+        if (hasAstContent) {
             return finalizeResult(treeSitterResult, QStringLiteral("ast"));
         }
         return finalizeResult(parsePhp(path, text), QStringLiteral("heuristic"));
@@ -2064,7 +2076,19 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
     }
     if (language == QStringLiteral("rust")) {
         const QVariantMap treeSitterResult = parseRustTreeSitter(path, text);
-        if (!treeSitterResult.value(QStringLiteral("symbols")).toList().isEmpty()) {
+        const bool hasAstErrors = treeSitterResult.value(QStringLiteral("analysisHasAstErrors")).toBool();
+        const bool hasAstContent = analysisHasMeaningfulContent(treeSitterResult);
+        if (hasAstErrors) {
+            const QVariantMap finalizedAst = finalizeResult(treeSitterResult, QStringLiteral("ast"));
+            const QVariantMap finalizedHeuristic = finalizeResult(parseRust(path, text), QStringLiteral("heuristic"));
+            return annotateAnalysisWithProvenance(
+                mergeRecoveredAnalysis(finalizedAst,
+                                       finalizedHeuristic,
+                                       QStringLiteral("Heuristic recovery supplemented partial AST analysis.")),
+                QStringLiteral("recovered"),
+                QStringLiteral("medium"));
+        }
+        if (hasAstContent) {
             return finalizeResult(treeSitterResult, QStringLiteral("ast"));
         }
         return finalizeResult(parseRust(path, text), QStringLiteral("heuristic"));
@@ -3800,6 +3824,8 @@ QVariantMap SymbolParser::parseRust(const QString &path, const QString &text) co
                                 snippetFromBraceBlock(text, match.capturedStart(0))));
     }
 
+    symbols = applySnippetCallRelations(symbols);
+
     result.insert(QStringLiteral("symbols"), symbols);
     result.insert(QStringLiteral("dependencies"), extractRustDependencies(text));
     result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
@@ -4158,6 +4184,7 @@ QVariantMap SymbolParser::parsePhp(const QString &path, const QString &text) con
     result.insert(QStringLiteral("path"), path);
     result.insert(QStringLiteral("fileName"), QFileInfo(path).fileName());
     result.insert(QStringLiteral("language"), QStringLiteral("php"));
+    symbols = applySnippetCallRelations(symbols);
     result.insert(QStringLiteral("symbols"), symbols);
     result.insert(QStringLiteral("quickLinks"), QVariantList{});
     result.insert(QStringLiteral("cssSummary"), QVariantMap{});

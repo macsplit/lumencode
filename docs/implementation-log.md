@@ -13,8 +13,9 @@
     - Extended `tools/regression_sweep.py` so fixtures can assert `analysisSourceMode`, `analysisPartial`, and analysis notices, not just symbol presence.
     - Extended the same recovered-analysis model to Python and Java, including checked-in broken-code fixtures for both languages.
     - Extended the same recovered-analysis model to C#, including a checked-in broken-code fixture for the current recovery contract.
+    - Extended the same recovered-analysis model to Rust and PHP, including checked-in broken-code fixtures for both languages.
     - Added post-merge normalization for recovered analyses so merged symbol trees and relation targets are rewritten against the surviving canonical symbol set, reducing obvious AST/heuristic duplicates and stale reverse-edge targets.
-    - Left the broader authority refactor intentionally incomplete: the same recovered-analysis model still needs to be applied language by language across the other Tree-sitter-backed parsers.
+    - Left the broader authority refactor intentionally incomplete: Swift and CSS still remain outside the deliberate recovered-analysis model, and heuristics are still merged at file scope rather than constrained to AST error ranges.
 
 - **Callable Signature Contract Refactor:**
     - Added `parameters` and `returns` to callable symbol payloads as backend-owned fields instead of controller-only UI enrichment.
