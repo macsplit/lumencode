@@ -20,7 +20,7 @@ What currently works:
 - Opening files into overview/detail panes with a compact left control rail and project-root display as `/`.
 - Preserving explorer scroll position across expand/collapse redraws and keeping child rows visibly indented.
 - Using the left control rail for back navigation, open-in-folder, open-in-editor, and settings.
-- Extracting detailed symbols for PHP, JS, TS, TSX, CSS, HTML, JSON, Python, C/C++, Java, C#, Rust, and Objective-C.
+- Extracting detailed symbols for PHP, JS, TS, TSX, QML, CSS, HTML, JSON, Python, C/C++, Java, C#, Rust, and Objective-C.
 - Extracting Swift symbols and members with a Tree-sitter-backed parser path.
 - Using Tree-sitter for PHP, JS, TS, TSX, CSS, Python, Rust, Java, C#, and Swift parsing where integrated.
 - Keeping the right detail pane permanently visible as a stable inspector surface.
@@ -85,6 +85,7 @@ Phase 1. Stabilization
 - Continue broad CLI-driven regression sweeps against mixed real-world projects under `/home/user/Code`.
 - Keep growing the baseline fixture suite so each supported language or language-cluster has a small structural repro project checked into the repo.
 - Continue AST-backed parity work language by language, using CLI-first verification before GUI iteration.
+- Keep pragmatic heuristic coverage for valuable local languages such as QML where a dedicated grammar path is not yet integrated, instead of leaving them unsupported.
 - Continue converting cross-file relationship work from name/snippet luck into explicit binding-aware or asset-aware models, especially for web projects.
 - Treat surfaced analysis warnings as investigation leads, not just acceptable noise: some will indicate algorithmic or integration weaknesses rather than merely large inputs.
 
@@ -117,6 +118,7 @@ Phase 4. Broader project understanding
 
 - Some extracted structure is still shallow or misleading on real projects.
 - Some languages still rely on heuristic fallback paths for parts of the overview, especially when native parser paths have been bypassed for stability. Plain JS/JSX currently still use the heuristic parser path for stability, while TS/TSX remain Tree-sitter-backed.
+- QML is now supported as a first-class language in the explorer and CLI, but it currently uses heuristic structural extraction rather than a dedicated AST-backed parser.
 - `Calls` / `Called By` support has improved and relation clicks now rehydrate into full destination symbols, but the overall graph is still incomplete and not yet uniformly reciprocal across all languages and project shapes.
 - The new overview warnings are part of the intended safety model. They mean the app stayed responsive and returned a bounded result, but they should still be treated as prompts to inspect why that bound was hit.
 - Some project `mainEntry` guesses are still imperfect on broad mixed-language roots.

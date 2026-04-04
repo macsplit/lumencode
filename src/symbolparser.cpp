@@ -1231,6 +1231,9 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
     if (language == QStringLiteral("html")) {
         return parseHtml(path, text);
     }
+    if (language == QStringLiteral("qml")) {
+        return parseQml(path, text);
+    }
     if (language == QStringLiteral("css")) {
         const QVariantMap treeSitterResult = parseCssTreeSitter(path, text);
         if (!treeSitterResult.value(QStringLiteral("symbols")).toList().isEmpty()) {
@@ -3772,6 +3775,167 @@ QVariantMap SymbolParser::parseHtml(const QString &path, const QString &text) co
     return result;
 }
 
+QVariantMap SymbolParser::parseQml(const QString &path, const QString &text) const
+{
+    QVariantList symbols;
+    QVariantList dependencies;
+    const QFileInfo fileInfo(path);
+    const QDir dir = fileInfo.dir();
+    QSet<QString> seenDependencyKeys;
+
+    auto appendDependency = [&](const QString &target, const QString &type, int line,
+                                const QString &detail = QString()) {
+        const QString key = type + QLatin1Char('|') + target;
+        if (target.isEmpty() || seenDependencyKeys.contains(key)) {
+            return;
+        }
+        seenDependencyKeys.insert(key);
+        QVariantMap item = makeSourceContextItem(path, QStringLiteral("qml"), line,
+                                                 snippetFromLine(text, line, 0),
+                                                 detail.isEmpty() ? QStringLiteral("qml import") : detail);
+        item.insert(QStringLiteral("target"), target);
+        item.insert(QStringLiteral("type"), type);
+        item.insert(QStringLiteral("label"), target);
+        if (target.startsWith(QStringLiteral("./")) || target.startsWith(QStringLiteral("../"))) {
+            const QString resolved = QDir::cleanPath(dir.filePath(target));
+            item.insert(QStringLiteral("path"), resolved);
+            item.insert(QStringLiteral("exists"), QFileInfo::exists(resolved));
+        } else {
+            item.insert(QStringLiteral("path"), QString());
+            item.insert(QStringLiteral("exists"), true);
+        }
+        dependencies.append(item);
+    };
+
+    const QRegularExpression importPattern(
+        QStringLiteral("^\\s*import\\s+(?:\"([^\"]+)\"|'([^']+)'|([A-Za-z_][A-Za-z0-9_.]*))(?:\\s+([0-9]+(?:\\.[0-9]+)?))?(?:\\s+as\\s+([A-Za-z_]\\w*))?"),
+        QRegularExpression::MultilineOption);
+    auto imports = importPattern.globalMatch(text);
+    while (imports.hasNext()) {
+        const auto match = imports.next();
+        const QString quotedTarget = !match.captured(1).isEmpty() ? match.captured(1) : match.captured(2);
+        const QString moduleTarget = match.captured(3);
+        const QString version = match.captured(4);
+        const QString alias = match.captured(5);
+        QString target = !quotedTarget.isEmpty() ? quotedTarget : moduleTarget;
+        QString detail = QStringLiteral("qml import");
+        if (!version.isEmpty()) {
+            detail += QStringLiteral(" %1").arg(version);
+        }
+        if (!alias.isEmpty()) {
+            detail += QStringLiteral(" as %1").arg(alias);
+        }
+        appendDependency(target, QStringLiteral("import"),
+                         lineNumberAtOffset(text, match.capturedStart(0)), detail);
+    }
+
+    const QRegularExpression inlineComponentPattern(
+        QStringLiteral(R"(^\s*component\s+([A-Z][A-Za-z0-9_]*)\s*:\s*([A-Z][A-Za-z0-9_.]*))"),
+        QRegularExpression::MultilineOption);
+    auto inlineComponents = inlineComponentPattern.globalMatch(text);
+    while (inlineComponents.hasNext()) {
+        const auto match = inlineComponents.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        symbols.append(makeSymbol(QStringLiteral("component"),
+                                  match.captured(1),
+                                  line,
+                                  QStringLiteral("inline %1").arg(match.captured(2)),
+                                  {},
+                                  snippetFromLine(text, line, 1)));
+    }
+
+    QVariantList rootMembers;
+    QSet<QString> seenRootMemberNames;
+    auto appendRootMember = [&](const QVariantMap &member) {
+        const QString key = member.value(QStringLiteral("kind")).toString()
+            + QLatin1Char('|')
+            + member.value(QStringLiteral("name")).toString();
+        if (member.value(QStringLiteral("name")).toString().isEmpty() || seenRootMemberNames.contains(key)) {
+            return;
+        }
+        seenRootMemberNames.insert(key);
+        rootMembers.append(member);
+    };
+
+    const QRegularExpression idPattern(QStringLiteral(R"(^\s*id\s*:\s*([A-Za-z_]\w*))"),
+                                       QRegularExpression::MultilineOption);
+    auto ids = idPattern.globalMatch(text);
+    while (ids.hasNext()) {
+        const auto match = ids.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        appendRootMember(makeSymbol(QStringLiteral("property"), match.captured(1), line,
+                                    QStringLiteral("id"), {}, snippetFromLine(text, line, 0)));
+    }
+
+    const QRegularExpression propertyPattern(
+        QStringLiteral(R"(^\s*(?:default\s+)?(?:readonly\s+)?property\s+([A-Za-z_][A-Za-z0-9_<>\[\].]*)\s+([A-Za-z_]\w*))"),
+        QRegularExpression::MultilineOption);
+    auto properties = propertyPattern.globalMatch(text);
+    while (properties.hasNext()) {
+        const auto match = properties.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        appendRootMember(makeSymbol(QStringLiteral("property"), match.captured(2), line,
+                                    match.captured(1), {}, snippetFromLine(text, line, 0)));
+    }
+
+    const QRegularExpression signalPattern(QStringLiteral(R"(^\s*signal\s+([A-Za-z_]\w*)\s*\()"),
+                                           QRegularExpression::MultilineOption);
+    auto signalMatches = signalPattern.globalMatch(text);
+    while (signalMatches.hasNext()) {
+        const auto match = signalMatches.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        appendRootMember(makeSymbol(QStringLiteral("signal"), match.captured(1), line,
+                                    QString(), {}, snippetFromLine(text, line, 0)));
+    }
+
+    const QRegularExpression functionPattern(QStringLiteral(R"(^\s*function\s+([A-Za-z_]\w*)\s*\()"),
+                                             QRegularExpression::MultilineOption);
+    auto functions = functionPattern.globalMatch(text);
+    while (functions.hasNext()) {
+        const auto match = functions.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        appendRootMember(makeSymbol(QStringLiteral("function"), match.captured(1), line,
+                                    QString(), {}, snippetFromBraceBlock(text, match.capturedStart(0))));
+    }
+
+    const QRegularExpression handlerPattern(QStringLiteral(R"(^\s*(on[A-Z][A-Za-z0-9_]*)\s*:)"),
+                                            QRegularExpression::MultilineOption);
+    auto handlers = handlerPattern.globalMatch(text);
+    while (handlers.hasNext()) {
+        const auto match = handlers.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        appendRootMember(makeSymbol(QStringLiteral("method"), match.captured(1), line,
+                                    QStringLiteral("signal handler"), {}, snippetFromLine(text, line, 1)));
+    }
+
+    const QRegularExpression rootComponentPattern(
+        QStringLiteral(R"(^\s*([A-Z][A-Za-z0-9_.]*)\s*\{)"),
+        QRegularExpression::MultilineOption);
+    const auto rootComponent = rootComponentPattern.match(text);
+    if (rootComponent.hasMatch()) {
+        const int start = rootComponent.capturedStart(0);
+        symbols.prepend(makeSymbol(QStringLiteral("component"),
+                                   rootComponent.captured(1),
+                                   lineNumberAtOffset(text, start),
+                                   QStringLiteral("qml root"),
+                                   rootMembers,
+                                   snippetFromBraceBlock(text, start)));
+    } else {
+        for (const QVariant &member : std::as_const(rootMembers)) {
+            symbols.append(member);
+        }
+    }
+
+    QVariantMap result = makeResultSkeleton(path, fileInfo.fileName(), QStringLiteral("qml"));
+    result.insert(QStringLiteral("symbols"), symbols);
+    result.insert(QStringLiteral("dependencies"), dependencies);
+    result.insert(QStringLiteral("summary"),
+                  QStringLiteral("%1 symbols, %2 imports")
+                      .arg(symbols.size())
+                      .arg(dependencies.size()));
+    return result;
+}
+
 QVariantMap SymbolParser::parseCss(const QString &path, const QString &text) const
 {
     QVariantList symbols;
@@ -3864,6 +4028,9 @@ QString SymbolParser::detectLanguage(const QString &path)
     }
     if (suffix == QStringLiteral("html")) {
         return QStringLiteral("html");
+    }
+    if (suffix == QStringLiteral("qml")) {
+        return QStringLiteral("qml");
     }
     if (suffix == QStringLiteral("css")) {
         return QStringLiteral("css");

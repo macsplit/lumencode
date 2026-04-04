@@ -55,8 +55,8 @@ The crawler must:
 
 - recurse directories without blocking the UI
 - ignore `.git`
-- focus on these file types: `js`, `jsx`, `ts`, `tsx`, `php`, `html`, `css`, `json`, `py`, `c`, `cc`, `cpp`, `cxx`, `h`, `hpp`, `java`, `cs`, `rs`, `m`, `mm`
-- focus on these file types: `js`, `jsx`, `ts`, `tsx`, `php`, `html`, `css`, `json`, `py`, `c`, `cc`, `cpp`, `cxx`, `h`, `hpp`, `java`, `cs`, `rs`, `m`, `mm`, `swift`
+- focus on these file types: `js`, `jsx`, `ts`, `tsx`, `php`, `html`, `qml`, `css`, `json`, `py`, `c`, `cc`, `cpp`, `cxx`, `h`, `hpp`, `java`, `cs`, `rs`, `m`, `mm`
+- focus on these file types: `js`, `jsx`, `ts`, `tsx`, `php`, `html`, `qml`, `css`, `json`, `py`, `c`, `cc`, `cpp`, `cxx`, `h`, `hpp`, `java`, `cs`, `rs`, `m`, `mm`, `swift`
 - fail gracefully on hostile trees by applying bounded recursion and bounded entry counts instead of unbounded scans
 
 Current crawler safeguards:
@@ -89,6 +89,11 @@ React TSX/JSX:
 
 - Functional components, class components, props interfaces, type aliases.
 - Hook-style functions beginning with `use`.
+
+QML:
+
+- Heuristic extraction of imports, root components, inline components, properties, signals, functions, and common `on...` handlers.
+- QML is expected to participate in the same snippet and lower-pane contract as other languages even without a dedicated AST grammar path yet.
 
 HTML:
 

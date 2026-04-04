@@ -2,6 +2,12 @@
 
 ## 2026-04-04
 
+- **QML Support:**
+    - Added first-class `.qml` file discovery in the filesystem crawler and regression harness.
+    - Added pragmatic QML language detection and heuristic parsing for imports, root/inline components, properties, signals, functions, and common `on...` handlers.
+    - Wired QML through the existing lower-pane snippet language and keyword-highlighting path so it behaves like a supported language in the current UI.
+    - Added a checked-in `qml_basic` fixture and validated it through `lumencode-cli` and the fixture sweep.
+
 - **Cross-File Relation Parity / Web Work:**
     - Improved JS/TS/CommonJS cross-file relation augmentation so local alias bindings are respected instead of relying only on raw name matching.
     - Added binding metadata for named imports, aliased imports, and destructured `require(...)` imports in script dependency payloads.

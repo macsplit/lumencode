@@ -17,7 +17,7 @@ DEFAULT_FIXTURE_MANIFEST = REPO_ROOT / "tests" / "fixtures" / "baseline" / "mani
 SUPPORTED_EXTENSIONS = {
     ".php", ".js", ".jsx", ".ts", ".tsx", ".py", ".java", ".cs", ".rs",
     ".cpp", ".cc", ".cxx", ".c", ".h", ".hpp", ".hh", ".m", ".mm",
-    ".html", ".css", ".json", ".swift",
+    ".html", ".qml", ".css", ".json", ".swift",
 }
 
 EXCLUDED_PARTS = {
@@ -104,8 +104,9 @@ def extension_priority(path: Path) -> tuple[int, str]:
         ".h": 9,
         ".rs": 10,
         ".html": 11,
-        ".css": 12,
-        ".json": 13,
+        ".qml": 12,
+        ".css": 13,
+        ".json": 14,
     }
     return (priority.get(path.suffix.lower(), 99), str(path))
 

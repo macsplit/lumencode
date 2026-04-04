@@ -301,6 +301,32 @@
       }
     },
     {
+      "name": "qml_basic_symbols",
+      "root": "tests/fixtures/baseline/qml_basic",
+      "file": "Sample.qml",
+      "expectations": [
+        {
+          "kind": "component",
+          "name": "Rectangle"
+        },
+        {
+          "kind": "function",
+          "name": "greet"
+        },
+        {
+          "kind": "property",
+          "name": "title"
+        },
+        {
+          "kind": "signal",
+          "name": "accepted"
+        }
+      ],
+      "file_expectations": {
+        "dependencies": 2
+      }
+    },
+    {
       "name": "json_package_summary",
       "root": "tests/fixtures/baseline/json_package",
       "file": "package.json",

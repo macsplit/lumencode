@@ -59,6 +59,9 @@ Kirigami.ApplicationWindow {
         if (fileType === "html") {
             return "text-html";
         }
+        if (fileType === "qml") {
+            return "text-x-script";
+        }
         if (fileType === "css") {
             return "format-text-code";
         }

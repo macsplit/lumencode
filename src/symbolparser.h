@@ -35,6 +35,7 @@ private:
 
     QVariantMap parsePhp(const QString &path, const QString &text) const;
     QVariantMap parseScriptLike(const QString &path, const QString &text, bool reactMode) const;
+    QVariantMap parseQml(const QString &path, const QString &text) const;
     QVariantMap parseHtml(const QString &path, const QString &text) const;
     QVariantMap parseCss(const QString &path, const QString &text) const;
     QVariantMap parseJson(const QString &path, const QString &text) const;

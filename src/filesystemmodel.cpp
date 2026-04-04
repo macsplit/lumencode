@@ -615,6 +615,9 @@ QString FileSystemModel::detectFileType(const QString &path, bool isDir)
     if (suffix == QStringLiteral("html")) {
         return QStringLiteral("html");
     }
+    if (suffix == QStringLiteral("qml")) {
+        return QStringLiteral("qml");
+    }
     if (suffix == QStringLiteral("css")) {
         return QStringLiteral("css");
     }
@@ -682,6 +685,7 @@ bool FileSystemModel::shouldIncludeFile(const QString &suffix)
         QStringLiteral("tsx"),
         QStringLiteral("php"),
         QStringLiteral("html"),
+        QStringLiteral("qml"),
         QStringLiteral("css"),
         QStringLiteral("py"),
         QStringLiteral("c"),

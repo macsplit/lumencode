@@ -739,6 +739,9 @@ QString normalizeSnippetLanguage(const QString &language)
     if (language == QStringLiteral("html")) {
         return QStringLiteral("html");
     }
+    if (language == QStringLiteral("qml")) {
+        return QStringLiteral("qml");
+    }
     if (language == QStringLiteral("json")) {
         return QStringLiteral("json");
     }
@@ -1054,6 +1057,14 @@ QSet<QString> keywordSet(const QString &language)
                 QStringLiteral("display"), QStringLiteral("position"), QStringLiteral("color"),
                 QStringLiteral("background"), QStringLiteral("font"), QStringLiteral("grid"),
                 QStringLiteral("flex"), QStringLiteral("padding"), QStringLiteral("margin")};
+    }
+    if (language == QStringLiteral("qml")) {
+        return {QStringLiteral("import"), QStringLiteral("property"), QStringLiteral("signal"),
+                QStringLiteral("function"), QStringLiteral("readonly"), QStringLiteral("default"),
+                QStringLiteral("required"), QStringLiteral("id"), QStringLiteral("anchors"),
+                QStringLiteral("states"), QStringLiteral("transitions"), QStringLiteral("component"),
+                QStringLiteral("onClicked"), QStringLiteral("onTriggered"), QStringLiteral("true"),
+                QStringLiteral("false"), QStringLiteral("null")};
     }
     if (language == QStringLiteral("json")) {
         return {QStringLiteral("true"), QStringLiteral("false"), QStringLiteral("null")};

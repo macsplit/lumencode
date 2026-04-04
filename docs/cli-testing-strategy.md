@@ -8,6 +8,7 @@ The `lumencode-cli` is a standalone executable that exercises the same core libr
 - `ProjectController`: High-level application state and logic.
 - `FileSystemModel`: Directory scanning, filtering, and tree structure.
 - `SymbolParser`: Language-specific symbol and metadata extraction, now using Tree-sitter for TS/TSX, PHP, CSS, Python, Rust, Java, C#, and Swift where integrated, while retaining heuristics where coverage is still incomplete.
+- `SymbolParser`: QML is now supported through a pragmatic heuristic parser path so the app’s own UI code is structurally explorable even before a dedicated grammar is integrated.
 - `SymbolParser`: Plain JS/JSX currently remain on the heuristic path for stability, but are still expected to participate in the same relation and snippet contracts as the AST-backed languages.
 
 By using the same underlying classes, the CLI provides an accurate representation of what the GUI would display, making it ideal for automated testing and rapid iteration on parsing features.
@@ -45,6 +46,7 @@ Test the `SymbolParser` against diverse file types to ensure correct symbol extr
 - **C#**: Tested Tree-sitter-backed type/member/import extraction using `dotnet/TimeTracker/Models/TimesModel.cs` and top-level ASP.NET-style program files using `dotnet/TimeTracker/Program.cs`.
 - **Swift**: Tested Tree-sitter-backed symbol/member extraction and intra-file relation payloads using files under `Coding/lumencode-swift/Sources`.
 - **Objective-C**: Tested heuristic class/import extraction using `TimeSystem/DesignApp/platforms/ios/Time Designer/Classes/MainViewController.m`.
+- **QML**: Tested heuristic import/component/property/signal/function extraction using the checked-in `tests/fixtures/baseline/qml_basic/Sample.qml`.
 
 ### 2. State Persistence & Sequencing
 In interactive mode, verify that commands correctly update the internal state and that subsequent commands operate on that updated state.
@@ -131,6 +133,7 @@ python3 tools/regression_sweep.py --max-files 24 --limit-per-project 3
 - `tools/regression_sweep.py` now resolves the active checkout path dynamically, so it can be run from `Coding/lumencode` without editing hard-coded repository paths.
 - The harness now follows relation targets through `selectSymbolByData` and verifies that reverse edges are present on the selected destination symbol.
 - The harness now also locks down reciprocal web-asset inspector behavior through checked-in fixtures instead of relying on ad hoc local repos.
+- The harness now also includes a baseline QML fixture so QML support is validated through the same CLI-first regression loop as the other language clusters.
 - The GUI now adds extra presentation behavior on top of the shared backend data, including lower-pane snippet rendering, compact snippet diagnostics, and CSS class drill-down behavior.
 - The GUI also adds async loading behavior and overview warnings on top of the shared backend data. When those warnings appear in normal use, they should be treated as prompts to investigate whether the limit is appropriate or the underlying algorithm is too expensive.
 - Project-summary regressions are also worth checking through the CLI because `mainEntry` scoring is still evolving for mixed-language roots.
