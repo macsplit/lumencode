@@ -129,6 +129,38 @@ bool isRelationshipCandidateFile(const QString &path)
         || suffix == QStringLiteral("cjs");
 }
 
+bool symbolKindSupportsIncomingRelationships(const QString &kind)
+{
+    return kind == QStringLiteral("function")
+        || kind == QStringLiteral("method")
+        || kind == QStringLiteral("constructor")
+        || kind == QStringLiteral("initializer")
+        || kind == QStringLiteral("hook")
+        || kind == QStringLiteral("component")
+        || kind == QStringLiteral("class")
+        || kind == QStringLiteral("struct")
+        || kind == QStringLiteral("enum")
+        || kind == QStringLiteral("protocol")
+        || kind == QStringLiteral("trait")
+        || kind == QStringLiteral("interface")
+        || kind == QStringLiteral("type")
+        || kind == QStringLiteral("module");
+}
+
+bool hasIncomingRelationshipSurface(const QVariantList &symbols)
+{
+    for (const QVariant &entry : symbols) {
+        const QVariantMap symbol = entry.toMap();
+        if (symbolKindSupportsIncomingRelationships(symbol.value(QStringLiteral("kind")).toString())) {
+            return true;
+        }
+        if (hasIncomingRelationshipSurface(symbol.value(QStringLiteral("members")).toList())) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void collectSymbolRelations(const QVariantList &symbols,
                             const QString &fallbackPath,
                             const QString &fallbackLanguage,
@@ -590,79 +622,81 @@ QVariantMap augmentAnalysisWithRelationships(const QVariantMap &analysis,
 
     QVector<QPair<QString, QVariantMap>> incomingSymbols;
     int incomingAnalysesLoaded = 0;
-    QDirIterator it(rootPath,
-                    QDir::Files | QDir::NoDotAndDotDot,
-                    QDirIterator::Subdirectories);
-    while (it.hasNext()) {
-        if (timer.elapsed() >= kRelationshipBudgetMs) {
-            appendAnalysisNotice(augmented, QStringLiteral("warning"),
-                                 QStringLiteral("Incoming relationship scan stopped after hitting the analysis time budget."));
-            appendSummarySuffix(augmented, QStringLiteral("Relationship graph partial."));
-            break;
-        }
-        const QString candidatePath = QFileInfo(it.next()).absoluteFilePath();
-        if (candidatePath == selectedPath) {
-            continue;
-        }
-        if (!isRelationshipCandidateFile(candidatePath)) {
-            continue;
-        }
-
-        bool skip = false;
-        QString relative = QDir(rootPath).relativeFilePath(candidatePath);
-        const QStringList segments = relative.split(QLatin1Char('/'), Qt::SkipEmptyParts);
-        for (const QString &segment : segments) {
-            if (shouldSkipRelationshipDirectory(segment)) {
-                skip = true;
+    if (hasIncomingRelationshipSurface(analysis.value(QStringLiteral("symbols")).toList())) {
+        QDirIterator it(rootPath,
+                        QDir::Files | QDir::NoDotAndDotDot,
+                        QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            if (timer.elapsed() >= kRelationshipBudgetMs) {
+                appendAnalysisNotice(augmented, QStringLiteral("warning"),
+                                     QStringLiteral("Incoming relationship scan stopped after hitting the analysis time budget."));
+                appendSummarySuffix(augmented, QStringLiteral("Relationship graph partial."));
                 break;
             }
-        }
-        if (skip) {
-            continue;
-        }
-
-        if (incomingAnalysesLoaded >= kRelationshipIncomingAnalysisLimit) {
-            appendAnalysisNotice(augmented, QStringLiteral("warning"),
-                                 QStringLiteral("Incoming relationship scan stopped after reaching the file analysis limit."));
-            appendSummarySuffix(augmented, QStringLiteral("Relationship graph partial."));
-            break;
-        }
-
-        const QVariantMap candidateAnalysis = cachedAnalysis(candidatePath);
-        ++incomingAnalysesLoaded;
-        if (candidateAnalysis.isEmpty()) {
-            continue;
-        }
-
-        bool dependsOnSelected = false;
-        const QVariantList candidateDependencies = candidateAnalysis.value(QStringLiteral("dependencies")).toList();
-        for (const QVariant &dependencyEntry : candidateDependencies) {
-            if (QFileInfo(dependencyEntry.toMap().value(QStringLiteral("path")).toString()).absoluteFilePath() == selectedPath) {
-                dependsOnSelected = true;
-                break;
+            const QString candidatePath = QFileInfo(it.next()).absoluteFilePath();
+            if (candidatePath == selectedPath) {
+                continue;
             }
-        }
-        if (!dependsOnSelected) {
-            continue;
-        }
+            if (!isRelationshipCandidateFile(candidatePath)) {
+                continue;
+            }
 
-        QHash<QString, QVariantMap> relations = collectNamedRelations(candidateAnalysis);
-        QHash<QString, QString> bindingMap;
-        for (const QVariant &dependencyEntry : candidateDependencies) {
-            const QVariantMap dependency = dependencyEntry.toMap();
-            if (QFileInfo(dependency.value(QStringLiteral("path")).toString()).absoluteFilePath() == selectedPath) {
-                const QHash<QString, QString> candidateBindings = dependencyBindingMap(dependency);
-                for (auto bindingIt = candidateBindings.cbegin(); bindingIt != candidateBindings.cend(); ++bindingIt) {
-                    bindingMap.insert(bindingIt.key(), bindingIt.value());
+            bool skip = false;
+            QString relative = QDir(rootPath).relativeFilePath(candidatePath);
+            const QStringList segments = relative.split(QLatin1Char('/'), Qt::SkipEmptyParts);
+            for (const QString &segment : segments) {
+                if (shouldSkipRelationshipDirectory(segment)) {
+                    skip = true;
+                    break;
                 }
             }
-        }
-        for (auto relIt = relations.cbegin(); relIt != relations.cend(); ++relIt) {
-            QVariantMap relation = relIt.value();
-            if (!bindingMap.isEmpty()) {
-                relation.insert(QStringLiteral("importBindingMap"), bindingMapToVariant(bindingMap));
+            if (skip) {
+                continue;
             }
-            incomingSymbols.append(qMakePair(candidatePath, relation));
+
+            if (incomingAnalysesLoaded >= kRelationshipIncomingAnalysisLimit) {
+                appendAnalysisNotice(augmented, QStringLiteral("warning"),
+                                     QStringLiteral("Incoming relationship scan stopped after reaching the file analysis limit."));
+                appendSummarySuffix(augmented, QStringLiteral("Relationship graph partial."));
+                break;
+            }
+
+            const QVariantMap candidateAnalysis = cachedAnalysis(candidatePath);
+            ++incomingAnalysesLoaded;
+            if (candidateAnalysis.isEmpty()) {
+                continue;
+            }
+
+            bool dependsOnSelected = false;
+            const QVariantList candidateDependencies = candidateAnalysis.value(QStringLiteral("dependencies")).toList();
+            for (const QVariant &dependencyEntry : candidateDependencies) {
+                if (QFileInfo(dependencyEntry.toMap().value(QStringLiteral("path")).toString()).absoluteFilePath() == selectedPath) {
+                    dependsOnSelected = true;
+                    break;
+                }
+            }
+            if (!dependsOnSelected) {
+                continue;
+            }
+
+            QHash<QString, QVariantMap> relations = collectNamedRelations(candidateAnalysis);
+            QHash<QString, QString> bindingMap;
+            for (const QVariant &dependencyEntry : candidateDependencies) {
+                const QVariantMap dependency = dependencyEntry.toMap();
+                if (QFileInfo(dependency.value(QStringLiteral("path")).toString()).absoluteFilePath() == selectedPath) {
+                    const QHash<QString, QString> candidateBindings = dependencyBindingMap(dependency);
+                    for (auto bindingIt = candidateBindings.cbegin(); bindingIt != candidateBindings.cend(); ++bindingIt) {
+                        bindingMap.insert(bindingIt.key(), bindingIt.value());
+                    }
+                }
+            }
+            for (auto relIt = relations.cbegin(); relIt != relations.cend(); ++relIt) {
+                QVariantMap relation = relIt.value();
+                if (!bindingMap.isEmpty()) {
+                    relation.insert(QStringLiteral("importBindingMap"), bindingMapToVariant(bindingMap));
+                }
+                incomingSymbols.append(qMakePair(candidatePath, relation));
+            }
         }
     }
 

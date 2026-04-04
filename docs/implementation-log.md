@@ -12,6 +12,7 @@
     - Added a checked-in broken TypeScript fixture to lock down that recovered-analysis contract through the CLI regression harness.
     - Extended `tools/regression_sweep.py` so fixtures can assert `analysisSourceMode`, `analysisPartial`, and analysis notices, not just symbol presence.
     - Extended the same recovered-analysis model to Python and Java, including checked-in broken-code fixtures for both languages.
+    - Extended the same recovered-analysis model to C#, including a checked-in broken-code fixture for the current recovery contract.
     - Added post-merge normalization for recovered analyses so merged symbol trees and relation targets are rewritten against the surviving canonical symbol set, reducing obvious AST/heuristic duplicates and stale reverse-edge targets.
     - Left the broader authority refactor intentionally incomplete: the same recovered-analysis model still needs to be applied language by language across the other Tree-sitter-backed parsers.
 
@@ -48,6 +49,8 @@
     - Moved GUI file and cross-file relation analysis onto an asynchronous background path using `QtConcurrent`, with stale-result protection so rapid navigation does not apply obsolete completions.
     - Added overview-pane loading affordances so users see when analysis is in progress instead of assuming empty or half-filled panes are bugs.
     - Confirmed the fixture baseline still passes after the async hardening and bounded-analysis changes.
+    - Added a low-value relationship gate in `ProjectController` so variable-only script files no longer trigger the expensive incoming relationship scan just because they are script-like.
+    - This specifically reduces misleading timeout/partial warnings on setup-style files that are unlikely to expose meaningful imported symbol relationships.
 
 - **Relation Navigation / Backend Work:**
     - Fixed relation click handling in `ProjectController` so selecting `Calls` / `Called By` entries rehydrates into the actual destination symbol instead of leaving the inspector on a thin edge payload.
@@ -69,7 +72,7 @@
 - **Known Remaining Gap:**
     - Relation traversal is substantially better, but overall relation completeness still needs work across languages and cross-file shapes.
     - Swift functions still often leave the right inspector feeling sparse; useful additional symbol detail should be added later once backend payloads are more trustworthy.
-    - The next iteration should continue the authority/recovery refactor into the remaining Tree-sitter languages, with C# as the next obvious candidate, while continuing to tighten recovered merge quality where broken-code fixtures expose residual duplication.
+    - The next iteration should continue the authority/recovery refactor into the remaining Tree-sitter languages beyond C#, while continuing to tighten recovered merge quality where broken-code fixtures expose residual duplication.
     - Surfaced warnings are expected now under bounded degradation, but each one should still be treated as a lead for future optimization or parser/integration investigation rather than dismissed as inevitable.
 
 ## 2026-04-03

@@ -55,7 +55,9 @@ What currently works:
 - Analysis payloads now carry explicit provenance (`analysisSourceMode`, `analysisConfidence`, symbol/item `sourceMode`, `confidence`) so AST-derived and heuristic-derived results can be distinguished.
 - TS/TSX now keep partial Tree-sitter output when the tree contains errors and supplement it with heuristic recovery instead of falling back file-wide.
 - Python and Java now also return deliberate `recovered` analyses on broken-but-parseable files instead of flipping wholesale to heuristic fallback.
+- C# now also returns deliberate `recovered` analyses on broken-but-parseable files instead of flipping wholesale to heuristic fallback.
 - Recovered analyses now normalize merged symbol trees and relation targets so obvious AST/heuristic duplicates are reduced before reaching the UI.
+- Low-value script files with no meaningful callable/API surface now skip the expensive incoming relationship scan, reducing spurious partial-analysis warnings on variable-only setup scripts.
 - Project-level summaries including file type counts and main entry-point detection.
 - Installing a desktop launcher and scalable app icon through `cmake --install`.
 - Stable-enough backend payloads for the current QML bindings.
@@ -125,7 +127,7 @@ Phase 4. Broader project understanding
 
 - Some extracted structure is still shallow or misleading on real projects.
 - Some languages still rely on heuristic fallback paths for parts of the overview, especially when native parser paths have been bypassed for stability. Plain JS/JSX currently still use the heuristic parser path for stability, while TS/TSX remain Tree-sitter-backed.
-- The parser now emits provenance and can return mixed recovered analyses. TS/TSX, Python, and Java use that model deliberately; other Tree-sitter languages still mostly behave as file-wide AST-or-heuristic paths.
+- The parser now emits provenance and can return mixed recovered analyses. TS/TSX, Python, Java, and C# use that model deliberately; other Tree-sitter languages still mostly behave as file-wide AST-or-heuristic paths.
 - Callable signatures (`parameters` / `returns`) are now emitted by the backend symbol payload instead of being derived in the UI/controller layer, but several languages still populate those fields through parser-layer signature heuristics rather than true AST field extraction.
 - QML is now supported as a first-class language in the explorer and CLI, but it currently uses heuristic structural extraction rather than a dedicated AST-backed parser.
 - `Calls` / `Called By` support has improved and relation clicks now rehydrate into full destination symbols, but the overall graph is still incomplete and not yet uniformly reciprocal across all languages and project shapes.

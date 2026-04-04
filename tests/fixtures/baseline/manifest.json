@@ -293,6 +293,27 @@
       ]
     },
     {
+      "name": "csharp_partial_recovery",
+      "root": "tests/fixtures/baseline/csharp_recovery",
+      "file": "Broken.cs",
+      "file_expectations": {
+        "analysis_source_mode": "recovered",
+        "analysis_partial": true,
+        "analysis_notices": 1
+      },
+      "expectations": [
+        {
+          "kind": "class",
+          "name": "Broken"
+        },
+        {
+          "kind": "method",
+          "name": "GreetBrokenCs",
+          "calls": ["HelperBrokenCs"]
+        }
+      ]
+    },
+    {
       "name": "cpp_basic_symbols",
       "root": "tests/fixtures/baseline/cpp_basic",
       "file": "sample.cpp",

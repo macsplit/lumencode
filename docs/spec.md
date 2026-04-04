@@ -257,9 +257,14 @@ Warnings are part of the product contract, not decorative text:
 Current parser authority model:
 
 - AST output is the intended authority where a Tree-sitter path exists
-- TS/TSX, Python, and Java now keep partial AST output even when the tree has errors and supplement it with heuristic recovery, returning a `recovered` analysis rather than a file-wide fallback
+- TS/TSX, Python, Java, and C# now keep partial AST output even when the tree has errors and supplement it with heuristic recovery, returning a `recovered` analysis rather than a file-wide fallback
 - recovered analyses should normalize merged symbol trees and relation targets against the surviving canonical symbol set so obvious AST/heuristic duplicates do not leak directly into the UI
 - the long-term direction is to apply that same authority/recovery pattern across the other Tree-sitter-backed languages instead of treating parsing as a file-wide pass/fail switch
+
+Controller-side relationship budgeting model:
+
+- incoming relationship scans should be skipped for low-value script files that expose no meaningful callable/API surface
+- variable-only setup scripts should still parse and display normally, but should not spend project-wide relationship budget looking for importers
 
 ## 4. UX
 

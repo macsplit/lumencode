@@ -2045,7 +2045,19 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
     }
     if (language == QStringLiteral("csharp")) {
         const QVariantMap treeSitterResult = parseCSharpTreeSitter(path, text);
-        if (!treeSitterResult.value(QStringLiteral("symbols")).toList().isEmpty()) {
+        const bool hasAstErrors = treeSitterResult.value(QStringLiteral("analysisHasAstErrors")).toBool();
+        const bool hasAstContent = analysisHasMeaningfulContent(treeSitterResult);
+        if (hasAstErrors) {
+            const QVariantMap finalizedAst = finalizeResult(treeSitterResult, QStringLiteral("ast"));
+            const QVariantMap finalizedHeuristic = finalizeResult(parseCSharp(path, text), QStringLiteral("heuristic"));
+            return annotateAnalysisWithProvenance(
+                mergeRecoveredAnalysis(finalizedAst,
+                                       finalizedHeuristic,
+                                       QStringLiteral("Heuristic recovery supplemented partial AST analysis.")),
+                QStringLiteral("recovered"),
+                QStringLiteral("medium"));
+        }
+        if (hasAstContent) {
             return finalizeResult(treeSitterResult, QStringLiteral("ast"));
         }
         return finalizeResult(parseCSharp(path, text), QStringLiteral("heuristic"));
@@ -3483,6 +3495,8 @@ QVariantMap SymbolParser::parseCSharp(const QString &path, const QString &text) 
         appendSymbol(makeSymbol(QStringLiteral("variable"), match.captured(1), line, QString(), {},
                                 snippetFromLine(text, line, 1)));
     }
+
+    symbols = applySnippetCallRelations(symbols);
 
     result.insert(QStringLiteral("symbols"), symbols);
     result.insert(QStringLiteral("dependencies"), extractCSharpDependencies(text));
