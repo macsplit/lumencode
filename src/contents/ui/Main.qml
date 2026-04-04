@@ -759,6 +759,51 @@ Kirigami.ApplicationWindow {
                                 }
 
                                 Kirigami.Separator {
+                                    visible: (project.selectedSymbol.parameters || []).length > 0
+                                             || (project.selectedSymbol.returns || []).length > 0
+                                    Layout.fillWidth: true
+                                }
+
+                                Kirigami.Heading {
+                                    visible: (project.selectedSymbol.parameters || []).length > 0
+                                    text: "Parameters"
+                                    level: 3
+                                }
+
+                                Repeater {
+                                    model: project.selectedSymbol.parameters || []
+
+                                    delegate: Label {
+                                        required property var modelData
+                                        Layout.fillWidth: true
+                                        wrapMode: Text.WordWrap
+                                        font.pointSize: root.compactSmallFontSize
+                                        color: Kirigami.Theme.disabledTextColor
+                                        text: (modelData.name || "")
+                                              + ((modelData.type || "") ? ": " + modelData.type : "")
+                                    }
+                                }
+
+                                Kirigami.Heading {
+                                    visible: (project.selectedSymbol.returns || []).length > 0
+                                    text: "Returns"
+                                    level: 3
+                                }
+
+                                Repeater {
+                                    model: project.selectedSymbol.returns || []
+
+                                    delegate: Label {
+                                        required property var modelData
+                                        Layout.fillWidth: true
+                                        wrapMode: Text.WordWrap
+                                        font.pointSize: root.compactSmallFontSize
+                                        color: Kirigami.Theme.disabledTextColor
+                                        text: modelData.text || ""
+                                    }
+                                }
+
+                                Kirigami.Separator {
                                     visible: (project.selectedFileData.dependencies || []).length > 0
                                     Layout.fillWidth: true
                                 }

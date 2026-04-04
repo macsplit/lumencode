@@ -21,6 +21,7 @@ The GUI now layers bounded asynchronous analysis on top of that helper path, so 
 - **Crash-Isolated Dump Mode**: `--dump-file <path>` parses exactly one file and prints the same analysis JSON used by the GUI-safe selection path.
 - **Persistent Interactive Mode (`-i`)**: Maintains application state across multiple JSON-based commands on `stdin`.
 - **JSON Output**: All state changes and analysis results are emitted as compact JSON for easy machine processing, including source snippets for symbols.
+- **Callable Signature Payloads**: Backend symbol JSON now includes `parameters` and `returns` for callable symbols, so CLI and GUI inspect the same signature data.
 - **Snippet Contract Validation**: Interactive state includes `selectedSnippet`, exposing `snippetKind` and `diagnosticsMode` so excerpt-vs-parseable behavior can be tested without QML.
 - **Corpus Sweep Harness**: `tools/regression_sweep.py` samples projects under `/home/user/Code`, drives interactive selection, and checks snippet, diagnostics, and member-shape invariants across many files.
 - **Fixture Baselines**: `tests/fixtures/baseline/manifest.json` defines a checked-in multi-language fixture corpus for deterministic regression runs.
@@ -47,6 +48,7 @@ Test the `SymbolParser` against diverse file types to ensure correct symbol extr
 - **Swift**: Tested Tree-sitter-backed symbol/member extraction and intra-file relation payloads using files under `Coding/lumencode-swift/Sources`.
 - **Objective-C**: Tested heuristic class/import extraction using `TimeSystem/DesignApp/platforms/ios/Time Designer/Classes/MainViewController.m`.
 - **QML**: Tested heuristic import/component/property/signal/function extraction using the checked-in `tests/fixtures/baseline/qml_basic/Sample.qml`.
+- **Callable Signatures**: Verified both typed and untyped callable payloads through `--dump-file` and interactive symbol selection, ensuring `parameters` / `returns` come from backend symbol data rather than controller-only enrichment.
 
 ### 2. State Persistence & Sequencing
 In interactive mode, verify that commands correctly update the internal state and that subsequent commands operate on that updated state.
@@ -134,6 +136,7 @@ python3 tools/regression_sweep.py --max-files 24 --limit-per-project 3
 - The harness now follows relation targets through `selectSymbolByData` and verifies that reverse edges are present on the selected destination symbol.
 - The harness now also locks down reciprocal web-asset inspector behavior through checked-in fixtures instead of relying on ad hoc local repos.
 - The harness now also includes a baseline QML fixture so QML support is validated through the same CLI-first regression loop as the other language clusters.
+- Signature fields should now be verified through CLI payloads first, because the parser owns `parameters` / `returns` and the GUI should only render them.
 - The GUI now adds extra presentation behavior on top of the shared backend data, including lower-pane snippet rendering, compact snippet diagnostics, and CSS class drill-down behavior.
 - The GUI also adds async loading behavior and overview warnings on top of the shared backend data. When those warnings appear in normal use, they should be treated as prompts to investigate whether the limit is appropriate or the underlying algorithm is too expensive.
 - Project-summary regressions are also worth checking through the CLI because `mainEntry` scoring is still evolving for mixed-language roots.
@@ -141,4 +144,5 @@ python3 tools/regression_sweep.py --max-files 24 --limit-per-project 3
 - Relation parity should also not be assumed yet; `Calls` and `Called By` payloads are materially better than before, but remain incomplete and sometimes asymmetric on real projects.
 - Web-asset reciprocity is now a deliberate separate model: HTML/CSS/script links should be validated through `quickLinks` and CSS summaries, not through synthetic call edges.
 - Python now uses an AST walk for same-file call relations because bounded snippets were not sufficient on docstring-heavy real files. Similar upgrades are still on the table for other languages if the corpus sweep exposes the same pattern.
+- Callable signatures are parser-owned now, but some languages still populate them via parser-layer signature heuristics rather than grammar-node extraction. Future regression work should distinguish those two cases once provenance/confidence fields exist.
 - Remaining native parser rehabilitation should proceed through the CLI first: collect a crashing file, minimize the repro, verify whether the fault is in LumenCode integration or an upstream grammar/runtime, and only then reduce the fallback/isolation layers for that language.

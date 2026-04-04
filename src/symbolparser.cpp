@@ -1132,6 +1132,325 @@ static QVariantMap makeSourceContextItem(const QString &sourcePath,
     return item;
 }
 
+static QString normalizeSignatureLanguage(const QString &language)
+{
+    if (language == QStringLiteral("script")) {
+        return QStringLiteral("js");
+    }
+    if (language == QStringLiteral("jsx")) {
+        return QStringLiteral("jsx");
+    }
+    if (language == QStringLiteral("tsx")) {
+        return QStringLiteral("tsx");
+    }
+    if (language == QStringLiteral("ts")) {
+        return QStringLiteral("ts");
+    }
+    return language;
+}
+
+static bool isCallableSymbolKind(const QString &kind)
+{
+    return kind == QStringLiteral("function")
+        || kind == QStringLiteral("method")
+        || kind == QStringLiteral("constructor")
+        || kind == QStringLiteral("hook");
+}
+
+static QString signatureHeadForSnippet(const QString &text)
+{
+    QString head = text.trimmed();
+    const int brace = head.indexOf(QLatin1Char('{'));
+    if (brace >= 0) {
+        head = head.left(brace).trimmed();
+    }
+    const int newline = head.indexOf(QLatin1Char('\n'));
+    if (newline >= 0) {
+        head = head.left(newline).trimmed();
+    }
+    return head;
+}
+
+static QStringList splitTopLevelSignatureParts(const QString &text)
+{
+    QStringList parts;
+    QString current;
+    int parenDepth = 0;
+    int bracketDepth = 0;
+    int braceDepth = 0;
+    int angleDepth = 0;
+    bool inSingleQuote = false;
+    bool inDoubleQuote = false;
+    for (int i = 0; i < text.size(); ++i) {
+        const QChar ch = text.at(i);
+        const QChar prev = i > 0 ? text.at(i - 1) : QChar();
+        if (ch == QLatin1Char('\'') && !inDoubleQuote && prev != QLatin1Char('\\')) {
+            inSingleQuote = !inSingleQuote;
+        } else if (ch == QLatin1Char('"') && !inSingleQuote && prev != QLatin1Char('\\')) {
+            inDoubleQuote = !inDoubleQuote;
+        }
+        if (!inSingleQuote && !inDoubleQuote) {
+            if (ch == QLatin1Char('(')) ++parenDepth;
+            else if (ch == QLatin1Char(')')) parenDepth = qMax(0, parenDepth - 1);
+            else if (ch == QLatin1Char('[')) ++bracketDepth;
+            else if (ch == QLatin1Char(']')) bracketDepth = qMax(0, bracketDepth - 1);
+            else if (ch == QLatin1Char('{')) ++braceDepth;
+            else if (ch == QLatin1Char('}')) braceDepth = qMax(0, braceDepth - 1);
+            else if (ch == QLatin1Char('<')) ++angleDepth;
+            else if (ch == QLatin1Char('>')) angleDepth = qMax(0, angleDepth - 1);
+            else if (ch == QLatin1Char(',') && parenDepth == 0 && bracketDepth == 0
+                     && braceDepth == 0 && angleDepth == 0) {
+                const QString part = current.trimmed();
+                if (!part.isEmpty()) {
+                    parts.append(part);
+                }
+                current.clear();
+                continue;
+            }
+        }
+        current += ch;
+    }
+    const QString part = current.trimmed();
+    if (!part.isEmpty()) {
+        parts.append(part);
+    }
+    return parts;
+}
+
+static QVariantMap makeSignatureParameter(const QString &name, const QString &type)
+{
+    QVariantMap item;
+    item.insert(QStringLiteral("name"), name.trimmed());
+    item.insert(QStringLiteral("type"), type.trimmed());
+    return item;
+}
+
+static QVariantMap parseSignatureParameter(QString raw, const QString &language)
+{
+    raw = raw.trimmed();
+    if (raw.isEmpty() || raw == QStringLiteral("void")) {
+        return {};
+    }
+    const int equals = raw.indexOf(QLatin1Char('='));
+    if (equals >= 0) {
+        raw = raw.left(equals).trimmed();
+    }
+    const int colon = raw.indexOf(QLatin1Char(':'));
+    if ((language == QStringLiteral("ts") || language == QStringLiteral("tsx")
+         || language == QStringLiteral("qml")) && colon >= 0) {
+        QString name = raw.left(colon).trimmed();
+        name.remove(QRegularExpression(QStringLiteral(R"(\?)")));
+        if (name.contains(QLatin1Char(' '))) {
+            name = name.section(QLatin1Char(' '), -1);
+        }
+        return makeSignatureParameter(name, raw.mid(colon + 1).trimmed());
+    }
+    if (language == QStringLiteral("php")) {
+        const int dollar = raw.lastIndexOf(QLatin1Char('$'));
+        if (dollar >= 0) {
+            return makeSignatureParameter(raw.mid(dollar).trimmed(), raw.left(dollar).trimmed());
+        }
+    }
+    if (language == QStringLiteral("python")) {
+        if (raw == QStringLiteral("self") || raw == QStringLiteral("cls")) {
+            return {};
+        }
+        if (colon >= 0) {
+            return makeSignatureParameter(raw.left(colon).trimmed(), raw.mid(colon + 1).trimmed());
+        }
+        return makeSignatureParameter(raw, QString());
+    }
+    if (language == QStringLiteral("swift")) {
+        const int swiftColon = raw.indexOf(QLatin1Char(':'));
+        if (swiftColon >= 0) {
+            const QStringList names = raw.left(swiftColon).trimmed().split(QRegularExpression(QStringLiteral(R"(\s+)")), Qt::SkipEmptyParts);
+            QString name = names.isEmpty() ? raw.left(swiftColon).trimmed() : names.last();
+            if (name == QStringLiteral("_") && !names.isEmpty()) {
+                name = names.first();
+            }
+            return makeSignatureParameter(name, raw.mid(swiftColon + 1).trimmed());
+        }
+    }
+    if (language == QStringLiteral("rust")) {
+        if (raw == QStringLiteral("self") || raw == QStringLiteral("&self")
+            || raw == QStringLiteral("&mut self") || raw == QStringLiteral("mut self")) {
+            return {};
+        }
+        if (colon >= 0) {
+            return makeSignatureParameter(raw.left(colon).trimmed(), raw.mid(colon + 1).trimmed());
+        }
+    }
+    if (language == QStringLiteral("objc")) {
+        const QString name = raw.section(QLatin1Char(' '), -1).remove(QRegularExpression(QStringLiteral(R"([*&]+)")));
+        return makeSignatureParameter(name, raw.left(raw.lastIndexOf(raw.section(QLatin1Char(' '), -1))).trimmed());
+    }
+
+    const QRegularExpression trailingNamePattern(QStringLiteral(R"(([A-Za-z_]\w*)\s*$)"));
+    const QRegularExpressionMatch trailingNameMatch = trailingNamePattern.match(raw);
+    if (!trailingNameMatch.hasMatch()) {
+        return {};
+    }
+    const QString name = trailingNameMatch.captured(1).trimmed();
+    const QString type = raw.left(trailingNameMatch.capturedStart(1)).trimmed();
+    return makeSignatureParameter(name, type);
+}
+
+static void appendReturnDetail(QVariantList &returns, const QString &text)
+{
+    const QString trimmed = text.trimmed();
+    if (trimmed.isEmpty()) {
+        return;
+    }
+    for (const QVariant &entry : std::as_const(returns)) {
+        if (entry.toMap().value(QStringLiteral("text")).toString() == trimmed) {
+            return;
+        }
+    }
+    QVariantMap item;
+    item.insert(QStringLiteral("text"), trimmed);
+    returns.append(item);
+}
+
+static QVariantMap enrichCallableSignature(QVariantMap symbol, const QString &language)
+{
+    if (!isCallableSymbolKind(symbol.value(QStringLiteral("kind")).toString())) {
+        return symbol;
+    }
+
+    const QString snippet = symbol.value(QStringLiteral("snippet")).toString();
+    if (snippet.trimmed().isEmpty()) {
+        return symbol;
+    }
+
+    const QString normalizedLanguage = normalizeSignatureLanguage(language);
+    const QString symbolName = symbol.value(QStringLiteral("name")).toString();
+    QString parameterText;
+    QString explicitReturn;
+    const QString head = signatureHeadForSnippet(snippet);
+    const QString kind = symbol.value(QStringLiteral("kind")).toString();
+
+    if (head.startsWith(QLatin1Char(':'))) {
+        return symbol;
+    }
+
+    auto capture = [&](const QRegularExpression &pattern, int paramsIndex, int returnIndex) {
+        const auto match = pattern.match(head);
+        if (!match.hasMatch()) {
+            return false;
+        }
+        parameterText = match.captured(paramsIndex).trimmed();
+        explicitReturn = returnIndex > 0 ? match.captured(returnIndex).trimmed() : QString();
+        return true;
+    };
+
+    if (normalizedLanguage == QStringLiteral("python")) {
+        capture(QRegularExpression(QStringLiteral(R"(^\s*def\s+[A-Za-z_]\w*\s*\(([^)]*)\)\s*(?:->\s*([^:]+))?)")), 1, 2);
+    } else if (normalizedLanguage == QStringLiteral("php")) {
+        capture(QRegularExpression(QStringLiteral(R"(\bfunction\s+[A-Za-z_]\w*\s*\(([^)]*)\)\s*(?::\s*([^\s{]+))?)")), 1, 2);
+    } else if (normalizedLanguage == QStringLiteral("swift")) {
+        if (!capture(QRegularExpression(QStringLiteral(R"(\bfunc\s+[A-Za-z_]\w*\s*\(([^)]*)\)\s*(?:->\s*([^{]+))?)")), 1, 2)) {
+            capture(QRegularExpression(QStringLiteral(R"(\binit\s*\(([^)]*)\))")), 1, -1);
+        }
+    } else if (normalizedLanguage == QStringLiteral("rust")) {
+        capture(QRegularExpression(QStringLiteral(R"(\bfn\s+[A-Za-z_]\w*\s*\(([^)]*)\)\s*(?:->\s*([^{]+))?)")), 1, 2);
+    } else if (normalizedLanguage == QStringLiteral("objc")) {
+        const auto match = QRegularExpression(QStringLiteral(R"(^\s*[-+]\s*\(([^)]+)\)\s*([A-Za-z_]\w*(?::[A-Za-z_]\w*)*))")).match(head);
+        if (match.hasMatch()) {
+            explicitReturn = match.captured(1).trimmed();
+            auto paramIt = QRegularExpression(QStringLiteral(R"(:\s*\(([^)]+)\)\s*([A-Za-z_]\w*))")).globalMatch(head);
+            QStringList objcParams;
+            while (paramIt.hasNext()) {
+                const auto paramMatch = paramIt.next();
+                objcParams.append(paramMatch.captured(2) + QStringLiteral(" : ") + paramMatch.captured(1));
+            }
+            parameterText = objcParams.join(QStringLiteral(", "));
+        }
+    } else {
+        bool matched = false;
+        if (!symbolName.isEmpty()) {
+            const QString escapedName = QRegularExpression::escape(symbolName);
+            const auto cStyle = QRegularExpression(
+                                    QStringLiteral(R"(^\s*(.+?)\b%1\s*\(([^)]*)\)\s*(?:const\b)?\s*(?:->\s*([^{]+))?)")
+                                        .arg(escapedName))
+                                    .match(head);
+            if (cStyle.hasMatch()) {
+                parameterText = cStyle.captured(2).trimmed();
+                explicitReturn = cStyle.captured(3).trimmed();
+                if (explicitReturn.isEmpty()) {
+                    QString prefix = cStyle.captured(1).trimmed();
+                    const QStringList dropTokens = {
+                        QStringLiteral("public"), QStringLiteral("private"), QStringLiteral("protected"),
+                        QStringLiteral("static"), QStringLiteral("virtual"), QStringLiteral("inline"),
+                        QStringLiteral("constexpr"), QStringLiteral("final"), QStringLiteral("override"),
+                        QStringLiteral("abstract"), QStringLiteral("async"), QStringLiteral("synchronized"),
+                        QStringLiteral("extern"), QStringLiteral("sealed")
+                    };
+                    QStringList prefixTokens = prefix.split(QRegularExpression(QStringLiteral(R"(\s+)")), Qt::SkipEmptyParts);
+                    while (!prefixTokens.isEmpty() && dropTokens.contains(prefixTokens.first())) {
+                        prefixTokens.removeFirst();
+                    }
+                    explicitReturn = prefixTokens.join(QLatin1Char(' ')).trimmed();
+                }
+                matched = true;
+            }
+        }
+        if (!matched) {
+            matched = capture(QRegularExpression(QStringLiteral(R"(\bfunction\s+[A-Za-z_]\w*\s*\(([^)]*)\)\s*(?::\s*([^{=]+))?)")), 1, 2);
+        }
+        if (!matched) {
+            capture(QRegularExpression(QStringLiteral(R"(\b(?:constructor|[A-Za-z_]\w*)\s*\(([^)]*)\)\s*(?::\s*([^{=]+))?)")), 1, 2);
+        }
+    }
+
+    QVariantList parameters;
+    for (const QString &part : splitTopLevelSignatureParts(parameterText)) {
+        const QVariantMap parameter = parseSignatureParameter(part, normalizedLanguage);
+        if (!parameter.isEmpty()) {
+            parameters.append(parameter);
+        }
+    }
+
+    QVariantList returns;
+    if (!explicitReturn.isEmpty()) {
+        appendReturnDetail(returns, explicitReturn);
+    } else if (kind == QStringLiteral("constructor")) {
+        appendReturnDetail(returns, QStringLiteral("none"));
+    } else {
+        auto returnIt = QRegularExpression(QStringLiteral(R"(\breturn\b\s*([^;\n]+))")).globalMatch(snippet);
+        while (returnIt.hasNext() && returns.size() < 3) {
+            appendReturnDetail(returns, returnIt.next().captured(1));
+        }
+        if (returns.isEmpty()) {
+            appendReturnDetail(returns, QStringLiteral("none"));
+        }
+    }
+
+    symbol.insert(QStringLiteral("parameters"), parameters);
+    symbol.insert(QStringLiteral("returns"), returns);
+    return symbol;
+}
+
+static QVariantList enrichSymbolSignatures(const QVariantList &symbols, const QString &language)
+{
+    QVariantList enriched;
+    enriched.reserve(symbols.size());
+    for (const QVariant &entry : symbols) {
+        QVariantMap symbol = entry.toMap();
+        symbol.insert(QStringLiteral("members"),
+                      enrichSymbolSignatures(symbol.value(QStringLiteral("members")).toList(), language));
+        enriched.append(enrichCallableSignature(symbol, language));
+    }
+    return enriched;
+}
+
+static QVariantMap enrichAnalysisSignatures(QVariantMap result)
+{
+    result.insert(QStringLiteral("symbols"),
+                  enrichSymbolSignatures(result.value(QStringLiteral("symbols")).toList(),
+                                         result.value(QStringLiteral("language")).toString()));
+    return result;
+}
+
 QVariantMap SymbolParser::makeSymbol(const QString &kind, const QString &name, int line,
                                      const QString &detail, const QVariantList &members,
                                      const QString &snippet)
@@ -1200,14 +1519,17 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
     const QFileInfo info(path);
     const QString language = detectLanguage(path);
     QVariantMap result = makeResultSkeleton(path, info.fileName(), language);
+    auto finalizeResult = [](QVariantMap analysis) {
+        return enrichAnalysisSignatures(analysis);
+    };
 
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         result.insert(QStringLiteral("summary"), QStringLiteral("Unable to read file"));
-        return result;
+        return finalizeResult(result);
     }
 
     if (shouldSkipFileBySize(info, kMaxParsableFileBytes)) {
-        return makeOversizedFileResult(path, language, info.size(), kMaxParsableFileBytes);
+        return finalizeResult(makeOversizedFileResult(path, language, info.size(), kMaxParsableFileBytes));
     }
 
     const QString text = QString::fromUtf8(file.readAll());
@@ -1215,87 +1537,87 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
     if (language == QStringLiteral("php")) {
         const QVariantMap treeSitterResult = parsePhpTreeSitter(path, text);
         if (!treeSitterResult.value(QStringLiteral("symbols")).toList().isEmpty()) {
-            return treeSitterResult;
+            return finalizeResult(treeSitterResult);
         }
-        return parsePhp(path, text);
+        return finalizeResult(parsePhp(path, text));
     }
     if (language == QStringLiteral("swift")) {
         const QVariantMap treeSitterResult = parseSwiftTreeSitter(path, text);
         if (!treeSitterResult.value(QStringLiteral("symbols")).toList().isEmpty()) {
-            return treeSitterResult;
+            return finalizeResult(treeSitterResult);
         }
         QVariantMap fallback = makeResultSkeleton(path, info.fileName(), language);
         fallback.insert(QStringLiteral("summary"), QStringLiteral("No Swift symbols extracted"));
-        return fallback;
+        return finalizeResult(fallback);
     }
     if (language == QStringLiteral("html")) {
-        return parseHtml(path, text);
+        return finalizeResult(parseHtml(path, text));
     }
     if (language == QStringLiteral("qml")) {
-        return parseQml(path, text);
+        return finalizeResult(parseQml(path, text));
     }
     if (language == QStringLiteral("css")) {
         const QVariantMap treeSitterResult = parseCssTreeSitter(path, text);
         if (!treeSitterResult.value(QStringLiteral("symbols")).toList().isEmpty()) {
-            return treeSitterResult;
+            return finalizeResult(treeSitterResult);
         }
-        return parseCss(path, text);
+        return finalizeResult(parseCss(path, text));
     }
     if (language == QStringLiteral("script")) {
-        return parseScriptLike(path, text, false);
+        return finalizeResult(parseScriptLike(path, text, false));
     }
     if (language == QStringLiteral("jsx")) {
-        return parseScriptLike(path, text, true);
+        return finalizeResult(parseScriptLike(path, text, true));
     }
     if (language == QStringLiteral("tsx")
         || language == QStringLiteral("ts")) {
         const QVariantMap treeSitterResult = parseScriptLikeTreeSitter(path, text, language);
         if (!treeSitterResult.value(QStringLiteral("symbols")).toList().isEmpty()) {
-            return treeSitterResult;
+            return finalizeResult(treeSitterResult);
         }
         if (language == QStringLiteral("tsx")) {
-            return parseScriptLike(path, text, true);
+            return finalizeResult(parseScriptLike(path, text, true));
         }
-        return parseScriptLike(path, text, false);
+        return finalizeResult(parseScriptLike(path, text, false));
     }
     if (language == QStringLiteral("json")) {
-        return parseJson(path, text);
+        return finalizeResult(parseJson(path, text));
     }
     if (language == QStringLiteral("python")) {
         const QVariantMap treeSitterResult = parsePythonTreeSitter(path, text);
         if (!treeSitterResult.value(QStringLiteral("symbols")).toList().isEmpty()) {
-            return treeSitterResult;
+            return finalizeResult(treeSitterResult);
         }
-        return parsePython(path, text);
+        return finalizeResult(parsePython(path, text));
     }
     if (language == QStringLiteral("cpp")) {
-        return parseCppLike(path, text, language);
+        return finalizeResult(parseCppLike(path, text, language));
     }
     if (language == QStringLiteral("java")) {
         const QVariantMap treeSitterResult = parseJavaTreeSitter(path, text);
         if (!treeSitterResult.value(QStringLiteral("symbols")).toList().isEmpty()) {
-            return treeSitterResult;
+            return finalizeResult(treeSitterResult);
         }
-        return parseJava(path, text);
+        return finalizeResult(parseJava(path, text));
     }
     if (language == QStringLiteral("csharp")) {
         const QVariantMap treeSitterResult = parseCSharpTreeSitter(path, text);
         if (!treeSitterResult.value(QStringLiteral("symbols")).toList().isEmpty()) {
-            return treeSitterResult;
+            return finalizeResult(treeSitterResult);
         }
-        return parseCSharp(path, text);
+        return finalizeResult(parseCSharp(path, text));
     }
     if (language == QStringLiteral("rust")) {
         const QVariantMap treeSitterResult = parseRustTreeSitter(path, text);
         if (!treeSitterResult.value(QStringLiteral("symbols")).toList().isEmpty()) {
-            return treeSitterResult;
+            return finalizeResult(treeSitterResult);
         }
-        return parseRust(path, text);
+        return finalizeResult(parseRust(path, text));
     }
     if (language == QStringLiteral("objc")) {
-        return parseObjectiveC(path, text, language);
+        return finalizeResult(parseObjectiveC(path, text, language));
     }
-    return result;
+    return finalizeResult(result);
 }
 
 QVariantMap SymbolParser::parseSwiftTreeSitter(const QString &path, const QString &text) const

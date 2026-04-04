@@ -212,13 +212,23 @@ Where available, symbol detail should include:
 - nested members
 - `Calls`
 - `Called By`
+- `Parameters`
+- `Returns`
 
 Current expectation:
 
 - relationship sections are shown in the right pane when the backend provides them
 - relationship entries are clickable and reuse the shared selection payload path
+- callable signature fields are shown after higher-priority relation sections in the right pane
+- `parameters` / `returns` are part of the backend symbol payload contract rather than controller-only UI enrichment
 - parity is still incomplete across languages and files, so missing or asymmetric relations are currently a known limitation rather than a UI bug
 - non-call web relationships should be modeled explicitly through quick links and CSS summaries rather than being forced into `Calls` / `Called By`
+
+Callable signature contract:
+
+- typed languages should prefer declared parameter types and declared return types
+- untyped languages may fall back to parameter names plus inferred `return ...` expressions when no declared return type exists
+- the current backend may still derive some signature fields from parser-layer snippet/signature analysis where grammar-specific AST field extraction has not yet been implemented
 
 ### 3.8 Robustness Contract
 

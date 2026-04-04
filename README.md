@@ -26,6 +26,7 @@ What currently works:
 - Keeping the right detail pane permanently visible as a stable inspector surface.
 - Showing a denser middle-pane overview with clickable top-level symbols and clickable nested member rows.
 - Showing `Calls` and `Called By` sections in the right detail pane where relationship data is available.
+- Showing `Parameters` and `Returns` for callable symbols in the right detail pane, with those lower-priority fields appended after higher-value relation data.
 - Resolving cross-file JS/TS/CommonJS relations more accurately, including aliased imports and destructured `require(...)` bindings.
 - Showing syntax-colored lower-pane snippets with internal highlighting rather than an external highlighting dependency.
 - Showing parser-aware diagnostics for supported snippet languages, while suppressing false errors for intentionally truncated previews.
@@ -85,6 +86,7 @@ Phase 1. Stabilization
 - Continue broad CLI-driven regression sweeps against mixed real-world projects under `/home/user/Code`.
 - Keep growing the baseline fixture suite so each supported language or language-cluster has a small structural repro project checked into the repo.
 - Continue AST-backed parity work language by language, using CLI-first verification before GUI iteration.
+- Move callable signature extraction from parser-layer snippet heuristics to grammar-specific AST fields language by language, now that `parameters` / `returns` are part of the backend symbol contract.
 - Keep pragmatic heuristic coverage for valuable local languages such as QML where a dedicated grammar path is not yet integrated, instead of leaving them unsupported.
 - Continue converting cross-file relationship work from name/snippet luck into explicit binding-aware or asset-aware models, especially for web projects.
 - Treat surfaced analysis warnings as investigation leads, not just acceptable noise: some will indicate algorithmic or integration weaknesses rather than merely large inputs.
@@ -118,6 +120,7 @@ Phase 4. Broader project understanding
 
 - Some extracted structure is still shallow or misleading on real projects.
 - Some languages still rely on heuristic fallback paths for parts of the overview, especially when native parser paths have been bypassed for stability. Plain JS/JSX currently still use the heuristic parser path for stability, while TS/TSX remain Tree-sitter-backed.
+- Callable signatures (`parameters` / `returns`) are now emitted by the backend symbol payload instead of being derived in the UI/controller layer, but several languages still populate those fields through parser-layer signature heuristics rather than true AST field extraction.
 - QML is now supported as a first-class language in the explorer and CLI, but it currently uses heuristic structural extraction rather than a dedicated AST-backed parser.
 - `Calls` / `Called By` support has improved and relation clicks now rehydrate into full destination symbols, but the overall graph is still incomplete and not yet uniformly reciprocal across all languages and project shapes.
 - The new overview warnings are part of the intended safety model. They mean the app stayed responsive and returned a bounded result, but they should still be treated as prompts to inspect why that bound was hit.

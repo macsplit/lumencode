@@ -2,6 +2,14 @@
 
 ## 2026-04-04
 
+- **Callable Signature Contract Refactor:**
+    - Added `parameters` and `returns` to callable symbol payloads as backend-owned fields instead of controller-only UI enrichment.
+    - Moved callable signature extraction into `SymbolParser`, so CLI dumps, async GUI analysis, direct symbol selection, and relation rehydration all see the same signature data.
+    - Preserved declared parameter types and return types for typed languages where the signature can be derived, while keeping fallback inferred `return ...` expression summaries for untyped cases.
+    - Fixed typed C-style signatures so return types are no longer replaced by sampled return expressions, and parameter types now preserve pointer/reference markers.
+    - Guarded obvious malformed callable snippets such as constructor initializer-list fragments so they no longer emit nonsense return values.
+    - Left the current parser-layer signature logic explicitly transitional: the architecture is now correct, but several languages still derive signatures from snippets/signature heads inside the parser rather than directly from grammar nodes.
+
 - **QML Support:**
     - Added first-class `.qml` file discovery in the filesystem crawler and regression harness.
     - Added pragmatic QML language detection and heuristic parsing for imports, root/inline components, properties, signals, functions, and common `on...` handlers.
