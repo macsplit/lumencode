@@ -168,6 +168,31 @@
       ]
     },
     {
+      "name": "python_partial_recovery",
+      "root": "tests/fixtures/baseline/python_recovery",
+      "file": "broken.py",
+      "file_expectations": {
+        "analysis_source_mode": "recovered",
+        "analysis_partial": true,
+        "analysis_notices": 1
+      },
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "helper_broken_py"
+        },
+        {
+          "kind": "function",
+          "name": "wrapper_broken_py",
+          "calls": ["helper_broken_py"]
+        },
+        {
+          "kind": "class",
+          "name": "WorkerBroken"
+        }
+      ]
+    },
+    {
       "name": "rust_basic_relations",
       "root": "tests/fixtures/baseline/rust_basic",
       "file": "main.rs",
@@ -218,6 +243,27 @@
           "kind": "method",
           "name": "helper",
           "calledBy": ["greet"]
+        }
+      ]
+    },
+    {
+      "name": "java_partial_recovery",
+      "root": "tests/fixtures/baseline/java_recovery",
+      "file": "Broken.java",
+      "file_expectations": {
+        "analysis_source_mode": "recovered",
+        "analysis_partial": true,
+        "analysis_notices": 1
+      },
+      "expectations": [
+        {
+          "kind": "class",
+          "name": "Broken"
+        },
+        {
+          "kind": "method",
+          "name": "greetBrokenJava",
+          "calls": ["helperBrokenJava"]
         }
       ]
     },

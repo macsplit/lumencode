@@ -11,6 +11,8 @@
       - return `analysisSourceMode: recovered` with a warning notice and partial-analysis flag
     - Added a checked-in broken TypeScript fixture to lock down that recovered-analysis contract through the CLI regression harness.
     - Extended `tools/regression_sweep.py` so fixtures can assert `analysisSourceMode`, `analysisPartial`, and analysis notices, not just symbol presence.
+    - Extended the same recovered-analysis model to Python and Java, including checked-in broken-code fixtures for both languages.
+    - Added post-merge normalization for recovered analyses so merged symbol trees and relation targets are rewritten against the surviving canonical symbol set, reducing obvious AST/heuristic duplicates and stale reverse-edge targets.
     - Left the broader authority refactor intentionally incomplete: the same recovered-analysis model still needs to be applied language by language across the other Tree-sitter-backed parsers.
 
 - **Callable Signature Contract Refactor:**
@@ -67,7 +69,7 @@
 - **Known Remaining Gap:**
     - Relation traversal is substantially better, but overall relation completeness still needs work across languages and cross-file shapes.
     - Swift functions still often leave the right inspector feeling sparse; useful additional symbol detail should be added later once backend payloads are more trustworthy.
-    - The next iteration should continue the authority/recovery refactor language by language, most likely starting with Python, before circling back to richer useful inspector payloads for sparse Swift/function selections.
+    - The next iteration should continue the authority/recovery refactor into the remaining Tree-sitter languages, with C# as the next obvious candidate, while continuing to tighten recovered merge quality where broken-code fixtures expose residual duplication.
     - Surfaced warnings are expected now under bounded degradation, but each one should still be treated as a lead for future optimization or parser/integration investigation rather than dismissed as inevitable.
 
 ## 2026-04-03

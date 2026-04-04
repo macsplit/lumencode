@@ -396,6 +396,8 @@ static void collectSymbolsByKey(const QVariantList &symbols,
     }
 }
 
+static bool snippetsLookCompatible(const QString &primarySnippet, const QString &secondarySnippet);
+
 static void appendUniqueRelation(QHash<QString, QVariantList> &edgeMap,
                                  const QString &ownerKey,
                                  const QVariantMap &relation,
@@ -406,9 +408,17 @@ static void appendUniqueRelation(QHash<QString, QVariantList> &edgeMap,
     QVariantList list = edgeMap.value(ownerKey);
     for (const QVariant &entry : std::as_const(list)) {
         const QVariantMap existing = entry.toMap();
-        if (existing.value(QStringLiteral("name")).toString() == adjusted.value(QStringLiteral("name")).toString()
-            && existing.value(QStringLiteral("line")).toInt() == adjusted.value(QStringLiteral("line")).toInt()) {
-            return;
+        if (existing.value(QStringLiteral("kind")).toString() == adjusted.value(QStringLiteral("kind")).toString()
+            && existing.value(QStringLiteral("name")).toString() == adjusted.value(QStringLiteral("name")).toString()) {
+            const int existingLine = existing.value(QStringLiteral("line")).toInt();
+            const int adjustedLine = adjusted.value(QStringLiteral("line")).toInt();
+            if (existingLine > 0 && adjustedLine > 0 && qAbs(existingLine - adjustedLine) <= 1) {
+                return;
+            }
+            if (snippetsLookCompatible(existing.value(QStringLiteral("snippet")).toString(),
+                                       adjusted.value(QStringLiteral("snippet")).toString())) {
+                return;
+            }
         }
     }
     list.append(adjusted);
@@ -437,6 +447,16 @@ static QVariantList applyRelationsToSymbols(const QVariantList &symbols,
         result.append(symbol);
     }
     return result;
+}
+
+static bool snippetsLookCompatible(const QString &primarySnippet, const QString &secondarySnippet)
+{
+    const QString left = primarySnippet.trimmed();
+    const QString right = secondarySnippet.trimmed();
+    if (left.isEmpty() || right.isEmpty()) {
+        return true;
+    }
+    return left == right || left.contains(right) || right.contains(left);
 }
 
 static QVariantList mergeUniqueRelations(const QVariantList &primary, const QVariantList &secondary)
@@ -486,27 +506,64 @@ static QVariantList mergeUniqueFlatEntries(const QVariantList &primary, const QV
 
 static QVariantMap mergeSymbolData(QVariantMap primary, const QVariantMap &secondary);
 
-static QVariantList mergeSymbolLists(const QVariantList &primary, const QVariantList &secondary)
+static int compatibleSymbolIndex(const QVariantList &symbols, const QVariantMap &candidate)
 {
-    QVariantList merged = primary;
-    QHash<QString, int> indexByKey;
-    for (int i = 0; i < merged.size(); ++i) {
-        const QString key = symbolKey(merged.at(i).toMap());
-        if (!key.isEmpty()) {
-            indexByKey.insert(key, i);
+    const QString candidateKey = symbolKey(candidate);
+    const QString candidateKind = candidate.value(QStringLiteral("kind")).toString();
+    const QString candidateName = candidate.value(QStringLiteral("name")).toString();
+    const int candidateLine = candidate.value(QStringLiteral("line")).toInt();
+    const QString candidateSnippet = candidate.value(QStringLiteral("snippet")).toString();
+
+    for (int i = 0; i < symbols.size(); ++i) {
+        const QVariantMap existing = symbols.at(i).toMap();
+        if (symbolKey(existing) == candidateKey && !candidateKey.isEmpty()) {
+            return i;
+        }
+
+        if (existing.value(QStringLiteral("kind")).toString() != candidateKind
+            || existing.value(QStringLiteral("name")).toString() != candidateName
+            || candidateKind.isEmpty()
+            || candidateName.isEmpty()) {
+            continue;
+        }
+
+        const int existingLine = existing.value(QStringLiteral("line")).toInt();
+        if (existingLine > 0 && candidateLine > 0) {
+            const int lineDelta = qAbs(existingLine - candidateLine);
+            if (lineDelta <= 1) {
+                return i;
+            }
+            if (lineDelta > 3) {
+                continue;
+            }
+        }
+
+        if (existingLine <= 0 || candidateLine <= 0) {
+            if (snippetsLookCompatible(existing.value(QStringLiteral("snippet")).toString(), candidateSnippet)) {
+                return i;
+            }
+            continue;
+        }
+
+        if (snippetsLookCompatible(existing.value(QStringLiteral("snippet")).toString(), candidateSnippet)) {
+            return i;
         }
     }
 
+    return -1;
+}
+
+static QVariantList mergeSymbolLists(const QVariantList &primary, const QVariantList &secondary)
+{
+    QVariantList merged = primary;
+
     for (const QVariant &entry : secondary) {
         const QVariantMap symbol = entry.toMap();
-        const QString key = symbolKey(symbol);
-        if (!key.isEmpty() && indexByKey.contains(key)) {
-            merged[indexByKey.value(key)] = mergeSymbolData(merged.at(indexByKey.value(key)).toMap(), symbol);
+        const int index = compatibleSymbolIndex(merged, symbol);
+        if (index >= 0) {
+            merged[index] = mergeSymbolData(merged.at(index).toMap(), symbol);
         } else {
             merged.append(symbol);
-            if (!key.isEmpty()) {
-                indexByKey.insert(key, merged.size() - 1);
-            }
         }
     }
 
@@ -555,6 +612,54 @@ static QVariantMap mergeSymbolData(QVariantMap primary, const QVariantMap &secon
     return primary;
 }
 
+static QVariantMap canonicalRelationForSymbol(const QVariantMap &relation, const QVariantList &canonicalSymbols)
+{
+    const int index = compatibleSymbolIndex(canonicalSymbols, relation);
+    if (index < 0) {
+        return relation;
+    }
+
+    QVariantMap normalized = relationFromSymbol(canonicalSymbols.at(index).toMap());
+    const QString detail = relation.value(QStringLiteral("detail")).toString();
+    if (!detail.isEmpty()) {
+        normalized.insert(QStringLiteral("detail"), detail);
+    }
+    return normalized;
+}
+
+static QVariantList normalizeRelationsAgainstSymbols(const QVariantList &relations,
+                                                     const QVariantList &canonicalSymbols)
+{
+    QVariantList normalized;
+    QHash<QString, QVariantList> deduped;
+    const QString ownerKey = QStringLiteral("__normalized__");
+    for (const QVariant &entry : relations) {
+        const QVariantMap relation = canonicalRelationForSymbol(entry.toMap(), canonicalSymbols);
+        appendUniqueRelation(deduped, ownerKey, relation, relation.value(QStringLiteral("detail")).toString());
+    }
+    normalized = deduped.value(ownerKey);
+    return normalized;
+}
+
+static QVariantList normalizeSymbolTree(const QVariantList &symbols, const QVariantList &canonicalSymbols)
+{
+    QVariantList normalized;
+    for (const QVariant &entry : symbols) {
+        QVariantMap symbol = entry.toMap();
+        QVariantList members = normalizeSymbolTree(symbol.value(QStringLiteral("members")).toList(), canonicalSymbols);
+        members = mergeSymbolLists(QVariantList{}, members);
+        symbol.insert(QStringLiteral("members"), members);
+        symbol.insert(QStringLiteral("calls"),
+                      normalizeRelationsAgainstSymbols(symbol.value(QStringLiteral("calls")).toList(),
+                                                       canonicalSymbols));
+        symbol.insert(QStringLiteral("calledBy"),
+                      normalizeRelationsAgainstSymbols(symbol.value(QStringLiteral("calledBy")).toList(),
+                                                       canonicalSymbols));
+        normalized.append(symbol);
+    }
+    return mergeSymbolLists(QVariantList{}, normalized);
+}
+
 static bool analysisHasMeaningfulContent(const QVariantMap &analysis)
 {
     return !analysis.value(QStringLiteral("symbols")).toList().isEmpty()
@@ -574,6 +679,10 @@ static QVariantMap mergeRecoveredAnalysis(QVariantMap primary,
     primary.insert(QStringLiteral("symbols"),
                    mergeSymbolLists(primary.value(QStringLiteral("symbols")).toList(),
                                     recovery.value(QStringLiteral("symbols")).toList()));
+    const QVariantList canonicalSymbols = primary.value(QStringLiteral("symbols")).toList();
+    primary.insert(QStringLiteral("symbols"),
+                   normalizeSymbolTree(primary.value(QStringLiteral("symbols")).toList(),
+                                       canonicalSymbols));
     primary.insert(QStringLiteral("dependencies"),
                    mergeUniqueFlatEntries(primary.value(QStringLiteral("dependencies")).toList(),
                                           recovery.value(QStringLiteral("dependencies")).toList()));
@@ -1895,7 +2004,19 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
     }
     if (language == QStringLiteral("python")) {
         const QVariantMap treeSitterResult = parsePythonTreeSitter(path, text);
-        if (!treeSitterResult.value(QStringLiteral("symbols")).toList().isEmpty()) {
+        const bool hasAstErrors = treeSitterResult.value(QStringLiteral("analysisHasAstErrors")).toBool();
+        const bool hasAstContent = analysisHasMeaningfulContent(treeSitterResult);
+        if (hasAstErrors) {
+            const QVariantMap finalizedAst = finalizeResult(treeSitterResult, QStringLiteral("ast"));
+            const QVariantMap finalizedHeuristic = finalizeResult(parsePython(path, text), QStringLiteral("heuristic"));
+            return annotateAnalysisWithProvenance(
+                mergeRecoveredAnalysis(finalizedAst,
+                                       finalizedHeuristic,
+                                       QStringLiteral("Heuristic recovery supplemented partial AST analysis.")),
+                QStringLiteral("recovered"),
+                QStringLiteral("medium"));
+        }
+        if (hasAstContent) {
             return finalizeResult(treeSitterResult, QStringLiteral("ast"));
         }
         return finalizeResult(parsePython(path, text), QStringLiteral("heuristic"));
@@ -1905,7 +2026,19 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
     }
     if (language == QStringLiteral("java")) {
         const QVariantMap treeSitterResult = parseJavaTreeSitter(path, text);
-        if (!treeSitterResult.value(QStringLiteral("symbols")).toList().isEmpty()) {
+        const bool hasAstErrors = treeSitterResult.value(QStringLiteral("analysisHasAstErrors")).toBool();
+        const bool hasAstContent = analysisHasMeaningfulContent(treeSitterResult);
+        if (hasAstErrors) {
+            const QVariantMap finalizedAst = finalizeResult(treeSitterResult, QStringLiteral("ast"));
+            const QVariantMap finalizedHeuristic = finalizeResult(parseJava(path, text), QStringLiteral("heuristic"));
+            return annotateAnalysisWithProvenance(
+                mergeRecoveredAnalysis(finalizedAst,
+                                       finalizedHeuristic,
+                                       QStringLiteral("Heuristic recovery supplemented partial AST analysis.")),
+                QStringLiteral("recovered"),
+                QStringLiteral("medium"));
+        }
+        if (hasAstContent) {
             return finalizeResult(treeSitterResult, QStringLiteral("ast"));
         }
         return finalizeResult(parseJava(path, text), QStringLiteral("heuristic"));
@@ -2794,6 +2927,8 @@ QVariantMap SymbolParser::parsePython(const QString &path, const QString &text) 
                                 snippetFromLine(text, line, 2)));
     }
 
+    symbols = applySnippetCallRelations(symbols);
+
     result.insert(QStringLiteral("symbols"), symbols);
     result.insert(QStringLiteral("dependencies"), extractPythonDependencies(text));
     result.insert(QStringLiteral("routes"), extractPythonRoutes(path, text));
@@ -3048,6 +3183,8 @@ QVariantMap SymbolParser::parseJava(const QString &path, const QString &text) co
         symbols.append(makeSymbol(kind, name, line, QString(), members,
                                   snippetFromBraceBlock(text, match.capturedStart(0))));
     }
+
+    symbols = applySnippetCallRelations(symbols);
 
     result.insert(QStringLiteral("symbols"), symbols);
     result.insert(QStringLiteral("dependencies"), extractJavaDependencies(text));
