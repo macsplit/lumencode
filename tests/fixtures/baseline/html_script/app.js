@@ -1,0 +1,3 @@
+function boot() {
+  return "ready";
+}

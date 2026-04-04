@@ -1007,7 +1007,7 @@ Kirigami.ApplicationWindow {
                                                 "kind": modelData.kind || "class",
                                                 "name": modelData.name || "",
                                                 "path": modelData.path || "",
-                                                "language": "css",
+                                                "language": modelData.language || "css",
                                                 "line": modelData.line || 0,
                                                 "snippet": modelData.snippet || "",
                                                 "detail": "CSS class"
@@ -1052,10 +1052,12 @@ Kirigami.ApplicationWindow {
                                                 "kind": modelData.kind || "class",
                                                 "name": modelData.name || "",
                                                 "path": modelData.path || "",
-                                                "language": "css",
+                                                "language": modelData.language || "css",
                                                 "line": modelData.line || 0,
                                                 "snippet": modelData.snippet || "",
-                                                "detail": "Missing CSS class"
+                                                "detail": modelData.language === "html"
+                                                          ? "HTML class usage"
+                                                          : "Missing CSS class"
                                             })
                                         }
 

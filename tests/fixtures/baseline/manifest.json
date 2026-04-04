@@ -30,6 +30,18 @@
       ]
     },
     {
+      "name": "js_commonjs_alias_cross_file",
+      "root": "tests/fixtures/baseline/js_commonjs",
+      "file": "alias.js",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "runAlias",
+          "calls": ["wrapper"]
+        }
+      ]
+    },
+    {
       "name": "ts_module_same_file",
       "root": "tests/fixtures/baseline/ts_module",
       "file": "helper.ts",
@@ -54,6 +66,18 @@
         {
           "kind": "function",
           "name": "runTs",
+          "calls": ["wrapperTs"]
+        }
+      ]
+    },
+    {
+      "name": "ts_module_alias_cross_file",
+      "root": "tests/fixtures/baseline/ts_module",
+      "file": "alias.ts",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "runAliasTs",
           "calls": ["wrapperTs"]
         }
       ]
@@ -255,7 +279,26 @@
           "kind": "class",
           "name": "title"
         }
-      ]
+      ],
+      "file_expectations": {
+        "quick_links": 1,
+        "css_matched_classes": 2,
+        "css_missing_classes": 1
+      }
+    },
+    {
+      "name": "html_script_consumers",
+      "root": "tests/fixtures/baseline/html_script",
+      "file": "app.js",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "boot"
+        }
+      ],
+      "file_expectations": {
+        "quick_links": 1
+      }
     },
     {
       "name": "json_package_summary",

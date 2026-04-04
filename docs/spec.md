@@ -78,6 +78,7 @@ JavaScript and TypeScript:
 
 - Exported functions, `const`/`let`/`var` declarations, classes, methods.
 - CommonJS `require(...)` dependencies and ES module `import ... from ...` links.
+- Binding-aware cross-file relationship augmentation for named imports, aliased imports, and destructured CommonJS imports.
 - `module.exports` and `exports.*` API members, with improved export surfacing.
 - Express route handlers and middleware-style endpoints where detectable.
 - Related test files by naming convention.
@@ -94,11 +95,13 @@ HTML:
 - Linked scripts and stylesheets with improved path resolution.
 - CSS classes used in markup, with cross-highlighting against available CSS.
 - CSS class matches and misses now carry snippets into the detail flow and lower source pane.
+- HTML files are expected to expose linked local scripts/stylesheets as navigable quick links.
 
 CSS:
 
 - Class selectors and custom properties.
 - CSS file class inspection now uses rule-level snippets instead of one-token previews.
+- CSS files are also expected to surface reciprocal HTML consumer links and HTML-side matched/missing class usage when nearby HTML links them directly.
 
 Python:
 
@@ -161,6 +164,12 @@ When an HTML file and sibling CSS files are available:
 - Collect CSS class selectors from sibling CSS files.
 - Show matches and missing classes, with class names as snippets.
 
+When a CSS or local script file is selected and nearby HTML files link it directly:
+
+- Show inbound HTML consumer links in the right pane as `quickLinks`.
+- Reuse the same selection payload path so those HTML consumer entries can drive the lower pane.
+- For CSS specifically, show the HTML-side matched/missing class breakdown from linked consumer pages.
+
 ### 3.5 Node Project Features
 
 When a Node/CommonJS project is explored:
@@ -204,6 +213,7 @@ Current expectation:
 - relationship sections are shown in the right pane when the backend provides them
 - relationship entries are clickable and reuse the shared selection payload path
 - parity is still incomplete across languages and files, so missing or asymmetric relations are currently a known limitation rather than a UI bug
+- non-call web relationships should be modeled explicitly through quick links and CSS summaries rather than being forced into `Calls` / `Called By`
 
 ### 3.8 Robustness Contract
 

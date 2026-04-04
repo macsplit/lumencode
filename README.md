@@ -26,12 +26,17 @@ What currently works:
 - Keeping the right detail pane permanently visible as a stable inspector surface.
 - Showing a denser middle-pane overview with clickable top-level symbols and clickable nested member rows.
 - Showing `Calls` and `Called By` sections in the right detail pane where relationship data is available.
+- Resolving cross-file JS/TS/CommonJS relations more accurately, including aliased imports and destructured `require(...)` bindings.
 - Showing syntax-colored lower-pane snippets with internal highlighting rather than an external highlighting dependency.
 - Showing parser-aware diagnostics for supported snippet languages, while suppressing false errors for intentionally truncated previews.
 - Showing file previews in the lower pane when a file itself is selected.
 - Using an explicit snippet contract (`snippetKind`, `diagnosticsMode`) so preview excerpts are handled differently from standalone parseable code.
 - Surfacing CSS class matches/misses from HTML and allowing those entries to drive the lower pane.
 - Inspecting CSS classes directly from CSS files with rule-level snippets.
+- Surfacing reciprocal web-asset relationships:
+  - HTML files show linked scripts and stylesheets
+  - CSS files show inbound HTML consumer pages plus matched/missing HTML class usage
+  - local JS/TS-style script files show inbound HTML consumer pages when linked from `<script src=...>`
 - Improved CommonJS and Node/service-style repo analysis, including:
   - dependency extraction from `require(...)` and `import`
   - export surfacing for `module.exports`, `exports.*`, and ES modules
@@ -80,6 +85,7 @@ Phase 1. Stabilization
 - Continue broad CLI-driven regression sweeps against mixed real-world projects under `/home/user/Code`.
 - Keep growing the baseline fixture suite so each supported language or language-cluster has a small structural repro project checked into the repo.
 - Continue AST-backed parity work language by language, using CLI-first verification before GUI iteration.
+- Continue converting cross-file relationship work from name/snippet luck into explicit binding-aware or asset-aware models, especially for web projects.
 - Treat surfaced analysis warnings as investigation leads, not just acceptable noise: some will indicate algorithmic or integration weaknesses rather than merely large inputs.
 
 Phase 2. Better source inspection
@@ -91,6 +97,7 @@ Phase 2. Better source inspection
 - Tighten relationship extraction so `Calls` and `Called By` behave consistently and reciprocally across supported languages.
 - Add more genuinely useful inspector content for sparse symbol types, especially Swift functions, once the backend payloads are stable enough to trust.
 - Keep replacing snippet-luck relation detection with proper AST walks where real projects prove the bounded-snippet fallback is too weak, as happened with Python docstring-heavy files.
+- Decide what richer right-pane payload should exist for sparse Swift/function selections now that the pane is permanently present and relation/navigation data is becoming more reliable.
 
 Phase 3. Better usability
 
@@ -102,6 +109,7 @@ Phase 4. Broader project understanding
 
 - Improve Node/CommonJS and service-repo structure understanding further.
 - Refine HTML/CSS class analysis to reduce noisy matches/mismatches.
+- Keep extending the reciprocal web-asset model deliberately rather than forcing HTML/CSS into fake call-graph semantics.
 - Improve project-level summaries for package metadata, tests, and API artifacts.
 - Continue refining entrypoint selection on broad multi-project roots.
 
@@ -113,6 +121,7 @@ Phase 4. Broader project understanding
 - The new overview warnings are part of the intended safety model. They mean the app stayed responsive and returned a bounded result, but they should still be treated as prompts to inspect why that bound was hit.
 - Some project `mainEntry` guesses are still imperfect on broad mixed-language roots.
 - HTML/CSS class comparison can still be noisy on complex HTML documents.
+- Reciprocal web-asset links are now intentional product behavior, but they currently only scan nearby HTML files and do not yet model broader templating or multi-root asset pipelines.
 - Syntax highlighting is currently an internal lightweight implementation, not a full external highlighter.
 - Snippet diagnostics are intentionally conservative for truncated previews and are not a full linter.
 - The UI is materially improved and the current pane layout should be treated as the baseline, but still needs a stabilization and polish pass.

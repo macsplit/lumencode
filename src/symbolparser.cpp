@@ -506,6 +506,136 @@ static QString pythonCallTargetName(TSNode node, const QByteArray &source)
     return lastIdentifier(raw);
 }
 
+static QString javaCallableKeyForNode(TSNode node,
+                                      const QByteArray &source,
+                                      const QHash<QString, QVariantMap> &byKey)
+{
+    QVariantMap probe;
+    const QString type = QString::fromUtf8(ts_node_type(node));
+    if (type == QStringLiteral("method_declaration")) {
+        probe.insert(QStringLiteral("kind"), QStringLiteral("method"));
+        probe.insert(QStringLiteral("name"), nodeText(fieldNode(node, "name"), source).trimmed());
+        probe.insert(QStringLiteral("line"), nodeLine(node));
+    } else if (type == QStringLiteral("constructor_declaration")) {
+        probe.insert(QStringLiteral("kind"), QStringLiteral("constructor"));
+        probe.insert(QStringLiteral("name"), nodeText(fieldNode(node, "name"), source).trimmed());
+        probe.insert(QStringLiteral("line"), nodeLine(node));
+    }
+
+    const QString key = symbolKey(probe);
+    return byKey.contains(key) ? key : QString();
+}
+
+static QString javaCallTargetName(TSNode node, const QByteArray &source)
+{
+    const QString type = QString::fromUtf8(ts_node_type(node));
+    QString raw;
+    if (type == QStringLiteral("method_invocation")) {
+        raw = nodeText(fieldNode(node, "name"), source).trimmed();
+        if (raw.isEmpty()) {
+            raw = nodeText(fieldNode(node, "object"), source).trimmed();
+        }
+    } else if (type == QStringLiteral("object_creation_expression")) {
+        raw = nodeText(fieldNode(node, "type"), source).trimmed();
+    }
+
+    if (raw.isEmpty() && ts_node_named_child_count(node) > 0) {
+        raw = nodeText(ts_node_named_child(node, 0), source).trimmed();
+    }
+    return lastIdentifier(raw);
+}
+
+static QString csharpCallableKeyForNode(TSNode node,
+                                        const QByteArray &source,
+                                        const QHash<QString, QVariantMap> &byKey)
+{
+    QVariantMap probe;
+    const QString type = QString::fromUtf8(ts_node_type(node));
+    if (type == QStringLiteral("method_declaration")) {
+        probe.insert(QStringLiteral("kind"), QStringLiteral("method"));
+        probe.insert(QStringLiteral("name"), nodeText(fieldNode(node, "name"), source).trimmed());
+        probe.insert(QStringLiteral("line"), nodeLine(node));
+    } else if (type == QStringLiteral("constructor_declaration")) {
+        probe.insert(QStringLiteral("kind"), QStringLiteral("constructor"));
+        probe.insert(QStringLiteral("name"), nodeText(fieldNode(node, "name"), source).trimmed());
+        probe.insert(QStringLiteral("line"), nodeLine(node));
+    }
+
+    const QString key = symbolKey(probe);
+    return byKey.contains(key) ? key : QString();
+}
+
+static QString csharpCallTargetName(TSNode node, const QByteArray &source)
+{
+    const QString type = QString::fromUtf8(ts_node_type(node));
+    QString raw;
+    if (type == QStringLiteral("invocation_expression")) {
+        raw = nodeText(fieldNode(node, "function"), source).trimmed();
+        if (raw.isEmpty()) {
+            raw = nodeText(fieldNode(node, "expression"), source).trimmed();
+        }
+    } else if (type == QStringLiteral("object_creation_expression")) {
+        raw = nodeText(fieldNode(node, "type"), source).trimmed();
+    }
+
+    if (raw.isEmpty() && ts_node_named_child_count(node) > 0) {
+        raw = nodeText(ts_node_named_child(node, 0), source).trimmed();
+    }
+    return lastIdentifier(raw);
+}
+
+static QString rustCallableKeyForNode(TSNode node,
+                                      const QByteArray &source,
+                                      const QHash<QString, QVariantMap> &byKey)
+{
+    if (QString::fromUtf8(ts_node_type(node)) != QStringLiteral("function_item")) {
+        return QString();
+    }
+
+    const QString name = nodeText(fieldNode(node, "name"), source).trimmed();
+    const int line = nodeLine(node);
+
+    QStringList candidateKinds;
+    const TSNode parent = ts_node_parent(node);
+    const QString parentType = QString::fromUtf8(ts_node_type(parent));
+    if (parentType == QStringLiteral("declaration_list")) {
+        const TSNode grandParent = ts_node_parent(parent);
+        const QString grandParentType = QString::fromUtf8(ts_node_type(grandParent));
+        if (grandParentType == QStringLiteral("impl_item")
+            || grandParentType == QStringLiteral("trait_item")
+            || grandParentType == QStringLiteral("mod_item")) {
+            candidateKinds.append(QStringLiteral("method"));
+        }
+    }
+    candidateKinds.append(QStringLiteral("function"));
+
+    for (const QString &kind : std::as_const(candidateKinds)) {
+        QVariantMap probe;
+        probe.insert(QStringLiteral("kind"), kind);
+        probe.insert(QStringLiteral("name"), name);
+        probe.insert(QStringLiteral("line"), line);
+        const QString key = symbolKey(probe);
+        if (byKey.contains(key)) {
+            return key;
+        }
+    }
+
+    return QString();
+}
+
+static QString rustCallTargetName(TSNode node, const QByteArray &source)
+{
+    if (QString::fromUtf8(ts_node_type(node)) != QStringLiteral("call_expression")) {
+        return QString();
+    }
+
+    QString raw = nodeText(fieldNode(node, "function"), source).trimmed();
+    if (raw.isEmpty() && ts_node_named_child_count(node) > 0) {
+        raw = nodeText(ts_node_named_child(node, 0), source).trimmed();
+    }
+    return lastIdentifier(raw);
+}
+
 static QString jsCallableKeyForNode(TSNode node,
                                     const QByteArray &source,
                                     const QHash<QString, QVariantMap> &byKey,
@@ -610,6 +740,120 @@ static QSet<QString> scriptCallNamesFromSnippet(const QString &snippet)
     return names;
 }
 
+static QVariantMap makeImportBinding(const QString &localName, const QString &importedName)
+{
+    QVariantMap binding;
+    binding.insert(QStringLiteral("local"), localName.trimmed());
+    binding.insert(QStringLiteral("imported"), importedName.trimmed());
+    return binding;
+}
+
+static QVariantList parseNamedImportBindings(const QString &clause)
+{
+    QVariantList bindings;
+    QString inner = clause.trimmed();
+    if (inner.startsWith(QLatin1Char('{'))) {
+        inner.remove(0, 1);
+    }
+    if (inner.endsWith(QLatin1Char('}'))) {
+        inner.chop(1);
+    }
+
+    const QStringList parts = inner.split(QLatin1Char(','), Qt::SkipEmptyParts);
+    for (const QString &rawPart : parts) {
+        const QString part = rawPart.trimmed();
+        if (part.isEmpty()) {
+            continue;
+        }
+        const QStringList aliasParts = part.split(QRegularExpression(QStringLiteral(R"(\s+as\s+)")),
+                                                  Qt::SkipEmptyParts);
+        if (aliasParts.size() >= 2) {
+            bindings.append(makeImportBinding(aliasParts.at(1), aliasParts.at(0)));
+        } else {
+            bindings.append(makeImportBinding(part, part));
+        }
+    }
+
+    return bindings;
+}
+
+static QVariantList parseScriptImportBindingsFromStatement(const QString &statement)
+{
+    QVariantList bindings;
+    QRegularExpression importClausePattern(QStringLiteral(R"(^\s*import\s+(.+?)\s+from\s+['"])"),
+                                           QRegularExpression::DotMatchesEverythingOption);
+    const QRegularExpressionMatch clauseMatch = importClausePattern.match(statement);
+    if (!clauseMatch.hasMatch()) {
+        return bindings;
+    }
+
+    const QString clause = clauseMatch.captured(1).trimmed();
+    if (clause.isEmpty()) {
+        return bindings;
+    }
+
+    int braceStart = clause.indexOf(QLatin1Char('{'));
+    int braceEnd = clause.lastIndexOf(QLatin1Char('}'));
+    QString beforeBraces = clause;
+    if (braceStart >= 0 && braceEnd > braceStart) {
+        beforeBraces = clause.left(braceStart).trimmed();
+        const QVariantList named = parseNamedImportBindings(clause.mid(braceStart, braceEnd - braceStart + 1));
+        for (const QVariant &binding : named) {
+            bindings.append(binding);
+        }
+    }
+
+    QString prefix = beforeBraces;
+    if (prefix.endsWith(QLatin1Char(','))) {
+        prefix.chop(1);
+        prefix = prefix.trimmed();
+    }
+
+    if (prefix.startsWith(QStringLiteral("* as "))) {
+        bindings.append(makeImportBinding(prefix.mid(5).trimmed(), QStringLiteral("*")));
+    } else if (!prefix.isEmpty()) {
+        const QStringList prefixParts = prefix.split(QLatin1Char(','), Qt::SkipEmptyParts);
+        for (const QString &part : prefixParts) {
+            const QString local = part.trimmed();
+            if (!local.isEmpty()) {
+                bindings.append(makeImportBinding(local, QStringLiteral("default")));
+            }
+        }
+    }
+
+    return bindings;
+}
+
+static QVariantList parseRequireBindingsFromStatement(const QString &statement)
+{
+    QVariantList bindings;
+    QRegularExpression destructuredPattern(QStringLiteral(R"((?:const|let|var)\s*\{([^}]+)\}\s*=\s*require\s*\()"));
+    const QRegularExpressionMatch destructuredMatch = destructuredPattern.match(statement);
+    if (destructuredMatch.hasMatch()) {
+        const QStringList parts = destructuredMatch.captured(1).split(QLatin1Char(','), Qt::SkipEmptyParts);
+        for (const QString &rawPart : parts) {
+            const QString part = rawPart.trimmed();
+            if (part.isEmpty()) {
+                continue;
+            }
+            const QStringList aliasParts = part.split(QLatin1Char(':'), Qt::SkipEmptyParts);
+            if (aliasParts.size() >= 2) {
+                bindings.append(makeImportBinding(aliasParts.at(1), aliasParts.at(0)));
+            } else {
+                bindings.append(makeImportBinding(part, part));
+            }
+        }
+        return bindings;
+    }
+
+    QRegularExpression directPattern(QStringLiteral(R"((?:const|let|var)\s+([A-Za-z_]\w*)\s*=\s*require\s*\()"));
+    const QRegularExpressionMatch directMatch = directPattern.match(statement);
+    if (directMatch.hasMatch()) {
+        bindings.append(makeImportBinding(directMatch.captured(1), QStringLiteral("default")));
+    }
+    return bindings;
+}
+
 static bool canOwnCallRelations(const QString &kind)
 {
     return kind == QStringLiteral("function")
@@ -710,6 +954,8 @@ static QVariantMap findCssClassSummaryEntry(const QString &cssPath, const QStrin
         + QStringLiteral(" ...");
     return makeCssClassSummaryEntry(name, true, cssPath, line, snippet);
 }
+
+static QStringList extractHtmlLinkedAssets(const QString &htmlText, const QString &assetType);
 
 static int lineNumberAtOffset(const QString &text, int offset)
 {
@@ -1447,7 +1693,9 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
     QVariantList routes;
     QSet<QString> seenDependencies;
 
-    auto appendDependency = [&](const QString &target, const QString &type, int line, const QString &snippet = QString()) {
+    auto appendDependency = [&](const QString &target, const QString &type, int line,
+                                const QString &snippet = QString(),
+                                const QVariantList &bindings = QVariantList{}) {
         if (seenDependencies.contains(type + QLatin1Char('|') + target)) {
             return;
         }
@@ -1459,6 +1707,9 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
         item.insert(QStringLiteral("target"), target);
         item.insert(QStringLiteral("type"), type);
         item.insert(QStringLiteral("label"), target);
+        if (!bindings.isEmpty()) {
+            item.insert(QStringLiteral("bindings"), bindings);
+        }
 
         const QDir dir = QFileInfo(path).dir();
         if (target.startsWith(QStringLiteral("./")) || target.startsWith(QStringLiteral("../"))) {
@@ -1499,7 +1750,9 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
         if (originalType == QStringLiteral("import_statement")) {
             const TSNode sourceNode = fieldNode(originalNode, "source");
             const QString target = nodeValueText(sourceNode, source);
-            appendDependency(target, QStringLiteral("import"), nodeLine(originalNode), nodeSnippet(originalNode, source, 1));
+            appendDependency(target, QStringLiteral("import"), nodeLine(originalNode),
+                             nodeSnippet(originalNode, source, 1),
+                             parseScriptImportBindingsFromStatement(nodeText(originalNode, source)));
             continue;
         }
 
@@ -1507,7 +1760,9 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
             const TSNode sourceNode = fieldNode(originalNode, "source");
             if (!ts_node_is_null(sourceNode)) {
                 const QString target = nodeValueText(sourceNode, source);
-                appendDependency(target, QStringLiteral("export"), nodeLine(originalNode), nodeSnippet(originalNode, source, 1));
+                appendDependency(target, QStringLiteral("export"), nodeLine(originalNode),
+                                 nodeSnippet(originalNode, source, 1),
+                                 parseScriptImportBindingsFromStatement(nodeText(originalNode, source)));
             }
         }
 
@@ -1582,7 +1837,9 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
                             if (ts_node_named_child_count(arguments) > 0) {
                                 TSNode arg = ts_node_named_child(arguments, 0);
                                 const QString target = nodeValueText(arg, source);
-                                appendDependency(target, QStringLiteral("require"), nodeLine(valueNode), nodeSnippet(valueNode, source, 1));
+                            appendDependency(target, QStringLiteral("require"), nodeLine(valueNode),
+                                             nodeSnippet(valueNode, source, 1),
+                                             parseRequireBindingsFromStatement(nodeText(child, source)));
                             }
                         }
                     }
@@ -1635,7 +1892,9 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
                     if (ts_node_named_child_count(arguments) > 0) {
                         TSNode arg = ts_node_named_child(arguments, 0);
                         const QString target = nodeValueText(arg, source);
-                        appendDependency(target, QStringLiteral("require"), nodeLine(expression), nodeSnippet(expression, source, 1));
+                    appendDependency(target, QStringLiteral("require"), nodeLine(expression),
+                                     nodeSnippet(expression, source, 1),
+                                     parseRequireBindingsFromStatement(nodeText(child, source)));
                     }
                 } else if (functionName.contains(QStringLiteral("app.")) || functionName.contains(QStringLiteral("router."))) {
                     // Express route detection
@@ -1667,7 +1926,8 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
 
     QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), language);
     result.insert(QStringLiteral("symbols"), symbols);
-    
+    result.insert(QStringLiteral("quickLinks"), findHtmlConsumersForAsset(path, QStringLiteral("script")));
+
     // Merge Tree-sitter dependencies with regex as fallback
     QVariantList regexDeps = extractDependencyLinks(path, text);
     for (const QVariant &dep : regexDeps) {
@@ -1831,7 +2091,7 @@ QVariantMap SymbolParser::parseCssTreeSitter(const QString &path, const QString 
 
     QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("css"));
     result.insert(QStringLiteral("symbols"), symbols);
-    result.insert(QStringLiteral("summary"), QStringLiteral("%1 selectors and variables").arg(symbols.size()));
+    enrichCssAnalysisWithHtmlUsage(result, path, text);
     return result;
 }
 
@@ -2339,6 +2599,45 @@ QVariantMap SymbolParser::parseJavaTreeSitter(const QString &path, const QString
         }
     }
 
+    if (!symbols.isEmpty()) {
+        QHash<QString, QVariantMap> byKey;
+        QHash<QString, QStringList> keysByName;
+        QHash<QString, QVariantList> callsByKey;
+        QHash<QString, QVariantList> calledByByKey;
+        collectSymbolsByKey(symbols, byKey, keysByName);
+
+        std::function<void(TSNode, const QString &)> visit = [&](TSNode node, const QString &currentKey) {
+            QString activeKey = currentKey;
+            const QString nodeKey = javaCallableKeyForNode(node, source, byKey);
+            if (!nodeKey.isEmpty()) {
+                activeKey = nodeKey;
+            }
+
+            const QString nodeType = QString::fromUtf8(ts_node_type(node));
+            if (!activeKey.isEmpty()
+                && (nodeType == QStringLiteral("method_invocation")
+                    || nodeType == QStringLiteral("object_creation_expression"))) {
+                const QString targetName = javaCallTargetName(node, source);
+                const QStringList candidateKeys = keysByName.value(targetName);
+                if (!targetName.isEmpty() && !candidateKeys.isEmpty()) {
+                    const QString targetKey = bestRelationTargetKey(candidateKeys, byKey);
+                    if (targetKey != activeKey && byKey.contains(targetKey)) {
+                        appendUniqueRelation(callsByKey, activeKey, relationFromSymbol(byKey.value(targetKey)), QStringLiteral("calls"));
+                        appendUniqueRelation(calledByByKey, targetKey, relationFromSymbol(byKey.value(activeKey)), QStringLiteral("called by"));
+                    }
+                }
+            }
+
+            const uint32_t childCount = ts_node_named_child_count(node);
+            for (uint32_t index = 0; index < childCount; ++index) {
+                visit(ts_node_named_child(node, index), activeKey);
+            }
+        };
+
+        visit(root, QString());
+        symbols = applyRelationsToSymbols(symbols, callsByKey, calledByByKey);
+    }
+
     symbols = applySnippetCallRelations(symbols);
 
     ts_tree_delete(tree);
@@ -2601,6 +2900,45 @@ QVariantMap SymbolParser::parseCSharpTreeSitter(const QString &path, const QStri
 
     walkCSharpScope(root);
 
+    if (!symbols.isEmpty()) {
+        QHash<QString, QVariantMap> byKey;
+        QHash<QString, QStringList> keysByName;
+        QHash<QString, QVariantList> callsByKey;
+        QHash<QString, QVariantList> calledByByKey;
+        collectSymbolsByKey(symbols, byKey, keysByName);
+
+        std::function<void(TSNode, const QString &)> visit = [&](TSNode node, const QString &currentKey) {
+            QString activeKey = currentKey;
+            const QString nodeKey = csharpCallableKeyForNode(node, source, byKey);
+            if (!nodeKey.isEmpty()) {
+                activeKey = nodeKey;
+            }
+
+            const QString nodeType = QString::fromUtf8(ts_node_type(node));
+            if (!activeKey.isEmpty()
+                && (nodeType == QStringLiteral("invocation_expression")
+                    || nodeType == QStringLiteral("object_creation_expression"))) {
+                const QString targetName = csharpCallTargetName(node, source);
+                const QStringList candidateKeys = keysByName.value(targetName);
+                if (!targetName.isEmpty() && !candidateKeys.isEmpty()) {
+                    const QString targetKey = bestRelationTargetKey(candidateKeys, byKey);
+                    if (targetKey != activeKey && byKey.contains(targetKey)) {
+                        appendUniqueRelation(callsByKey, activeKey, relationFromSymbol(byKey.value(targetKey)), QStringLiteral("calls"));
+                        appendUniqueRelation(calledByByKey, targetKey, relationFromSymbol(byKey.value(activeKey)), QStringLiteral("called by"));
+                    }
+                }
+            }
+
+            const uint32_t childCount = ts_node_named_child_count(node);
+            for (uint32_t index = 0; index < childCount; ++index) {
+                visit(ts_node_named_child(node, index), activeKey);
+            }
+        };
+
+        visit(root, QString());
+        symbols = applyRelationsToSymbols(symbols, callsByKey, calledByByKey);
+    }
+
     symbols = applySnippetCallRelations(symbols);
 
     ts_tree_delete(tree);
@@ -2850,6 +3188,42 @@ QVariantMap SymbolParser::parseRustTreeSitter(const QString &path, const QString
                 appendDependency(name, QStringLiteral("module"), child);
             }
         }
+    }
+
+    if (!symbols.isEmpty()) {
+        QHash<QString, QVariantMap> byKey;
+        QHash<QString, QStringList> keysByName;
+        QHash<QString, QVariantList> callsByKey;
+        QHash<QString, QVariantList> calledByByKey;
+        collectSymbolsByKey(symbols, byKey, keysByName);
+
+        std::function<void(TSNode, const QString &)> visit = [&](TSNode node, const QString &currentKey) {
+            QString activeKey = currentKey;
+            const QString nodeKey = rustCallableKeyForNode(node, source, byKey);
+            if (!nodeKey.isEmpty()) {
+                activeKey = nodeKey;
+            }
+
+            if (!activeKey.isEmpty() && QString::fromUtf8(ts_node_type(node)) == QStringLiteral("call_expression")) {
+                const QString targetName = rustCallTargetName(node, source);
+                const QStringList candidateKeys = keysByName.value(targetName);
+                if (!targetName.isEmpty() && !candidateKeys.isEmpty()) {
+                    const QString targetKey = bestRelationTargetKey(candidateKeys, byKey);
+                    if (targetKey != activeKey && byKey.contains(targetKey)) {
+                        appendUniqueRelation(callsByKey, activeKey, relationFromSymbol(byKey.value(targetKey)), QStringLiteral("calls"));
+                        appendUniqueRelation(calledByByKey, targetKey, relationFromSymbol(byKey.value(activeKey)), QStringLiteral("called by"));
+                    }
+                }
+            }
+
+            const uint32_t childCount = ts_node_named_child_count(node);
+            for (uint32_t index = 0; index < childCount; ++index) {
+                visit(ts_node_named_child(node, index), activeKey);
+            }
+        };
+
+        visit(root, QString());
+        symbols = applyRelationsToSymbols(symbols, callsByKey, calledByByKey);
     }
 
     symbols = applySnippetCallRelations(symbols);
@@ -3273,7 +3647,7 @@ QVariantMap SymbolParser::parseScriptLike(const QString &path, const QString &te
     result.insert(QStringLiteral("fileName"), QFileInfo(path).fileName());
     result.insert(QStringLiteral("language"), reactMode ? QFileInfo(path).suffix().toLower() : QStringLiteral("script"));
     result.insert(QStringLiteral("symbols"), symbols);
-    result.insert(QStringLiteral("quickLinks"), QVariantList{});
+    result.insert(QStringLiteral("quickLinks"), findHtmlConsumersForAsset(path, QStringLiteral("script")));
     result.insert(QStringLiteral("dependencies"), extractDependencyLinks(path, text));
     result.insert(QStringLiteral("routes"), extractExpressRoutes(text));
     result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
@@ -3287,13 +3661,6 @@ QVariantMap SymbolParser::parseHtml(const QString &path, const QString &text) co
 {
     QVariantList links;
     QDir dir = QFileInfo(path).dir();
-
-    QRegularExpression scriptPattern(QStringLiteral(R"(<script[^>]+src=["']([^"']+)["'])"),
-                                     QRegularExpression::CaseInsensitiveOption);
-    QRegularExpression stylePattern(QStringLiteral(R"(<link[^>]+href=["']([^"']+)["'][^>]*rel=["'][^"']*stylesheet[^"']*["'])"),
-                                    QRegularExpression::CaseInsensitiveOption);
-    QRegularExpression alternateStylePattern(QStringLiteral(R"(<link[^>]+rel=["'][^"']*stylesheet[^"']*["'][^>]+href=["']([^"']+)["'])"),
-                                             QRegularExpression::CaseInsensitiveOption);
     QSet<QString> linkedCssFiles;
     bool hasLocalCssSource = false;
 
@@ -3318,24 +3685,16 @@ QVariantMap SymbolParser::parseHtml(const QString &path, const QString &text) co
         }
     };
 
-    auto scripts = scriptPattern.globalMatch(text);
-    while (scripts.hasNext()) {
-        const auto match = scripts.next();
-        const int line = lineNumberAtOffset(text, match.capturedStart(0));
-        collectLink(match.captured(1), QStringLiteral("script"), line, snippetFromLine(text, line, 1));
+    const QStringList scriptTargets = extractHtmlLinkedAssets(text, QStringLiteral("script"));
+    for (const QString &target : scriptTargets) {
+        const int line = lineNumberAtOffset(text, text.indexOf(target));
+        collectLink(target, QStringLiteral("script"), line, snippetFromLine(text, line, 1));
     }
 
-    auto styles = stylePattern.globalMatch(text);
-    while (styles.hasNext()) {
-        const auto match = styles.next();
-        const int line = lineNumberAtOffset(text, match.capturedStart(0));
-        collectLink(match.captured(1), QStringLiteral("stylesheet"), line, snippetFromLine(text, line, 1));
-    }
-    auto styles2 = alternateStylePattern.globalMatch(text);
-    while (styles2.hasNext()) {
-        const auto match = styles2.next();
-        const int line = lineNumberAtOffset(text, match.capturedStart(0));
-        collectLink(match.captured(1), QStringLiteral("stylesheet"), line, snippetFromLine(text, line, 1));
+    const QStringList stylesheetTargets = extractHtmlLinkedAssets(text, QStringLiteral("stylesheet"));
+    for (const QString &target : stylesheetTargets) {
+        const int line = lineNumberAtOffset(text, text.indexOf(target));
+        collectLink(target, QStringLiteral("stylesheet"), line, snippetFromLine(text, line, 1));
     }
 
     const QStringList usedClasses = extractHtmlClasses(text);
@@ -3440,13 +3799,11 @@ QVariantMap SymbolParser::parseCss(const QString &path, const QString &text) con
     result.insert(QStringLiteral("fileName"), QFileInfo(path).fileName());
     result.insert(QStringLiteral("language"), QStringLiteral("css"));
     result.insert(QStringLiteral("symbols"), symbols);
-    result.insert(QStringLiteral("quickLinks"), QVariantList{});
     result.insert(QStringLiteral("dependencies"), QVariantList{});
     result.insert(QStringLiteral("routes"), QVariantList{});
     result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
     result.insert(QStringLiteral("packageSummary"), QVariantMap{});
-    result.insert(QStringLiteral("cssSummary"), QVariantMap{});
-    result.insert(QStringLiteral("summary"), QStringLiteral("%1 selectors and variables").arg(symbols.size()));
+    enrichCssAnalysisWithHtmlUsage(result, path, text);
     return result;
 }
 
@@ -3719,6 +4076,246 @@ QStringList SymbolParser::extractHtmlClasses(const QString &text)
     return values;
 }
 
+static QStringList extractHtmlLinkedAssets(const QString &htmlText, const QString &assetType)
+{
+    QStringList assets;
+    QSet<QString> seen;
+
+    const QRegularExpression scriptPattern(QStringLiteral(R"(<script[^>]+src=["']([^"']+)["'])"),
+                                           QRegularExpression::CaseInsensitiveOption);
+    const QRegularExpression stylePattern(QStringLiteral(R"(<link[^>]+href=["']([^"']+)["'][^>]*rel=["'][^"']*stylesheet[^"']*["'])"),
+                                          QRegularExpression::CaseInsensitiveOption);
+    const QRegularExpression alternateStylePattern(QStringLiteral(R"(<link[^>]+rel=["'][^"']*stylesheet[^"']*["'][^>]+href=["']([^"']+)["'])"),
+                                                   QRegularExpression::CaseInsensitiveOption);
+
+    auto appendUnique = [&](const QString &value) {
+        if (!value.isEmpty() && !seen.contains(value)) {
+            seen.insert(value);
+            assets.append(value);
+        }
+    };
+
+    if (assetType == QStringLiteral("script")) {
+        auto scripts = scriptPattern.globalMatch(htmlText);
+        while (scripts.hasNext()) {
+            appendUnique(scripts.next().captured(1));
+        }
+        return assets;
+    }
+
+    auto styles = stylePattern.globalMatch(htmlText);
+    while (styles.hasNext()) {
+        appendUnique(styles.next().captured(1));
+    }
+
+    auto alternateStyles = alternateStylePattern.globalMatch(htmlText);
+    while (alternateStyles.hasNext()) {
+        appendUnique(alternateStyles.next().captured(1));
+    }
+
+    return assets;
+}
+
+void SymbolParser::enrichCssAnalysisWithHtmlUsage(QVariantMap &result, const QString &path, const QString &text)
+{
+    QVariantList quickLinks;
+    QVariantList matchedClasses;
+    QVariantList missingClasses;
+    QStringList usedClasses;
+    QSet<QString> seenQuickLinkPaths;
+    const QStringList extractedClasses = extractCssClasses(text);
+    const QSet<QString> cssClassNames(extractedClasses.cbegin(), extractedClasses.cend());
+    const QFileInfo cssInfo(path);
+    const QString absoluteCssPath = cssInfo.absoluteFilePath();
+    const QFileInfoList siblings = cssInfo.dir().entryInfoList({QStringLiteral("*.html"), QStringLiteral("*.htm")},
+                                                               QDir::Files | QDir::NoDotAndDotDot,
+                                                               QDir::Name);
+
+    for (const QFileInfo &htmlInfo : siblings) {
+        if (shouldSkipFileBySize(htmlInfo, kMaxAuxiliaryFileBytes)) {
+            continue;
+        }
+
+        QFile htmlFile(htmlInfo.absoluteFilePath());
+        if (!htmlFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            continue;
+        }
+
+        const QString htmlText = QString::fromUtf8(htmlFile.readAll());
+        const QStringList stylesheetTargets = extractHtmlLinkedAssets(htmlText, QStringLiteral("stylesheet"));
+        bool referencesThisCss = false;
+        for (const QString &target : stylesheetTargets) {
+            const bool isLocalTarget = target.startsWith(QStringLiteral("./"))
+                || target.startsWith(QStringLiteral("../"))
+                || target.startsWith(QLatin1Char('/'))
+                || (!target.contains(QStringLiteral("://")) && !target.startsWith(QStringLiteral("//")));
+            if (!isLocalTarget) {
+                continue;
+            }
+            const QString resolved = QDir::cleanPath(htmlInfo.dir().filePath(target));
+            if (QFileInfo(resolved).absoluteFilePath() == absoluteCssPath) {
+                referencesThisCss = true;
+                break;
+            }
+        }
+
+        if (!referencesThisCss) {
+            continue;
+        }
+
+        const QString htmlPath = htmlInfo.absoluteFilePath();
+        if (!seenQuickLinkPaths.contains(htmlPath)) {
+            seenQuickLinkPaths.insert(htmlPath);
+            int line = 1;
+            const int offset = htmlText.indexOf(cssInfo.fileName());
+            if (offset >= 0) {
+                line = lineNumberAtOffset(htmlText, offset);
+            }
+            QVariantMap link = makeSourceContextItem(path, QStringLiteral("css"), line,
+                                                     snippetFromLine(htmlText, line, 1),
+                                                     QStringLiteral("referenced by HTML file"));
+            link.insert(QStringLiteral("label"), htmlInfo.fileName());
+            link.insert(QStringLiteral("target"), htmlInfo.fileName());
+            link.insert(QStringLiteral("type"), QStringLiteral("consumer"));
+            link.insert(QStringLiteral("path"), htmlPath);
+            link.insert(QStringLiteral("targetPath"), htmlPath);
+            link.insert(QStringLiteral("language"), QStringLiteral("html"));
+            link.insert(QStringLiteral("exists"), true);
+            quickLinks.append(link);
+        }
+
+        const QStringList htmlClasses = extractHtmlClasses(htmlText);
+        for (const QString &className : htmlClasses) {
+            if (!usedClasses.contains(className)) {
+                usedClasses.append(className);
+            }
+            if (cssClassNames.contains(className)) {
+                QVariantMap entry = findCssClassSummaryEntry(path, text, className);
+                entry.insert(QStringLiteral("language"), QStringLiteral("css"));
+                bool exists = false;
+                for (const QVariant &existing : std::as_const(matchedClasses)) {
+                    if (existing.toMap().value(QStringLiteral("name")).toString() == className) {
+                        exists = true;
+                        break;
+                    }
+                }
+                if (!exists) {
+                    matchedClasses.append(entry);
+                }
+            } else {
+                QVariantMap missing = makeCssClassSummaryEntry(className, false, htmlPath, 0,
+                                                               QStringLiteral("Used in %1").arg(htmlInfo.fileName()));
+                missing.insert(QStringLiteral("language"), QStringLiteral("html"));
+                bool exists = false;
+                for (const QVariant &existing : std::as_const(missingClasses)) {
+                    if (existing.toMap().value(QStringLiteral("name")).toString() == className) {
+                        exists = true;
+                        break;
+                    }
+                }
+                if (!exists) {
+                    missingClasses.append(missing);
+                }
+            }
+        }
+    }
+
+    QVariantMap cssSummary;
+    if (!quickLinks.isEmpty() || !matchedClasses.isEmpty() || !missingClasses.isEmpty()) {
+        QStringList availableClasses = extractedClasses;
+        availableClasses.sort(Qt::CaseInsensitive);
+        usedClasses.sort(Qt::CaseInsensitive);
+        cssSummary.insert(QStringLiteral("usedClasses"), toVariantList(usedClasses));
+        cssSummary.insert(QStringLiteral("matchedClasses"), matchedClasses);
+        cssSummary.insert(QStringLiteral("missingClasses"), missingClasses);
+        cssSummary.insert(QStringLiteral("availableClasses"), toVariantList(availableClasses));
+    }
+
+    result.insert(QStringLiteral("quickLinks"), quickLinks);
+    result.insert(QStringLiteral("cssSummary"), cssSummary);
+
+    const int symbolCount = result.value(QStringLiteral("symbols")).toList().size();
+    result.insert(QStringLiteral("summary"),
+                  QStringLiteral("%1 selectors and variables, %2 HTML consumers")
+                      .arg(symbolCount)
+                      .arg(quickLinks.size()));
+}
+
+QVariantList SymbolParser::findHtmlConsumersForAsset(const QString &path, const QString &assetType)
+{
+    QVariantList quickLinks;
+    QSet<QString> seenQuickLinkPaths;
+    const QFileInfo assetInfo(path);
+    const QString absoluteAssetPath = assetInfo.absoluteFilePath();
+    const QString canonicalAssetPath = assetInfo.canonicalFilePath();
+    const QFileInfoList siblings = assetInfo.dir().entryInfoList({QStringLiteral("*.html"), QStringLiteral("*.htm")},
+                                                                 QDir::Files | QDir::NoDotAndDotDot,
+                                                                 QDir::Name);
+
+    for (const QFileInfo &htmlInfo : siblings) {
+        if (shouldSkipFileBySize(htmlInfo, kMaxAuxiliaryFileBytes)) {
+            continue;
+        }
+
+        QFile htmlFile(htmlInfo.absoluteFilePath());
+        if (!htmlFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            continue;
+        }
+
+        const QString htmlText = QString::fromUtf8(htmlFile.readAll());
+        const QStringList targets = extractHtmlLinkedAssets(htmlText, assetType);
+        bool referencesAsset = false;
+        for (const QString &target : targets) {
+            const bool isLocalTarget = target.startsWith(QStringLiteral("./"))
+                || target.startsWith(QStringLiteral("../"))
+                || target.startsWith(QLatin1Char('/'))
+                || (!target.contains(QStringLiteral("://")) && !target.startsWith(QStringLiteral("//")));
+            if (!isLocalTarget) {
+                continue;
+            }
+            const QString resolved = QDir::cleanPath(htmlInfo.dir().filePath(target));
+            const QFileInfo resolvedInfo(resolved);
+            const QString resolvedAbsolutePath = resolvedInfo.absoluteFilePath();
+            const QString resolvedCanonicalPath = resolvedInfo.canonicalFilePath();
+            if (resolvedAbsolutePath == absoluteAssetPath
+                || (!canonicalAssetPath.isEmpty() && resolvedCanonicalPath == canonicalAssetPath)
+                || resolvedInfo.fileName() == assetInfo.fileName()) {
+                referencesAsset = true;
+                break;
+            }
+        }
+
+        if (!referencesAsset) {
+            continue;
+        }
+
+        const QString htmlPath = htmlInfo.absoluteFilePath();
+        if (seenQuickLinkPaths.contains(htmlPath)) {
+            continue;
+        }
+        seenQuickLinkPaths.insert(htmlPath);
+
+        int line = 1;
+        const int offset = htmlText.indexOf(assetInfo.fileName());
+        if (offset >= 0) {
+            line = lineNumberAtOffset(htmlText, offset);
+        }
+        QVariantMap link = makeSourceContextItem(path, detectLanguage(path), line,
+                                                 snippetFromLine(htmlText, line, 1),
+                                                 QStringLiteral("referenced by HTML file"));
+        link.insert(QStringLiteral("label"), htmlInfo.fileName());
+        link.insert(QStringLiteral("target"), htmlInfo.fileName());
+        link.insert(QStringLiteral("type"), QStringLiteral("consumer"));
+        link.insert(QStringLiteral("path"), htmlPath);
+        link.insert(QStringLiteral("targetPath"), htmlPath);
+        link.insert(QStringLiteral("language"), QStringLiteral("html"));
+        link.insert(QStringLiteral("exists"), true);
+        quickLinks.append(link);
+    }
+
+    return quickLinks;
+}
+
 QStringList SymbolParser::extractCssClasses(const QString &text)
 {
     QSet<QString> classes;
@@ -3742,7 +4339,8 @@ QVariantList SymbolParser::extractDependencyLinks(const QString &path, const QSt
     const QDir dir = fileInfo.dir();
     const QString language = detectLanguage(path);
 
-    auto appendLink = [&](const QString &target, const QString &type, int line) {
+    auto appendLink = [&](const QString &target, const QString &type, int line,
+                          const QVariantList &bindings = QVariantList{}) {
         if (seen.contains(type + QLatin1Char('|') + target)) {
             return;
         }
@@ -3753,6 +4351,9 @@ QVariantList SymbolParser::extractDependencyLinks(const QString &path, const QSt
         item.insert(QStringLiteral("target"), target);
         item.insert(QStringLiteral("type"), type);
         item.insert(QStringLiteral("label"), target);
+        if (!bindings.isEmpty()) {
+            item.insert(QStringLiteral("bindings"), bindings);
+        }
 
         if (target.startsWith(QStringLiteral("./")) || target.startsWith(QStringLiteral("../"))) {
             QString resolved = QDir::cleanPath(dir.filePath(target));
@@ -3791,20 +4392,23 @@ QVariantList SymbolParser::extractDependencyLinks(const QString &path, const QSt
         links.append(item);
     };
 
-    QRegularExpression requirePattern(QStringLiteral(R"(require\s*\(\s*['"]([^'"]+)['"]\s*\))"));
+    QRegularExpression requirePattern(
+        QStringLiteral("(?:(?:const|let|var)\\s+[A-Za-z_{}\\s,:]+\\s*=\\s*)?require\\s*\\(\\s*['\\\"]([^'\\\"]+)['\\\"]\\s*\\)"));
     auto requireMatches = requirePattern.globalMatch(text);
     while (requireMatches.hasNext()) {
         const auto match = requireMatches.next();
         const int line = text.left(match.capturedStart(0)).count(QLatin1Char('\n')) + 1;
-        appendLink(match.captured(1), QStringLiteral("require"), line);
+        appendLink(match.captured(1), QStringLiteral("require"), line,
+                   parseRequireBindingsFromStatement(match.captured(0)));
     }
 
-    QRegularExpression importPattern(QStringLiteral(R"(import\s+[\s\S]*?\sfrom\s+['"]([^'"]+)['"])"));
+    QRegularExpression importPattern(QStringLiteral(R"(import\s+([\s\S]*?)\sfrom\s+['"]([^'"]+)['"])"));
     auto imports = importPattern.globalMatch(text);
     while (imports.hasNext()) {
         const auto match = imports.next();
         const int line = text.left(match.capturedStart(0)).count(QLatin1Char('\n')) + 1;
-        appendLink(match.captured(1), QStringLiteral("import"), line);
+        appendLink(match.captured(2), QStringLiteral("import"), line,
+                   parseScriptImportBindingsFromStatement(match.captured(0)));
     }
 
     return links;

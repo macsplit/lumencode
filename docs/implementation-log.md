@@ -2,6 +2,18 @@
 
 ## 2026-04-04
 
+- **Cross-File Relation Parity / Web Work:**
+    - Improved JS/TS/CommonJS cross-file relation augmentation so local alias bindings are respected instead of relying only on raw name matching.
+    - Added binding metadata for named imports, aliased imports, and destructured `require(...)` imports in script dependency payloads.
+    - Extended the project-side relationship augmentation to use those bindings when deriving cross-file `Calls` / `Called By` links.
+    - Added checked-in alias fixtures for TS module imports and CommonJS destructuring aliases.
+    - Added reciprocal web-asset inspector behavior:
+      - CSS files now show inbound HTML consumer links.
+      - CSS files now show HTML-side matched/missing class usage from linked nearby HTML files.
+      - Local script files now show inbound HTML consumer links when linked via `<script src=...>`.
+    - Updated the right-pane CSS class navigation so entries can point to HTML or CSS appropriately instead of assuming every class entry is CSS-backed.
+    - Added checked-in `html_script` fixture coverage and extended `html_css` fixture expectations so this web reciprocity model is regression-tested.
+
 - **Robustness / Overload Hardening:**
     - Added controller-side budgets for project relationship augmentation, including a time budget and limits on imported and incoming file analyses.
     - Added explicit `analysisNotices` and partial-analysis summaries so bounded work now surfaces as visible warnings instead of silent sparse output.
@@ -30,6 +42,7 @@
 - **Known Remaining Gap:**
     - Relation traversal is substantially better, but overall relation completeness still needs work across languages and cross-file shapes.
     - Swift functions still often leave the right inspector feeling sparse; useful additional symbol detail should be added later once backend payloads are more trustworthy.
+    - The next iteration should likely focus on richer useful inspector payloads for sparse Swift/function selections and on continuing to replace name/snippet-based relation luck with explicit AST- or model-driven logic.
     - Surfaced warnings are expected now under bounded degradation, but each one should still be treated as a lead for future optimization or parser/integration investigation rather than dismissed as inevitable.
 
 ## 2026-04-03

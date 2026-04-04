@@ -48,6 +48,8 @@ private:
     static QVariantList parseObjectMembers(const QString &body);
     static QStringList extractHtmlClasses(const QString &text);
     static QStringList extractCssClasses(const QString &text);
+    static QVariantList findHtmlConsumersForAsset(const QString &path, const QString &assetType);
+    static void enrichCssAnalysisWithHtmlUsage(QVariantMap &result, const QString &path, const QString &text);
     static QVariantList extractDependencyLinks(const QString &path, const QString &text);
     static QVariantList extractPythonDependencies(const QString &text);
     static QVariantList extractCppDependencies(const QString &path, const QString &text);

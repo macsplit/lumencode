@@ -25,6 +25,7 @@ The GUI now layers bounded asynchronous analysis on top of that helper path, so 
 - **Fixture Baselines**: `tests/fixtures/baseline/manifest.json` defines a checked-in multi-language fixture corpus for deterministic regression runs.
 - **Relation Checks**: The sweep now includes relation-presence checks and relation round-trip checks for languages where `Calls` / `Called By` should exist, while tolerating files that do not contain enough callable symbols to make that meaningful.
 - **Fixture Relation Coverage**: The checked-in fixture corpus now asserts concrete relation pairs for JS, TS, PHP, Swift, Python, Rust, Java, and C# rather than only symbol presence.
+- **Web Reciprocity Coverage**: The fixture corpus also asserts reciprocal HTML/CSS and HTML/script asset relationships so web-file inspector behavior stays deterministic.
 
 ## Testing Strategy
 
@@ -35,6 +36,7 @@ Test the `SymbolParser` against diverse file types to ensure correct symbol extr
 - **PHP**: `src/symbolparser.cpp` (for internal tests if available) and sample PHP files.
 - **TypeScript/JavaScript/JSX/TSX**: Utilized `it-tools` project (`src/router.ts`) for testing ES module imports, exports, and `vue-router` structure. Also tested CommonJS (`module.exports`) using `APIScraping/digest/urltomarkdown/url_to_markdown_processor.js`.
 - **HTML/CSS**: Tested with `Android2023/www/index.html` and associated CSS.
+- **Reciprocal Web Assets**: Checked-in fixtures now cover HTML -> CSS links, CSS -> HTML consumer links, HTML class matches/misses, and HTML -> script / script -> HTML consumer links.
 - **JSON**: Tested `package.json` for scripts and dependencies, and OpenAPI JSON for route definitions.
 - **Python**: Tested Flask-style routes and imports using `HardwareIoT/whisper-web-service/app.py`.
 - **Rust**: Tested `impl`, `mod`, `use`, and bounded snippets using `Gaming/sokoban-emoji/src/main.rs`.
@@ -63,6 +65,7 @@ Use the CLI in two layers:
 - Broader local-corpus sweeps under `/home/user/Code` to catch noisy or weak output on real projects.
 
 The fixture layer should stay small, structural, and intentional. It is where every supported language or language-cluster should eventually have at least one minimal project that exercises symbols, members, imports, exports, snippets, and relations where applicable.
+That includes non-call relationships where the product contract is still structural but not a call graph, such as HTML/CSS/script asset links.
 
 ### 5. Safety Regression Testing
 Exercise pathological inputs and failure-containment paths:
@@ -127,10 +130,12 @@ python3 tools/regression_sweep.py --max-files 24 --limit-per-project 3
 - `tools/regression_sweep.py` now also supports a manifest-driven fixture suite. `--fixtures-only` should be the quickest regression check before broader corpus runs.
 - `tools/regression_sweep.py` now resolves the active checkout path dynamically, so it can be run from `Coding/lumencode` without editing hard-coded repository paths.
 - The harness now follows relation targets through `selectSymbolByData` and verifies that reverse edges are present on the selected destination symbol.
+- The harness now also locks down reciprocal web-asset inspector behavior through checked-in fixtures instead of relying on ad hoc local repos.
 - The GUI now adds extra presentation behavior on top of the shared backend data, including lower-pane snippet rendering, compact snippet diagnostics, and CSS class drill-down behavior.
 - The GUI also adds async loading behavior and overview warnings on top of the shared backend data. When those warnings appear in normal use, they should be treated as prompts to investigate whether the limit is appropriate or the underlying algorithm is too expensive.
 - Project-summary regressions are also worth checking through the CLI because `mainEntry` scoring is still evolving for mixed-language roots.
 - Full GUI parity should not be assumed for purely visual concerns such as splitter layout, lightweight syntax coloring, or rich-text snippet presentation.
 - Relation parity should also not be assumed yet; `Calls` and `Called By` payloads are materially better than before, but remain incomplete and sometimes asymmetric on real projects.
+- Web-asset reciprocity is now a deliberate separate model: HTML/CSS/script links should be validated through `quickLinks` and CSS summaries, not through synthetic call edges.
 - Python now uses an AST walk for same-file call relations because bounded snippets were not sufficient on docstring-heavy real files. Similar upgrades are still on the table for other languages if the corpus sweep exposes the same pattern.
 - Remaining native parser rehabilitation should proceed through the CLI first: collect a crashing file, minimize the repro, verify whether the fault is in LumenCode integration or an upstream grammar/runtime, and only then reduce the fallback/isolation layers for that language.

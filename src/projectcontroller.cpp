@@ -129,6 +129,45 @@ bool isRelationshipCandidateFile(const QString &path)
         || suffix == QStringLiteral("cjs");
 }
 
+void collectSymbolRelations(const QVariantList &symbols,
+                            const QString &fallbackPath,
+                            const QString &fallbackLanguage,
+                            QHash<QString, QVariantMap> &relationsByName);
+
+QHash<QString, QString> dependencyBindingMap(const QVariantMap &dependency)
+{
+    QHash<QString, QString> bindings;
+    const QVariantList items = dependency.value(QStringLiteral("bindings")).toList();
+    for (const QVariant &entry : items) {
+        const QVariantMap binding = entry.toMap();
+        const QString local = binding.value(QStringLiteral("local")).toString().trimmed();
+        const QString imported = binding.value(QStringLiteral("imported")).toString().trimmed();
+        if (!local.isEmpty() && !imported.isEmpty()) {
+            bindings.insert(local, imported);
+        }
+    }
+    return bindings;
+}
+
+QVariantMap bindingMapToVariant(const QHash<QString, QString> &bindings)
+{
+    QVariantMap result;
+    for (auto it = bindings.cbegin(); it != bindings.cend(); ++it) {
+        result.insert(it.key(), it.value());
+    }
+    return result;
+}
+
+QHash<QString, QVariantMap> collectNamedRelations(const QVariantMap &analysis)
+{
+    QHash<QString, QVariantMap> relations;
+    collectSymbolRelations(analysis.value(QStringLiteral("symbols")).toList(),
+                           analysis.value(QStringLiteral("path")).toString(),
+                           analysis.value(QStringLiteral("language")).toString(),
+                           relations);
+    return relations;
+}
+
 QSet<QString> relationNamesFromSnippet(const QString &snippet)
 {
     static const QVector<QRegularExpression> patterns = {
@@ -280,6 +319,22 @@ QVariantMap parseAnalysisViaHelper(const QString &targetPath, int finishTimeoutM
     return result;
 }
 
+bool importedUsageMatches(const QVariantMap &relation, const QString &symbolName)
+{
+    const QSet<QString> relationNames = relationNamesFromSnippet(relation.value(QStringLiteral("snippet")).toString());
+    if (relationNames.contains(symbolName)) {
+        return true;
+    }
+
+    const QVariantMap bindingMap = relation.value(QStringLiteral("importBindingMap")).toMap();
+    for (const QString &localName : relationNames) {
+        if (bindingMap.value(localName).toString() == symbolName) {
+            return true;
+        }
+    }
+    return false;
+}
+
 QVariantMap makeLoadingAnalysisResult(const QString &path)
 {
     const QFileInfo info(path);
@@ -406,7 +461,7 @@ QVariantList augmentSymbolsWithRelationships(const QVariantList &symbols,
                 if (existingCallers.contains(relationName)) {
                     continue;
                 }
-                if (!relationNamesFromSnippet(relation.value(QStringLiteral("snippet")).toString()).contains(symbolName)) {
+                if (!importedUsageMatches(relation, symbolName)) {
                     continue;
                 }
                 QVariantMap caller = relation;
@@ -489,10 +544,46 @@ QVariantMap augmentAnalysisWithRelationships(const QVariantMap &analysis,
             continue;
         }
 
-        collectSymbolRelations(importedAnalysis.value(QStringLiteral("symbols")).toList(),
-                               importedAnalysis.value(QStringLiteral("path")).toString(),
-                               importedAnalysis.value(QStringLiteral("language")).toString(),
-                               importedSymbols);
+        const QHash<QString, QVariantMap> importedRelations = collectNamedRelations(importedAnalysis);
+        for (auto it = importedRelations.cbegin(); it != importedRelations.cend(); ++it) {
+            const QVariantMap existing = importedSymbols.value(it.key());
+            if (existing.isEmpty()
+                || relationKindPriority(it.value().value(QStringLiteral("kind")).toString())
+                    < relationKindPriority(existing.value(QStringLiteral("kind")).toString())) {
+                importedSymbols.insert(it.key(), it.value());
+            }
+        }
+
+        const QHash<QString, QString> bindingMap = dependencyBindingMap(dependency);
+        if (bindingMap.isEmpty()) {
+            continue;
+        }
+
+        for (auto it = bindingMap.cbegin(); it != bindingMap.cend(); ++it) {
+            const QString localName = it.key();
+            const QString importedName = it.value();
+            if (localName.isEmpty()) {
+                continue;
+            }
+
+            QVariantMap relation;
+            if (importedName != QStringLiteral("*")) {
+                relation = importedRelations.value(importedName);
+            }
+            if (relation.isEmpty() && importedName == QStringLiteral("default")) {
+                relation = importedRelations.value(localName);
+            }
+            if (relation.isEmpty()) {
+                continue;
+            }
+
+            const QVariantMap existing = importedSymbols.value(localName);
+            if (existing.isEmpty()
+                || relationKindPriority(relation.value(QStringLiteral("kind")).toString())
+                    < relationKindPriority(existing.value(QStringLiteral("kind")).toString())) {
+                importedSymbols.insert(localName, relation);
+            }
+        }
     }
 
     QVector<QPair<QString, QVariantMap>> incomingSymbols;
@@ -553,13 +644,23 @@ QVariantMap augmentAnalysisWithRelationships(const QVariantMap &analysis,
             continue;
         }
 
-        QHash<QString, QVariantMap> relations;
-        collectSymbolRelations(candidateAnalysis.value(QStringLiteral("symbols")).toList(),
-                               candidateAnalysis.value(QStringLiteral("path")).toString(),
-                               candidateAnalysis.value(QStringLiteral("language")).toString(),
-                               relations);
+        QHash<QString, QVariantMap> relations = collectNamedRelations(candidateAnalysis);
+        QHash<QString, QString> bindingMap;
+        for (const QVariant &dependencyEntry : candidateDependencies) {
+            const QVariantMap dependency = dependencyEntry.toMap();
+            if (QFileInfo(dependency.value(QStringLiteral("path")).toString()).absoluteFilePath() == selectedPath) {
+                const QHash<QString, QString> candidateBindings = dependencyBindingMap(dependency);
+                for (auto bindingIt = candidateBindings.cbegin(); bindingIt != candidateBindings.cend(); ++bindingIt) {
+                    bindingMap.insert(bindingIt.key(), bindingIt.value());
+                }
+            }
+        }
         for (auto relIt = relations.cbegin(); relIt != relations.cend(); ++relIt) {
-            incomingSymbols.append(qMakePair(candidatePath, relIt.value()));
+            QVariantMap relation = relIt.value();
+            if (!bindingMap.isEmpty()) {
+                relation.insert(QStringLiteral("importBindingMap"), bindingMapToVariant(bindingMap));
+            }
+            incomingSymbols.append(qMakePair(candidatePath, relation));
         }
     }
 
