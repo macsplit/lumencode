@@ -9,6 +9,8 @@ LumenCode is intentionally:
 - non-editing
 - non-Git-aware
 
+![Screenshot](screenshots/screenshot.png)
+
 ## Current State
 
 What currently works:
