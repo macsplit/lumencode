@@ -12,6 +12,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CLI_PATH = REPO_ROOT / "build" / "bin" / "lumencode-cli"
 CODE_ROOT = Path("/home/user/Code")
+DEFAULT_FIXTURE_MANIFEST = REPO_ROOT / "tests" / "fixtures" / "baseline" / "manifest.json"
 
 SUPPORTED_EXTENSIONS = {
     ".php", ".js", ".jsx", ".ts", ".tsx", ".py", ".java", ".cs", ".rs",
@@ -30,7 +31,7 @@ EXCLUDED_PARTS = {
 PRIMARY_KINDS = {"function", "method", "constructor", "class", "variable", "property", "module"}
 PRIMARY_SNIPPET_KINDS = {"line_excerpt", "block_excerpt", "exact_construct"}
 INVALID_MEMBER_NAMES = {"if", "for", "while", "switch", "catch", "function", "return", "else", "do", "try"}
-RELATION_EXPECTED_LANGUAGES = {"javascript", "typescript", "tsx", "php", "swift"}
+RELATION_EXPECTED_LANGUAGES = {"javascript", "typescript", "tsx", "php", "swift", "python", "rust", "java", "csharp"}
 CALLABLE_KINDS = {"function", "method", "constructor"}
 
 
@@ -216,6 +217,24 @@ def relation_names(symbol: dict, field: str) -> set[str]:
     }
 
 
+def iter_symbols(symbols: list[dict]):
+    stack = list(symbols)
+    while stack:
+        symbol = stack.pop()
+        yield symbol
+        stack.extend(symbol.get("members", []) or [])
+
+
+def find_symbol(symbols: list[dict], name: str, kind: str | None = None) -> dict | None:
+    for symbol in iter_symbols(symbols):
+        if symbol.get("name", "") != name:
+            continue
+        if kind and symbol.get("kind", "") != kind:
+            continue
+        return symbol
+    return None
+
+
 def validate_relation_roundtrip(file_path: Path, parsed: dict, owner: dict, issues: list[dict], context: str) -> None:
     owner_name = owner.get("name", "")
     if not owner_name:
@@ -356,22 +375,120 @@ def inspect_file(file_path: Path, issues: list[dict]) -> None:
             add_issue(issues, "route_selection_failure", file_path, name=route.get("label", route.get("path", "")), message=str(exc))
 
 
+def inspect_fixture_case(case: dict, issues: list[dict]) -> None:
+    root = (REPO_ROOT / case["root"]).resolve()
+    file_path = (root / case["file"]).resolve()
+    case_name = case.get("name", str(file_path))
+
+    try:
+        state = run_cli_commands([
+            {"command": "setRootPath", "params": {"path": str(root)}},
+            {"command": "selectPath", "params": {"path": str(file_path)}},
+        ])
+    except Exception as exc:
+        add_issue(issues, "fixture_selection_failure", file_path, case=case_name, message=str(exc))
+        return
+
+    parsed = state.get("selectedFileData", {}) or {}
+    symbols = parsed.get("symbols", []) or []
+    expected_symbols = case.get("expectations", [])
+    file_expectations = case.get("file_expectations", {})
+
+    if not symbols and expected_symbols:
+        add_issue(issues, "fixture_no_symbols", file_path, case=case_name)
+        return
+
+    if "quick_links" in file_expectations:
+        actual = len(parsed.get("quickLinks", []) or [])
+        if actual < int(file_expectations["quick_links"]):
+            add_issue(issues, "fixture_missing_quick_links", file_path, case=case_name, expected=file_expectations["quick_links"], actual=actual)
+
+    if "dependencies" in file_expectations:
+        actual = len(parsed.get("dependencies", []) or [])
+        if actual < int(file_expectations["dependencies"]):
+            add_issue(issues, "fixture_missing_dependencies", file_path, case=case_name, expected=file_expectations["dependencies"], actual=actual)
+
+    if "routes" in file_expectations:
+        actual = len(parsed.get("routes", []) or [])
+        if actual < int(file_expectations["routes"]):
+            add_issue(issues, "fixture_missing_routes", file_path, case=case_name, expected=file_expectations["routes"], actual=actual)
+
+    if "css_matched_classes" in file_expectations:
+        css_summary = parsed.get("cssSummary", {}) or {}
+        actual = len(css_summary.get("matchedClasses", []) or [])
+        if actual < int(file_expectations["css_matched_classes"]):
+            add_issue(issues, "fixture_missing_css_matches", file_path, case=case_name, expected=file_expectations["css_matched_classes"], actual=actual)
+
+    if "css_missing_classes" in file_expectations:
+        css_summary = parsed.get("cssSummary", {}) or {}
+        actual = len(css_summary.get("missingClasses", []) or [])
+        if actual < int(file_expectations["css_missing_classes"]):
+            add_issue(issues, "fixture_missing_css_gaps", file_path, case=case_name, expected=file_expectations["css_missing_classes"], actual=actual)
+
+    if "package_scripts" in file_expectations:
+        package_summary = parsed.get("packageSummary", {}) or {}
+        actual = len((package_summary.get("scripts", {}) or {}).keys())
+        if actual < int(file_expectations["package_scripts"]):
+            add_issue(issues, "fixture_missing_package_scripts", file_path, case=case_name, expected=file_expectations["package_scripts"], actual=actual)
+
+    for expectation in expected_symbols:
+        symbol = find_symbol(symbols, expectation["name"], expectation.get("kind"))
+        if not symbol:
+            add_issue(issues, "fixture_missing_symbol", file_path, case=case_name, name=expectation["name"], kind=expectation.get("kind", ""))
+            continue
+
+        for field in ("calls", "calledBy"):
+            expected_names = set(expectation.get(field, []))
+            if not expected_names:
+                continue
+            actual_names = relation_names(symbol, field)
+            missing = sorted(expected_names - actual_names)
+            if missing:
+                add_issue(
+                    issues,
+                    "fixture_missing_relation",
+                    file_path,
+                    case=case_name,
+                    symbol=expectation["name"],
+                    relation_type=field,
+                    missing=missing,
+                )
+
+        validate_relation_roundtrip(file_path, parsed, symbol, issues, context=f"fixture:{case_name}:{expectation['name']}")
+
+
+def load_fixture_cases(manifest_path: Path) -> list[dict]:
+    if not manifest_path.exists():
+        return []
+    return json.loads(manifest_path.read_text()).get("cases", [])
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run lumencode regression probes across sampled projects.")
     parser.add_argument("--limit-per-project", type=int, default=6)
     parser.add_argument("--max-files", type=int, default=100)
+    parser.add_argument("--fixture-manifest", type=Path, default=DEFAULT_FIXTURE_MANIFEST)
+    parser.add_argument("--fixtures-only", action="store_true")
     args = parser.parse_args()
 
     if not CLI_PATH.exists():
         print(json.dumps({"error": f"CLI not found at {CLI_PATH}"}))
         return 1
 
-    files = discover_candidates(limit_per_project=args.limit_per_project, max_files=args.max_files)
     issues: list[dict] = []
-    for file_path in files:
-        inspect_file(file_path, issues)
+    fixture_cases = load_fixture_cases(args.fixture_manifest)
+    for case in fixture_cases:
+        inspect_fixture_case(case, issues)
+
+    files: list[Path] = []
+    if not args.fixtures_only:
+        files = discover_candidates(limit_per_project=args.limit_per_project, max_files=args.max_files)
+        for file_path in files:
+            inspect_file(file_path, issues)
 
     summary = {
+        "fixture_manifest": str(args.fixture_manifest),
+        "fixture_cases": len(fixture_cases),
         "files_tested": len(files),
         "limit_per_project": args.limit_per_project,
         "max_files": args.max_files,

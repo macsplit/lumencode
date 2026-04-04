@@ -40,7 +40,9 @@ What currently works:
 - A crash-isolated file-analysis path: GUI selection now shells out to `lumencode-cli --dump-file`, so parser crashes terminate the helper instead of the main app.
 - CLI state now exposes the active lower-pane snippet payload, and interactive mode can select arbitrary source-context payloads for GUI-parity checks.
 - A regression sweep harness at `tools/regression_sweep.py` that samples local projects, drives the CLI selection path, and validates snippet/diagnostic contracts across languages.
-- The regression sweep now runs against the current checkout path, includes Swift files, and performs basic relation-presence checks for supported languages.
+- A baseline fixture suite under `tests/fixtures/baseline/` with a manifest-driven set of small language-specific projects for deterministic regression coverage.
+- The regression sweep now supports `--fixtures-only`, validates relation round-trips through the interactive selection path, and treats the fixture suite as the first stability gate before broader real-repo sweeps.
+- Same-file `Calls` / `Called By` parity checks now cover Swift, PHP, JS/TS, Python, Rust, Java, and C# in the baseline fixture suite.
 - Project-level summaries including file type counts and main entry-point detection.
 - Installing a desktop launcher and scalable app icon through `cmake --install`.
 - Stable-enough backend payloads for the current QML bindings.
@@ -71,6 +73,7 @@ Phase 1. Stabilization
 - Harden all selection payloads so every detail section is safe to bind.
 - Reduce misleading or noisy structural output on real projects.
 - Continue broad CLI-driven regression sweeps against mixed real-world projects under `/home/user/Code`.
+- Keep growing the baseline fixture suite so each supported language or language-cluster has a small structural repro project checked into the repo.
 - Continue AST-backed parity work language by language, using CLI-first verification before GUI iteration.
 
 Phase 2. Better source inspection
@@ -80,6 +83,8 @@ Phase 2. Better source inspection
 - Support clearer line-focused navigation and open-in-editor behavior from overview/detail items into the lower pane.
 - Rehabilitate the native Tree-sitter-backed parser paths language by language, using the new crash-isolated CLI flow and minimized repro files. Keep fallback and helper isolation in place until those native paths prove stable.
 - Tighten relationship extraction so `Calls` and `Called By` behave consistently and reciprocally across supported languages.
+- Add more genuinely useful inspector content for sparse symbol types, especially Swift functions, once the backend payloads are stable enough to trust.
+- Keep replacing snippet-luck relation detection with proper AST walks where real projects prove the bounded-snippet fallback is too weak, as happened with Python docstring-heavy files.
 
 Phase 3. Better usability
 
@@ -97,8 +102,8 @@ Phase 4. Broader project understanding
 ## Known Issues
 
 - Some extracted structure is still shallow or misleading on real projects.
-- Some languages still rely on heuristic fallback paths for parts of the overview, especially when native parser paths have been bypassed for stability.
-- `Calls` / `Called By` support has improved, but is still incomplete and not always reciprocal after drilling across symbols.
+- Some languages still rely on heuristic fallback paths for parts of the overview, especially when native parser paths have been bypassed for stability. Plain JS/JSX currently still use the heuristic parser path for stability, while TS/TSX remain Tree-sitter-backed.
+- `Calls` / `Called By` support has improved and relation clicks now rehydrate into full destination symbols, but the overall graph is still incomplete and not yet uniformly reciprocal across all languages and project shapes.
 - Some project `mainEntry` guesses are still imperfect on broad mixed-language roots.
 - HTML/CSS class comparison can still be noisy on complex HTML documents.
 - Syntax highlighting is currently an internal lightweight implementation, not a full external highlighter.

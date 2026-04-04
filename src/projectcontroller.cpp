@@ -162,6 +162,37 @@ QVariantMap makeRelationFromSymbol(const QVariantMap &symbol,
     return relation;
 }
 
+int relationKindPriority(const QString &kind)
+{
+    if (kind == QStringLiteral("function")
+        || kind == QStringLiteral("method")
+        || kind == QStringLiteral("constructor")
+        || kind == QStringLiteral("initializer")
+        || kind == QStringLiteral("hook")
+        || kind == QStringLiteral("component")) {
+        return 0;
+    }
+    if (kind == QStringLiteral("class")
+        || kind == QStringLiteral("struct")
+        || kind == QStringLiteral("enum")
+        || kind == QStringLiteral("protocol")
+        || kind == QStringLiteral("trait")
+        || kind == QStringLiteral("interface")
+        || kind == QStringLiteral("type")) {
+        return 1;
+    }
+    if (kind == QStringLiteral("module")) {
+        return 2;
+    }
+    if (kind == QStringLiteral("variable")) {
+        return 3;
+    }
+    if (kind == QStringLiteral("property")) {
+        return 4;
+    }
+    return 5;
+}
+
 void collectSymbolRelations(const QVariantList &symbols,
                             const QString &fallbackPath,
                             const QString &fallbackLanguage,
@@ -171,7 +202,13 @@ void collectSymbolRelations(const QVariantList &symbols,
         const QVariantMap symbol = entry.toMap();
         const QString name = symbol.value(QStringLiteral("name")).toString();
         if (!name.isEmpty()) {
-            relationsByName.insert(name, makeRelationFromSymbol(symbol, fallbackPath, fallbackLanguage));
+            const QVariantMap candidate = makeRelationFromSymbol(symbol, fallbackPath, fallbackLanguage);
+            const QVariantMap existing = relationsByName.value(name);
+            if (existing.isEmpty()
+                || relationKindPriority(candidate.value(QStringLiteral("kind")).toString())
+                    < relationKindPriority(existing.value(QStringLiteral("kind")).toString())) {
+                relationsByName.insert(name, candidate);
+            }
         }
 
         const QVariantList members = symbol.value(QStringLiteral("members")).toList();

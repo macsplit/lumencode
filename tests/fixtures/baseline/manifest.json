@@ -1,0 +1,270 @@
+{
+  "cases": [
+    {
+      "name": "js_commonjs_same_file",
+      "root": "tests/fixtures/baseline/js_commonjs",
+      "file": "helper.js",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "wrapper",
+          "calls": ["helper"]
+        },
+        {
+          "kind": "function",
+          "name": "helper",
+          "calledBy": ["wrapper"]
+        }
+      ]
+    },
+    {
+      "name": "js_commonjs_cross_file",
+      "root": "tests/fixtures/baseline/js_commonjs",
+      "file": "main.js",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "run",
+          "calls": ["wrapper"]
+        }
+      ]
+    },
+    {
+      "name": "ts_module_same_file",
+      "root": "tests/fixtures/baseline/ts_module",
+      "file": "helper.ts",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "wrapperTs",
+          "calls": ["helperTs"]
+        },
+        {
+          "kind": "function",
+          "name": "helperTs",
+          "calledBy": ["wrapperTs"]
+        }
+      ]
+    },
+    {
+      "name": "ts_module_cross_file",
+      "root": "tests/fixtures/baseline/ts_module",
+      "file": "main.ts",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "runTs",
+          "calls": ["wrapperTs"]
+        }
+      ]
+    },
+    {
+      "name": "php_basic_same_file",
+      "root": "tests/fixtures/baseline/php_basic",
+      "file": "helper.php",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "helper_wrapper",
+          "calls": ["helper_value"]
+        },
+        {
+          "kind": "function",
+          "name": "helper_value",
+          "calledBy": ["helper_wrapper"]
+        }
+      ]
+    },
+    {
+      "name": "swift_basic_same_file",
+      "root": "tests/fixtures/baseline/swift_basic",
+      "file": "App.swift",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "openFolder",
+          "calls": ["loadProject"]
+        },
+        {
+          "kind": "function",
+          "name": "loadProject",
+          "calledBy": ["openFolder"]
+        }
+      ]
+    },
+    {
+      "name": "python_basic_relations",
+      "root": "tests/fixtures/baseline/python_basic",
+      "file": "sample.py",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "helper_py"
+        },
+        {
+          "kind": "function",
+          "name": "outer_py",
+          "calls": ["helper_py"]
+        },
+        {
+          "kind": "class",
+          "name": "Worker"
+        },
+        {
+          "kind": "method",
+          "name": "run",
+          "calls": ["helper_py"]
+        },
+        {
+          "kind": "function",
+          "name": "helper_py",
+          "calledBy": ["outer_py", "run"]
+        }
+      ]
+    },
+    {
+      "name": "rust_basic_relations",
+      "root": "tests/fixtures/baseline/rust_basic",
+      "file": "main.rs",
+      "expectations": [
+        {
+          "kind": "struct",
+          "name": "Greeter"
+        },
+        {
+          "kind": "function",
+          "name": "helper_rs"
+        },
+        {
+          "kind": "function",
+          "name": "main"
+        },
+        {
+          "kind": "method",
+          "name": "greet",
+          "calls": ["helper_rs"]
+        },
+        {
+          "kind": "function",
+          "name": "helper_rs",
+          "calledBy": ["greet", "main"]
+        }
+      ]
+    },
+    {
+      "name": "java_basic_relations",
+      "root": "tests/fixtures/baseline/java_basic",
+      "file": "Sample.java",
+      "expectations": [
+        {
+          "kind": "class",
+          "name": "Sample"
+        },
+        {
+          "kind": "constructor",
+          "name": "Sample"
+        },
+        {
+          "kind": "method",
+          "name": "greet",
+          "calls": ["helper"]
+        },
+        {
+          "kind": "method",
+          "name": "helper",
+          "calledBy": ["greet"]
+        }
+      ]
+    },
+    {
+      "name": "csharp_basic_relations",
+      "root": "tests/fixtures/baseline/csharp_basic",
+      "file": "Sample.cs",
+      "expectations": [
+        {
+          "kind": "class",
+          "name": "Sample"
+        },
+        {
+          "kind": "constructor",
+          "name": "Sample"
+        },
+        {
+          "kind": "method",
+          "name": "Greet",
+          "calls": ["Helper"]
+        },
+        {
+          "kind": "method",
+          "name": "Helper",
+          "calledBy": ["Greet"]
+        }
+      ]
+    },
+    {
+      "name": "cpp_basic_symbols",
+      "root": "tests/fixtures/baseline/cpp_basic",
+      "file": "sample.cpp",
+      "expectations": [
+        {
+          "kind": "class",
+          "name": "Sample"
+        },
+        {
+          "kind": "function",
+          "name": "helper_cpp"
+        }
+      ]
+    },
+    {
+      "name": "objc_basic_symbols",
+      "root": "tests/fixtures/baseline/objc_basic",
+      "file": "Sample.m",
+      "expectations": [
+        {
+          "kind": "class",
+          "name": "Sample"
+        },
+        {
+          "kind": "method",
+          "name": "greet"
+        }
+      ]
+    },
+    {
+      "name": "html_css_links",
+      "root": "tests/fixtures/baseline/html_css",
+      "file": "index.html",
+      "expectations": [],
+      "file_expectations": {
+        "quick_links": 1,
+        "css_matched_classes": 2,
+        "css_missing_classes": 1
+      }
+    },
+    {
+      "name": "css_basic_symbols",
+      "root": "tests/fixtures/baseline/html_css",
+      "file": "styles.css",
+      "expectations": [
+        {
+          "kind": "class",
+          "name": "hero"
+        },
+        {
+          "kind": "class",
+          "name": "title"
+        }
+      ]
+    },
+    {
+      "name": "json_package_summary",
+      "root": "tests/fixtures/baseline/json_package",
+      "file": "package.json",
+      "expectations": [],
+      "file_expectations": {
+        "package_scripts": 2
+      }
+    }
+  ]
+}

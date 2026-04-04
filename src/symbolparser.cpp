@@ -210,6 +210,55 @@ static QVariantMap relationFromSymbol(const QVariantMap &symbol)
     return relation;
 }
 
+static int relationKindPriority(const QString &kind)
+{
+    if (kind == QStringLiteral("function")
+        || kind == QStringLiteral("method")
+        || kind == QStringLiteral("constructor")
+        || kind == QStringLiteral("initializer")
+        || kind == QStringLiteral("hook")
+        || kind == QStringLiteral("component")) {
+        return 0;
+    }
+    if (kind == QStringLiteral("class")
+        || kind == QStringLiteral("struct")
+        || kind == QStringLiteral("enum")
+        || kind == QStringLiteral("protocol")
+        || kind == QStringLiteral("trait")
+        || kind == QStringLiteral("interface")
+        || kind == QStringLiteral("type")) {
+        return 1;
+    }
+    if (kind == QStringLiteral("module")) {
+        return 2;
+    }
+    if (kind == QStringLiteral("variable")) {
+        return 3;
+    }
+    if (kind == QStringLiteral("property")) {
+        return 4;
+    }
+    return 5;
+}
+
+static QString bestRelationTargetKey(const QStringList &candidateKeys,
+                                     const QHash<QString, QVariantMap> &byKey)
+{
+    QString bestKey;
+    int bestPriority = std::numeric_limits<int>::max();
+
+    for (const QString &candidateKey : candidateKeys) {
+        const QVariantMap candidate = byKey.value(candidateKey);
+        const int priority = relationKindPriority(candidate.value(QStringLiteral("kind")).toString());
+        if (priority < bestPriority) {
+            bestPriority = priority;
+            bestKey = candidateKey;
+        }
+    }
+
+    return bestKey;
+}
+
 static void collectSymbolsByKey(const QVariantList &symbols,
                                 QHash<QString, QVariantMap> &byKey,
                                 QHash<QString, QStringList> &keysByName)
@@ -405,6 +454,229 @@ static QString phpCallTargetName(TSNode node, const QByteArray &source)
         raw = nodeText(ts_node_named_child(node, 0), source).trimmed();
     }
     return lastIdentifier(raw);
+}
+
+static QString pythonCallableKeyForNode(TSNode node,
+                                        const QByteArray &source,
+                                        const QHash<QString, QVariantMap> &byKey)
+{
+    if (QString::fromUtf8(ts_node_type(node)) != QStringLiteral("function_definition")) {
+        return QString();
+    }
+
+    const QString name = firstIdentifier(nodeText(fieldNode(node, "name"), source).trimmed());
+    const int line = nodeLine(node);
+    const TSNode classAncestor = firstAncestorOfType(ts_node_parent(node), {"class_definition"});
+    const TSNode decoratedAncestor = firstAncestorOfType(ts_node_parent(node), {"decorated_definition"});
+
+    QStringList candidateKinds;
+    if (!ts_node_is_null(classAncestor)) {
+        if (!ts_node_is_null(decoratedAncestor)
+            && nodeText(decoratedAncestor, source).contains(QStringLiteral("@property"))) {
+            candidateKinds.append(QStringLiteral("property"));
+        }
+        candidateKinds.append(QStringLiteral("method"));
+    }
+    candidateKinds.append(QStringLiteral("function"));
+
+    for (const QString &kind : std::as_const(candidateKinds)) {
+        QVariantMap probe;
+        probe.insert(QStringLiteral("kind"), kind);
+        probe.insert(QStringLiteral("name"), name);
+        probe.insert(QStringLiteral("line"), line);
+        const QString key = symbolKey(probe);
+        if (byKey.contains(key)) {
+            return key;
+        }
+    }
+
+    return QString();
+}
+
+static QString pythonCallTargetName(TSNode node, const QByteArray &source)
+{
+    if (QString::fromUtf8(ts_node_type(node)) != QStringLiteral("call")) {
+        return QString();
+    }
+
+    QString raw = nodeText(fieldNode(node, "function"), source).trimmed();
+    if (raw.isEmpty() && ts_node_named_child_count(node) > 0) {
+        raw = nodeText(ts_node_named_child(node, 0), source).trimmed();
+    }
+    return lastIdentifier(raw);
+}
+
+static QString jsCallableKeyForNode(TSNode node,
+                                    const QByteArray &source,
+                                    const QHash<QString, QVariantMap> &byKey,
+                                    bool reactMode)
+{
+    const QString type = QString::fromUtf8(ts_node_type(node));
+    QVariantMap probe;
+
+    if (type == QStringLiteral("function_declaration")
+        || type == QStringLiteral("generator_function_declaration")) {
+        const QString name = firstIdentifier(nodeText(fieldNode(node, "name"), source).trimmed());
+        probe.insert(QStringLiteral("kind"),
+                     (!name.isEmpty() && name.startsWith(QStringLiteral("use")))
+                         ? QStringLiteral("hook")
+                         : (reactMode && !name.isEmpty() && name.at(0).isUpper()
+                                ? QStringLiteral("component")
+                                : QStringLiteral("function")));
+        probe.insert(QStringLiteral("name"), name);
+        probe.insert(QStringLiteral("line"), nodeLine(node));
+    } else if (type == QStringLiteral("method_definition")) {
+        probe.insert(QStringLiteral("kind"), QStringLiteral("method"));
+        probe.insert(QStringLiteral("name"), firstIdentifier(nodeText(fieldNode(node, "name"), source).trimmed()));
+        probe.insert(QStringLiteral("line"), nodeLine(node));
+    } else if (type == QStringLiteral("variable_declarator")) {
+        const QString name = firstIdentifier(nodeText(fieldNode(node, "name"), source).trimmed());
+        const TSNode valueNode = fieldNode(node, "value");
+        const QString valueType = QString::fromUtf8(ts_node_type(valueNode));
+        if (valueType == QStringLiteral("arrow_function")
+            || valueType == QStringLiteral("function")
+            || valueType == QStringLiteral("function_expression")) {
+            probe.insert(QStringLiteral("kind"),
+                         (!name.isEmpty() && name.startsWith(QStringLiteral("use")))
+                             ? QStringLiteral("hook")
+                             : (reactMode && !name.isEmpty() && name.at(0).isUpper()
+                                    ? QStringLiteral("component")
+                                    : QStringLiteral("function")));
+            probe.insert(QStringLiteral("name"), name);
+            probe.insert(QStringLiteral("line"), nodeLine(node));
+        }
+    } else if (type == QStringLiteral("pair")) {
+        const TSNode keyNode = fieldNode(node, "key");
+        const TSNode valueNode = fieldNode(node, "value");
+        const QString valueType = QString::fromUtf8(ts_node_type(valueNode));
+        if (valueType == QStringLiteral("arrow_function")
+            || valueType == QStringLiteral("function")
+            || valueType == QStringLiteral("function_expression")) {
+            probe.insert(QStringLiteral("kind"), QStringLiteral("function"));
+            probe.insert(QStringLiteral("name"), firstIdentifier(nodeText(keyNode, source).trimmed()));
+            probe.insert(QStringLiteral("line"), nodeLine(node));
+        }
+    } else if (type == QStringLiteral("assignment_expression")) {
+        const QString left = nodeText(fieldNode(node, "left"), source).trimmed();
+        const TSNode valueNode = fieldNode(node, "right");
+        const QString valueType = QString::fromUtf8(ts_node_type(valueNode));
+        if ((left.startsWith(QStringLiteral("module.exports."))
+             || left.startsWith(QStringLiteral("exports.")))
+            && (valueType == QStringLiteral("arrow_function")
+                || valueType == QStringLiteral("function")
+                || valueType == QStringLiteral("function_expression"))) {
+            probe.insert(QStringLiteral("kind"), QStringLiteral("function"));
+            probe.insert(QStringLiteral("name"), left.section(QLatin1Char('.'), -1));
+            probe.insert(QStringLiteral("line"), nodeLine(node));
+        }
+    }
+
+    const QString key = symbolKey(probe);
+    return byKey.contains(key) ? key : QString();
+}
+
+static QString jsCallTargetName(TSNode node, const QByteArray &source)
+{
+    const QString type = QString::fromUtf8(ts_node_type(node));
+    if (type != QStringLiteral("call_expression") && type != QStringLiteral("new_expression")) {
+        return QString();
+    }
+
+    QString raw = nodeText(fieldNode(node, "function"), source).trimmed();
+    if (raw.isEmpty()) {
+        raw = nodeText(fieldNode(node, "constructor"), source).trimmed();
+    }
+    if (raw.isEmpty() && ts_node_named_child_count(node) > 0) {
+        raw = nodeText(ts_node_named_child(node, 0), source).trimmed();
+    }
+    return lastIdentifier(raw);
+}
+
+static QSet<QString> scriptCallNamesFromSnippet(const QString &snippet)
+{
+    static const QVector<QRegularExpression> patterns = {
+        QRegularExpression(QStringLiteral(R"(\b([A-Za-z_][A-Za-z0-9_]*)\s*\()")),
+        QRegularExpression(QStringLiteral(R"(\.\s*([A-Za-z_][A-Za-z0-9_]*)\s*\()"))
+    };
+
+    QSet<QString> names;
+    for (const QRegularExpression &pattern : patterns) {
+        auto it = pattern.globalMatch(snippet);
+        while (it.hasNext()) {
+            const QRegularExpressionMatch match = it.next();
+            names.insert(match.captured(1));
+        }
+    }
+    return names;
+}
+
+static bool canOwnCallRelations(const QString &kind)
+{
+    return kind == QStringLiteral("function")
+        || kind == QStringLiteral("method")
+        || kind == QStringLiteral("constructor")
+        || kind == QStringLiteral("initializer")
+        || kind == QStringLiteral("deinitializer")
+        || kind == QStringLiteral("hook")
+        || kind == QStringLiteral("component");
+}
+
+static QVariantList applySnippetCallRelations(const QVariantList &symbols)
+{
+    if (symbols.isEmpty()) {
+        return symbols;
+    }
+
+    QHash<QString, QVariantMap> byKey;
+    QHash<QString, QStringList> keysByName;
+    QHash<QString, QVariantList> callsByKey;
+    QHash<QString, QVariantList> calledByByKey;
+    collectSymbolsByKey(symbols, byKey, keysByName);
+
+    std::function<void(const QVariantList &)> collectExistingRelations = [&](const QVariantList &items) {
+        for (const QVariant &entry : items) {
+            const QVariantMap symbol = entry.toMap();
+            const QString ownerKey = symbolKey(symbol);
+            if (!ownerKey.isEmpty()) {
+                for (const QVariant &callEntry : symbol.value(QStringLiteral("calls")).toList()) {
+                    appendUniqueRelation(callsByKey, ownerKey, callEntry.toMap(), callEntry.toMap().value(QStringLiteral("detail")).toString());
+                }
+                for (const QVariant &callerEntry : symbol.value(QStringLiteral("calledBy")).toList()) {
+                    appendUniqueRelation(calledByByKey, ownerKey, callerEntry.toMap(), callerEntry.toMap().value(QStringLiteral("detail")).toString());
+                }
+            }
+            collectExistingRelations(symbol.value(QStringLiteral("members")).toList());
+        }
+    };
+
+    collectExistingRelations(symbols);
+
+    std::function<void(const QVariantList &)> collectRelations = [&](const QVariantList &items) {
+        for (const QVariant &entry : items) {
+            const QVariantMap symbol = entry.toMap();
+            const QString ownerKey = symbolKey(symbol);
+            const QString ownerKind = symbol.value(QStringLiteral("kind")).toString();
+            if (!ownerKey.isEmpty() && canOwnCallRelations(ownerKind)) {
+                const QSet<QString> relationNames = scriptCallNamesFromSnippet(symbol.value(QStringLiteral("snippet")).toString());
+                for (const QString &targetName : relationNames) {
+                    const QStringList candidateKeys = keysByName.value(targetName);
+                    if (candidateKeys.isEmpty()) {
+                        continue;
+                    }
+                    const QString targetKey = bestRelationTargetKey(candidateKeys, byKey);
+                    if (targetKey.isEmpty() || targetKey == ownerKey || !byKey.contains(targetKey)) {
+                        continue;
+                    }
+                    appendUniqueRelation(callsByKey, ownerKey, relationFromSymbol(byKey.value(targetKey)), QStringLiteral("calls"));
+                    appendUniqueRelation(calledByByKey, targetKey, relationFromSymbol(byKey.value(ownerKey)), QStringLiteral("called by"));
+                }
+            }
+            collectRelations(symbol.value(QStringLiteral("members")).toList());
+        }
+    };
+
+    collectRelations(symbols);
+    return applyRelationsToSymbols(symbols, callsByKey, calledByByKey);
 }
 
 static QVariantMap makeCssClassSummaryEntry(const QString &name, bool matched,
@@ -868,8 +1140,8 @@ QVariantMap SymbolParser::parseSwiftTreeSitter(const QString &path, const QStrin
             if (!activeKey.isEmpty() && QString::fromUtf8(ts_node_type(node)) == QStringLiteral("call_expression")) {
                 const QString targetName = swiftCallTargetName(node, source);
                 const QStringList candidateKeys = keysByName.value(targetName);
-                if (!targetName.isEmpty() && candidateKeys.size() == 1) {
-                    const QString targetKey = candidateKeys.constFirst();
+                if (!targetName.isEmpty() && !candidateKeys.isEmpty()) {
+                    const QString targetKey = bestRelationTargetKey(candidateKeys, byKey);
                     if (targetKey != activeKey && byKey.contains(targetKey)) {
                         appendUniqueRelation(callsByKey, activeKey, relationFromSymbol(byKey.value(targetKey)), QStringLiteral("calls"));
                         appendUniqueRelation(calledByByKey, targetKey, relationFromSymbol(byKey.value(activeKey)), QStringLiteral("called by"));
@@ -886,6 +1158,8 @@ QVariantMap SymbolParser::parseSwiftTreeSitter(const QString &path, const QStrin
         visit(root, QString());
         symbols = applyRelationsToSymbols(symbols, callsByKey, calledByByKey);
     }
+
+    symbols = applySnippetCallRelations(symbols);
 
     ts_tree_delete(tree);
     ts_parser_delete(parser);
@@ -1008,8 +1282,8 @@ QVariantMap SymbolParser::parsePhpTreeSitter(const QString &path, const QString 
                     || nodeType == QStringLiteral("scoped_call_expression"))) {
                 const QString targetName = phpCallTargetName(node, source);
                 const QStringList candidateKeys = keysByName.value(targetName);
-                if (!targetName.isEmpty() && candidateKeys.size() == 1) {
-                    const QString targetKey = candidateKeys.constFirst();
+                if (!targetName.isEmpty() && !candidateKeys.isEmpty()) {
+                    const QString targetKey = bestRelationTargetKey(candidateKeys, byKey);
                     if (targetKey != activeKey && byKey.contains(targetKey)) {
                         appendUniqueRelation(callsByKey, activeKey, relationFromSymbol(byKey.value(targetKey)), QStringLiteral("calls"));
                         appendUniqueRelation(calledByByKey, targetKey, relationFromSymbol(byKey.value(activeKey)), QStringLiteral("called by"));
@@ -1026,6 +1300,8 @@ QVariantMap SymbolParser::parsePhpTreeSitter(const QString &path, const QString 
         visit(root, QString());
         symbols = applyRelationsToSymbols(symbols, callsByKey, calledByByKey);
     }
+
+    symbols = applySnippetCallRelations(symbols);
 
     ts_tree_delete(tree);
     ts_parser_delete(parser);
@@ -1389,9 +1665,6 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
         }
     }
 
-    ts_tree_delete(tree);
-    ts_parser_delete(parser);
-
     QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), language);
     result.insert(QStringLiteral("symbols"), symbols);
     
@@ -1423,6 +1696,75 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
     }
     result.insert(QStringLiteral("routes"), routes);
     result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
+
+    if (!symbols.isEmpty()) {
+        QHash<QString, QVariantMap> byKey;
+        QHash<QString, QStringList> keysByName;
+        QHash<QString, QVariantList> callsByKey;
+        QHash<QString, QVariantList> calledByByKey;
+        collectSymbolsByKey(symbols, byKey, keysByName);
+
+        std::function<void(TSNode, const QString &)> visit = [&](TSNode node, const QString &currentKey) {
+            QString activeKey = currentKey;
+            const QString nodeKey = jsCallableKeyForNode(node, source, byKey, reactMode);
+            if (!nodeKey.isEmpty()) {
+                activeKey = nodeKey;
+            }
+
+            const QString nodeType = QString::fromUtf8(ts_node_type(node));
+            if (!activeKey.isEmpty()
+                && (nodeType == QStringLiteral("call_expression")
+                    || nodeType == QStringLiteral("new_expression"))) {
+                const QString targetName = jsCallTargetName(node, source);
+                const QStringList candidateKeys = keysByName.value(targetName);
+                if (!targetName.isEmpty() && !candidateKeys.isEmpty()) {
+                    const QString targetKey = bestRelationTargetKey(candidateKeys, byKey);
+                    if (targetKey != activeKey && byKey.contains(targetKey)) {
+                        appendUniqueRelation(callsByKey, activeKey, relationFromSymbol(byKey.value(targetKey)), QStringLiteral("calls"));
+                        appendUniqueRelation(calledByByKey, targetKey, relationFromSymbol(byKey.value(activeKey)), QStringLiteral("called by"));
+                    }
+                }
+            }
+
+            const uint32_t childCount = ts_node_named_child_count(node);
+            for (uint32_t index = 0; index < childCount; ++index) {
+                visit(ts_node_named_child(node, index), activeKey);
+            }
+        };
+
+        visit(root, QString());
+
+        std::function<void(const QVariantList &)> collectSnippetRelations = [&](const QVariantList &items) {
+            for (const QVariant &entry : items) {
+                const QVariantMap symbol = entry.toMap();
+                const QString ownerKey = symbolKey(symbol);
+                if (!ownerKey.isEmpty()) {
+                    const QSet<QString> relationNames = scriptCallNamesFromSnippet(symbol.value(QStringLiteral("snippet")).toString());
+                    for (const QString &targetName : relationNames) {
+                        const QStringList candidateKeys = keysByName.value(targetName);
+                        if (candidateKeys.isEmpty()) {
+                            continue;
+                        }
+                        const QString targetKey = bestRelationTargetKey(candidateKeys, byKey);
+                        if (targetKey.isEmpty() || targetKey == ownerKey || !byKey.contains(targetKey)) {
+                            continue;
+                        }
+                        appendUniqueRelation(callsByKey, ownerKey, relationFromSymbol(byKey.value(targetKey)), QStringLiteral("calls"));
+                        appendUniqueRelation(calledByByKey, targetKey, relationFromSymbol(byKey.value(ownerKey)), QStringLiteral("called by"));
+                    }
+                }
+                collectSnippetRelations(symbol.value(QStringLiteral("members")).toList());
+            }
+        };
+
+        collectSnippetRelations(symbols);
+        symbols = applyRelationsToSymbols(symbols, callsByKey, calledByByKey);
+        result.insert(QStringLiteral("symbols"), symbols);
+    }
+
+    ts_tree_delete(tree);
+    ts_parser_delete(parser);
+
     if (QFileInfo(path).fileName() == QStringLiteral("index.js")) {
         const QString packagePath = QFileInfo(QDir(QFileInfo(path).dir()).filePath(QStringLiteral("package.json"))).absoluteFilePath();
         if (QFileInfo::exists(packagePath)) {
@@ -1667,6 +2009,44 @@ QVariantMap SymbolParser::parsePythonTreeSitter(const QString &path, const QStri
             appendUnique(parsePythonDefinition(definition, child, decorationDetail(child)));
         }
     }
+
+    if (!symbols.isEmpty()) {
+        QHash<QString, QVariantMap> byKey;
+        QHash<QString, QStringList> keysByName;
+        QHash<QString, QVariantList> callsByKey;
+        QHash<QString, QVariantList> calledByByKey;
+        collectSymbolsByKey(symbols, byKey, keysByName);
+
+        std::function<void(TSNode, const QString &)> visit = [&](TSNode node, const QString &currentKey) {
+            QString activeKey = currentKey;
+            const QString nodeKey = pythonCallableKeyForNode(node, source, byKey);
+            if (!nodeKey.isEmpty()) {
+                activeKey = nodeKey;
+            }
+
+            if (!activeKey.isEmpty() && QString::fromUtf8(ts_node_type(node)) == QStringLiteral("call")) {
+                const QString targetName = pythonCallTargetName(node, source);
+                const QStringList candidateKeys = keysByName.value(targetName);
+                if (!targetName.isEmpty() && !candidateKeys.isEmpty()) {
+                    const QString targetKey = bestRelationTargetKey(candidateKeys, byKey);
+                    if (targetKey != activeKey && byKey.contains(targetKey)) {
+                        appendUniqueRelation(callsByKey, activeKey, relationFromSymbol(byKey.value(targetKey)), QStringLiteral("calls"));
+                        appendUniqueRelation(calledByByKey, targetKey, relationFromSymbol(byKey.value(activeKey)), QStringLiteral("called by"));
+                    }
+                }
+            }
+
+            const uint32_t childCount = ts_node_named_child_count(node);
+            for (uint32_t index = 0; index < childCount; ++index) {
+                visit(ts_node_named_child(node, index), activeKey);
+            }
+        };
+
+        visit(root, QString());
+        symbols = applyRelationsToSymbols(symbols, callsByKey, calledByByKey);
+    }
+
+    symbols = applySnippetCallRelations(symbols);
 
     ts_tree_delete(tree);
     ts_parser_delete(parser);
@@ -1959,6 +2339,8 @@ QVariantMap SymbolParser::parseJavaTreeSitter(const QString &path, const QString
         }
     }
 
+    symbols = applySnippetCallRelations(symbols);
+
     ts_tree_delete(tree);
     ts_parser_delete(parser);
 
@@ -2219,6 +2601,8 @@ QVariantMap SymbolParser::parseCSharpTreeSitter(const QString &path, const QStri
 
     walkCSharpScope(root);
 
+    symbols = applySnippetCallRelations(symbols);
+
     ts_tree_delete(tree);
     ts_parser_delete(parser);
 
@@ -2467,6 +2851,8 @@ QVariantMap SymbolParser::parseRustTreeSitter(const QString &path, const QString
             }
         }
     }
+
+    symbols = applySnippetCallRelations(symbols);
 
     ts_tree_delete(tree);
     ts_parser_delete(parser);
@@ -2846,6 +3232,40 @@ QVariantMap SymbolParser::parseScriptLike(const QString &path, const QString &te
         symbols.append(makePartialScriptSymbol(QStringLiteral("variable"), name, line, QString(), {},
                                                snippetFromLine(text, line, 0),
                                                QStringLiteral("line_excerpt")));
+    }
+
+    if (!symbols.isEmpty()) {
+        QHash<QString, QVariantMap> byKey;
+        QHash<QString, QStringList> keysByName;
+        QHash<QString, QVariantList> callsByKey;
+        QHash<QString, QVariantList> calledByByKey;
+        collectSymbolsByKey(symbols, byKey, keysByName);
+
+        std::function<void(const QVariantList &)> collectSnippetRelations = [&](const QVariantList &items) {
+            for (const QVariant &entry : items) {
+                const QVariantMap symbol = entry.toMap();
+                const QString ownerKey = symbolKey(symbol);
+                if (!ownerKey.isEmpty()) {
+                    const QSet<QString> relationNames = scriptCallNamesFromSnippet(symbol.value(QStringLiteral("snippet")).toString());
+                    for (const QString &targetName : relationNames) {
+                        const QStringList candidateKeys = keysByName.value(targetName);
+                        if (candidateKeys.isEmpty()) {
+                            continue;
+                        }
+                        const QString targetKey = bestRelationTargetKey(candidateKeys, byKey);
+                        if (targetKey.isEmpty() || targetKey == ownerKey || !byKey.contains(targetKey)) {
+                            continue;
+                        }
+                        appendUniqueRelation(callsByKey, ownerKey, relationFromSymbol(byKey.value(targetKey)), QStringLiteral("calls"));
+                        appendUniqueRelation(calledByByKey, targetKey, relationFromSymbol(byKey.value(ownerKey)), QStringLiteral("called by"));
+                    }
+                }
+                collectSnippetRelations(symbol.value(QStringLiteral("members")).toList());
+            }
+        };
+
+        collectSnippetRelations(symbols);
+        symbols = applyRelationsToSymbols(symbols, callsByKey, calledByByKey);
     }
 
     QVariantMap result;

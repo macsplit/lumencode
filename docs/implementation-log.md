@@ -1,5 +1,28 @@
 # Implementation Log
 
+## 2026-04-04
+
+- **Relation Navigation / Backend Work:**
+    - Fixed relation click handling in `ProjectController` so selecting `Calls` / `Called By` entries rehydrates into the actual destination symbol instead of leaving the inspector on a thin edge payload.
+    - This restored reciprocal relation visibility in the common case where the destination symbol already has its own relation data, especially when navigating through Swift files.
+    - Tightened relationship target selection so callable declarations are preferred over weaker export/property shadows when multiple symbols share a name.
+- **More Relation Parity:**
+    - Added same-file relation coverage for Python, Rust, Java, and C# to the checked-in fixture suite instead of only asserting symbol presence for those languages.
+    - Added a proper AST walk for Python call relations after real docstring-heavy files proved that bounded snippet-based relation detection was too weak.
+    - Changed the snippet-based relation fallback to merge with existing AST-derived edges instead of overwriting them, which fixed missing reverse links during relation round-trips on real class methods.
+- **JavaScript Stability Follow-up:**
+    - Investigated restoring plain JS/JSX to the native Tree-sitter path.
+    - Confirmed there are still stability problems on real-world JS files in that path, so plain JS/JSX were left on the heuristic parser for now.
+    - Added same-file call-relation extraction to the heuristic JS/JSX parser so it participates in the same `Calls` / `Called By` contract without regressing crash behavior.
+- **Fixture / Regression Work:**
+    - Added a checked-in baseline fixture suite under `tests/fixtures/baseline/` with a manifest-driven set of compact structural test projects spanning JS, TS, PHP, Swift, Python, Rust, Java, C#, C++, Objective-C, HTML/CSS, and `package.json`.
+    - Extended `tools/regression_sweep.py` with `--fixture-manifest` and `--fixtures-only`.
+    - Added relation round-trip checks to the regression harness by driving `selectSymbolByData` through the interactive CLI and verifying reverse edges on the selected destination symbol.
+    - Revalidated the current backend with both fixture-only runs and wider local-corpus sweeps under `/home/user/Code`, ending this session with `issues_found: 0` on both passes.
+- **Known Remaining Gap:**
+    - Relation traversal is substantially better, but overall relation completeness still needs work across languages and cross-file shapes.
+    - Swift functions still often leave the right inspector feeling sparse; useful additional symbol detail should be added later once backend payloads are more trustworthy.
+
 ## 2026-04-03
 
 - **Repository Repair:**
