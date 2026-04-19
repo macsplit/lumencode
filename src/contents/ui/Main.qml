@@ -1244,7 +1244,12 @@ Kirigami.ApplicationWindow {
 
     Component.onCompleted: {
         draftRootPath = project.lastOpenedPath() || project.rootPath
-        if (project.restoreLastOpenedPath()) {
+        if (typeof cliInitialPath !== "undefined" && cliInitialPath !== "") {
+            root.openProject(cliInitialPath)
+            if (typeof cliInitialFile !== "undefined" && cliInitialFile !== "") {
+                project.selectPath(cliInitialFile)
+            }
+        } else if (project.restoreLastOpenedPath()) {
             projectLoaded = true
             pageStack.clear()
             pageStack.push(explorerPageComponent)
