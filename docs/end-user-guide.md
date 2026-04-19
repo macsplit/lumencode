@@ -6,30 +6,15 @@ It is not a text editor and it is not a Git client. The product value is fast st
 
 ## Mental Model
 
-```mermaid
-flowchart LR
-    A[Choose project root] --> B[Browse folders and files]
-    B --> C[Open a file]
-    C --> D[Inspect top-level symbols]
-    D --> E[Inspect symbol detail]
-    E --> F[Read snippet in lower pane]
-    E --> G[Follow calls, callers, links, routes, dependencies]
-```
+![Mental model](./generated/end-user-mental-model.png)
+
+Source: [end-user-mental-model.mmd](./diagrams/end-user-mental-model.mmd)
 
 ## Main Screen
 
-```mermaid
-flowchart TB
-    subgraph Top
-        L[Left pane\nProject tree]
-        M[Middle pane\nFile overview]
-        R[Right pane\nInspector]
-    end
-    B[Bottom pane\nSnippet and diagnostics]
-    L --> M
-    M --> R
-    R --> B
-```
+![Main screen](./generated/end-user-main-screen.png)
+
+Source: [end-user-main-screen.mmd](./diagrams/end-user-main-screen.mmd)
 
 ### Left Pane
 
@@ -58,22 +43,9 @@ flowchart TB
 
 ## Typical Workflow
 
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant T as Tree
-    participant O as Overview
-    participant I as Inspector
-    participant S as Snippet Pane
-    U->>T: Select file
-    T->>O: Show file structure
-    U->>O: Click symbol
-    O->>I: Show detail
-    O->>S: Show symbol snippet
-    U->>I: Click relation or quick link
-    I->>O: Move to new symbol or file
-    O->>S: Refresh snippet
-```
+![Typical workflow](./generated/end-user-typical-workflow.png)
+
+Source: [end-user-typical-workflow.mmd](./diagrams/end-user-typical-workflow.mmd)
 
 ## What To Expect In Different File Types
 
@@ -97,14 +69,9 @@ sequenceDiagram
 
 Warnings are part of normal bounded behavior, not necessarily a failure.
 
-```mermaid
-flowchart TD
-    A[Analysis starts] --> B{Normal size and cost?}
-    B -- Yes --> C[Full structural result]
-    B -- No --> D[Bounded partial result]
-    D --> E[Warning shown in UI]
-    E --> F[App stays responsive]
-```
+![Warnings model](./generated/end-user-warnings.png)
+
+Source: [end-user-warnings.mmd](./diagrams/end-user-warnings.mmd)
 
 Common reasons:
 

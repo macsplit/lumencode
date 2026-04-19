@@ -6,35 +6,15 @@ The project goal is not “parse everything perfectly.” The goal is “stay re
 
 ## System Overview
 
-```mermaid
-flowchart LR
-    FS[FileSystemModel] --> PC[ProjectController]
-    PC --> GUI[QML UI]
-    PC --> CLI[lumencode-cli]
-    CLI --> SP[SymbolParser]
-    PC --> Helper[Helper process\nlumencode-cli --dump-file]
-    Helper --> SP
-    SP --> TS[Tree-sitter parsers]
-    SP --> H[Heuristic parsers]
-```
+![System overview](./generated/developer-system-overview.png)
+
+Source: [developer-system-overview.mmd](./diagrams/developer-system-overview.mmd)
 
 ## Core Runtime Flow
 
-```mermaid
-sequenceDiagram
-    participant UI as QML
-    participant PC as ProjectController
-    participant HP as Helper Process
-    participant SP as SymbolParser
-    UI->>PC: selectPath(...)
-    PC->>PC: beginAsyncAnalysis(...)
-    PC->>HP: lumencode-cli --dump-file
-    HP->>SP: parseFile(...)
-    SP-->>HP: analysis JSON
-    HP-->>PC: parsed result
-    PC->>PC: augment relationships
-    PC-->>UI: selectedFileData / selectedSymbol / selectedSnippet
-```
+![Runtime flow](./generated/developer-runtime-flow.png)
+
+Source: [developer-runtime-flow.mmd](./diagrams/developer-runtime-flow.mmd)
 
 ## Main Components
 
@@ -66,19 +46,9 @@ sequenceDiagram
 
 ## Parsing Authority Model
 
-```mermaid
-flowchart TD
-    A[Parse file] --> B{Tree-sitter path exists?}
-    B -- No --> H[Heuristic result]
-    B -- Yes --> C[AST result]
-    C --> D{AST has errors?}
-    D -- No --> E[Authoritative AST result]
-    D -- Yes --> F[Recovered result]
-    F --> G[Keep AST-owned structure]
-    F --> I[Heuristic supplementation only for AST-uncovered ranges]
-    G --> J[Merged recovered payload]
-    I --> J
-```
+![Authority model](./generated/developer-authority-model.png)
+
+Source: [developer-authority-model.mmd](./diagrams/developer-authority-model.mmd)
 
 This is the current stable recovery contract. Earlier generic error-node harvesting was backed out because it was not stable enough across grammars.
 
@@ -122,26 +92,17 @@ Important symbol-level fields:
 
 ## Selection and Rehydration Model
 
-```mermaid
-flowchart TD
-    A[User clicks symbol or relation] --> B{Target file already loaded?}
-    B -- No --> C[Queue pending selection]
-    C --> D[Async analysis completes]
-    D --> E[Hydrate real symbol from loaded payload]
-    B -- Yes --> E
-    E --> F[Update selectedSymbol and selectedSnippet]
-```
+![Selection and rehydration](./generated/developer-selection-rehydration.png)
+
+Source: [developer-selection-rehydration.mmd](./diagrams/developer-selection-rehydration.mmd)
 
 Important rule: thin relation payloads should never remain the final selected state when a real symbol can be hydrated from the current file payload.
 
 ## Relationship Layers
 
-```mermaid
-flowchart LR
-    A[Same-file AST relations] --> D[Final symbol relations]
-    B[Same-file snippet fallback] --> D
-    C[ProjectController cross-file augmentation] --> D
-```
+![Relationship layers](./generated/developer-relationship-layers.png)
+
+Source: [developer-relationship-layers.mmd](./diagrams/developer-relationship-layers.mmd)
 
 Guidance:
 
@@ -152,14 +113,9 @@ Guidance:
 
 ## Robustness Model
 
-```mermaid
-flowchart TD
-    A[User selects file] --> B[Async helper analysis]
-    B --> C{Result usable?}
-    C -- Yes --> D[Render payload]
-    C -- Partial --> E[Render payload + warning]
-    C -- No --> F[Render explicit fallback summary]
-```
+![Robustness model](./generated/developer-robustness-model.png)
+
+Source: [developer-robustness-model.mmd](./diagrams/developer-robustness-model.mmd)
 
 Current robustness interventions include:
 
@@ -173,15 +129,9 @@ Current robustness interventions include:
 
 ## How To Add Or Improve A Language
 
-```mermaid
-flowchart TD
-    A[Pick one language problem] --> B[Add or improve parser output]
-    B --> C[Add fixture coverage]
-    C --> D[Run fixture-only sweep]
-    D --> E[Run normal corpus sweep]
-    E --> F[Run broader stress sweep]
-    F --> G[Only then inspect GUI behavior]
-```
+![Language workflow](./generated/developer-language-workflow.png)
+
+Source: [developer-language-workflow.mmd](./diagrams/developer-language-workflow.mmd)
 
 Rules:
 
