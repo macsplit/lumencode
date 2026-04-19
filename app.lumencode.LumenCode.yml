@@ -10,7 +10,6 @@ finish-args:
   - --socket=session-bus
   - --device=dri
   - --filesystem=home
-  - --share=network
 modules:
   - name: lumencode
     buildsystem: cmake-ninja
