@@ -56,6 +56,7 @@ What currently works:
 - TS/TSX now keep partial Tree-sitter output when the tree contains errors and supplement it with heuristic recovery instead of falling back file-wide.
 - Python, Java, C#, Rust, and PHP now also return deliberate `recovered` analyses on broken-but-parseable files instead of flipping wholesale to heuristic fallback.
 - Recovered analyses now normalize merged symbol trees and relation targets so obvious AST/heuristic duplicates are reduced before reaching the UI.
+- Recovered analyses now constrain heuristic supplementation to AST-uncovered symbol ranges instead of merging heuristic structure indiscriminately across the whole file.
 - Low-value script files with no meaningful callable/API surface now skip the expensive incoming relationship scan, reducing spurious partial-analysis warnings on variable-only setup scripts.
 - Obvious minified or bundled script/CSS assets are now skipped deliberately with an explicit warning result instead of being treated as normal source and polluting structural analysis.
 - Project-level summaries including file type counts and main entry-point detection.
@@ -93,7 +94,7 @@ Phase 1. Stabilization
 - Keep growing the baseline fixture suite so each supported language or language-cluster has a small structural repro project checked into the repo.
 - Continue AST-backed parity work language by language, using CLI-first verification before GUI iteration.
 - Continue the new authority/recovery refactor language by language: AST should remain authoritative, with heuristics only supplementing broken or uncovered cases.
-- Re-enter range-aware recovery cautiously from the current stable base: start language-by-language and keep the fixture suite green before widening any AST error-range logic across grammars.
+- Keep tightening the current range-aware recovery model language by language, using fixture-gated refinements rather than broad parser-wide error walkers.
 - Move callable signature extraction from parser-layer snippet heuristics to grammar-specific AST fields language by language, now that `parameters` / `returns` are part of the backend symbol contract.
 - Keep pragmatic heuristic coverage for valuable local languages such as QML where a dedicated grammar path is not yet integrated, instead of leaving them unsupported.
 - Continue converting cross-file relationship work from name/snippet luck into explicit binding-aware or asset-aware models, especially for web projects.
@@ -129,7 +130,7 @@ Phase 4. Broader project understanding
 - Some extracted structure is still shallow or misleading on real projects.
 - Some languages still rely on heuristic fallback paths for parts of the overview, especially when native parser paths have been bypassed for stability. Plain JS/JSX currently still use the heuristic parser path for stability, while TS/TSX remain Tree-sitter-backed.
 - The parser now emits provenance and can return mixed recovered analyses. TS/TSX, Python, Java, C#, Rust, and PHP use that model deliberately; Swift and CSS still mostly behave as file-wide AST-or-heuristic paths.
-- The first attempt at generic AST error-range harvesting was backed out because it was not stable enough across grammars; range-aware recovery remains a next-step goal, not a finished contract.
+- Range-aware recovery is now implemented through AST-uncovered-range gating rather than raw parser error-node harvesting. That is deliberate: the broader error-node walk was backed out after grammar instability.
 - Callable signatures (`parameters` / `returns`) are now emitted by the backend symbol payload instead of being derived in the UI/controller layer, but several languages still populate those fields through parser-layer signature heuristics rather than true AST field extraction.
 - QML is now supported as a first-class language in the explorer and CLI, but it currently uses heuristic structural extraction rather than a dedicated AST-backed parser.
 - `Calls` / `Called By` support has improved and relation clicks now rehydrate into full destination symbols, but the overall graph is still incomplete and not yet uniformly reciprocal across all languages and project shapes.

@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from collections import defaultdict
@@ -171,6 +172,39 @@ def count_callable_symbols(symbols: list[dict]) -> int:
     return total
 
 
+def count_symbol_source_modes(symbols: list[dict]) -> dict[str, int]:
+    counts: dict[str, int] = defaultdict(int)
+    for symbol in iter_symbols(symbols):
+        mode = symbol.get("sourceMode", "") or ""
+        if mode:
+            counts[mode] += 1
+    return counts
+
+
+def count_potential_local_relations(symbols: list[dict]) -> int:
+    callable_symbols = [
+        symbol for symbol in iter_symbols(symbols)
+        if symbol.get("kind", "") in CALLABLE_KINDS and symbol.get("name", "")
+    ]
+    if len(callable_symbols) < 2:
+        return 0
+
+    potential = 0
+    for owner in callable_symbols:
+        snippet = owner.get("snippet", "") or ""
+        owner_name = owner.get("name", "")
+        if not snippet:
+            continue
+        for target in callable_symbols:
+            target_name = target.get("name", "")
+            if not target_name or target_name == owner_name:
+                continue
+            if re.search(rf"\b{re.escape(target_name)}\b", snippet):
+                potential += 1
+                break
+    return potential
+
+
 def validate_selected_snippet(file_path: Path, state: dict, issues: list[dict], context: str) -> None:
     snippet = state.get("selectedSnippet", {})
     kind = snippet.get("kind", "")
@@ -294,8 +328,9 @@ def inspect_file(file_path: Path, issues: list[dict]) -> None:
     if language in RELATION_EXPECTED_LANGUAGES and symbols:
         calls_count, called_by_count = count_relations(symbols)
         callable_count = count_callable_symbols(symbols)
-        if callable_count >= 2 and calls_count == 0 and called_by_count == 0:
-            add_issue(issues, "missing_relations_for_language", file_path, language=language, symbol_count=len(symbols), callable_count=callable_count)
+        potential_relations = count_potential_local_relations(symbols)
+        if callable_count >= 2 and potential_relations > 0 and calls_count == 0 and called_by_count == 0:
+            add_issue(issues, "missing_relations_for_language", file_path, language=language, symbol_count=len(symbols), callable_count=callable_count, potential_relations=potential_relations)
 
     for symbol in symbols[:6]:
         kind = symbol.get("kind", "")
@@ -462,6 +497,19 @@ def inspect_fixture_case(case: dict, issues: list[dict]) -> None:
         actual = len(parsed.get("analysisNotices", []) or [])
         if actual < int(file_expectations["analysis_notices"]):
             add_issue(issues, "fixture_missing_analysis_notices", file_path, case=case_name, expected=file_expectations["analysis_notices"], actual=actual)
+
+    if "symbol_source_modes" in file_expectations:
+        actual_counts = count_symbol_source_modes(symbols)
+        for mode, expected in (file_expectations["symbol_source_modes"] or {}).items():
+            actual = actual_counts.get(mode, 0)
+            if actual < int(expected):
+                add_issue(issues,
+                          "fixture_missing_symbol_source_mode",
+                          file_path,
+                          case=case_name,
+                          source_mode=mode,
+                          expected=expected,
+                          actual=actual)
 
     for expectation in expected_symbols:
         symbol = find_symbol(symbols, expectation["name"], expectation.get("kind"))

@@ -15,7 +15,8 @@
     - Extended the same recovered-analysis model to C#, including a checked-in broken-code fixture for the current recovery contract.
     - Extended the same recovered-analysis model to Rust and PHP, including checked-in broken-code fixtures for both languages.
     - Added post-merge normalization for recovered analyses so merged symbol trees and relation targets are rewritten against the surviving canonical symbol set, reducing obvious AST/heuristic duplicates and stale reverse-edge targets.
-    - Left the broader authority refactor intentionally incomplete: Swift and CSS still remain outside the deliberate recovered-analysis model, and heuristics are still merged at file scope rather than constrained to AST error ranges.
+    - Finished the current recovery phase by replacing file-wide heuristic supplementation with AST-uncovered-range gating for the recovered languages. Heuristic structure is now merged only where the AST did not already claim useful symbol ranges, and same-file relation selection waits for async hydration before resolving relation targets.
+    - Left the broader authority refactor intentionally incomplete in narrower ways: Swift and CSS still remain outside the deliberate recovered-analysis model, and future work can refine the current uncovered-range model further without reviving the unstable parser-wide error-node walk.
 
 - **Callable Signature Contract Refactor:**
     - Added `parameters` and `returns` to callable symbol payloads as backend-owned fields instead of controller-only UI enrichment.

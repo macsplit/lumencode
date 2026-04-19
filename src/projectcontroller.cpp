@@ -1581,6 +1581,11 @@ void ProjectController::selectSymbolByData(const QVariantMap &symbol)
     const QString currentPath = QFileInfo(m_selectedFileData.value(QStringLiteral("path")).toString()).absoluteFilePath();
     const QString targetPath = symbolTargetPath(symbol, currentPath);
 
+    if (m_analysisInProgress && (targetPath.isEmpty() || targetPath == currentPath)) {
+        m_pendingSelectedSymbol = symbol;
+        return;
+    }
+
     if (!targetPath.isEmpty() && targetPath != currentPath) {
         m_selectedPath = targetPath;
         emit selectedPathChanged();

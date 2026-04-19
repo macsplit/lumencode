@@ -12,6 +12,7 @@
 #include <QVector>
 
 #include <cstring>
+#include <algorithm>
 #include <functional>
 #include <tree_sitter/api.h>
 
@@ -378,6 +379,7 @@ static QVariantMap annotateAnalysisWithProvenance(QVariantMap result,
     result.insert(QStringLiteral("relatedFiles"),
                   annotateFlatEntriesWithProvenance(result.value(QStringLiteral("relatedFiles")).toList(),
                                                     sourceMode, confidence));
+    result.remove(QStringLiteral("_recoveryLineRanges"));
     return result;
 }
 
@@ -766,6 +768,199 @@ static QVariantMap mergeRecoveredAnalysis(QVariantMap primary,
     return primary;
 }
 
+static QVariantMap makeLineRange(int startLine, int endLine)
+{
+    QVariantMap range;
+    range.insert(QStringLiteral("startLine"), startLine);
+    range.insert(QStringLiteral("endLine"), qMax(startLine, endLine));
+    return range;
+}
+
+static QVariantList normalizeLineRanges(QVariantList ranges)
+{
+    if (ranges.isEmpty()) {
+        return ranges;
+    }
+
+    std::sort(ranges.begin(), ranges.end(), [](const QVariant &leftValue, const QVariant &rightValue) {
+        const QVariantMap left = leftValue.toMap();
+        const QVariantMap right = rightValue.toMap();
+        const int leftStart = left.value(QStringLiteral("startLine")).toInt();
+        const int rightStart = right.value(QStringLiteral("startLine")).toInt();
+        if (leftStart != rightStart) {
+            return leftStart < rightStart;
+        }
+        return left.value(QStringLiteral("endLine")).toInt() < right.value(QStringLiteral("endLine")).toInt();
+    });
+
+    QVariantList normalized;
+    QVariantMap current = ranges.constFirst().toMap();
+    for (int index = 1; index < ranges.size(); ++index) {
+        const QVariantMap candidate = ranges.at(index).toMap();
+        const int currentEnd = current.value(QStringLiteral("endLine")).toInt();
+        const int candidateStart = candidate.value(QStringLiteral("startLine")).toInt();
+        if (candidateStart <= currentEnd + 1) {
+            current.insert(QStringLiteral("endLine"),
+                           qMax(currentEnd, candidate.value(QStringLiteral("endLine")).toInt()));
+            continue;
+        }
+        normalized.append(current);
+        current = candidate;
+    }
+    normalized.append(current);
+    return normalized;
+}
+
+static int symbolEndLine(const QVariantMap &symbol)
+{
+    const int startLine = symbol.value(QStringLiteral("line")).toInt();
+    if (startLine <= 0) {
+        return startLine;
+    }
+
+    const QString snippet = symbol.value(QStringLiteral("snippet")).toString();
+    const int lineCount = qMax(1, snippet.count(QLatin1Char('\n')) + 1);
+    return startLine + lineCount - 1;
+}
+
+static bool lineSpanIntersectsRanges(int startLine,
+                                     int endLine,
+                                     const QVariantList &ranges)
+{
+    if (startLine <= 0 || endLine <= 0 || ranges.isEmpty()) {
+        return false;
+    }
+
+    for (const QVariant &entry : ranges) {
+        const QVariantMap range = entry.toMap();
+        const int rangeStart = range.value(QStringLiteral("startLine")).toInt();
+        const int rangeEnd = range.value(QStringLiteral("endLine")).toInt();
+        if (startLine <= rangeEnd && endLine >= rangeStart) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static QVariantList collectSymbolOwnedRanges(const QVariantList &symbols)
+{
+    QVariantList ranges;
+    std::function<void(const QVariantList &)> visit = [&](const QVariantList &items) {
+        for (const QVariant &entry : items) {
+            const QVariantMap symbol = entry.toMap();
+            const int startLine = symbol.value(QStringLiteral("line")).toInt();
+            const int endLine = symbolEndLine(symbol);
+            if (startLine > 0 && endLine >= startLine) {
+                ranges.append(makeLineRange(startLine, endLine));
+            }
+            visit(symbol.value(QStringLiteral("members")).toList());
+        }
+    };
+
+    visit(symbols);
+    return normalizeLineRanges(ranges);
+}
+
+static QVariantList filterRecoveryFlatEntries(const QVariantList &entries,
+                                              const QVariantList &ranges)
+{
+    if (ranges.isEmpty()) {
+        return entries;
+    }
+
+    QVariantList filtered;
+    for (const QVariant &entry : entries) {
+        const QVariantMap item = entry.toMap();
+        const int line = item.value(QStringLiteral("line")).toInt();
+        if (line > 0 && !lineSpanIntersectsRanges(line, line, ranges)) {
+            filtered.append(item);
+        }
+    }
+    return filtered;
+}
+
+static QVariantList filterRecoveryRelations(const QVariantList &relations,
+                                            const QVariantList &ownedRanges)
+{
+    if (ownedRanges.isEmpty()) {
+        return relations;
+    }
+
+    QVariantList filtered;
+    for (const QVariant &entry : relations) {
+        const QVariantMap relation = entry.toMap();
+        const int line = relation.value(QStringLiteral("line")).toInt();
+        if (line <= 0 || !lineSpanIntersectsRanges(line, line, ownedRanges)) {
+            filtered.append(relation);
+        }
+    }
+    return filtered;
+}
+
+static QVariantList filterRecoverySymbols(const QVariantList &symbols,
+                                          const QVariantList &ranges,
+                                          const QVariantList &canonicalAstSymbols)
+{
+    if (ranges.isEmpty()) {
+        return symbols;
+    }
+
+    QVariantList filtered;
+    for (const QVariant &entry : symbols) {
+        QVariantMap symbol = entry.toMap();
+        const QVariantList filteredMembers = filterRecoverySymbols(symbol.value(QStringLiteral("members")).toList(),
+                                                                  ranges,
+                                                                  canonicalAstSymbols);
+        const int startLine = symbol.value(QStringLiteral("line")).toInt();
+        const int endLine = symbolEndLine(symbol);
+        const bool intersectsOwnedAst = lineSpanIntersectsRanges(startLine, endLine, ranges);
+        const bool overlapsAst = compatibleSymbolIndex(canonicalAstSymbols, symbol) >= 0;
+        const QVariantList filteredCalls = filterRecoveryRelations(symbol.value(QStringLiteral("calls")).toList(), ranges);
+        const QVariantList filteredCalledBy = filterRecoveryRelations(symbol.value(QStringLiteral("calledBy")).toList(), ranges);
+
+        if (intersectsOwnedAst && filteredMembers.isEmpty()
+            && filteredCalls.isEmpty() && filteredCalledBy.isEmpty()) {
+            continue;
+        }
+
+        symbol.insert(QStringLiteral("members"), filteredMembers);
+        if (intersectsOwnedAst) {
+            symbol.insert(QStringLiteral("calls"), filteredCalls);
+            symbol.insert(QStringLiteral("calledBy"), filteredCalledBy);
+        }
+
+        if (!overlapsAst || !intersectsOwnedAst || !filteredMembers.isEmpty()) {
+            filtered.append(symbol);
+        } else if (!filteredCalls.isEmpty() || !filteredCalledBy.isEmpty()) {
+            filtered.append(symbol);
+        }
+    }
+
+    return filtered;
+}
+
+static QVariantMap limitRecoveryAnalysisToRanges(QVariantMap recovery,
+                                                 const QVariantMap &astAnalysis)
+{
+    const QVariantList ranges = collectSymbolOwnedRanges(astAnalysis.value(QStringLiteral("symbols")).toList());
+    if (ranges.isEmpty()) {
+        return recovery;
+    }
+
+    const QVariantList astSymbols = astAnalysis.value(QStringLiteral("symbols")).toList();
+    recovery.insert(QStringLiteral("symbols"),
+                    filterRecoverySymbols(recovery.value(QStringLiteral("symbols")).toList(),
+                                          ranges,
+                                          astSymbols));
+    recovery.insert(QStringLiteral("dependencies"),
+                    filterRecoveryFlatEntries(recovery.value(QStringLiteral("dependencies")).toList(), ranges));
+    recovery.insert(QStringLiteral("routes"),
+                    filterRecoveryFlatEntries(recovery.value(QStringLiteral("routes")).toList(), ranges));
+    recovery.insert(QStringLiteral("quickLinks"), QVariantList{});
+    recovery.insert(QStringLiteral("relatedFiles"), QVariantList{});
+    return recovery;
+}
+
 static QString swiftDeclarationKind(TSNode node, const QByteArray &source)
 {
     const QString type = QString::fromUtf8(ts_node_type(node));
@@ -902,6 +1097,106 @@ static QString phpCallTargetName(TSNode node, const QByteArray &source)
         raw = nodeText(ts_node_named_child(node, 0), source).trimmed();
     }
     return lastIdentifier(raw);
+}
+
+static QSet<QString> phpCallbackTargetNames(const QString &snippet,
+                                            const QHash<QString, QStringList> &keysByName)
+{
+    QSet<QString> names;
+
+    for (auto it = keysByName.cbegin(); it != keysByName.cend(); ++it) {
+        const QString &candidate = it.key();
+        if (candidate.isEmpty()) {
+            continue;
+        }
+
+        const QString singleQuotedThis = QStringLiteral("[$this, '%1']").arg(candidate);
+        const QString doubleQuotedThis = QStringLiteral("[$this, \"%1\"]").arg(candidate);
+        const QString singleQuotedBare = QStringLiteral("'%1'").arg(candidate);
+        const QString doubleQuotedBare = QStringLiteral("\"%1\"").arg(candidate);
+
+        if (snippet.contains(singleQuotedThis) || snippet.contains(doubleQuotedThis)) {
+            names.insert(candidate);
+            continue;
+        }
+
+        if ((snippet.contains(QStringLiteral("add_action("))
+             || snippet.contains(QStringLiteral("add_filter("))
+             || snippet.contains(QStringLiteral("add_menu_page("))
+             || snippet.contains(QStringLiteral("add_submenu_page("))
+             || snippet.contains(QStringLiteral("register_rest_route(")))
+            && (snippet.contains(singleQuotedBare) || snippet.contains(doubleQuotedBare))) {
+            names.insert(candidate);
+        }
+    }
+
+    return names;
+}
+
+static QVariantList applyPhpCallbackRelations(const QVariantList &symbols)
+{
+    if (symbols.isEmpty()) {
+        return symbols;
+    }
+
+    QHash<QString, QVariantMap> byKey;
+    QHash<QString, QStringList> keysByName;
+    QHash<QString, QVariantList> callsByKey;
+    QHash<QString, QVariantList> calledByByKey;
+    collectSymbolsByKey(symbols, byKey, keysByName);
+
+    std::function<void(const QVariantList &)> collectExistingRelations = [&](const QVariantList &items) {
+        for (const QVariant &entry : items) {
+            const QVariantMap symbol = entry.toMap();
+            const QString ownerKey = symbolKey(symbol);
+            if (!ownerKey.isEmpty()) {
+                for (const QVariant &callEntry : symbol.value(QStringLiteral("calls")).toList()) {
+                    appendUniqueRelation(callsByKey, ownerKey, callEntry.toMap(), callEntry.toMap().value(QStringLiteral("detail")).toString());
+                }
+                for (const QVariant &callerEntry : symbol.value(QStringLiteral("calledBy")).toList()) {
+                    appendUniqueRelation(calledByByKey, ownerKey, callerEntry.toMap(), callerEntry.toMap().value(QStringLiteral("detail")).toString());
+                }
+            }
+            collectExistingRelations(symbol.value(QStringLiteral("members")).toList());
+        }
+    };
+
+    collectExistingRelations(symbols);
+
+    std::function<void(const QVariantList &)> collectRelations = [&](const QVariantList &items) {
+        for (const QVariant &entry : items) {
+            const QVariantMap symbol = entry.toMap();
+            const QString ownerKey = symbolKey(symbol);
+            const QString ownerKind = symbol.value(QStringLiteral("kind")).toString();
+            const bool canOwn = ownerKind == QStringLiteral("function")
+                || ownerKind == QStringLiteral("method")
+                || ownerKind == QStringLiteral("constructor")
+                || ownerKind == QStringLiteral("initializer")
+                || ownerKind == QStringLiteral("deinitializer")
+                || ownerKind == QStringLiteral("hook")
+                || ownerKind == QStringLiteral("component");
+            if (!ownerKey.isEmpty() && canOwn) {
+                const QSet<QString> targetNames = phpCallbackTargetNames(symbol.value(QStringLiteral("snippet")).toString(),
+                                                                        keysByName);
+                for (const QString &targetName : targetNames) {
+                    const QStringList candidateKeys = keysByName.value(targetName);
+                    if (candidateKeys.isEmpty()) {
+                        continue;
+                    }
+                    const QString targetKey = bestRelationTargetKey(candidateKeys, byKey);
+                    if (targetKey.isEmpty() || targetKey == ownerKey || !byKey.contains(targetKey)) {
+                        continue;
+                    }
+                    appendUniqueRelation(callsByKey, ownerKey, relationFromSymbol(byKey.value(targetKey)), QStringLiteral("calls"));
+                    appendUniqueRelation(calledByByKey, targetKey, relationFromSymbol(byKey.value(ownerKey)), QStringLiteral("called by"));
+                }
+            }
+            collectRelations(symbol.value(QStringLiteral("members")).toList());
+        }
+    };
+
+    collectRelations(symbols);
+    return applyRelationsToSymbols(symbols, callsByKey, calledByByKey);
 }
 
 static QString pythonCallableKeyForNode(TSNode node,
@@ -1174,7 +1469,8 @@ static QSet<QString> scriptCallNamesFromSnippet(const QString &snippet)
 {
     static const QVector<QRegularExpression> patterns = {
         QRegularExpression(QStringLiteral(R"(\b([A-Za-z_][A-Za-z0-9_]*)\s*\()")),
-        QRegularExpression(QStringLiteral(R"(\.\s*([A-Za-z_][A-Za-z0-9_]*)\s*\()"))
+        QRegularExpression(QStringLiteral(R"(\.\s*([A-Za-z_][A-Za-z0-9_]*)\s*\()")),
+        QRegularExpression(QStringLiteral(R"(\[\s*\$this\s*,\s*['"]([A-Za-z_][A-Za-z0-9_]*)['"]\s*\])"))
     };
 
     QSet<QString> names;
@@ -1990,6 +2286,17 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
         analysis = enrichAnalysisSignatures(analysis);
         return annotateAnalysisWithProvenance(analysis, sourceMode, confidence);
     };
+    auto finalizeRecoveredResult = [&](const QVariantMap &astAnalysis,
+                                       const QVariantMap &heuristicAnalysis,
+                                       const QString &message) {
+        const QVariantMap limitedHeuristic = limitRecoveryAnalysisToRanges(heuristicAnalysis, astAnalysis);
+        const QVariantMap finalizedAst = finalizeResult(astAnalysis, QStringLiteral("ast"));
+        const QVariantMap finalizedHeuristic = finalizeResult(limitedHeuristic, QStringLiteral("heuristic"));
+        return annotateAnalysisWithProvenance(
+            mergeRecoveredAnalysis(finalizedAst, finalizedHeuristic, message),
+            QStringLiteral("recovered"),
+            QStringLiteral("medium"));
+    };
 
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         result.insert(QStringLiteral("summary"), QStringLiteral("Unable to read file"));
@@ -2015,14 +2322,9 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
         const bool hasAstErrors = treeSitterResult.value(QStringLiteral("analysisHasAstErrors")).toBool();
         const bool hasAstContent = analysisHasMeaningfulContent(treeSitterResult);
         if (hasAstErrors) {
-            const QVariantMap finalizedAst = finalizeResult(treeSitterResult, QStringLiteral("ast"));
-            const QVariantMap finalizedHeuristic = finalizeResult(parsePhp(path, text), QStringLiteral("heuristic"));
-            return annotateAnalysisWithProvenance(
-                mergeRecoveredAnalysis(finalizedAst,
-                                       finalizedHeuristic,
-                                       QStringLiteral("Heuristic recovery supplemented partial AST analysis.")),
-                QStringLiteral("recovered"),
-                QStringLiteral("medium"));
+            return finalizeRecoveredResult(treeSitterResult,
+                                           parsePhp(path, text),
+                                           QStringLiteral("Heuristic recovery supplemented AST-uncovered ranges only."));
         }
         if (hasAstContent) {
             return finalizeResult(treeSitterResult, QStringLiteral("ast"));
@@ -2063,15 +2365,9 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
         const bool hasAstErrors = treeSitterResult.value(QStringLiteral("analysisHasAstErrors")).toBool();
         const bool hasAstContent = analysisHasMeaningfulContent(treeSitterResult);
         if (hasAstErrors) {
-            const QVariantMap finalizedAst = finalizeResult(treeSitterResult, QStringLiteral("ast"));
-            const QVariantMap finalizedHeuristic = finalizeResult(parseScriptLike(path, text, language == QStringLiteral("tsx")),
-                                                                 QStringLiteral("heuristic"));
-            return annotateAnalysisWithProvenance(
-                mergeRecoveredAnalysis(finalizedAst,
-                                       finalizedHeuristic,
-                                       QStringLiteral("Heuristic recovery supplemented partial AST analysis.")),
-                QStringLiteral("recovered"),
-                QStringLiteral("medium"));
+            return finalizeRecoveredResult(treeSitterResult,
+                                           parseScriptLike(path, text, language == QStringLiteral("tsx")),
+                                           QStringLiteral("Heuristic recovery supplemented AST-uncovered ranges only."));
         }
         if (hasAstContent) {
             return finalizeResult(treeSitterResult, QStringLiteral("ast"));
@@ -2089,14 +2385,9 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
         const bool hasAstErrors = treeSitterResult.value(QStringLiteral("analysisHasAstErrors")).toBool();
         const bool hasAstContent = analysisHasMeaningfulContent(treeSitterResult);
         if (hasAstErrors) {
-            const QVariantMap finalizedAst = finalizeResult(treeSitterResult, QStringLiteral("ast"));
-            const QVariantMap finalizedHeuristic = finalizeResult(parsePython(path, text), QStringLiteral("heuristic"));
-            return annotateAnalysisWithProvenance(
-                mergeRecoveredAnalysis(finalizedAst,
-                                       finalizedHeuristic,
-                                       QStringLiteral("Heuristic recovery supplemented partial AST analysis.")),
-                QStringLiteral("recovered"),
-                QStringLiteral("medium"));
+            return finalizeRecoveredResult(treeSitterResult,
+                                           parsePython(path, text),
+                                           QStringLiteral("Heuristic recovery supplemented AST-uncovered ranges only."));
         }
         if (hasAstContent) {
             return finalizeResult(treeSitterResult, QStringLiteral("ast"));
@@ -2111,14 +2402,9 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
         const bool hasAstErrors = treeSitterResult.value(QStringLiteral("analysisHasAstErrors")).toBool();
         const bool hasAstContent = analysisHasMeaningfulContent(treeSitterResult);
         if (hasAstErrors) {
-            const QVariantMap finalizedAst = finalizeResult(treeSitterResult, QStringLiteral("ast"));
-            const QVariantMap finalizedHeuristic = finalizeResult(parseJava(path, text), QStringLiteral("heuristic"));
-            return annotateAnalysisWithProvenance(
-                mergeRecoveredAnalysis(finalizedAst,
-                                       finalizedHeuristic,
-                                       QStringLiteral("Heuristic recovery supplemented partial AST analysis.")),
-                QStringLiteral("recovered"),
-                QStringLiteral("medium"));
+            return finalizeRecoveredResult(treeSitterResult,
+                                           parseJava(path, text),
+                                           QStringLiteral("Heuristic recovery supplemented AST-uncovered ranges only."));
         }
         if (hasAstContent) {
             return finalizeResult(treeSitterResult, QStringLiteral("ast"));
@@ -2130,14 +2416,9 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
         const bool hasAstErrors = treeSitterResult.value(QStringLiteral("analysisHasAstErrors")).toBool();
         const bool hasAstContent = analysisHasMeaningfulContent(treeSitterResult);
         if (hasAstErrors) {
-            const QVariantMap finalizedAst = finalizeResult(treeSitterResult, QStringLiteral("ast"));
-            const QVariantMap finalizedHeuristic = finalizeResult(parseCSharp(path, text), QStringLiteral("heuristic"));
-            return annotateAnalysisWithProvenance(
-                mergeRecoveredAnalysis(finalizedAst,
-                                       finalizedHeuristic,
-                                       QStringLiteral("Heuristic recovery supplemented partial AST analysis.")),
-                QStringLiteral("recovered"),
-                QStringLiteral("medium"));
+            return finalizeRecoveredResult(treeSitterResult,
+                                           parseCSharp(path, text),
+                                           QStringLiteral("Heuristic recovery supplemented AST-uncovered ranges only."));
         }
         if (hasAstContent) {
             return finalizeResult(treeSitterResult, QStringLiteral("ast"));
@@ -2149,14 +2430,9 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
         const bool hasAstErrors = treeSitterResult.value(QStringLiteral("analysisHasAstErrors")).toBool();
         const bool hasAstContent = analysisHasMeaningfulContent(treeSitterResult);
         if (hasAstErrors) {
-            const QVariantMap finalizedAst = finalizeResult(treeSitterResult, QStringLiteral("ast"));
-            const QVariantMap finalizedHeuristic = finalizeResult(parseRust(path, text), QStringLiteral("heuristic"));
-            return annotateAnalysisWithProvenance(
-                mergeRecoveredAnalysis(finalizedAst,
-                                       finalizedHeuristic,
-                                       QStringLiteral("Heuristic recovery supplemented partial AST analysis.")),
-                QStringLiteral("recovered"),
-                QStringLiteral("medium"));
+            return finalizeRecoveredResult(treeSitterResult,
+                                           parseRust(path, text),
+                                           QStringLiteral("Heuristic recovery supplemented AST-uncovered ranges only."));
         }
         if (hasAstContent) {
             return finalizeResult(treeSitterResult, QStringLiteral("ast"));
@@ -2280,6 +2556,7 @@ QVariantMap SymbolParser::parseSwiftTreeSitter(const QString &path, const QStrin
         symbols = applyRelationsToSymbols(symbols, callsByKey, calledByByKey);
     }
 
+    symbols = applyPhpCallbackRelations(symbols);
     symbols = applySnippetCallRelations(symbols);
 
     ts_tree_delete(tree);
@@ -4254,6 +4531,7 @@ QVariantMap SymbolParser::parsePhp(const QString &path, const QString &text) con
     result.insert(QStringLiteral("path"), path);
     result.insert(QStringLiteral("fileName"), QFileInfo(path).fileName());
     result.insert(QStringLiteral("language"), QStringLiteral("php"));
+    symbols = applyPhpCallbackRelations(symbols);
     symbols = applySnippetCallRelations(symbols);
     result.insert(QStringLiteral("symbols"), symbols);
     result.insert(QStringLiteral("quickLinks"), QVariantList{});

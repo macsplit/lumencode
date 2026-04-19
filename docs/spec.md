@@ -258,6 +258,8 @@ Warnings are part of the product contract, not decorative text:
 Current parser authority model:
 
 - AST output is the intended authority where a Tree-sitter path exists
+- When an AST-backed file contains errors but still yields useful structure, heuristic recovery may supplement only AST-uncovered symbol ranges rather than re-parsing the whole file as equally authoritative.
+- Recovered analyses are therefore mixed on purpose: AST-owned regions remain authoritative, while heuristic supplementation is bounded to uncovered structure and relation contributions.
 - TS/TSX, Python, Java, C#, Rust, and PHP now keep partial AST output even when the tree has errors and supplement it with heuristic recovery, returning a `recovered` analysis rather than a file-wide fallback
 - Swift and CSS still mostly behave as file-wide AST-or-heuristic paths because the current recovery handshake is not yet implemented there
 - a first generic attempt at AST error-range harvesting was intentionally backed out after cross-grammar instability; future range-aware recovery work should be language-specific and fixture-gated
