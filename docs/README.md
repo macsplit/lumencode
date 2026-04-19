@@ -10,7 +10,7 @@ These guides are meant to explain how to use and extend LumenCode without forcin
 
 Diagram sources live in `docs/diagrams/`.
 
-To render them to `docs/generated/`:
+To render them to `docs/generated/` as SVG and PNG:
 
 ```bash
 ./tools/generate-doc-diagrams.sh
