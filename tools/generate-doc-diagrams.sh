@@ -12,12 +12,6 @@ if ! command -v mmdc >/dev/null 2>&1; then
     exit 1
 fi
 
-if ! command -v convert >/dev/null 2>&1; then
-    echo "convert not found in PATH" >&2
-    echo "Install ImageMagick or make it available before generating PNG outputs." >&2
-    exit 1
-fi
-
 detect_browser() {
     local candidate
     for candidate in \
@@ -58,7 +52,7 @@ for source in "$DIAGRAM_DIR"/*.mmd; do
     echo "Generating $svg_target"
     mmdc -p "$PUPPETEER_CONFIG" -i "$source" -o "$svg_target" -t neutral -b transparent
     echo "Generating $png_target"
-    convert "$svg_target" "$png_target"
+    mmdc -p "$PUPPETEER_CONFIG" -i "$source" -o "$png_target" -t neutral -b white
 done
 
 echo "Generated diagrams in $OUTPUT_DIR"
