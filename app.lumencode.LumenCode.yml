@@ -9,6 +9,7 @@ finish-args:
   - --socket=wayland
   - --socket=session-bus
   - --talk-name=org.freedesktop.portal.Desktop
+  - --talk-name=org.freedesktop.Flatpak
   - --device=dri
   - --filesystem=home
 modules:

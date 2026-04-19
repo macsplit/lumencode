@@ -1697,6 +1697,12 @@ bool ProjectController::openCurrentInFolder() const
 
     const QFileInfo info(path);
     const QString folderPath = info.isDir() ? info.absoluteFilePath() : info.absolutePath();
+
+    if (QFileInfo::exists(QStringLiteral("/.flatpak-info"))) {
+        return QProcess::startDetached(QStringLiteral("flatpak-spawn"), 
+            {QStringLiteral("--host"), QStringLiteral("xdg-open"), folderPath});
+    }
+
     return !folderPath.isEmpty() && QDesktopServices::openUrl(QUrl::fromLocalFile(folderPath));
 }
 
@@ -1708,6 +1714,10 @@ bool ProjectController::openCurrentInEditor() const
     }
 
     if (m_preferredEditor.isEmpty()) {
+        if (QFileInfo::exists(QStringLiteral("/.flatpak-info"))) {
+            return QProcess::startDetached(QStringLiteral("flatpak-spawn"), 
+                {QStringLiteral("--host"), QStringLiteral("xdg-open"), filePath});
+        }
         return QDesktopServices::openUrl(QUrl::fromLocalFile(filePath));
     }
 
@@ -1731,6 +1741,13 @@ bool ProjectController::openCurrentInEditor() const
     if (!substituted) {
         command.append(filePath);
     }
+
+    if (QFileInfo::exists(QStringLiteral("/.flatpak-info"))) {
+        QStringList hostCommand = {QStringLiteral("--host"), program};
+        hostCommand.append(command);
+        return QProcess::startDetached(QStringLiteral("flatpak-spawn"), hostCommand);
+    }
+
     return QProcess::startDetached(program, command);
 }
 
