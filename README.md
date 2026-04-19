@@ -11,6 +11,12 @@ LumenCode is intentionally:
 
 ![Screenshot](screenshots/screenshot.png)
 
+## Guides
+
+- [Docs Index](docs/README.md)
+- [End-User Guide](docs/end-user-guide.md)
+- [Developer Guide](docs/developer-guide.md)
+
 ## Current State
 
 What currently works:
