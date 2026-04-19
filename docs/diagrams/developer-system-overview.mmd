@@ -3,7 +3,7 @@ flowchart LR
     PC --> GUI[QML UI]
     PC --> CLI[lumencode-cli]
     CLI --> SP[SymbolParser]
-    PC --> Helper[Helper process\nlumencode-cli --dump-file]
+    PC --> Helper[Helper process<br/>lumencode-cli --dump-file]
     Helper --> SP
     SP --> TS[Tree-sitter parsers]
     SP --> H[Heuristic parsers]
