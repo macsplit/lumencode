@@ -7,6 +7,7 @@ finish-args:
   - --share=ipc
   - --socket=x11
   - --socket=wayland
+  - --socket=session-bus
   - --device=dri
   - --filesystem=home
   - --share=network
