@@ -8,6 +8,7 @@ finish-args:
   - --socket=x11
   - --socket=wayland
   - --socket=session-bus
+  - --talk-name=org.freedesktop.portal.Desktop
   - --device=dri
   - --filesystem=home
 modules:
