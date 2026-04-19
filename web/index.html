@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LumenCode - Structural Code Explorer</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>LumenCode</h1>
+            <p class="tagline">Structural code explorer for local source trees</p>
+        </header>
+
+        <main>
+            <section class="screenshot">
+                <img src="screenshot.png" alt="LumenCode Screenshot">
+            </section>
+
+            <section class="about">
+                <h2>About</h2>
+                <p>LumenCode is a developer tool that focuses on code shape rather than freeform text editing. It reads a filesystem tree, extracts symbols from supported source files, and allows you to drill from folders to files to symbols to member details.</p>
+                <p>It is intentionally filesystem-aware, parser-assisted, and non-editing.</p>
+            </section>
+
+            <section class="specs">
+                <h2>Technical Specifications</h2>
+                <ul>
+                    <li><strong>Languages:</strong> PHP, JS, TS, TSX, QML, CSS, HTML, JSON, Python, C/C++, Java, C#, Rust, Swift, and Objective-C.</li>
+                    <li><strong>Parsers:</strong> Tree-sitter integration for most major languages.</li>
+                    <li><strong>Features:</strong> Denser three-pane explorer, syntax-colored snippets, cross-file relation analysis, and crash-isolated background analysis.</li>
+                </ul>
+            </section>
+
+            <section class="install">
+                <h2>Installation</h2>
+                <p>LumenCode is available as a standalone Flatpak bundle or can be built from source.</p>
+                
+                <div class="install-options">
+                    <div class="option">
+                        <h3>Flatpak</h3>
+                        <p>Download and install the Flatpak bundle directly:</p>
+                        <p><a href="app.lumencode.LumenCode.flatpak" class="download-button">Download LumenCode Flatpak</a></p>
+                        <p><small>ID: <code>app.lumencode.LumenCode</code></small></p>
+                    </div>
+                    <div class="option">
+                        <h3>From Source</h3>
+<pre><code>git clone https://github.com/macsplit/lumencode.git
+cd lumencode
+cmake -S . -B build
+cmake --build build</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="source">
+                <p>Source code is available on <a href="https://github.com/macsplit/lumencode">GitHub</a>.</p>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 LumenCode. Released under the <a href="https://github.com/macsplit/lumencode/blob/main/LICENSE">GPLv3 License</a>.</p>
+        </footer>
+    </div>
+</body>
+</html>

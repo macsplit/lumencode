@@ -1,0 +1,20 @@
+id: app.lumencode.LumenCode
+runtime: org.kde.Platform
+runtime-version: '5.15-21.08'
+sdk: org.kde.Sdk
+command: lumencode
+finish-args:
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --device=dri
+  - --filesystem=home
+  - --share=network
+modules:
+  - name: lumencode
+    buildsystem: cmake-ninja
+    sources:
+      - type: dir
+        path: .
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
