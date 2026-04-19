@@ -10,8 +10,39 @@ REMOTE_DIR="/var/www/lumencode"
 PORT=33335
 DOMAIN="lumencode.app"
 PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-http://$NUC_HOST:$PORT}"
+FLATPAK_GPG_HOMEDIR="${FLATPAK_GPG_HOMEDIR:-$HOME/.gnupg}"
+FLATPAK_GPG_UID="${FLATPAK_GPG_UID:-LumenCode Flatpak Repo <flatpak@lumencode.app>}"
+FLATPAK_GPG_KEY_ID="${FLATPAK_GPG_KEY_ID:-}"
+
+resolve_signing_key() {
+    if [ -n "$FLATPAK_GPG_KEY_ID" ]; then
+        return 0
+    fi
+
+    FLATPAK_GPG_KEY_ID="$(gpg --homedir "$FLATPAK_GPG_HOMEDIR" --list-secret-keys --with-colons "$FLATPAK_GPG_UID" | awk -F: '$1 == "sec" { print $5; exit }')"
+    if [ -z "$FLATPAK_GPG_KEY_ID" ]; then
+        echo "❌ No Flatpak signing key found for $FLATPAK_GPG_UID" >&2
+        echo "   Set FLATPAK_GPG_KEY_ID explicitly or create the key first." >&2
+        exit 1
+    fi
+}
+
+export_public_key_base64() {
+    gpg --homedir "$FLATPAK_GPG_HOMEDIR" --export "$FLATPAK_GPG_KEY_ID" | base64 -w0
+}
+
+sign_repo() {
+    echo "🔏 Signing Flatpak repository with key $FLATPAK_GPG_KEY_ID..."
+    flatpak build-update-repo \
+        --gpg-sign="$FLATPAK_GPG_KEY_ID" \
+        --gpg-homedir="$FLATPAK_GPG_HOMEDIR" \
+        "$REPO_DIR"
+}
 
 generate_flatpak_metadata() {
+    local public_key_base64
+    public_key_base64="$(export_public_key_base64)"
+
     cat > "$WEB_DIR/app.lumencode.LumenCode.flatpakref" <<EOF
 [Flatpak Ref]
 Version=1
@@ -25,6 +56,8 @@ Icon=$PUBLIC_BASE_URL/favicon.png
 Url=$PUBLIC_BASE_URL/repo/
 RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo
 IsRuntime=false
+SuggestRemoteName=lumencode
+GPGKey=$public_key_base64
 EOF
 
     cat > "$WEB_DIR/lumencode.flatpakrepo" <<EOF
@@ -36,12 +69,16 @@ Description=Self-hosted Flatpak repository for LumenCode updates.
 Homepage=$PUBLIC_BASE_URL/
 Icon=$PUBLIC_BASE_URL/favicon.png
 Url=$PUBLIC_BASE_URL/repo/
+GPGKey=$public_key_base64
 EOF
 }
 
 echo "🚀 Deploying LumenCode website to $NUC_HOST..."
 
-# 1. Generate Flatpak metadata and sync static files
+# 1. Resolve signing key, sign repo, then generate metadata and sync static files
+resolve_signing_key
+sign_repo
+
 echo "🧾 Generating Flatpak metadata for $PUBLIC_BASE_URL..."
 generate_flatpak_metadata
 
