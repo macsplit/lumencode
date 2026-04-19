@@ -1,0 +1,8 @@
+[Flatpak Repo]
+Version=1
+Title=LumenCode Flatpak Repository
+Comment=Flatpak repository for LumenCode
+Description=Self-hosted Flatpak repository for LumenCode updates.
+Homepage=http://nuc:33335/
+Icon=http://nuc:33335/favicon.png
+Url=http://nuc:33335/repo/

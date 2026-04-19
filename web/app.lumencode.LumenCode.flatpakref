@@ -1,0 +1,12 @@
+[Flatpak Ref]
+Version=1
+Name=app.lumencode.LumenCode
+Branch=master
+Title=LumenCode
+Comment=Structural code explorer for local source trees
+Description=Filesystem-aware structural code explorer with parser-assisted symbol browsing and cross-file relation analysis.
+Homepage=http://nuc:33335/
+Icon=http://nuc:33335/favicon.png
+Url=http://nuc:33335/repo/
+RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo
+IsRuntime=false
