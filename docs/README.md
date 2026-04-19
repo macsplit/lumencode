@@ -7,3 +7,11 @@
 - [Implementation Log](./implementation-log.md)
 
 These guides are meant to explain how to use and extend LumenCode without forcing the reader through every implementation caveat first.
+
+Diagram sources live in `docs/diagrams/`.
+
+To render them to `docs/generated/`:
+
+```bash
+./tools/generate-doc-diagrams.sh
+```

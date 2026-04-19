@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant U as User
+    participant T as Tree
+    participant O as Overview
+    participant I as Inspector
+    participant S as Snippet Pane
+    U->>T: Select file
+    T->>O: Show file structure
+    U->>O: Click symbol
+    O->>I: Show detail
+    O->>S: Show symbol snippet
+    U->>I: Click relation or quick link
+    I->>O: Move to new symbol or file
+    O->>S: Refresh snippet

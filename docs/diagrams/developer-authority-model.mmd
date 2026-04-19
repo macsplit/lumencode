@@ -1,0 +1,11 @@
+flowchart TD
+    A[Parse file] --> B{Tree-sitter path exists?}
+    B -- No --> H[Heuristic result]
+    B -- Yes --> C[AST result]
+    C --> D{AST has errors?}
+    D -- No --> E[Authoritative AST result]
+    D -- Yes --> F[Recovered result]
+    F --> G[Keep AST-owned structure]
+    F --> I[Heuristic supplementation only for AST-uncovered ranges]
+    G --> J[Merged recovered payload]
+    I --> J

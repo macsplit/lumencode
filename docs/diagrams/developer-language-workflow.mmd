@@ -1,0 +1,7 @@
+flowchart TD
+    A[Pick one language problem] --> B[Add or improve parser output]
+    B --> C[Add fixture coverage]
+    C --> D[Run fixture-only sweep]
+    D --> E[Run normal corpus sweep]
+    E --> F[Run broader stress sweep]
+    F --> G[Only then inspect GUI behavior]

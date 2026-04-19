@@ -1,0 +1,6 @@
+flowchart TD
+    A[Analysis starts] --> B{Normal size and cost?}
+    B -- Yes --> C[Full structural result]
+    B -- No --> D[Bounded partial result]
+    D --> E[Warning shown in UI]
+    E --> F[App stays responsive]

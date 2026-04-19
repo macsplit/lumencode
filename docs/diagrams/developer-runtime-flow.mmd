@@ -1,0 +1,13 @@
+sequenceDiagram
+    participant UI as QML
+    participant PC as ProjectController
+    participant HP as Helper Process
+    participant SP as SymbolParser
+    UI->>PC: selectPath(...)
+    PC->>PC: beginAsyncAnalysis(...)
+    PC->>HP: lumencode-cli --dump-file
+    HP->>SP: parseFile(...)
+    SP-->>HP: analysis JSON
+    HP-->>PC: parsed result
+    PC->>PC: augment relationships
+    PC-->>UI: selectedFileData / selectedSymbol / selectedSnippet

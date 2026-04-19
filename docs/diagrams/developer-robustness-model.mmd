@@ -1,0 +1,6 @@
+flowchart TD
+    A[User selects file] --> B[Async helper analysis]
+    B --> C{Result usable?}
+    C -- Yes --> D[Render payload]
+    C -- Partial --> E[Render payload + warning]
+    C -- No --> F[Render explicit fallback summary]

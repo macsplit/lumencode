@@ -1,0 +1,7 @@
+flowchart TD
+    A[User clicks symbol or relation] --> B{Target file already loaded?}
+    B -- No --> C[Queue pending selection]
+    C --> D[Async analysis completes]
+    D --> E[Hydrate real symbol from loaded payload]
+    B -- Yes --> E
+    E --> F[Update selectedSymbol and selectedSnippet]

@@ -1,0 +1,10 @@
+flowchart TB
+    subgraph Top
+        L[Left pane\nProject tree]
+        M[Middle pane\nFile overview]
+        R[Right pane\nInspector]
+    end
+    B[Bottom pane\nSnippet and diagnostics]
+    L --> M
+    M --> R
+    R --> B
