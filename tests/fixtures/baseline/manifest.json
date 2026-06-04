@@ -8,12 +8,16 @@
         {
           "kind": "function",
           "name": "wrapper",
-          "calls": ["helper"]
+          "calls": [
+            "helper"
+          ]
         },
         {
           "kind": "function",
           "name": "helper",
-          "calledBy": ["wrapper"]
+          "calledBy": [
+            "wrapper"
+          ]
         }
       ]
     },
@@ -25,7 +29,9 @@
         {
           "kind": "function",
           "name": "run",
-          "calls": ["wrapper"]
+          "calls": [
+            "wrapper"
+          ]
         }
       ]
     },
@@ -37,7 +43,9 @@
         {
           "kind": "function",
           "name": "runAlias",
-          "calls": ["wrapper"]
+          "calls": [
+            "wrapper"
+          ]
         }
       ]
     },
@@ -49,12 +57,16 @@
         {
           "kind": "function",
           "name": "wrapperTs",
-          "calls": ["helperTs"]
+          "calls": [
+            "helperTs"
+          ]
         },
         {
           "kind": "function",
           "name": "helperTs",
-          "calledBy": ["wrapperTs"]
+          "calledBy": [
+            "wrapperTs"
+          ]
         }
       ]
     },
@@ -66,7 +78,9 @@
         {
           "kind": "function",
           "name": "runTs",
-          "calls": ["wrapperTs"]
+          "calls": [
+            "wrapperTs"
+          ]
         }
       ]
     },
@@ -78,7 +92,9 @@
         {
           "kind": "function",
           "name": "runAliasTs",
-          "calls": ["wrapperTs"]
+          "calls": [
+            "wrapperTs"
+          ]
         }
       ]
     },
@@ -99,7 +115,9 @@
         {
           "kind": "function",
           "name": "wrapperBroken",
-          "calls": ["helperBroken"]
+          "calls": [
+            "helperBroken"
+          ]
         }
       ]
     },
@@ -111,12 +129,16 @@
         {
           "kind": "function",
           "name": "helper_wrapper",
-          "calls": ["helper_value"]
+          "calls": [
+            "helper_value"
+          ]
         },
         {
           "kind": "function",
           "name": "helper_value",
-          "calledBy": ["helper_wrapper"]
+          "calledBy": [
+            "helper_wrapper"
+          ]
         }
       ]
     },
@@ -152,12 +174,16 @@
         {
           "kind": "function",
           "name": "openFolder",
-          "calls": ["loadProject"]
+          "calls": [
+            "loadProject"
+          ]
         },
         {
           "kind": "function",
           "name": "loadProject",
-          "calledBy": ["openFolder"]
+          "calledBy": [
+            "openFolder"
+          ]
         }
       ]
     },
@@ -173,7 +199,9 @@
         {
           "kind": "function",
           "name": "outer_py",
-          "calls": ["helper_py"]
+          "calls": [
+            "helper_py"
+          ]
         },
         {
           "kind": "class",
@@ -182,12 +210,17 @@
         {
           "kind": "method",
           "name": "run",
-          "calls": ["helper_py"]
+          "calls": [
+            "helper_py"
+          ]
         },
         {
           "kind": "function",
           "name": "helper_py",
-          "calledBy": ["outer_py", "run"]
+          "calledBy": [
+            "outer_py",
+            "run"
+          ]
         }
       ]
     },
@@ -208,7 +241,9 @@
         {
           "kind": "function",
           "name": "wrapper_broken_py",
-          "calls": ["helper_broken_py"]
+          "calls": [
+            "helper_broken_py"
+          ]
         },
         {
           "kind": "class",
@@ -236,12 +271,17 @@
         {
           "kind": "method",
           "name": "greet",
-          "calls": ["helper_rs"]
+          "calls": [
+            "helper_rs"
+          ]
         },
         {
           "kind": "function",
           "name": "helper_rs",
-          "calledBy": ["greet", "main"]
+          "calledBy": [
+            "greet",
+            "main"
+          ]
         }
       ]
     },
@@ -262,7 +302,9 @@
         {
           "kind": "function",
           "name": "wrapper_broken_rs",
-          "calls": ["helper_broken_rs"]
+          "calls": [
+            "helper_broken_rs"
+          ]
         },
         {
           "kind": "struct",
@@ -286,12 +328,16 @@
         {
           "kind": "method",
           "name": "greet",
-          "calls": ["helper"]
+          "calls": [
+            "helper"
+          ]
         },
         {
           "kind": "method",
           "name": "helper",
-          "calledBy": ["greet"]
+          "calledBy": [
+            "greet"
+          ]
         }
       ]
     },
@@ -312,7 +358,9 @@
         {
           "kind": "method",
           "name": "greetBrokenJava",
-          "calls": ["helperBrokenJava"]
+          "calls": [
+            "helperBrokenJava"
+          ]
         }
       ]
     },
@@ -332,12 +380,16 @@
         {
           "kind": "method",
           "name": "Greet",
-          "calls": ["Helper"]
+          "calls": [
+            "Helper"
+          ]
         },
         {
           "kind": "method",
           "name": "Helper",
-          "calledBy": ["Greet"]
+          "calledBy": [
+            "Greet"
+          ]
         }
       ]
     },
@@ -358,7 +410,9 @@
         {
           "kind": "method",
           "name": "GreetBrokenCs",
-          "calls": ["HelperBrokenCs"]
+          "calls": [
+            "HelperBrokenCs"
+          ]
         }
       ]
     },
@@ -400,7 +454,7 @@
       "file_expectations": {
         "quick_links": 1,
         "css_matched_classes": 2,
-        "css_missing_classes": 1
+        "css_missing_classes": 2
       }
     },
     {
@@ -420,6 +474,28 @@
       "file_expectations": {
         "quick_links": 1,
         "css_matched_classes": 2,
+        "css_missing_classes": 2
+      }
+    },
+    {
+      "name": "html_css_pseudo_selectors",
+      "root": "tests/fixtures/baseline/html_css_pseudos",
+      "file": "index.html",
+      "expectations": [],
+      "file_expectations": {
+        "quick_links": 1,
+        "css_matched_classes": 8,
+        "css_missing_classes": 1
+      }
+    },
+    {
+      "name": "html_css_has_selectors",
+      "root": "tests/fixtures/baseline/html_css_has",
+      "file": "index.html",
+      "expectations": [],
+      "file_expectations": {
+        "quick_links": 1,
+        "css_matched_classes": 5,
         "css_missing_classes": 1
       }
     },

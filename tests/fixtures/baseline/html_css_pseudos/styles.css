@@ -1,0 +1,16 @@
+/* .fake-comment should not count */
+.menu:is(.selected, .active) {
+  color: red;
+}
+
+.card:where(.rounded) {
+  border: 1px solid;
+}
+
+.panel:not(.hidden) {
+  opacity: 1;
+}
+
+.content::before {
+  content: ".fake-string";
+}

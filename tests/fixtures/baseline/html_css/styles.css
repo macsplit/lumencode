@@ -1,7 +1,12 @@
+/* .fake-comment should be ignored */
 .hero {
   color: red;
 }
 
 .title {
   font-weight: bold;
+}
+
+.content::before {
+  content: ".fake-string";
 }

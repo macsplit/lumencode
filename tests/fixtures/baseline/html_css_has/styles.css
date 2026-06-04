@@ -1,0 +1,16 @@
+/* .fake-comment should not count */
+.wrapper:has(.card) {
+  padding: 1rem;
+}
+
+.card:has(.selected, .badge) {
+  border: 1px solid;
+}
+
+.wrapper:has(.ghost) {
+  opacity: 0.5;
+}
+
+.note::before {
+  content: ".fake-string";
+}

@@ -1,5 +1,51 @@
 # Implementation Log
 
+## 2026-06-04
+- **Fixture hardening: CSS `:has()` coverage:**
+    - Added a dedicated `html_css_has` baseline to cover grouped selectors with `:has()` and confirm the extractor matches nested class selectors instead of string-literal noise.
+    - Locked in the expected CSS summary counts so `:has()` handling stays regression-tested alongside the existing pseudo-class coverage.
+    - Revalidated the fixture-only harness and confirmed the new fixture output matches the intended class/missing-class split.
+- **Fixture hardening: CSS pseudo-class coverage:**
+    - Added a dedicated `html_css_pseudos` baseline to cover grouped selectors and pseudo-class wrappers such as `:is()`, `:where()`, and `:not()`.
+    - Locked in the expected CSS summary counts for both matched and missing classes so the pseudo-class path stays regression-tested.
+    - Revalidated the fixture-only harness and the 160-file corpus sweep with `issues_found: 0`.
+
+- **Fixture hardening: html_css baseline:**
+    - Expanded the baseline HTML/CSS fixture to include comment and string-literal selector noise, plus an explicit missing class that exercises the CSS summary path.
+    - Updated the manifest expectations so the fixture now locks in the current `matchedClasses` and `missingClasses` counts for the CSS summary.
+    - Revalidated the fixture-only harness and the 160-file corpus sweep with `issues_found: 0`.
+
+- **Stabilization pass: CSS selector noise reduction:**
+    - Replaced CSS summary class discovery with Tree-sitter-backed selector traversal, with the regex path now acting only as a fallback.
+    - Kept selector lookup anchored to the cleaned CSS text so matched class snippets and line numbers stay aligned with the real selector instead of comment noise.
+    - Revalidated a focused CSS fixture and the 160-file corpus sweep with `issues_found: 0`.
+
+- **Stabilization pass: HTML/CSS and Node/CommonJS noise reduction:**
+    - Stripped HTML comments out of class extraction and linked-asset discovery so comment content no longer creates fake class matches or asset links.
+    - Normalized HTML asset targets to drop cache-busting query and fragment suffixes before resolution, matching the real file path instead of the decorated URL.
+    - Extended local Node/CommonJS dependency resolution to recognize common `.mjs`, `.cjs`, and `.jsx` forms, including index-file fallbacks, so local imports resolve less noisily.
+    - Revalidated the HTML-focused temporary fixture, the Node/CommonJS temporary fixture, the build, and the 160-file corpus sweep with `issues_found: 0`.
+
+- **Stabilization pass: shared inspection contract:**
+    - Normalized the remaining Python, Java, C#, and Rust dependency payload builders onto `makeSourceContextItem` so they inherit the same snippet-kind and diagnostics defaults as the rest of the inspection output.
+    - Removed the last unused hand-rolled dependency closure from the Python path after the normalization.
+    - Revalidated the build, the earlier JS/TS crash reproducer, and the 160-file corpus sweep with `issues_found: 0`.
+
+- **Generated JS corpus coverage:**
+    - Added `highlight.js` and `prism` to the shared corpus to stress generated and bundled JavaScript assets.
+    - Revalidated the 160-file sweep with the expanded corpus and `issues_found: 0`.
+
+- **Corpus expansion continued:**
+    - Added more HTML/CSS and C# corpus repos under `/home/user/Code/Corpus`, including `startbootstrap-freelancer`, `startbootstrap-agency`, and `dotnet-samples`.
+    - Revalidated the expanded corpus with a 160-file sweep and `issues_found: 0`.
+
+
+- **Corpus expansion and stability hardening:**
+    - Created `/home/user/Code/Corpus` and seeded it with representative real-world repos for broader regression fodder.
+    - Fixed a JS/TS Tree-sitter crash in `jsCallableKeyForNode` by guarding missing child nodes before dereferencing them.
+    - Normalized multiline context snippets to `block_excerpt` in `makeSourceContextItem`, so dependency payloads no longer violate the line-excerpt contract.
+    - Revalidated the exact crash reproducer and a broader 80-file corpus sweep with `issues_found: 0`.
+
 ## 2026-04-04
 
 - **Parser Authority / Recovery Refactor (Phase 1):**
@@ -224,6 +270,7 @@
     - Removed the previously tracked `build/` output tree from git history going forward.
 
 ## Next Session Starting Point
+- Focus next on stabilization and trustworthiness of the inspection pipeline before adding search.
 
 - Continue broadening the CLI regression corpus and assertion set.
 - Improve snippet highlighting fidelity or adopt a stronger highlighting dependency if one is available locally later.

@@ -90,6 +90,7 @@ cmake --build build
 If KF5 development packages are missing from the CMake search path, CMake will fail during configuration. That is an environment issue, not an application logic issue.
 
 ## Roadmap
+Next major milestone: stabilization and trustworthiness of the inspection pipeline, before search.
 
 Phase 1. Stabilization
 
