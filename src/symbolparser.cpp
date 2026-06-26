@@ -6201,7 +6201,7 @@ QVariantList SymbolParser::extractPythonRoutes(const QString &path, const QStrin
 {
     QVariantList routes;
     QRegularExpression routePattern(
-        QStringLiteral(R"(^\s*@(?:\w+\.)?route\s*\(\s*['"]([^'"]+)['"](?:\s*,\s*methods\s*=\s*\[([^\]]*)\])?)"),
+        QStringLiteral(R"(^[ \t]*@(?:\w+\.)?route\s*\(\s*['"]([^'"]+)['"](?:\s*,\s*methods\s*=\s*\[([^\]]*)\])?)"),
         QRegularExpression::MultilineOption);
     auto routeIt = routePattern.globalMatch(text);
     while (routeIt.hasNext()) {
@@ -6213,7 +6213,7 @@ QVariantList SymbolParser::extractPythonRoutes(const QString &path, const QStrin
             method.remove(QLatin1Char('\''));
             method.remove(QLatin1Char('"'));
         }
-        QVariantMap route = makeSourceContextItem(path, QStringLiteral("python"), line, snippetFromLine(text, line, 1),
+        QVariantMap route = makeSourceContextItem(path, QStringLiteral("python"), line, snippetFromLine(text, line, 0),
                                                   QStringLiteral("route"));
         route.insert(QStringLiteral("owner"), QStringLiteral("app"));
         route.insert(QStringLiteral("method"), method);
@@ -6223,14 +6223,14 @@ QVariantList SymbolParser::extractPythonRoutes(const QString &path, const QStrin
     }
 
     QRegularExpression fastApiPattern(
-        QStringLiteral(R"(^\s*@(?:\w+\.)?(get|post|put|patch|delete|options|head)\s*\(\s*['"]([^'"]+)['"])"),
+        QStringLiteral(R"(^[ \t]*@(?:\w+\.)?(get|post|put|patch|delete|options|head)\s*\(\s*['"]([^'"]+)['"])"),
         QRegularExpression::MultilineOption | QRegularExpression::CaseInsensitiveOption);
     auto fastApiIt = fastApiPattern.globalMatch(text);
     while (fastApiIt.hasNext()) {
         const auto match = fastApiIt.next();
         const int line = lineNumberAtOffset(text, match.capturedStart(0));
         const QString method = match.captured(1).toUpper();
-        QVariantMap route = makeSourceContextItem(path, QStringLiteral("python"), line, snippetFromLine(text, line, 1),
+        QVariantMap route = makeSourceContextItem(path, QStringLiteral("python"), line, snippetFromLine(text, line, 0),
                                                   QStringLiteral("route"));
         route.insert(QStringLiteral("owner"), QStringLiteral("app"));
         route.insert(QStringLiteral("method"), method);

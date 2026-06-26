@@ -203,7 +203,7 @@ def count_potential_local_relations(symbols: list[dict]) -> int:
             target_name = target.get("name", "")
             if not target_name or target_name == owner_name:
                 continue
-            if re.search(rf"\b{re.escape(target_name)}\b", snippet):
+            if re.search(rf"\b{re.escape(target_name)}\s*\(", snippet):
                 potential += 1
                 break
     return potential
