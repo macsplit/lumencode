@@ -27,6 +27,12 @@
     - Both the linked-CSS loop and the sibling-CSS loop now use `buildCssClassIndex`.
     - Result: `index.html` linking `bootstrap.min.css` dropped from 20s timeout to 27ms. Full 1200-file sweep passes with `issues_found: 0`.
 
+- **JS heuristic output quality improvements:**
+    - Anchored all top-level declaration patterns (`variable`, `arrow`, `objectExport`, `functionExpression`) to `^` so they only match at column 0 with `MultilineOption`. Local variables and nested arrow functions inside function bodies are no longer extracted as top-level symbols; typical async-function files dropped from 30+ symbols to 6–9 meaningful ones.
+    - Added `"function"` to the return-type `dropTokens` list in `enrichCallableSignature`. The C-style prefix extractor was stripping `async` but leaving `function` behind, causing `async function foo()` to report `returns: ['function']`; these now correctly report `returns: ['none']`.
+    - Suppressed bare open-delimiter return captures (`{`, `(`, `[`) from multi-line object/array literals so they no longer appear as meaningless return values. Single-character literal returns (e.g. `return 1`) are preserved.
+    - All 27 fixture cases and the 784-file corpus sweep continue to pass with `issues_found: 0`.
+
 ## 2026-06-04
 - **Fixture hardening: CSS `:has()` coverage:**
     - Added a dedicated `html_css_has` baseline to cover grouped selectors with `:has()` and confirm the extractor matches nested class selectors instead of string-literal noise.
