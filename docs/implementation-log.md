@@ -1,5 +1,32 @@
 # Implementation Log
 
+## 2026-06-26
+
+- **Regression sweep hardening: provenance and signature contracts:**
+    - Extended `tools/regression_sweep.py` with contract validators for `sourceMode`, `confidence`, `parameters`, and `returns` on every symbol so violations surface immediately.
+    - Added duplicate symbol identity detection (restricted to top-level symbols to avoid false positives from member methods with the same relative line).
+    - Added stale relation target detection and source-context collection validation for dependencies, routes, quickLinks, and relatedFiles.
+    - Tightened the potential relation heuristic in the sweep to require call syntax (`name(`) rather than bare word presence.
+
+- **Callable signature contract fixes:**
+    - `enrichCallableSignature` previously returned early without setting `parameters`/`returns` when the snippet was empty or started with `:` (constructor initialiser). Added default fields (`parameters: []`, `returns: [{text:"none"}]`) in both early-return paths so the contract is always satisfied.
+    - Fixed JS class methods and PHP heuristic methods that had no snippets: added `snippetFromBraceBlock` to JS `parseClassMembers` and ensured `parseObjectMembers` similarly includes snippets.
+
+- **CSS deduplication fix:**
+    - Comma-grouped selectors (e.g. `.a:hover, .a:focus-visible {}`) previously produced duplicate CSS symbols because both selectors resolved to the same `rule_set` line. Added `seenClassLines` QSet deduplication in `parseCssTreeSitter`.
+
+- **Snippet anchoring fixes (line-start regex patterns):**
+    - Replaced `^\s*` with `^[ \t]*` in ObjC function, interface/type alias, Python Flask/FastAPI decorator, and other multiline patterns. PCRE `\s` matches `\n`, causing matches at blank lines whose `lineNumberAtOffset` then produced wrong snippet lines.
+    - Reduced `contextLines` to 0 on ObjC methods (was 1) and ObjC functions (was 2) to stop snippets from inheriting closing braces of the preceding method.
+    - Reduced `contextLines` to 0 on Python route decorators and TS interface/type patterns.
+
+- **HTML parse timeout fix (CSS class index):**
+    - The HTML parser was calling `findCssClassSummaryEntry` (which runs a full Tree-sitter CSS parse) once per class name found in each linked CSS file. For `bootstrap.min.css` (~228K, ~500+ classes) this caused 500 sequential Tree-sitter parses and a 20-second timeout.
+    - Replaced the per-class approach with a new `buildCssClassIndex` function that does one Tree-sitter parse per CSS file and returns a complete `QMap<QString, QVariantMap>` of all name→entry mappings.
+    - Added a minified-file fast path: if the CSS file looks minified (`.min.` in filename or very long lines), `buildCssClassIndex` skips Tree-sitter entirely and uses the regex fallback with stub entries, avoiding even the single Tree-sitter parse on huge vendor bundles.
+    - Both the linked-CSS loop and the sibling-CSS loop now use `buildCssClassIndex`.
+    - Result: `index.html` linking `bootstrap.min.css` dropped from 20s timeout to 27ms. Full 1200-file sweep passes with `issues_found: 0`.
+
 ## 2026-06-04
 - **Fixture hardening: CSS `:has()` coverage:**
     - Added a dedicated `html_css_has` baseline to cover grouped selectors with `:has()` and confirm the extractor matches nested class selectors instead of string-literal noise.

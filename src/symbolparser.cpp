@@ -1846,6 +1846,74 @@ static QVariantMap findCssClassSummaryEntry(const QString &cssPath, const QStrin
     return makeCssClassSummaryEntry(name, true, cssPath, line, snippet);
 }
 
+// Single-pass CSS class index builder. Parses cssText once and returns name → entry for
+// all class selectors. For minified files (detected by filename or line structure) it falls
+// back to a fast regex scan with stub entries so the caller never runs N sequential parses.
+static QMap<QString, QVariantMap> buildCssClassIndex(const QString &cssPath, const QString &cssText)
+{
+    QMap<QString, QVariantMap> index;
+
+    if (looksLikeMinifiedSource(cssPath, QStringLiteral("css"), cssText)) {
+        const QString cleaned = normalizeCssSelectorText(cssText);
+        QRegularExpression pattern(QStringLiteral(R"(\.([A-Za-z_-][\w-]*))"));
+        auto it = pattern.globalMatch(cleaned);
+        while (it.hasNext()) {
+            const QString name = it.next().captured(1);
+            if (!index.contains(name)) {
+                index.insert(name, makeCssClassSummaryEntry(name, true, cssPath, 0,
+                    QStringLiteral(".%1 { ... }").arg(name)));
+            }
+        }
+        return index;
+    }
+
+    const QByteArray source = cssText.toUtf8();
+    TSLanguage *language = languageForName(QStringLiteral("css"));
+    if (!language) {
+        return index;
+    }
+    TSParser *parser = ts_parser_new();
+    if (!parser || !ts_parser_set_language(parser, language)) {
+        if (parser) {
+            ts_parser_delete(parser);
+        }
+        return index;
+    }
+    TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
+    if (!tree) {
+        ts_parser_delete(parser);
+        return index;
+    }
+    TSNode root = ts_tree_root_node(tree);
+    std::function<void(TSNode)> visit = [&](TSNode node) {
+        if (ts_node_is_null(node)) {
+            return;
+        }
+        const QString type = QString::fromUtf8(ts_node_type(node));
+        if (type == QStringLiteral("class_selector")) {
+            QString name = nodeText(node, source).trimmed();
+            if (name.startsWith(QLatin1Char('.'))) {
+                name.remove(0, 1);
+            }
+            if (!name.isEmpty() && !index.contains(name)) {
+                const TSNode snippetNode = firstAncestorOfType(node, {"rule_set", "block"});
+                const TSNode effectiveNode = ts_node_is_null(snippetNode) ? node : snippetNode;
+                index.insert(name, makeCssClassSummaryEntry(name, true, cssPath,
+                                                             nodeLine(effectiveNode),
+                                                             nodeSnippet(effectiveNode, source)));
+            }
+        }
+        const uint32_t count = ts_node_named_child_count(node);
+        for (uint32_t i = 0; i < count; ++i) {
+            visit(ts_node_named_child(node, i));
+        }
+    };
+    visit(root);
+    ts_tree_delete(tree);
+    ts_parser_delete(parser);
+    return index;
+}
+
 static QStringList extractHtmlLinkedAssets(const QString &htmlText, const QString &assetType);
 static QStringList extractHtmlLinkedAssets(const QString &htmlText, const QString &assetType);
 
@@ -5065,10 +5133,11 @@ QVariantMap SymbolParser::parseHtml(const QString &path, const QString &text) co
             continue;
         }
         const QString cssText = QString::fromUtf8(cssFile.readAll());
-        for (const QString &name : extractCssClasses(cssText)) {
-            availableClasses.insert(name);
-            if (!availableClassEntries.contains(name)) {
-                availableClassEntries.insert(name, findCssClassSummaryEntry(cssPath, cssText, name));
+        const QMap<QString, QVariantMap> classIndex = buildCssClassIndex(cssPath, cssText);
+        for (auto it = classIndex.constBegin(); it != classIndex.constEnd(); ++it) {
+            availableClasses.insert(it.key());
+            if (!availableClassEntries.contains(it.key())) {
+                availableClassEntries.insert(it.key(), it.value());
             }
         }
     }
@@ -5088,10 +5157,11 @@ QVariantMap SymbolParser::parseHtml(const QString &path, const QString &text) co
             continue;
         }
         const QString cssText = QString::fromUtf8(cssFile.readAll());
-        for (const QString &name : extractCssClasses(cssText)) {
-            availableClasses.insert(name);
-            if (!availableClassEntries.contains(name)) {
-                availableClassEntries.insert(name, findCssClassSummaryEntry(entry.absoluteFilePath(), cssText, name));
+        const QMap<QString, QVariantMap> classIndex = buildCssClassIndex(entry.absoluteFilePath(), cssText);
+        for (auto it = classIndex.constBegin(); it != classIndex.constEnd(); ++it) {
+            availableClasses.insert(it.key());
+            if (!availableClassEntries.contains(it.key())) {
+                availableClassEntries.insert(it.key(), it.value());
             }
         }
     }
