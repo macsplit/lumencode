@@ -1,5 +1,8 @@
 node_modules
 /src/*
+!/src/parser.c
+!/src/tree_sitter/
+!/src/tree_sitter/*.h
 !/src/scanner.c
 !/src/*.json
 *.swp
