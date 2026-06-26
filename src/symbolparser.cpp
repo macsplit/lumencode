@@ -2363,7 +2363,7 @@ static QVariantMap enrichCallableSignature(QVariantMap symbol, const QString &la
                         QStringLiteral("static"), QStringLiteral("virtual"), QStringLiteral("inline"),
                         QStringLiteral("constexpr"), QStringLiteral("final"), QStringLiteral("override"),
                         QStringLiteral("abstract"), QStringLiteral("async"), QStringLiteral("synchronized"),
-                        QStringLiteral("extern"), QStringLiteral("sealed")
+                        QStringLiteral("extern"), QStringLiteral("sealed"), QStringLiteral("function")
                     };
                     QStringList prefixTokens = prefix.split(QRegularExpression(QStringLiteral(R"(\s+)")), Qt::SkipEmptyParts);
                     while (!prefixTokens.isEmpty() && dropTokens.contains(prefixTokens.first())) {
@@ -2398,7 +2398,12 @@ static QVariantMap enrichCallableSignature(QVariantMap symbol, const QString &la
     } else {
         auto returnIt = QRegularExpression(QStringLiteral(R"(\breturn\b\s*([^;\n]+))")).globalMatch(snippet);
         while (returnIt.hasNext() && returns.size() < 3) {
-            appendReturnDetail(returns, returnIt.next().captured(1));
+            const QString captured = returnIt.next().captured(1).trimmed();
+            // Skip bare open-delimiters from multi-line object/array/call literals
+            if (captured != QStringLiteral("{") && captured != QStringLiteral("(")
+                    && captured != QStringLiteral("[")) {
+                appendReturnDetail(returns, captured);
+            }
         }
         if (returns.isEmpty()) {
             appendReturnDetail(returns, QStringLiteral("none"));
@@ -4886,7 +4891,7 @@ QVariantMap SymbolParser::parseScriptLike(const QString &path, const QString &te
     }
 
     QRegularExpression objectExportPattern(
-        QStringLiteral(R"((?:export\s+)?(?:const|let|var)\s+([A-Za-z_]\w*)\s*=\s*\{)"),
+        QStringLiteral(R"(^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_]\w*)\s*=\s*\{)"),
         QRegularExpression::MultilineOption);
     auto objectExports = objectExportPattern.globalMatch(text);
     while (objectExports.hasNext()) {
@@ -4941,7 +4946,7 @@ QVariantMap SymbolParser::parseScriptLike(const QString &path, const QString &te
     }
 
     QRegularExpression arrowPattern(
-        QStringLiteral(R"((?:export\s+)?const\s+([A-Za-z_]\w*)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>)"),
+        QStringLiteral(R"(^(?:export\s+)?const\s+([A-Za-z_]\w*)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>)"),
         QRegularExpression::MultilineOption);
     auto arrows = arrowPattern.globalMatch(text);
     while (arrows.hasNext()) {
@@ -4958,7 +4963,7 @@ QVariantMap SymbolParser::parseScriptLike(const QString &path, const QString &te
     }
 
     QRegularExpression functionExpressionPattern(
-        QStringLiteral(R"((?:export\s+)?(?:const|let|var)\s+([A-Za-z_]\w*)\s*=\s*(?:async\s*)?function\s*\()"),
+        QStringLiteral(R"(^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_]\w*)\s*=\s*(?:async\s*)?function\s*\()"),
         QRegularExpression::MultilineOption);
     auto functionExpressions = functionExpressionPattern.globalMatch(text);
     while (functionExpressions.hasNext()) {
@@ -5009,7 +5014,7 @@ QVariantMap SymbolParser::parseScriptLike(const QString &path, const QString &te
     }
 
     QRegularExpression variablePattern(
-        QStringLiteral(R"((?:export\s+)?(?:const|let|var)\s+([A-Za-z_]\w*)\s*=)"),
+        QStringLiteral(R"(^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_]\w*)\s*=)"),
         QRegularExpression::MultilineOption);
     auto variables = variablePattern.globalMatch(text);
     while (variables.hasNext()) {
