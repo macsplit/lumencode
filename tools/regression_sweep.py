@@ -23,7 +23,7 @@ SUPPORTED_EXTENSIONS = {
 
 EXCLUDED_PARTS = {
     ".git", "node_modules", "dist", "build", "bin", "obj", ".gradle", ".idea",
-    ".vscode", "coverage", "vendor", "third_party", "Archive", "venv",
+    ".vscode", "coverage", "vendor", "Vendor", "third_party", "Archive", "venv",
     "site-packages", "__pycache__", ".claude", "article_cache", ".swiftpm",
     ".build",
     "DerivedData",
@@ -34,6 +34,10 @@ PRIMARY_SNIPPET_KINDS = {"line_excerpt", "block_excerpt", "exact_construct"}
 INVALID_MEMBER_NAMES = {"if", "for", "while", "switch", "catch", "function", "return", "else", "do", "try"}
 RELATION_EXPECTED_LANGUAGES = {"javascript", "typescript", "tsx", "php", "swift", "python", "rust", "java", "csharp"}
 CALLABLE_KINDS = {"function", "method", "constructor"}
+VALID_SOURCE_MODES = {"ast", "heuristic", "recovered"}
+VALID_CONFIDENCES = {"high", "medium", "low"}
+SOURCE_CONTEXT_COLLECTIONS = ("dependencies", "routes", "quickLinks", "relatedFiles")
+DUPLICATE_SENSITIVE_KINDS = {"function", "method", "constructor", "class", "module", "struct", "enum", "trait", "impl"}
 
 
 def run_cli_dump(file_path: Path) -> dict:
@@ -269,6 +273,154 @@ def iter_symbols(symbols: list[dict]):
         stack.extend(symbol.get("members", []) or [])
 
 
+def signature_parameter_text(parameter: dict) -> str:
+    text = (parameter.get("text", "") or "").strip()
+    if text:
+        return text
+    name = (parameter.get("name", "") or "").strip()
+    param_type = (parameter.get("type", "") or "").strip()
+    if name and param_type:
+        return f"{name}: {param_type}"
+    return name or param_type
+
+
+def signature_parameter_texts(symbol: dict) -> list[str]:
+    return [
+        signature_parameter_text(parameter)
+        for parameter in (symbol.get("parameters", []) or [])
+        if isinstance(parameter, dict)
+    ]
+
+
+def signature_return_texts(symbol: dict) -> list[str]:
+    return [
+        (entry.get("text", "") or "").strip()
+        for entry in (symbol.get("returns", []) or [])
+        if isinstance(entry, dict)
+    ]
+
+
+def symbol_identity(symbol: dict) -> tuple[str, str, int]:
+    return (symbol.get("kind", "") or "", symbol.get("name", "") or "", int(symbol.get("line", 0) or 0))
+
+
+def validate_provenance_item(file_path: Path, item: dict, issues: list[dict], context: str) -> None:
+    source_mode = item.get("sourceMode", "") or ""
+    confidence = item.get("confidence", "") or ""
+    if not source_mode:
+        add_issue(issues, "missing_source_mode", file_path, context=context, kind=item.get("kind", ""), name=item.get("name", item.get("label", "")))
+    elif source_mode not in VALID_SOURCE_MODES:
+        add_issue(issues, "invalid_source_mode", file_path, context=context, sourceMode=source_mode, kind=item.get("kind", ""), name=item.get("name", item.get("label", "")))
+
+    if not confidence:
+        add_issue(issues, "missing_confidence", file_path, context=context, kind=item.get("kind", ""), name=item.get("name", item.get("label", "")))
+    elif confidence not in VALID_CONFIDENCES:
+        add_issue(issues, "invalid_confidence", file_path, context=context, confidence=confidence, kind=item.get("kind", ""), name=item.get("name", item.get("label", "")))
+
+
+def validate_signature_contract(file_path: Path, symbol: dict, issues: list[dict], context: str) -> None:
+    if symbol.get("kind", "") not in CALLABLE_KINDS:
+        return
+
+    parameters = symbol.get("parameters")
+    returns = symbol.get("returns")
+    if not isinstance(parameters, list):
+        add_issue(issues, "callable_missing_parameters", file_path, context=context, kind=symbol.get("kind", ""), name=symbol.get("name", ""))
+    else:
+        for index, parameter in enumerate(parameters):
+            if not isinstance(parameter, dict) or not signature_parameter_text(parameter):
+                add_issue(issues, "callable_invalid_parameter", file_path, context=context, kind=symbol.get("kind", ""), name=symbol.get("name", ""), index=index)
+
+    if not isinstance(returns, list) or not returns:
+        add_issue(issues, "callable_missing_returns", file_path, context=context, kind=symbol.get("kind", ""), name=symbol.get("name", ""))
+    else:
+        for index, return_entry in enumerate(returns):
+            if not isinstance(return_entry, dict) or not (return_entry.get("text", "") or "").strip():
+                add_issue(issues, "callable_invalid_return", file_path, context=context, kind=symbol.get("kind", ""), name=symbol.get("name", ""), index=index)
+
+
+def relation_points_to_current_file(relation: dict, parsed: dict, symbol_lines: set[int]) -> bool:
+    target_path = relation.get("path") or relation.get("sourcePath") or ""
+    current_path = parsed.get("path", "") or ""
+    if target_path:
+        return target_path == current_path
+    relation_line = int(relation.get("line", 0) or 0)
+    return relation_line in symbol_lines
+
+
+def validate_analysis_contract(parsed: dict, file_path: Path, issues: list[dict], context: str) -> None:
+    source_mode = parsed.get("analysisSourceMode", "") or ""
+    confidence = parsed.get("analysisConfidence", "") or ""
+    if not source_mode:
+        add_issue(issues, "missing_analysis_source_mode", file_path, context=context)
+    elif source_mode not in VALID_SOURCE_MODES:
+        add_issue(issues, "invalid_analysis_source_mode", file_path, context=context, sourceMode=source_mode)
+
+    if not confidence:
+        add_issue(issues, "missing_analysis_confidence", file_path, context=context)
+    elif confidence not in VALID_CONFIDENCES:
+        add_issue(issues, "invalid_analysis_confidence", file_path, context=context, confidence=confidence)
+
+    notices = parsed.get("analysisNotices", []) or []
+    if parsed.get("analysisPartial") is True and not notices:
+        add_issue(issues, "partial_analysis_without_notice", file_path, context=context)
+    if notices and not isinstance(notices, list):
+        add_issue(issues, "invalid_analysis_notices", file_path, context=context)
+
+    symbols = list(iter_symbols(parsed.get("symbols", []) or []))
+    symbol_identities = {symbol_identity(symbol) for symbol in symbols}
+    symbol_lines = {identity[2] for identity in symbol_identities if identity[2] > 0}
+
+    # Duplicate check is top-level only — member methods can share names/lines across different classes
+    seen_top_symbols: set[tuple[str, str, int]] = set()
+    for symbol in (parsed.get("symbols", []) or []):
+        identity = symbol_identity(symbol)
+        symbol_context = f"{context}:symbol:{identity[0]}:{identity[1]}:{identity[2]}"
+        if identity[0] in DUPLICATE_SENSITIVE_KINDS:
+            if identity in seen_top_symbols:
+                add_issue(issues, "duplicate_symbol_identity", file_path, context=symbol_context, kind=identity[0], name=identity[1], line=identity[2])
+            seen_top_symbols.add(identity)
+
+    for symbol in symbols:
+        identity = symbol_identity(symbol)
+        symbol_context = f"{context}:symbol:{identity[0]}:{identity[1]}:{identity[2]}"
+        validate_provenance_item(file_path, symbol, issues, symbol_context)
+        validate_signature_contract(file_path, symbol, issues, symbol_context)
+
+        for field in ("calls", "calledBy"):
+            for relation in (symbol.get(field, []) or []):
+                relation_context = f"{symbol_context}:{field}:{relation.get('name', '')}"
+                validate_provenance_item(file_path, relation, issues, relation_context)
+                if relation_points_to_current_file(relation, parsed, symbol_lines):
+                    target_identity = symbol_identity(relation)
+                    if target_identity not in symbol_identities:
+                        add_issue(issues, "stale_relation_target", file_path, context=relation_context, relation_type=field, kind=target_identity[0], name=target_identity[1], line=target_identity[2])
+
+    for collection_name in SOURCE_CONTEXT_COLLECTIONS:
+        for index, item in enumerate(parsed.get(collection_name, []) or []):
+            if isinstance(item, dict):
+                validate_provenance_item(file_path, item, issues, f"{context}:{collection_name}:{index}")
+
+
+def validate_symbol_expectation(file_path: Path, case_name: str, expectation: dict, symbol: dict, issues: list[dict], context: str) -> None:
+    if "sourceMode" in expectation and symbol.get("sourceMode", "") != expectation["sourceMode"]:
+        add_issue(issues, "fixture_wrong_symbol_source_mode", file_path, case=case_name, context=context, name=expectation["name"], expected=expectation["sourceMode"], actual=symbol.get("sourceMode", ""))
+    if "confidence" in expectation and symbol.get("confidence", "") != expectation["confidence"]:
+        add_issue(issues, "fixture_wrong_symbol_confidence", file_path, case=case_name, context=context, name=expectation["name"], expected=expectation["confidence"], actual=symbol.get("confidence", ""))
+    if "parameters" in expectation:
+        actual = signature_parameter_texts(symbol)
+        if actual != expectation["parameters"]:
+            add_issue(issues, "fixture_wrong_symbol_parameters", file_path, case=case_name, context=context, name=expectation["name"], expected=expectation["parameters"], actual=actual)
+    if "returns" in expectation:
+        actual = signature_return_texts(symbol)
+        if actual != expectation["returns"]:
+            add_issue(issues, "fixture_wrong_symbol_returns", file_path, case=case_name, context=context, name=expectation["name"], expected=expectation["returns"], actual=actual)
+
+
+def expectation_needs_selection_roundtrip(expectation: dict) -> bool:
+    return any(key in expectation for key in ("sourceMode", "confidence", "parameters", "returns"))
+
+
 def find_symbol(symbols: list[dict], name: str, kind: str | None = None) -> dict | None:
     for symbol in iter_symbols(symbols):
         if symbol.get("name", "") != name:
@@ -324,6 +476,8 @@ def inspect_file(file_path: Path, issues: list[dict]) -> None:
     dependencies = parsed.get("dependencies", []) or []
     routes = parsed.get("routes", []) or []
     language = (parsed.get("language", "") or "").lower()
+
+    validate_analysis_contract(parsed, file_path, issues, context="corpus")
 
     if language in RELATION_EXPECTED_LANGUAGES and symbols:
         calls_count, called_by_count = count_relations(symbols)
@@ -443,6 +597,8 @@ def inspect_fixture_case(case: dict, issues: list[dict]) -> None:
         except Exception:
             pass
 
+    validate_analysis_contract(parsed, file_path, issues, context=f"fixture:{case_name}")
+
     symbols = parsed.get("symbols", []) or []
     file_expectations = case.get("file_expectations", {})
 
@@ -488,6 +644,16 @@ def inspect_fixture_case(case: dict, issues: list[dict]) -> None:
         if actual != file_expectations["analysis_source_mode"]:
             add_issue(issues, "fixture_wrong_analysis_source_mode", file_path, case=case_name, expected=file_expectations["analysis_source_mode"], actual=actual)
 
+    if "analysis_confidence" in file_expectations:
+        actual = parsed.get("analysisConfidence", "")
+        if actual != file_expectations["analysis_confidence"]:
+            add_issue(issues, "fixture_wrong_analysis_confidence", file_path, case=case_name, expected=file_expectations["analysis_confidence"], actual=actual)
+
+    if "analysis_has_ast_errors" in file_expectations:
+        actual = bool(parsed.get("analysisHasAstErrors", False))
+        if actual != bool(file_expectations["analysis_has_ast_errors"]):
+            add_issue(issues, "fixture_wrong_analysis_has_ast_errors", file_path, case=case_name, expected=file_expectations["analysis_has_ast_errors"], actual=actual)
+
     if "analysis_partial" in file_expectations:
         actual = bool(parsed.get("analysisPartial", False))
         if actual != bool(file_expectations["analysis_partial"]):
@@ -511,11 +677,30 @@ def inspect_fixture_case(case: dict, issues: list[dict]) -> None:
                           expected=expected,
                           actual=actual)
 
+    if "symbol_confidences" in file_expectations:
+        actual_counts: dict[str, int] = defaultdict(int)
+        for symbol in iter_symbols(symbols):
+            confidence = symbol.get("confidence", "") or ""
+            if confidence:
+                actual_counts[confidence] += 1
+        for confidence, expected in (file_expectations["symbol_confidences"] or {}).items():
+            actual = actual_counts.get(confidence, 0)
+            if actual < int(expected):
+                add_issue(issues,
+                          "fixture_missing_symbol_confidence",
+                          file_path,
+                          case=case_name,
+                          confidence=confidence,
+                          expected=expected,
+                          actual=actual)
+
     for expectation in expected_symbols:
         symbol = find_symbol(symbols, expectation["name"], expectation.get("kind"))
         if not symbol:
             add_issue(issues, "fixture_missing_symbol", file_path, case=case_name, name=expectation["name"], kind=expectation.get("kind", ""))
             continue
+
+        validate_symbol_expectation(file_path, case_name, expectation, symbol, issues, context="dump")
 
         for field in ("calls", "calledBy"):
             expected_names = set(expectation.get(field, []))
@@ -535,6 +720,21 @@ def inspect_fixture_case(case: dict, issues: list[dict]) -> None:
                 )
 
         validate_relation_roundtrip(file_path, parsed, symbol, issues, context=f"fixture:{case_name}:{expectation['name']}")
+
+        if expectation_needs_selection_roundtrip(expectation):
+            try:
+                state = run_cli_commands([
+                    {"command": "setRootPath", "params": {"path": str(root)}},
+                    {"command": "selectPath", "params": {"path": str(file_path)}},
+                    {"command": "selectSymbolByData", "params": symbol},
+                ])
+                selected_symbol = state.get("selectedSymbol", {}) or {}
+                if not selected_symbol:
+                    add_issue(issues, "fixture_selected_symbol_empty", file_path, case=case_name, name=expectation["name"])
+                else:
+                    validate_symbol_expectation(file_path, case_name, expectation, selected_symbol, issues, context="selected")
+            except Exception as exc:
+                add_issue(issues, "fixture_symbol_roundtrip_failure", file_path, case=case_name, name=expectation["name"], message=str(exc))
 
 
 def load_fixture_cases(manifest_path: Path) -> list[dict]:

@@ -2215,6 +2215,14 @@ static QVariantMap enrichCallableSignature(QVariantMap symbol, const QString &la
 
     const QString snippet = symbol.value(QStringLiteral("snippet")).toString();
     if (snippet.trimmed().isEmpty()) {
+        if (!symbol.contains(QStringLiteral("parameters"))) {
+            symbol.insert(QStringLiteral("parameters"), QVariantList{});
+        }
+        if (!symbol.contains(QStringLiteral("returns"))) {
+            QVariantList noReturn;
+            noReturn.append(QVariantMap{{QStringLiteral("text"), QStringLiteral("none")}});
+            symbol.insert(QStringLiteral("returns"), noReturn);
+        }
         return symbol;
     }
 
@@ -2226,6 +2234,14 @@ static QVariantMap enrichCallableSignature(QVariantMap symbol, const QString &la
     const QString kind = symbol.value(QStringLiteral("kind")).toString();
 
     if (head.startsWith(QLatin1Char(':'))) {
+        if (!symbol.contains(QStringLiteral("parameters"))) {
+            symbol.insert(QStringLiteral("parameters"), QVariantList{});
+        }
+        if (!symbol.contains(QStringLiteral("returns"))) {
+            QVariantList noReturn;
+            noReturn.append(QVariantMap{{QStringLiteral("text"), QStringLiteral("none")}});
+            symbol.insert(QStringLiteral("returns"), noReturn);
+        }
         return symbol;
     }
 
@@ -3373,6 +3389,7 @@ QVariantMap SymbolParser::parseCssTreeSitter(const QString &path, const QString 
     TSNode root = ts_tree_root_node(tree);
     const bool hasAstErrors = ts_node_has_error(root);
 
+    QSet<QString> seenClassLines;
     std::function<void(TSNode)> visit = [&](TSNode node) {
         const QString type = QString::fromUtf8(ts_node_type(node));
         if (type == QStringLiteral("class_selector")) {
@@ -3382,7 +3399,12 @@ QVariantMap SymbolParser::parseCssTreeSitter(const QString &path, const QString 
             }
             const TSNode snippetNode = firstAncestorOfType(node, {"rule_set", "block"});
             const TSNode effectiveNode = ts_node_is_null(snippetNode) ? node : snippetNode;
-            symbols.append(makeSymbol(QStringLiteral("class"), name, nodeLine(effectiveNode), QString(), {}, nodeSnippet(effectiveNode, source)));
+            const int symbolLine = nodeLine(effectiveNode);
+            const QString dedupeKey = name + QLatin1Char(':') + QString::number(symbolLine);
+            if (!seenClassLines.contains(dedupeKey)) {
+                seenClassLines.insert(dedupeKey);
+                symbols.append(makeSymbol(QStringLiteral("class"), name, symbolLine, QString(), {}, nodeSnippet(effectiveNode, source)));
+            }
         } else if (type == QStringLiteral("property_name")) {
             const QString name = nodeText(node, source);
             if (name.startsWith(QStringLiteral("--"))) {
@@ -4609,14 +4631,14 @@ QVariantMap SymbolParser::parseObjectiveC(const QString &path, const QString &te
             }
             const int methodLine = lineNumberAtOffset(text, match.capturedStart(0) + method.capturedStart(0));
             members.append(makeSymbol(QStringLiteral("method"), methodName, methodLine, QString(), {},
-                                      snippetFromLine(text, methodLine, 1)));
+                                      snippetFromLine(text, methodLine, 0)));
         }
         appendSymbol(makeSymbol(QStringLiteral("class"), className, line, QString(), members,
                                 snippetFromLine(text, line, 3)));
     }
 
     QRegularExpression functionPattern(
-        QStringLiteral(R"(^\s*(?:static\s+|extern\s+)?(?:[\w<>*]+\s+)+([A-Za-z_]\w*)\s*\([^;{}]*\)\s*\{)"),
+        QStringLiteral(R"(^[ \t]*(?:static\s+|extern\s+)?(?:[\w<>*]+\s+)+([A-Za-z_]\w*)\s*\([^;{}]*\)\s*\{)"),
         QRegularExpression::MultilineOption);
     auto functionIt = functionPattern.globalMatch(text);
     while (functionIt.hasNext()) {
@@ -4628,7 +4650,7 @@ QVariantMap SymbolParser::parseObjectiveC(const QString &path, const QString &te
         }
         const int line = lineNumberAtOffset(text, match.capturedStart(0));
         appendSymbol(makeSymbol(QStringLiteral("function"), name, line, QString(), {},
-                                snippetFromLine(text, line, 2)));
+                                snippetFromLine(text, line, 0)));
     }
 
     result.insert(QStringLiteral("symbols"), symbols);
@@ -4895,26 +4917,26 @@ QVariantMap SymbolParser::parseScriptLike(const QString &path, const QString &te
     }
 
     QRegularExpression interfacePattern(
-        QStringLiteral(R"((?:export\s+)?interface\s+([A-Za-z_]\w*))"),
+        QStringLiteral(R"(^[ \t]*(?:export\s+)?interface\s+([A-Za-z_]\w*))"),
         QRegularExpression::MultilineOption);
     auto interfaces = interfacePattern.globalMatch(text);
     while (interfaces.hasNext()) {
         const auto match = interfaces.next();
         const int line = text.left(match.capturedStart(0)).count(QLatin1Char('\n')) + 1;
         symbols.append(makePartialScriptSymbol(QStringLiteral("props"), match.captured(1), line, QString(), {},
-                                               snippetFromLine(text, line, 1),
+                                               snippetFromLine(text, line, 0),
                                                QStringLiteral("line_excerpt")));
     }
 
     QRegularExpression typePattern(
-        QStringLiteral(R"((?:export\s+)?type\s+([A-Za-z_]\w*)\s*=)"),
+        QStringLiteral(R"(^[ \t]*(?:export\s+)?type\s+([A-Za-z_]\w*)\s*=)"),
         QRegularExpression::MultilineOption);
     auto types = typePattern.globalMatch(text);
     while (types.hasNext()) {
         const auto match = types.next();
         const int line = text.left(match.capturedStart(0)).count(QLatin1Char('\n')) + 1;
         symbols.append(makePartialScriptSymbol(QStringLiteral("type"), match.captured(1), line, QString(), {},
-                                               snippetFromLine(text, line, 1),
+                                               snippetFromLine(text, line, 0),
                                                QStringLiteral("line_excerpt")));
     }
 
@@ -5451,7 +5473,8 @@ QVariantList SymbolParser::parseClassMembers(const QString &body, const QString 
                 continue;
             }
             const int line = body.left(match.capturedStart(0)).count(QLatin1Char('\n')) + 1;
-            members.append(makeSymbol(QStringLiteral("method"), name, line));
+            members.append(makeSymbol(QStringLiteral("method"), name, line, QString(), {},
+                                      snippetFromBraceBlock(body, match.capturedStart(0))));
         }
 
         QRegularExpression propertyPattern(
@@ -5483,7 +5506,8 @@ QVariantList SymbolParser::parseObjectMembers(const QString &body)
             continue;
         }
         const int line = body.left(match.capturedStart(0)).count(QLatin1Char('\n')) + 1;
-        members.append(makeSymbol(QStringLiteral("method"), name, line));
+        members.append(makeSymbol(QStringLiteral("method"), name, line, QString(), {},
+                                  snippetFromBraceBlock(body, match.capturedStart(0))));
     }
 
     QRegularExpression arrowPattern(
@@ -5497,7 +5521,8 @@ QVariantList SymbolParser::parseObjectMembers(const QString &body)
             continue;
         }
         const int line = body.left(match.capturedStart(0)).count(QLatin1Char('\n')) + 1;
-        members.append(makeSymbol(QStringLiteral("function"), name, line));
+        members.append(makeSymbol(QStringLiteral("function"), name, line, QString(), {},
+                                  snippetFromLine(body, line, 0)));
     }
 
     QRegularExpression functionPropertyPattern(
@@ -5521,7 +5546,8 @@ QVariantList SymbolParser::parseObjectMembers(const QString &body)
             continue;
         }
         const int line = body.left(match.capturedStart(0)).count(QLatin1Char('\n')) + 1;
-        members.append(makeSymbol(QStringLiteral("method"), name, line));
+        members.append(makeSymbol(QStringLiteral("method"), name, line, QString(), {},
+                                  snippetFromBraceBlock(body, match.capturedStart(0))));
     }
 
     QRegularExpression propertyPattern(

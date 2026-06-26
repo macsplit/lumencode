@@ -105,18 +105,36 @@
       "file_expectations": {
         "analysis_source_mode": "recovered",
         "analysis_partial": true,
-        "analysis_notices": 1
+        "analysis_notices": 1,
+        "analysis_confidence": "medium",
+        "analysis_has_ast_errors": true,
+        "symbol_source_modes": {
+          "ast": 2
+        },
+        "symbol_confidences": {
+          "medium": 2
+        }
       },
       "expectations": [
         {
           "kind": "function",
-          "name": "helperBroken"
+          "name": "helperBroken",
+          "sourceMode": "ast",
+          "confidence": "medium",
+          "parameters": [
+            "value: number"
+          ]
         },
         {
           "kind": "function",
           "name": "wrapperBroken",
           "calls": [
             "helperBroken"
+          ],
+          "sourceMode": "ast",
+          "confidence": "medium",
+          "parameters": [
+            "value: number"
           ]
         }
       ]
@@ -131,6 +149,12 @@
           "name": "helper_wrapper",
           "calls": [
             "helper_value"
+          ],
+          "sourceMode": "ast",
+          "confidence": "high",
+          "parameters": [],
+          "returns": [
+            "helper_value()"
           ]
         },
         {
@@ -138,9 +162,25 @@
           "name": "helper_value",
           "calledBy": [
             "helper_wrapper"
+          ],
+          "sourceMode": "ast",
+          "confidence": "high",
+          "parameters": [],
+          "returns": [
+            "1"
           ]
         }
-      ]
+      ],
+      "file_expectations": {
+        "analysis_source_mode": "ast",
+        "analysis_confidence": "high",
+        "symbol_source_modes": {
+          "ast": 2
+        },
+        "symbol_confidences": {
+          "high": 2
+        }
+      }
     },
     {
       "name": "php_partial_recovery",
@@ -149,7 +189,15 @@
       "file_expectations": {
         "analysis_source_mode": "recovered",
         "analysis_partial": true,
-        "analysis_notices": 1
+        "analysis_notices": 1,
+        "analysis_confidence": "medium",
+        "analysis_has_ast_errors": true,
+        "symbol_source_modes": {
+          "ast": 3
+        },
+        "symbol_confidences": {
+          "medium": 3
+        }
       },
       "expectations": [
         {
@@ -158,11 +206,19 @@
         },
         {
           "kind": "method",
-          "name": "helperValue"
+          "name": "helperValue",
+          "sourceMode": "ast",
+          "confidence": "medium",
+          "parameters": [],
+          "returns": [
+            "7"
+          ]
         },
         {
           "kind": "method",
-          "name": "runValue"
+          "name": "runValue",
+          "sourceMode": "ast",
+          "confidence": "medium"
         }
       ]
     },
@@ -176,6 +232,12 @@
           "name": "openFolder",
           "calls": [
             "loadProject"
+          ],
+          "sourceMode": "ast",
+          "confidence": "high",
+          "parameters": [],
+          "returns": [
+            "none"
           ]
         },
         {
@@ -183,9 +245,25 @@
           "name": "loadProject",
           "calledBy": [
             "openFolder"
+          ],
+          "sourceMode": "ast",
+          "confidence": "high",
+          "parameters": [],
+          "returns": [
+            "none"
           ]
         }
-      ]
+      ],
+      "file_expectations": {
+        "analysis_source_mode": "ast",
+        "analysis_confidence": "high",
+        "symbol_source_modes": {
+          "ast": 2
+        },
+        "symbol_confidences": {
+          "high": 2
+        }
+      }
     },
     {
       "name": "python_basic_relations",
@@ -194,13 +272,25 @@
       "expectations": [
         {
           "kind": "function",
-          "name": "helper_py"
+          "name": "helper_py",
+          "sourceMode": "ast",
+          "confidence": "high",
+          "parameters": [],
+          "returns": [
+            "os.getcwd()"
+          ]
         },
         {
           "kind": "function",
           "name": "outer_py",
           "calls": [
             "helper_py"
+          ],
+          "sourceMode": "ast",
+          "confidence": "high",
+          "parameters": [],
+          "returns": [
+            "helper_py()"
           ]
         },
         {
@@ -212,6 +302,12 @@
           "name": "run",
           "calls": [
             "helper_py"
+          ],
+          "sourceMode": "ast",
+          "confidence": "high",
+          "parameters": [],
+          "returns": [
+            "helper_py()"
           ]
         },
         {
@@ -222,7 +318,17 @@
             "run"
           ]
         }
-      ]
+      ],
+      "file_expectations": {
+        "analysis_source_mode": "ast",
+        "analysis_confidence": "high",
+        "symbol_source_modes": {
+          "ast": 4
+        },
+        "symbol_confidences": {
+          "high": 4
+        }
+      }
     },
     {
       "name": "python_partial_recovery",
@@ -231,23 +337,46 @@
       "file_expectations": {
         "analysis_source_mode": "recovered",
         "analysis_partial": true,
-        "analysis_notices": 1
+        "analysis_notices": 1,
+        "analysis_confidence": "medium",
+        "analysis_has_ast_errors": true,
+        "symbol_source_modes": {
+          "ast": 3,
+          "heuristic": 1
+        },
+        "symbol_confidences": {
+          "medium": 4
+        }
       },
       "expectations": [
         {
           "kind": "function",
-          "name": "helper_broken_py"
+          "name": "helper_broken_py",
+          "sourceMode": "ast",
+          "confidence": "medium",
+          "parameters": [],
+          "returns": [
+            "os.getcwd()"
+          ]
         },
         {
           "kind": "function",
           "name": "wrapper_broken_py",
           "calls": [
             "helper_broken_py"
+          ],
+          "sourceMode": "heuristic",
+          "confidence": "medium",
+          "parameters": [],
+          "returns": [
+            "helper_broken_py()"
           ]
         },
         {
           "kind": "class",
-          "name": "WorkerBroken"
+          "name": "WorkerBroken",
+          "sourceMode": "ast",
+          "confidence": "medium"
         }
       ]
     },
@@ -262,17 +391,35 @@
         },
         {
           "kind": "function",
-          "name": "helper_rs"
+          "name": "helper_rs",
+          "sourceMode": "ast",
+          "confidence": "high",
+          "parameters": [],
+          "returns": [
+            "&'static str"
+          ]
         },
         {
           "kind": "function",
-          "name": "main"
+          "name": "main",
+          "sourceMode": "ast",
+          "confidence": "high",
+          "parameters": [],
+          "returns": [
+            "none"
+          ]
         },
         {
           "kind": "method",
           "name": "greet",
           "calls": [
             "helper_rs"
+          ],
+          "sourceMode": "ast",
+          "confidence": "high",
+          "parameters": [],
+          "returns": [
+            "&'static str"
           ]
         },
         {
@@ -283,7 +430,17 @@
             "main"
           ]
         }
-      ]
+      ],
+      "file_expectations": {
+        "analysis_source_mode": "ast",
+        "analysis_confidence": "high",
+        "symbol_source_modes": {
+          "ast": 5
+        },
+        "symbol_confidences": {
+          "high": 5
+        }
+      }
     },
     {
       "name": "rust_partial_recovery",
@@ -292,23 +449,45 @@
       "file_expectations": {
         "analysis_source_mode": "recovered",
         "analysis_partial": true,
-        "analysis_notices": 1
+        "analysis_notices": 1,
+        "analysis_confidence": "medium",
+        "analysis_has_ast_errors": true,
+        "symbol_source_modes": {
+          "ast": 3
+        },
+        "symbol_confidences": {
+          "medium": 3
+        }
       },
       "expectations": [
         {
           "kind": "function",
-          "name": "helper_broken_rs"
+          "name": "helper_broken_rs",
+          "sourceMode": "ast",
+          "confidence": "medium",
+          "parameters": [],
+          "returns": [
+            "i32"
+          ]
         },
         {
           "kind": "function",
           "name": "wrapper_broken_rs",
           "calls": [
             "helper_broken_rs"
+          ],
+          "sourceMode": "ast",
+          "confidence": "medium",
+          "parameters": [],
+          "returns": [
+            "i32"
           ]
         },
         {
           "kind": "struct",
-          "name": "WorkerBrokenRs"
+          "name": "WorkerBrokenRs",
+          "sourceMode": "ast",
+          "confidence": "medium"
         }
       ]
     },
@@ -319,17 +498,33 @@
       "expectations": [
         {
           "kind": "class",
-          "name": "Sample"
+          "name": "Sample",
+          "sourceMode": "ast",
+          "confidence": "high"
         },
         {
           "kind": "constructor",
-          "name": "Sample"
+          "name": "Sample",
+          "sourceMode": "ast",
+          "confidence": "high",
+          "parameters": [
+            "name: String"
+          ],
+          "returns": [
+            "none"
+          ]
         },
         {
           "kind": "method",
           "name": "greet",
           "calls": [
             "helper"
+          ],
+          "sourceMode": "ast",
+          "confidence": "high",
+          "parameters": [],
+          "returns": [
+            "String"
           ]
         },
         {
@@ -337,9 +532,25 @@
           "name": "helper",
           "calledBy": [
             "greet"
+          ],
+          "sourceMode": "ast",
+          "confidence": "high",
+          "parameters": [],
+          "returns": [
+            "String"
           ]
         }
-      ]
+      ],
+      "file_expectations": {
+        "analysis_source_mode": "ast",
+        "analysis_confidence": "high",
+        "symbol_source_modes": {
+          "ast": 5
+        },
+        "symbol_confidences": {
+          "high": 5
+        }
+      }
     },
     {
       "name": "java_partial_recovery",
@@ -348,18 +559,34 @@
       "file_expectations": {
         "analysis_source_mode": "recovered",
         "analysis_partial": true,
-        "analysis_notices": 1
+        "analysis_notices": 1,
+        "analysis_confidence": "medium",
+        "analysis_has_ast_errors": true,
+        "symbol_source_modes": {
+          "ast": 3
+        },
+        "symbol_confidences": {
+          "medium": 3
+        }
       },
       "expectations": [
         {
           "kind": "class",
-          "name": "Broken"
+          "name": "Broken",
+          "sourceMode": "ast",
+          "confidence": "medium"
         },
         {
           "kind": "method",
           "name": "greetBrokenJava",
           "calls": [
             "helperBrokenJava"
+          ],
+          "sourceMode": "ast",
+          "confidence": "medium",
+          "parameters": [],
+          "returns": [
+            "String"
           ]
         }
       ]
@@ -371,17 +598,33 @@
       "expectations": [
         {
           "kind": "class",
-          "name": "Sample"
+          "name": "Sample",
+          "sourceMode": "ast",
+          "confidence": "high"
         },
         {
           "kind": "constructor",
-          "name": "Sample"
+          "name": "Sample",
+          "sourceMode": "ast",
+          "confidence": "high",
+          "parameters": [
+            "name: string"
+          ],
+          "returns": [
+            "none"
+          ]
         },
         {
           "kind": "method",
           "name": "Greet",
           "calls": [
             "Helper"
+          ],
+          "sourceMode": "ast",
+          "confidence": "high",
+          "parameters": [],
+          "returns": [
+            "string"
           ]
         },
         {
@@ -389,9 +632,25 @@
           "name": "Helper",
           "calledBy": [
             "Greet"
+          ],
+          "sourceMode": "ast",
+          "confidence": "high",
+          "parameters": [],
+          "returns": [
+            "string"
           ]
         }
-      ]
+      ],
+      "file_expectations": {
+        "analysis_source_mode": "ast",
+        "analysis_confidence": "high",
+        "symbol_source_modes": {
+          "ast": 5
+        },
+        "symbol_confidences": {
+          "high": 5
+        }
+      }
     },
     {
       "name": "csharp_partial_recovery",
@@ -400,18 +659,34 @@
       "file_expectations": {
         "analysis_source_mode": "recovered",
         "analysis_partial": true,
-        "analysis_notices": 1
+        "analysis_notices": 1,
+        "analysis_confidence": "medium",
+        "analysis_has_ast_errors": true,
+        "symbol_source_modes": {
+          "heuristic": 4
+        },
+        "symbol_confidences": {
+          "medium": 4
+        }
       },
       "expectations": [
         {
           "kind": "class",
-          "name": "Broken"
+          "name": "Broken",
+          "sourceMode": "heuristic",
+          "confidence": "medium"
         },
         {
           "kind": "method",
           "name": "GreetBrokenCs",
           "calls": [
             "HelperBrokenCs"
+          ],
+          "sourceMode": "heuristic",
+          "confidence": "medium",
+          "parameters": [],
+          "returns": [
+            "string"
           ]
         }
       ]
@@ -427,9 +702,25 @@
         },
         {
           "kind": "function",
-          "name": "helper_cpp"
+          "name": "helper_cpp",
+          "sourceMode": "heuristic",
+          "confidence": "medium",
+          "parameters": [],
+          "returns": [
+            "int"
+          ]
         }
-      ]
+      ],
+      "file_expectations": {
+        "analysis_source_mode": "heuristic",
+        "analysis_confidence": "medium",
+        "symbol_source_modes": {
+          "heuristic": 3
+        },
+        "symbol_confidences": {
+          "medium": 3
+        }
+      }
     },
     {
       "name": "objc_basic_symbols",
@@ -524,7 +815,12 @@
         },
         {
           "kind": "function",
-          "name": "greet"
+          "name": "greet",
+          "sourceMode": "heuristic",
+          "confidence": "medium",
+          "parameters": [
+            "name"
+          ]
         },
         {
           "kind": "property",
@@ -536,7 +832,15 @@
         }
       ],
       "file_expectations": {
-        "dependencies": 2
+        "dependencies": 2,
+        "analysis_source_mode": "heuristic",
+        "analysis_confidence": "medium",
+        "symbol_source_modes": {
+          "heuristic": 7
+        },
+        "symbol_confidences": {
+          "medium": 7
+        }
       }
     },
     {
