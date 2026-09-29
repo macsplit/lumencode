@@ -55,10 +55,10 @@ search**. See [Recent History](#recent-history) for how it got here and
 | JavaScript / JSX | Tree-sitter (heuristic fallback) | repair → heuristic | declarations, IIFE/UMD/AMD bodies, `X.prototype.m`, closure modules, `X.extend({...})` classes | same-file and cross-file (imports, `require` bindings) | `import`, `require` | Express (anywhere in the tree) | snippet-derived |
 | TypeScript / TSX | Tree-sitter | repair → heuristic | as JS, plus interfaces and types | as JS | as JS | as JS | snippet-derived |
 | Python | Tree-sitter | repair (indented blocks) → heuristic | classes, functions, methods, properties | AST walk | imports | Flask / FastAPI | **from the syntax tree**: parameters with types/defaults, annotated or inferred returns per return path |
-| Java | Tree-sitter | repair → heuristic | types, members | yes | imports | — | snippet-derived |
+| Java | Tree-sitter | repair → heuristic | types, members | yes | imports | Spring (`@RequestMapping`, `@GetMapping`, ...), JAX-RS (`@Path` + verbs) | snippet-derived |
 | C# | Tree-sitter | repair → heuristic | types, members, top-level programs | yes | `using` | ASP.NET attributes / minimal APIs | snippet-derived |
 | Rust | Tree-sitter | repair → heuristic | items, impls, modules | yes | `use` | — | snippet-derived |
-| Swift | Tree-sitter | repair | types, extensions, members | yes | — (gap) | — | snippet-derived |
+| Swift | Tree-sitter | repair | types, extensions, members | yes | `import` / `@testable import` | — | snippet-derived |
 | CSS | Tree-sitter | repair → heuristic | rules, custom properties | — | `@import`, `url()` | — | — |
 | HTML | tree-sitter-html | tolerant grammar | ids, event handlers, custom elements, forms, inline `<script>` / `<style>` contents | handlers → JS functions | linked assets | — | — |
 | QML | heuristic | — | components, properties, signals, functions | — (gap) | imports | — | snippet-derived |
@@ -221,7 +221,7 @@ Phase 2. Better source inspection
 Phase 2b. Language breadth and link parity
 
 - Add AST-backed C/C++ (members, relations) and new languages seen in the corpus: Go, Kotlin, Ruby, Bash, VB.NET and SQL (heuristic where no suitable grammar exists).
-- Close per-language link gaps: Swift imports, Java (Spring / JAX-RS) routes, QML and Objective-C call relations.
+- Close per-language link gaps: ~~Swift imports, Java (Spring / JAX-RS) routes~~ (done 2026-09), QML and Objective-C call relations.
 - Use `tools/corpus_scan.py --compare` and `tools/damage_probe.py` as the acceptance gates for each language.
 
 Phase 3. Better usability

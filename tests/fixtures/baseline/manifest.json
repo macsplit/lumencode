@@ -262,7 +262,8 @@
         },
         "symbol_confidences": {
           "high": 2
-        }
+        },
+        "dependencies": 1
       }
     },
     {
@@ -1065,6 +1066,34 @@
         ]
       },
       "expectations": []
+    },
+    {
+      "name": "java_spring_routes",
+      "root": "tests/fixtures/baseline/java_routes",
+      "file": "TodoController.java",
+      "file_expectations": {
+        "routes": 4
+      },
+      "expectations": [
+        {
+          "kind": "class",
+          "name": "TodoController"
+        }
+      ]
+    },
+    {
+      "name": "java_jaxrs_routes",
+      "root": "tests/fixtures/baseline/java_routes",
+      "file": "UserResource.java",
+      "file_expectations": {
+        "routes": 2
+      },
+      "expectations": [
+        {
+          "kind": "class",
+          "name": "UserResource"
+        }
+      ]
     }
   ]
 }

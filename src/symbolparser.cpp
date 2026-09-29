@@ -3524,6 +3524,127 @@ static void enrichPhpAnalysis(QVariantMap &result, const QString &path, const QS
     }
 }
 
+
+// Swift: `import Module` / `@testable import Module` / `import struct Module.Type`.
+static void enrichSwiftDependencies(QVariantMap &result, const QString &path, const QString &text)
+{
+    QVariantList dependencies = result.value(QStringLiteral("dependencies")).toList();
+    if (!dependencies.isEmpty()) {
+        return;
+    }
+    static const QRegularExpression importPattern(
+        QStringLiteral(R"(^[ \t]*(@testable\s+)?import\s+(?:(?:typealias|struct|class|enum|protocol|let|var|func)\s+)?([A-Za-z_][\w.]*))"),
+        QRegularExpression::MultilineOption);
+    auto it = importPattern.globalMatch(text);
+    QSet<QString> seen;
+    while (it.hasNext()) {
+        const auto match = it.next();
+        const QString module = match.captured(2);
+        if (seen.contains(module)) {
+            continue;
+        }
+        seen.insert(module);
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        QVariantMap item = makeSourceContextItem(path, QStringLiteral("swift"), line, snippetFromLine(text, line, 0),
+                                                 QStringLiteral("import dependency"));
+        item.insert(QStringLiteral("target"), module);
+        item.insert(QStringLiteral("type"), match.captured(1).isEmpty() ? QStringLiteral("import") : QStringLiteral("testable import"));
+        item.insert(QStringLiteral("label"), module);
+        item.insert(QStringLiteral("path"), QString());
+        item.insert(QStringLiteral("exists"), true);
+        dependencies.append(item);
+    }
+    result.insert(QStringLiteral("dependencies"), dependencies);
+}
+
+// Java web routes: Spring (@RequestMapping / @GetMapping ...) and JAX-RS
+// (@Path + @GET ...), combining a class-level prefix with method mappings.
+static void enrichJavaRoutes(QVariantMap &result, const QString &path, const QString &text)
+{
+    if (!text.contains(QStringLiteral("Mapping")) && !text.contains(QStringLiteral("@Path"))) {
+        return;
+    }
+    QVariantList routes = result.value(QStringLiteral("routes")).toList();
+    static const QRegularExpression annotationPattern(
+        QStringLiteral(R"(@(RequestMapping|GetMapping|PostMapping|PutMapping|DeleteMapping|PatchMapping|Path|GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\b(\s*\(([^)]*)\))?)"));
+    static const QRegularExpression pathValue(QStringLiteral(R"re((?:value\s*=\s*|path\s*=\s*)?\{?\s*"([^"]*)")re"));
+    static const QRegularExpression methodValue(QStringLiteral(R"(RequestMethod\.([A-Z]+))"));
+    static const QRegularExpression classDecl(QStringLiteral(R"(\b(class|interface)\s+\w+)"));
+
+    const auto firstClass = classDecl.match(text);
+    const int classOffset = firstClass.hasMatch() ? firstClass.capturedStart(0) : -1;
+
+    struct Annotation
+    {
+        QString name;
+        QString value;
+        QString args;
+        int offset = 0;
+        int line = 0;
+    };
+    QList<Annotation> methodLevel;
+    QString prefix;
+    auto it = annotationPattern.globalMatch(text);
+    while (it.hasNext()) {
+        const auto match = it.next();
+        Annotation annotation{match.captured(1), pathValue.match(match.captured(3)).captured(1), match.captured(3),
+                              static_cast<int>(match.capturedStart(0)), lineNumberAtOffset(text, match.capturedStart(0))};
+        if (classOffset >= 0 && annotation.offset < classOffset) {
+            if (annotation.name == QStringLiteral("RequestMapping") || annotation.name == QStringLiteral("Path")) {
+                prefix = annotation.value;
+            }
+            continue;
+        }
+        methodLevel.append(annotation);
+    }
+
+    auto addRoute = [&](const QString &method, const QString &routePath, int line) {
+        QString full = prefix;
+        if (!routePath.isEmpty()) {
+            if (!full.endsWith(QLatin1Char('/')) && !routePath.startsWith(QLatin1Char('/'))) {
+                full += QLatin1Char('/');
+            }
+            full += routePath;
+        }
+        if (full.isEmpty()) {
+            full = QStringLiteral("/");
+        }
+        QVariantMap route = makeSourceContextItem(path, QStringLiteral("java"), line, snippetFromLine(text, line, 2),
+                                                  QStringLiteral("route"));
+        route.insert(QStringLiteral("method"), method);
+        route.insert(QStringLiteral("path"), full);
+        route.insert(QStringLiteral("label"), method + QStringLiteral(" ") + full);
+        routes.append(route);
+    };
+
+    static const QSet<QString> jaxRsVerbs = {
+        QStringLiteral("GET"), QStringLiteral("POST"), QStringLiteral("PUT"), QStringLiteral("DELETE"),
+        QStringLiteral("PATCH"), QStringLiteral("HEAD"), QStringLiteral("OPTIONS"),
+    };
+    for (const Annotation &annotation : std::as_const(methodLevel)) {
+        if (routes.size() >= 200) {
+            break;
+        }
+        if (annotation.name == QStringLiteral("RequestMapping")) {
+            const auto method = methodValue.match(annotation.args);
+            addRoute(method.hasMatch() ? method.captured(1) : QStringLiteral("ANY"), annotation.value, annotation.line);
+        } else if (annotation.name.endsWith(QStringLiteral("Mapping"))) {
+            addRoute(annotation.name.left(annotation.name.size() - 7).toUpper(), annotation.value, annotation.line);
+        } else if (jaxRsVerbs.contains(annotation.name)) {
+            // Pair the verb with a method-level @Path in the same annotation block.
+            QString subPath;
+            for (const Annotation &other : std::as_const(methodLevel)) {
+                if (other.name == QStringLiteral("Path") && qAbs(other.line - annotation.line) <= 3) {
+                    subPath = other.value;
+                    break;
+                }
+            }
+            addRoute(annotation.name, subPath, annotation.line);
+        }
+    }
+    result.insert(QStringLiteral("routes"), routes);
+}
+
 QVariantMap SymbolParser::makeSymbol(const QString &kind, const QString &name, int line,
                                      const QString &detail, const QVariantList &members,
                                      const QString &snippet)
@@ -3770,6 +3891,9 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
                                               [&] { return parseSwiftTreeSitter(path, text); },
                                               {},
                                               true);
+        enrichSwiftDependencies(analysis, path, text);
+        analysis = annotateAnalysisWithProvenance(analysis, analysis.value(QStringLiteral("analysisSourceMode")).toString(),
+                                                  analysis.value(QStringLiteral("analysisConfidence")).toString());
         if (analysis.value(QStringLiteral("symbols")).toList().isEmpty()) {
             QVariantMap fallback = makeResultSkeleton(path, info.fileName(), language);
             fallback.insert(QStringLiteral("summary"), QStringLiteral("No Swift symbols extracted"));
@@ -3814,10 +3938,13 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
         return finalizeResult(parseCppLike(path, text, language), QStringLiteral("heuristic"));
     }
     if (language == QStringLiteral("java")) {
-        return analyseWithAst(language,
-                              [&] { return parseJavaTreeSitter(path, text); },
-                              [&] { return parseJava(path, text); },
-                              false);
+        QVariantMap analysis = analyseWithAst(language,
+                                              [&] { return parseJavaTreeSitter(path, text); },
+                                              [&] { return parseJava(path, text); },
+                                              false);
+        enrichJavaRoutes(analysis, path, text);
+        return annotateAnalysisWithProvenance(analysis, analysis.value(QStringLiteral("analysisSourceMode")).toString(),
+                                              analysis.value(QStringLiteral("analysisConfidence")).toString());
     }
     if (language == QStringLiteral("csharp")) {
         return analyseWithAst(language,
