@@ -1,0 +1,4 @@
+{
+    "name": "fixture/php-links",
+    "autoload": { "psr-4": { "App\\": "src/" } }
+}

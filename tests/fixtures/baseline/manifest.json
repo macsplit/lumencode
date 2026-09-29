@@ -1038,6 +1038,33 @@
           "name": "completed"
         }
       ]
+    },
+    {
+      "name": "php_dependencies_routes_templates",
+      "root": "tests/fixtures/baseline/php_links",
+      "file": "public/index.php",
+      "file_expectations": {
+        "dependencies": 4,
+        "routes": 3,
+        "quick_link_labels": [
+          "site.css",
+          "site.js"
+        ]
+      },
+      "expectations": []
+    },
+    {
+      "name": "php_template_as_script_consumer",
+      "root": "tests/fixtures/baseline/php_links",
+      "file": "public/js/site.js",
+      "file_expectations": {
+        "quick_link_labels": [
+          "index.php",
+          "#flash \u2192 index.php:21",
+          ".flash \u2192 site.css:1"
+        ]
+      },
+      "expectations": []
     }
   ]
 }

@@ -164,6 +164,28 @@ QStringList calledNamesInCode(const QString &code)
     return names;
 }
 
+// PHP templates: blank <?php ... ?> regions (keeping newlines) so the HTML
+// grammar parses the markup with unchanged line numbers.
+QString blankPhpRegions(QString text)
+{
+    int searchFrom = 0;
+    while (true) {
+        const int open = text.indexOf(QStringLiteral("<?"), searchFrom);
+        if (open < 0) {
+            break;
+        }
+        const int close = text.indexOf(QStringLiteral("?>"), open + 2);
+        const int end = close < 0 ? text.size() : close + 2;
+        for (int index = open; index < end; ++index) {
+            if (text.at(index) != QLatin1Char('\n')) {
+                text[index] = QLatin1Char(' ');
+            }
+        }
+        searchFrom = end;
+    }
+    return text;
+}
+
 struct PageCacheEntry
 {
     qint64 size = -1;
@@ -497,7 +519,11 @@ HtmlPage loadHtmlPage(const QString &path)
         empty.path = key;
         return empty;
     }
-    const HtmlPage page = parseHtmlPage(key, QString::fromUtf8(file.readAll()));
+    QString text = QString::fromUtf8(file.readAll());
+    if (key.endsWith(QStringLiteral(".php"), Qt::CaseInsensitive)) {
+        text = blankPhpRegions(text);
+    }
+    const HtmlPage page = parseHtmlPage(key, text);
     QMutexLocker locker(&cacheMutex());
     PageCacheEntry entry;
     entry.size = info.size();

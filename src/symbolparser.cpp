@@ -3262,6 +3262,268 @@ static void enrichScriptWithWebLinks(QVariantMap &result, const QString &path, c
     result.insert(QStringLiteral("quickLinks"), quickLinks);
 }
 
+
+// ---------------------------------------------------------------------------
+// PHP links: use/require/include dependencies, framework routes, template assets
+// ---------------------------------------------------------------------------
+
+struct PhpAutoloadRoot
+{
+    QString prefix; // namespace prefix with trailing backslash
+    QString directory; // absolute
+};
+
+// PSR-4 roots from the nearest composer.json above the file (cached).
+static QList<PhpAutoloadRoot> phpAutoloadRoots(const QString &filePath)
+{
+    static QMutex mutex;
+    static QHash<QString, QList<PhpAutoloadRoot>> cache;
+    QDir dir = QFileInfo(filePath).dir();
+    for (int level = 0; level < 8; ++level) {
+        const QString composerPath = dir.absoluteFilePath(QStringLiteral("composer.json"));
+        if (QFileInfo::exists(composerPath)) {
+            {
+                QMutexLocker locker(&mutex);
+                if (cache.contains(composerPath)) {
+                    return cache.value(composerPath);
+                }
+            }
+            QList<PhpAutoloadRoot> roots;
+            QFile file(composerPath);
+            if (file.open(QIODevice::ReadOnly)) {
+                const QJsonObject root = QJsonDocument::fromJson(file.readAll()).object();
+                for (const QString &section : {QStringLiteral("autoload"), QStringLiteral("autoload-dev")}) {
+                    const QJsonObject psr4 = root.value(section).toObject().value(QStringLiteral("psr-4")).toObject();
+                    for (auto it = psr4.constBegin(); it != psr4.constEnd(); ++it) {
+                        QStringList directories;
+                        if (it.value().isArray()) {
+                            for (const QJsonValue &value : it.value().toArray()) {
+                                directories.append(value.toString());
+                            }
+                        } else {
+                            directories.append(it.value().toString());
+                        }
+                        for (const QString &directory : std::as_const(directories)) {
+                            roots.append({it.key(), QDir::cleanPath(dir.absoluteFilePath(directory))});
+                        }
+                    }
+                }
+            }
+            std::sort(roots.begin(), roots.end(), [](const PhpAutoloadRoot &a, const PhpAutoloadRoot &b) {
+                return a.prefix.size() > b.prefix.size();
+            });
+            QMutexLocker locker(&mutex);
+            cache.insert(composerPath, roots);
+            return roots;
+        }
+        if (!dir.cdUp()) {
+            break;
+        }
+    }
+    return {};
+}
+
+static QString resolvePhpClassPath(const QString &filePath, const QString &className)
+{
+    const QString normalized = className.startsWith(QLatin1Char('\\')) ? className.mid(1) : className;
+    for (const PhpAutoloadRoot &root : phpAutoloadRoots(filePath)) {
+        if (!normalized.startsWith(root.prefix)) {
+            continue;
+        }
+        QString relative = normalized.mid(root.prefix.size());
+        relative.replace(QLatin1Char('\\'), QLatin1Char('/'));
+        const QString candidate = QDir(root.directory).absoluteFilePath(relative + QStringLiteral(".php"));
+        if (QFileInfo::exists(candidate)) {
+            return candidate;
+        }
+    }
+    return {};
+}
+
+// require 'x.php' / __DIR__ . '/x.php' / CONSTANT . 'core/x.php': resolve the
+// literal part relative to the file, then to its ancestors (constants usually
+// name a project root).
+static QString resolvePhpIncludePath(const QString &filePath, const QString &literal)
+{
+    QString relative = literal.trimmed();
+    if (relative.isEmpty()) {
+        return {};
+    }
+    QDir dir = QFileInfo(filePath).dir();
+    const QString direct = QDir::cleanPath(dir.absoluteFilePath(relative.startsWith(QLatin1Char('/')) ? relative.mid(1) : relative));
+    if (QFileInfo::exists(direct)) {
+        return direct;
+    }
+    for (int level = 0; level < 6 && dir.cdUp(); ++level) {
+        const QString candidate = QDir::cleanPath(dir.absoluteFilePath(relative.startsWith(QLatin1Char('/')) ? relative.mid(1) : relative));
+        if (QFileInfo::exists(candidate)) {
+            return candidate;
+        }
+    }
+    return {};
+}
+
+static void enrichPhpAnalysis(QVariantMap &result, const QString &path, const QString &text)
+{
+    QVariantList dependencies = result.value(QStringLiteral("dependencies")).toList();
+    QSet<QString> seen;
+    for (const QVariant &entry : std::as_const(dependencies)) {
+        seen.insert(entry.toMap().value(QStringLiteral("target")).toString());
+    }
+    auto addDependency = [&](const QString &target, const QString &type, int offset, const QString &resolved,
+                             const QString &label = QString()) {
+        if (target.isEmpty() || seen.contains(type + target) || dependencies.size() >= 120) {
+            return;
+        }
+        seen.insert(type + target);
+        const int line = lineNumberAtOffset(text, offset);
+        QVariantMap item = makeSourceContextItem(path, QStringLiteral("php"), line, snippetFromLine(text, line, 0),
+                                                 QStringLiteral("%1 dependency").arg(type));
+        item.insert(QStringLiteral("target"), target);
+        item.insert(QStringLiteral("type"), type);
+        item.insert(QStringLiteral("label"), label.isEmpty() ? target : label);
+        item.insert(QStringLiteral("path"), resolved);
+        item.insert(QStringLiteral("exists"), resolved.isEmpty() ? true : QFileInfo::exists(resolved));
+        dependencies.append(item);
+    };
+
+    // use Foo\Bar; use Foo\{A, B as C}; use function Foo\bar;
+    static const QRegularExpression usePattern(
+        QStringLiteral(R"(^[ \t]*use\s+(?:function\s+|const\s+)?([\\A-Za-z_][\\\w]*)(?:\s*\\\s*\{([^}]*)\})?[^;]*;)"),
+        QRegularExpression::MultilineOption);
+    auto useIt = usePattern.globalMatch(text);
+    while (useIt.hasNext()) {
+        const auto match = useIt.next();
+        QString base = match.captured(1);
+        const QString group = match.captured(2);
+        QStringList names;
+        if (!group.isEmpty()) {
+            if (base.endsWith(QLatin1Char('\\'))) {
+                base.chop(1);
+            }
+            for (QString part : group.split(QLatin1Char(','), Qt::SkipEmptyParts)) {
+                part = part.trimmed().section(QRegularExpression(QStringLiteral(R"(\s+as\s+)")), 0, 0).trimmed();
+                if (!part.isEmpty()) {
+                    names.append(base + QLatin1Char('\\') + part);
+                }
+            }
+        } else {
+            names.append(base);
+        }
+        for (const QString &name : std::as_const(names)) {
+            addDependency(name, QStringLiteral("use"), match.capturedStart(0), resolvePhpClassPath(path, name),
+                          name.section(QLatin1Char('\\'), -1));
+        }
+    }
+
+    // require / include (_once) with a string literal part.
+    static const QRegularExpression includePattern(
+        QStringLiteral(R"(\b(require|include)(_once)?\s*\(?\s*([^;]*?)\s*\)?\s*;)"));
+    static const QRegularExpression literalPattern(QStringLiteral(R"(['"]([^'"]+\.(?:php|inc|phtml|html))['"])"));
+    auto includeIt = includePattern.globalMatch(text);
+    while (includeIt.hasNext()) {
+        const auto match = includeIt.next();
+        const QString expression = match.captured(3);
+        const auto literal = literalPattern.match(expression);
+        if (!literal.hasMatch()) {
+            continue;
+        }
+        const QString target = literal.captured(1);
+        addDependency(target, match.captured(1) + match.captured(2), match.capturedStart(0),
+                      resolvePhpIncludePath(path, target), QFileInfo(target).fileName());
+    }
+    result.insert(QStringLiteral("dependencies"), dependencies);
+
+    // Routes: Slim/Lumen $app->get('/x', ...), $group->post(...), ->map([...], '/x'),
+    // Laravel Route::get('/x', ...), CodeIgniter $route['x'] = 'controller/method'.
+    QVariantList routes = result.value(QStringLiteral("routes")).toList();
+    static const QRegularExpression routeCall(
+        QStringLiteral(R"((\$\w+|Route)\s*(?:->|::)\s*(get|post|put|patch|delete|options|any|map|match)\s*\(\s*(?:(\[[^\]]*\])\s*,\s*)?['"]([^'"]*)['"])"),
+        QRegularExpression::CaseInsensitiveOption);
+    auto routeIt = routeCall.globalMatch(text);
+    while (routeIt.hasNext() && routes.size() < 200) {
+        const auto match = routeIt.next();
+        const QString routePath = match.captured(4);
+        QString method = match.captured(2).toUpper();
+        if (!match.captured(3).isEmpty()) {
+            QString methods = match.captured(3);
+            methods.remove(QRegularExpression(QStringLiteral(R"([\[\]'"\s])")));
+            method = methods.contains(QLatin1Char('$')) ? QStringLiteral("ANY")
+                                                          : methods.toUpper().replace(QLatin1Char(','), QLatin1Char('|'));
+        }
+        if (!(routePath.startsWith(QLatin1Char('/')) || routePath.startsWith(QLatin1Char('{')) || match.captured(1) == QStringLiteral("Route"))) {
+            continue;
+        }
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        QVariantMap route = makeSourceContextItem(path, QStringLiteral("php"), line, snippetFromLine(text, line, 1),
+                                                  QStringLiteral("route"));
+        route.insert(QStringLiteral("owner"), match.captured(1));
+        route.insert(QStringLiteral("method"), method);
+        route.insert(QStringLiteral("path"), routePath);
+        route.insert(QStringLiteral("label"), method + QStringLiteral(" ") + routePath);
+        routes.append(route);
+    }
+    static const QRegularExpression ciRoute(QStringLiteral(R"(^\s*\$route\[\s*['"]([^'"]+)['"]\s*\]\s*=\s*['"]([^'"]*)['"])"),
+                                            QRegularExpression::MultilineOption);
+    auto ciIt = ciRoute.globalMatch(text);
+    while (ciIt.hasNext() && routes.size() < 200) {
+        const auto match = ciIt.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        QVariantMap route = makeSourceContextItem(path, QStringLiteral("php"), line, snippetFromLine(text, line, 0),
+                                                  QStringLiteral("route"));
+        route.insert(QStringLiteral("owner"), QStringLiteral("$route"));
+        route.insert(QStringLiteral("method"), QStringLiteral("ANY"));
+        route.insert(QStringLiteral("path"), match.captured(1));
+        route.insert(QStringLiteral("handler"), match.captured(2));
+        route.insert(QStringLiteral("label"), QStringLiteral("%1 → %2").arg(match.captured(1), match.captured(2)));
+        routes.append(route);
+    }
+    result.insert(QStringLiteral("routes"), routes);
+
+    // Templates: a PHP file that renders HTML links assets like a page does.
+    if (text.contains(QStringLiteral("<script")) || text.contains(QStringLiteral("<link"))
+        || text.contains(QStringLiteral("<form"))) {
+        // Blank the PHP regions (keeping newlines) so the HTML grammar sees
+        // only the template markup, with unchanged line numbers.
+        QString markup = text;
+        int searchFrom = 0;
+        while (true) {
+            const int open = markup.indexOf(QStringLiteral("<?"), searchFrom);
+            if (open < 0) {
+                break;
+            }
+            int close = markup.indexOf(QStringLiteral("?>"), open + 2);
+            const int end = close < 0 ? markup.size() : close + 2;
+            for (int index = open; index < end; ++index) {
+                if (markup.at(index) != QLatin1Char('\n')) {
+                    markup[index] = QLatin1Char(' ');
+                }
+            }
+            searchFrom = end;
+        }
+        const WebLinks::HtmlPage page = WebLinks::parseHtmlPage(path, markup);
+        QVariantList quickLinks = result.value(QStringLiteral("quickLinks")).toList();
+        for (const WebLinks::HtmlAsset &asset : page.assets) {
+            if (asset.kind == QStringLiteral("page") || !asset.local) {
+                continue;
+            }
+            QVariantMap item = makeSourceContextItem(path, QStringLiteral("php"), asset.line, asset.snippet,
+                                                     QStringLiteral("%1 link").arg(asset.kind));
+            item.insert(QStringLiteral("label"), QFileInfo(asset.target).fileName().isEmpty() ? asset.target : QFileInfo(asset.target).fileName());
+            item.insert(QStringLiteral("target"), asset.target);
+            item.insert(QStringLiteral("type"), asset.kind);
+            item.insert(QStringLiteral("path"), asset.resolvedPath);
+            item.insert(QStringLiteral("targetPath"), asset.resolvedPath);
+            item.insert(QStringLiteral("exists"), asset.exists);
+            quickLinks.append(item);
+        }
+        result.insert(QStringLiteral("quickLinks"), quickLinks);
+    }
+    if (result.value(QStringLiteral("relatedFiles")).toList().isEmpty()) {
+        result.insert(QStringLiteral("relatedFiles"), SymbolParser::findRelatedFilesPublic(path));
+    }
+}
+
 QVariantMap SymbolParser::makeSymbol(const QString &kind, const QString &name, int line,
                                      const QString &detail, const QVariantList &members,
                                      const QString &snippet)
@@ -3495,10 +3757,13 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
     };
 
     if (language == QStringLiteral("php")) {
-        return analyseWithAst(language,
-                              [&] { return parsePhpTreeSitter(path, text); },
-                              [&] { return parsePhp(path, text); },
-                              false);
+        QVariantMap analysis = analyseWithAst(language,
+                                              [&] { return parsePhpTreeSitter(path, text); },
+                                              [&] { return parsePhp(path, text); },
+                                              false);
+        enrichPhpAnalysis(analysis, path, text);
+        return annotateAnalysisWithProvenance(analysis, analysis.value(QStringLiteral("analysisSourceMode")).toString(),
+                                              analysis.value(QStringLiteral("analysisConfidence")).toString());
     }
     if (language == QStringLiteral("swift")) {
         QVariantMap analysis = analyseWithAst(language,
@@ -8105,6 +8370,11 @@ QVariantList SymbolParser::extractAspNetRoutes(const QString &path, const QStrin
         routes.append(route);
     }
     return routes;
+}
+
+QVariantList SymbolParser::findRelatedFilesPublic(const QString &path)
+{
+    return findRelatedFiles(path);
 }
 
 QVariantList SymbolParser::findRelatedFiles(const QString &path)
