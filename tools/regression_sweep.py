@@ -12,7 +12,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CLI_PATH = REPO_ROOT / "build" / "bin" / "lumencode-cli"
-CODE_ROOT = Path("/home/user/Code")
+CODE_ROOT = Path(os.environ.get("LUMENCODE_CORPUS", "/home/user/Code"))
 DEFAULT_FIXTURE_MANIFEST = REPO_ROOT / "tests" / "fixtures" / "baseline" / "manifest.json"
 
 SUPPORTED_EXTENSIONS = {
@@ -749,7 +749,13 @@ def main() -> int:
     parser.add_argument("--max-files", type=int, default=100)
     parser.add_argument("--fixture-manifest", type=Path, default=DEFAULT_FIXTURE_MANIFEST)
     parser.add_argument("--fixtures-only", action="store_true")
+    parser.add_argument("--corpus-root", type=Path, default=None,
+                        help="project tree to sample (default: $LUMENCODE_CORPUS or /home/user/Code)")
     args = parser.parse_args()
+
+    global CODE_ROOT
+    if args.corpus_root is not None:
+        CODE_ROOT = args.corpus_root.resolve()
 
     if not CLI_PATH.exists():
         print(json.dumps({"error": f"CLI not found at {CLI_PATH}"}))

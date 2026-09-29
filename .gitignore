@@ -3,3 +3,4 @@ __pycache__/
 tools/__pycache__/
 .flatpak-builder/
 repo/
+build-*/

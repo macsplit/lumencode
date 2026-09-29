@@ -96,6 +96,16 @@ static bool looksLikeMinifiedSource(const QString &path, const QString &language
         || (nonEmptyLines <= 8 && averageLineLength >= 1200.0);
 }
 
+static QString tsType(TSNode node)
+{
+    // ts_node_type() dereferences the node's subtree, so a null node (e.g. a
+    // missing optional field such as the value of `let x: T`) would crash.
+    if (ts_node_is_null(node)) {
+        return {};
+    }
+    return QString::fromUtf8(ts_node_type(node));
+}
+
 static QString nodeText(TSNode node, const QByteArray &source)
 {
     if (ts_node_is_null(node)) {
@@ -193,7 +203,7 @@ static TSNode firstAncestorOfType(TSNode node, std::initializer_list<const char 
 {
     TSNode current = node;
     while (!ts_node_is_null(current)) {
-        const QString currentType = QString::fromUtf8(ts_node_type(current));
+        const QString currentType = tsType(current);
         for (const char *type : types) {
             if (currentType == QLatin1String(type)) {
                 return current;
@@ -963,7 +973,7 @@ static QVariantMap limitRecoveryAnalysisToRanges(QVariantMap recovery,
 
 static QString swiftDeclarationKind(TSNode node, const QByteArray &source)
 {
-    const QString type = QString::fromUtf8(ts_node_type(node));
+    const QString type = tsType(node);
     if (type == QStringLiteral("protocol_declaration")) {
         return QStringLiteral("protocol");
     }
@@ -994,7 +1004,7 @@ static QString swiftDeclarationKind(TSNode node, const QByteArray &source)
 
 static QString swiftDeclarationName(TSNode node, const QByteArray &source)
 {
-    const QString type = QString::fromUtf8(ts_node_type(node));
+    const QString type = tsType(node);
     if (type == QStringLiteral("init_declaration")) {
         return QStringLiteral("init");
     }
@@ -1023,7 +1033,7 @@ static QString swiftCallableKeyForNode(TSNode node,
                                        const QByteArray &source,
                                        const QHash<QString, QVariantMap> &byKey)
 {
-    const QString type = QString::fromUtf8(ts_node_type(node));
+    const QString type = tsType(node);
     if (type != QStringLiteral("function_declaration")
         && type != QStringLiteral("protocol_function_declaration")
         && type != QStringLiteral("init_declaration")
@@ -1047,7 +1057,7 @@ static QString swiftCallableKeyForNode(TSNode node,
 
 static QString swiftCallTargetName(TSNode node, const QByteArray &source)
 {
-    if (QString::fromUtf8(ts_node_type(node)) != QStringLiteral("call_expression")) {
+    if (tsType(node) != QStringLiteral("call_expression")) {
         return QString();
     }
 
@@ -1065,7 +1075,7 @@ static QString phpCallableKeyForNode(TSNode node,
                                      const QByteArray &source,
                                      const QHash<QString, QVariantMap> &byKey)
 {
-    const QString type = QString::fromUtf8(ts_node_type(node));
+    const QString type = tsType(node);
     if (type != QStringLiteral("function_definition") && type != QStringLiteral("method_declaration")) {
         return QString();
     }
@@ -1082,7 +1092,7 @@ static QString phpCallableKeyForNode(TSNode node,
 
 static QString phpCallTargetName(TSNode node, const QByteArray &source)
 {
-    const QString type = QString::fromUtf8(ts_node_type(node));
+    const QString type = tsType(node);
     if (type != QStringLiteral("function_call_expression")
         && type != QStringLiteral("member_call_expression")
         && type != QStringLiteral("scoped_call_expression")) {
@@ -1203,7 +1213,7 @@ static QString pythonCallableKeyForNode(TSNode node,
                                         const QByteArray &source,
                                         const QHash<QString, QVariantMap> &byKey)
 {
-    if (QString::fromUtf8(ts_node_type(node)) != QStringLiteral("function_definition")) {
+    if (tsType(node) != QStringLiteral("function_definition")) {
         return QString();
     }
 
@@ -1238,7 +1248,7 @@ static QString pythonCallableKeyForNode(TSNode node,
 
 static QString pythonCallTargetName(TSNode node, const QByteArray &source)
 {
-    if (QString::fromUtf8(ts_node_type(node)) != QStringLiteral("call")) {
+    if (tsType(node) != QStringLiteral("call")) {
         return QString();
     }
 
@@ -1254,7 +1264,7 @@ static QString javaCallableKeyForNode(TSNode node,
                                       const QHash<QString, QVariantMap> &byKey)
 {
     QVariantMap probe;
-    const QString type = QString::fromUtf8(ts_node_type(node));
+    const QString type = tsType(node);
     if (type == QStringLiteral("method_declaration")) {
         probe.insert(QStringLiteral("kind"), QStringLiteral("method"));
         probe.insert(QStringLiteral("name"), nodeText(fieldNode(node, "name"), source).trimmed());
@@ -1271,7 +1281,7 @@ static QString javaCallableKeyForNode(TSNode node,
 
 static QString javaCallTargetName(TSNode node, const QByteArray &source)
 {
-    const QString type = QString::fromUtf8(ts_node_type(node));
+    const QString type = tsType(node);
     QString raw;
     if (type == QStringLiteral("method_invocation")) {
         raw = nodeText(fieldNode(node, "name"), source).trimmed();
@@ -1293,7 +1303,7 @@ static QString csharpCallableKeyForNode(TSNode node,
                                         const QHash<QString, QVariantMap> &byKey)
 {
     QVariantMap probe;
-    const QString type = QString::fromUtf8(ts_node_type(node));
+    const QString type = tsType(node);
     if (type == QStringLiteral("method_declaration")) {
         probe.insert(QStringLiteral("kind"), QStringLiteral("method"));
         probe.insert(QStringLiteral("name"), nodeText(fieldNode(node, "name"), source).trimmed());
@@ -1310,7 +1320,7 @@ static QString csharpCallableKeyForNode(TSNode node,
 
 static QString csharpCallTargetName(TSNode node, const QByteArray &source)
 {
-    const QString type = QString::fromUtf8(ts_node_type(node));
+    const QString type = tsType(node);
     QString raw;
     if (type == QStringLiteral("invocation_expression")) {
         raw = nodeText(fieldNode(node, "function"), source).trimmed();
@@ -1331,7 +1341,7 @@ static QString rustCallableKeyForNode(TSNode node,
                                       const QByteArray &source,
                                       const QHash<QString, QVariantMap> &byKey)
 {
-    if (QString::fromUtf8(ts_node_type(node)) != QStringLiteral("function_item")) {
+    if (tsType(node) != QStringLiteral("function_item")) {
         return QString();
     }
 
@@ -1340,10 +1350,10 @@ static QString rustCallableKeyForNode(TSNode node,
 
     QStringList candidateKinds;
     const TSNode parent = ts_node_parent(node);
-    const QString parentType = QString::fromUtf8(ts_node_type(parent));
+    const QString parentType = tsType(parent);
     if (parentType == QStringLiteral("declaration_list")) {
         const TSNode grandParent = ts_node_parent(parent);
-        const QString grandParentType = QString::fromUtf8(ts_node_type(grandParent));
+        const QString grandParentType = tsType(grandParent);
         if (grandParentType == QStringLiteral("impl_item")
             || grandParentType == QStringLiteral("trait_item")
             || grandParentType == QStringLiteral("mod_item")) {
@@ -1368,7 +1378,7 @@ static QString rustCallableKeyForNode(TSNode node,
 
 static QString rustCallTargetName(TSNode node, const QByteArray &source)
 {
-    if (QString::fromUtf8(ts_node_type(node)) != QStringLiteral("call_expression")) {
+    if (tsType(node) != QStringLiteral("call_expression")) {
         return QString();
     }
 
@@ -1387,7 +1397,7 @@ static QString jsCallableKeyForNode(TSNode node,
     if (ts_node_is_null(node)) {
         return {};
     }
-    const QString type = QString::fromUtf8(ts_node_type(node));
+    const QString type = tsType(node);
     QVariantMap probe;
 
     if (type == QStringLiteral("function_declaration")
@@ -1411,7 +1421,7 @@ static QString jsCallableKeyForNode(TSNode node,
         if (ts_node_is_null(valueNode)) {
             return {};
         }
-        const QString valueType = QString::fromUtf8(ts_node_type(valueNode));
+        const QString valueType = tsType(valueNode);
         if (valueType == QStringLiteral("arrow_function")
             || valueType == QStringLiteral("function")
             || valueType == QStringLiteral("function_expression")) {
@@ -1430,7 +1440,7 @@ static QString jsCallableKeyForNode(TSNode node,
         if (ts_node_is_null(valueNode)) {
             return {};
         }
-        const QString valueType = QString::fromUtf8(ts_node_type(valueNode));
+        const QString valueType = tsType(valueNode);
         if (valueType == QStringLiteral("arrow_function")
             || valueType == QStringLiteral("function")
             || valueType == QStringLiteral("function_expression")) {
@@ -1444,7 +1454,7 @@ static QString jsCallableKeyForNode(TSNode node,
         if (ts_node_is_null(valueNode)) {
             return {};
         }
-        const QString valueType = QString::fromUtf8(ts_node_type(valueNode));
+        const QString valueType = tsType(valueNode);
         if ((left.startsWith(QStringLiteral("module.exports."))
              || left.startsWith(QStringLiteral("exports.")))
             && (valueType == QStringLiteral("arrow_function")
@@ -1462,7 +1472,7 @@ static QString jsCallableKeyForNode(TSNode node,
 
 static QString jsCallTargetName(TSNode node, const QByteArray &source)
 {
-    const QString type = QString::fromUtf8(ts_node_type(node));
+    const QString type = tsType(node);
     if (type != QStringLiteral("call_expression") && type != QStringLiteral("new_expression")) {
         return QString();
     }
@@ -1732,7 +1742,7 @@ static QStringList extractCssClassesTreeSitter(const QString &text)
             return;
         }
 
-        const QString type = QString::fromUtf8(ts_node_type(node));
+        const QString type = tsType(node);
         if (type == QStringLiteral("class_selector")) {
             QString name = nodeText(node, source).trimmed();
             if (name.startsWith(QLatin1Char('.'))) {
@@ -1790,7 +1800,7 @@ static QVariantMap findCssClassSummaryEntryTreeSitter(const QString &cssPath, co
             return;
         }
 
-        const QString type = QString::fromUtf8(ts_node_type(node));
+        const QString type = tsType(node);
         if (type == QStringLiteral("class_selector")) {
             QString className = nodeText(node, source).trimmed();
             if (className.startsWith(QLatin1Char('.'))) {
@@ -1889,7 +1899,7 @@ static QMap<QString, QVariantMap> buildCssClassIndex(const QString &cssPath, con
         if (ts_node_is_null(node)) {
             return;
         }
-        const QString type = QString::fromUtf8(ts_node_type(node));
+        const QString type = tsType(node);
         if (type == QStringLiteral("class_selector")) {
             QString name = nodeText(node, source).trimmed();
             if (name.startsWith(QLatin1Char('.'))) {
@@ -2716,7 +2726,7 @@ QVariantMap SymbolParser::parseSwiftTreeSitter(const QString &path, const QStrin
         const uint32_t count = ts_node_named_child_count(body);
         for (uint32_t i = 0; i < count; ++i) {
             TSNode child = ts_node_named_child(body, i);
-            const QString type = QString::fromUtf8(ts_node_type(child));
+            const QString type = tsType(child);
             if (type == QStringLiteral("class_declaration")
                 || type == QStringLiteral("protocol_declaration")
                 || type == QStringLiteral("function_declaration")
@@ -2742,7 +2752,7 @@ QVariantMap SymbolParser::parseSwiftTreeSitter(const QString &path, const QStrin
     const uint32_t count = ts_node_named_child_count(root);
     for (uint32_t i = 0; i < count; ++i) {
         TSNode child = ts_node_named_child(root, i);
-        const QString type = QString::fromUtf8(ts_node_type(child));
+        const QString type = tsType(child);
         if (type == QStringLiteral("class_declaration")
             || type == QStringLiteral("protocol_declaration")
             || type == QStringLiteral("function_declaration")
@@ -2775,7 +2785,7 @@ QVariantMap SymbolParser::parseSwiftTreeSitter(const QString &path, const QStrin
                 activeKey = nodeKey;
             }
 
-            if (!activeKey.isEmpty() && QString::fromUtf8(ts_node_type(node)) == QStringLiteral("call_expression")) {
+            if (!activeKey.isEmpty() && tsType(node) == QStringLiteral("call_expression")) {
                 const QString targetName = swiftCallTargetName(node, source);
                 const QStringList candidateKeys = keysByName.value(targetName);
                 if (!targetName.isEmpty() && !candidateKeys.isEmpty()) {
@@ -2838,7 +2848,7 @@ QVariantMap SymbolParser::parsePhpTreeSitter(const QString &path, const QString 
         const uint32_t count = ts_node_named_child_count(declarationList);
         for (uint32_t i = 0; i < count; ++i) {
             TSNode child = ts_node_named_child(declarationList, i);
-            const QString type = QString::fromUtf8(ts_node_type(child));
+            const QString type = tsType(child);
             if (type == QStringLiteral("method_declaration")) {
                 const QString name = nodeText(fieldNode(child, "name"), source);
                 members.append(makeSymbol(QStringLiteral("method"), name, nodeLine(child), QString(), {}, nodeSnippet(child, source)));
@@ -2870,7 +2880,7 @@ QVariantMap SymbolParser::parsePhpTreeSitter(const QString &path, const QString 
     const uint32_t count = ts_node_named_child_count(root);
     for (uint32_t i = 0; i < count; ++i) {
         TSNode child = ts_node_named_child(root, i);
-        const QString type = QString::fromUtf8(ts_node_type(child));
+        const QString type = tsType(child);
 
         if (type == QStringLiteral("php_tag") || type == QStringLiteral("text")) {
             continue;
@@ -2916,7 +2926,7 @@ QVariantMap SymbolParser::parsePhpTreeSitter(const QString &path, const QString 
                 activeKey = nodeKey;
             }
 
-            const QString nodeType = QString::fromUtf8(ts_node_type(node));
+            const QString nodeType = tsType(node);
             if (!activeKey.isEmpty()
                 && (nodeType == QStringLiteral("function_call_expression")
                     || nodeType == QStringLiteral("member_call_expression")
@@ -3016,7 +3026,7 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
         const uint32_t count = ts_node_named_child_count(body);
         for (uint32_t i = 0; i < count; ++i) {
             TSNode child = ts_node_named_child(body, i);
-            const QString type = QString::fromUtf8(ts_node_type(child));
+            const QString type = tsType(child);
             if (type == QStringLiteral("method_definition")) {
                 QString name = nodeText(fieldNode(child, "name"), source);
                 if (name.isEmpty()) {
@@ -3040,12 +3050,12 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
         const uint32_t count = ts_node_named_child_count(objectNode);
         for (uint32_t i = 0; i < count; ++i) {
             TSNode child = ts_node_named_child(objectNode, i);
-            const QString type = QString::fromUtf8(ts_node_type(child));
+            const QString type = tsType(child);
             if (type == QStringLiteral("pair")) {
                 const TSNode keyNode = fieldNode(child, "key");
                 const TSNode valueNode = fieldNode(child, "value");
                 const QString key = nodeText(keyNode, source);
-                const QString valueType = QString::fromUtf8(ts_node_type(valueNode));
+                const QString valueType = tsType(valueNode);
                 if (valueType == QStringLiteral("arrow_function")
                     || valueType == QStringLiteral("function")
                     || valueType == QStringLiteral("function_expression")) {
@@ -3070,14 +3080,14 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
     };
 
     auto unwrapExport = [&](TSNode node) {
-        const QString type = QString::fromUtf8(ts_node_type(node));
+        const QString type = tsType(node);
         if (type != QStringLiteral("export_statement")) {
             return node;
         }
         const uint32_t count = ts_node_named_child_count(node);
         for (uint32_t i = 0; i < count; ++i) {
             TSNode child = ts_node_named_child(node, i);
-            const QString childType = QString::fromUtf8(ts_node_type(child));
+            const QString childType = tsType(child);
             if (childType != QStringLiteral("comment")) {
                 return child;
             }
@@ -3139,10 +3149,10 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
 
     for (uint32_t i = 0; i < count; ++i) {
         TSNode originalNode = ts_node_named_child(root, i);
-        const QString originalType = QString::fromUtf8(ts_node_type(originalNode));
+        const QString originalType = tsType(originalNode);
         bool isExported = originalType == QStringLiteral("export_statement");
         TSNode child = unwrapExport(originalNode);
-        const QString type = QString::fromUtf8(ts_node_type(child));
+        const QString type = tsType(child);
 
         if (originalType == QStringLiteral("import_statement")) {
             const TSNode sourceNode = fieldNode(originalNode, "source");
@@ -3195,10 +3205,10 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
             const uint32_t declarationCount = ts_node_named_child_count(child);
             for (uint32_t j = 0; j < declarationCount; ++j) {
                 TSNode declarator = ts_node_named_child(child, j);
-                if (QString::fromUtf8(ts_node_type(declarator)) == QStringLiteral("variable_declarator")) {
+                if (tsType(declarator) == QStringLiteral("variable_declarator")) {
                     const QString name = nodeText(fieldNode(declarator, "name"), source);
                     const TSNode valueNode = fieldNode(declarator, "value");
-                    const QString valueType = QString::fromUtf8(ts_node_type(valueNode));
+                    const QString valueType = tsType(valueNode);
                     
                     QVariantMap symbol;
                     if (valueType == QStringLiteral("arrow_function")
@@ -3244,11 +3254,11 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
             }
         } else if (type == QStringLiteral("expression_statement")) {
             TSNode expression = ts_node_named_child(child, 0);
-            const QString exprType = QString::fromUtf8(ts_node_type(expression));
+            const QString exprType = tsType(expression);
             if (exprType == QStringLiteral("assignment_expression")) {
                 const QString left = nodeText(fieldNode(expression, "left"), source);
                 TSNode valueNode = fieldNode(expression, "right");
-                const QString valueType = QString::fromUtf8(ts_node_type(valueNode));
+                const QString valueType = tsType(valueNode);
                 if (left == QStringLiteral("module.exports") && valueType == QStringLiteral("object")) {
                     const QVariantList members = parseJsObjectMembers(valueNode);
                     appendSymbolIfNew(makeSymbol(QStringLiteral("module"), left, nodeLine(expression),
@@ -3373,7 +3383,7 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
                 activeKey = nodeKey;
             }
 
-            const QString nodeType = QString::fromUtf8(ts_node_type(node));
+            const QString nodeType = tsType(node);
             if (!activeKey.isEmpty()
                 && (nodeType == QStringLiteral("call_expression")
                     || nodeType == QStringLiteral("new_expression"))) {
@@ -3464,7 +3474,7 @@ QVariantMap SymbolParser::parseCssTreeSitter(const QString &path, const QString 
 
     QSet<QString> seenClassLines;
     std::function<void(TSNode)> visit = [&](TSNode node) {
-        const QString type = QString::fromUtf8(ts_node_type(node));
+        const QString type = tsType(node);
         if (type == QStringLiteral("class_selector")) {
             QString name = nodeText(node, source);
             if (name.startsWith(QLatin1Char('.'))) {
@@ -3614,7 +3624,7 @@ QVariantMap SymbolParser::parsePythonTreeSitter(const QString &path, const QStri
         const uint32_t count = ts_node_named_child_count(decoratedNode);
         for (uint32_t i = 0; i < count; ++i) {
             TSNode child = ts_node_named_child(decoratedNode, i);
-            if (QString::fromUtf8(ts_node_type(child)) == QStringLiteral("decorator")) {
+            if (tsType(child) == QStringLiteral("decorator")) {
                 decorators.append(nodeText(child, source).trimmed());
             }
         }
@@ -3631,11 +3641,11 @@ QVariantMap SymbolParser::parsePythonTreeSitter(const QString &path, const QStri
             TSNode child = ts_node_named_child(blockNode, i);
             TSNode snippetNode = child;
             QString detail;
-            QString childType = QString::fromUtf8(ts_node_type(child));
+            QString childType = tsType(child);
             if (childType == QStringLiteral("decorated_definition")) {
                 detail = decorationDetail(child);
                 child = fieldNode(child, "definition");
-                childType = QString::fromUtf8(ts_node_type(child));
+                childType = tsType(child);
             }
             if (childType != QStringLiteral("function_definition")) {
                 continue;
@@ -3654,7 +3664,7 @@ QVariantMap SymbolParser::parsePythonTreeSitter(const QString &path, const QStri
     };
 
     parsePythonDefinition = [&](TSNode rawNode, TSNode snippetNode, const QString &detail) -> QVariantMap {
-        const QString type = QString::fromUtf8(ts_node_type(rawNode));
+        const QString type = tsType(rawNode);
         if (type == QStringLiteral("class_definition")) {
             const QString name = nodeText(fieldNode(rawNode, "name"), source);
             const TSNode body = fieldNode(rawNode, "body");
@@ -3672,7 +3682,7 @@ QVariantMap SymbolParser::parsePythonTreeSitter(const QString &path, const QStri
     const uint32_t count = ts_node_named_child_count(root);
     for (uint32_t i = 0; i < count; ++i) {
         TSNode child = ts_node_named_child(root, i);
-        const QString type = QString::fromUtf8(ts_node_type(child));
+        const QString type = tsType(child);
         if (type == QStringLiteral("class_definition") || type == QStringLiteral("function_definition")) {
             appendUnique(parsePythonDefinition(child, child, QString()));
             continue;
@@ -3697,7 +3707,7 @@ QVariantMap SymbolParser::parsePythonTreeSitter(const QString &path, const QStri
                 activeKey = nodeKey;
             }
 
-            if (!activeKey.isEmpty() && QString::fromUtf8(ts_node_type(node)) == QStringLiteral("call")) {
+            if (!activeKey.isEmpty() && tsType(node) == QStringLiteral("call")) {
                 const QString targetName = pythonCallTargetName(node, source);
                 const QStringList candidateKeys = keysByName.value(targetName);
                 if (!targetName.isEmpty() && !candidateKeys.isEmpty()) {
@@ -3855,7 +3865,7 @@ QVariantMap SymbolParser::parseJavaTreeSitter(const QString &path, const QString
         const uint32_t count = ts_node_named_child_count(node);
         for (uint32_t i = 0; i < count; ++i) {
             TSNode child = ts_node_named_child(node, i);
-            if (QString::fromUtf8(ts_node_type(child)) == QStringLiteral("modifiers")
+            if (tsType(child) == QStringLiteral("modifiers")
                 && nodeText(child, source).contains(modifier)) {
                 return true;
             }
@@ -3929,7 +3939,7 @@ QVariantMap SymbolParser::parseJavaTreeSitter(const QString &path, const QString
         const uint32_t count = ts_node_named_child_count(node);
         for (uint32_t i = 0; i < count; ++i) {
             TSNode child = ts_node_named_child(node, i);
-            if (QString::fromUtf8(ts_node_type(child)) != QStringLiteral("variable_declarator")) {
+            if (tsType(child) != QStringLiteral("variable_declarator")) {
                 continue;
             }
             const QString name = nodeText(fieldNode(child, "name"), source);
@@ -3949,7 +3959,7 @@ QVariantMap SymbolParser::parseJavaTreeSitter(const QString &path, const QString
         const uint32_t count = ts_node_named_child_count(bodyNode);
         for (uint32_t i = 0; i < count; ++i) {
             TSNode child = ts_node_named_child(bodyNode, i);
-            const QString type = QString::fromUtf8(ts_node_type(child));
+            const QString type = tsType(child);
             if (type == QStringLiteral("method_declaration")) {
                 members.append(makeSymbol(QStringLiteral("method"),
                                           nodeText(fieldNode(child, "name"), source),
@@ -4002,7 +4012,7 @@ QVariantMap SymbolParser::parseJavaTreeSitter(const QString &path, const QString
     const uint32_t count = ts_node_named_child_count(root);
     for (uint32_t i = 0; i < count; ++i) {
         TSNode child = ts_node_named_child(root, i);
-        const QString type = QString::fromUtf8(ts_node_type(child));
+        const QString type = tsType(child);
         if (type == QStringLiteral("import_declaration")) {
             appendDependency(child);
         } else if (type == QStringLiteral("class_declaration")) {
@@ -4030,7 +4040,7 @@ QVariantMap SymbolParser::parseJavaTreeSitter(const QString &path, const QString
                 activeKey = nodeKey;
             }
 
-            const QString nodeType = QString::fromUtf8(ts_node_type(node));
+            const QString nodeType = tsType(node);
             if (!activeKey.isEmpty()
                 && (nodeType == QStringLiteral("method_invocation")
                     || nodeType == QStringLiteral("object_creation_expression"))) {
@@ -4156,7 +4166,7 @@ QVariantMap SymbolParser::parseCSharpTreeSitter(const QString &path, const QStri
         const uint32_t count = ts_node_named_child_count(node);
         for (uint32_t i = 0; i < count; ++i) {
             TSNode child = ts_node_named_child(node, i);
-            if (QString::fromUtf8(ts_node_type(child)) == QStringLiteral("modifier")
+            if (tsType(child) == QStringLiteral("modifier")
                 && nodeText(child, source) == modifier) {
                 return true;
             }
@@ -4231,7 +4241,7 @@ QVariantMap SymbolParser::parseCSharpTreeSitter(const QString &path, const QStri
         const uint32_t count = ts_node_named_child_count(bodyNode);
         for (uint32_t i = 0; i < count; ++i) {
             TSNode child = ts_node_named_child(bodyNode, i);
-            const QString type = QString::fromUtf8(ts_node_type(child));
+            const QString type = tsType(child);
             if (type == QStringLiteral("method_declaration")) {
                 members.append(makeSymbol(QStringLiteral("method"),
                                           nodeText(fieldNode(child, "name"), source),
@@ -4248,13 +4258,13 @@ QVariantMap SymbolParser::parseCSharpTreeSitter(const QString &path, const QStri
                 const uint32_t fieldChildCount = ts_node_named_child_count(child);
                 for (uint32_t fieldIndex = 0; fieldIndex < fieldChildCount; ++fieldIndex) {
                     TSNode fieldChild = ts_node_named_child(child, fieldIndex);
-                    if (QString::fromUtf8(ts_node_type(fieldChild)) != QStringLiteral("variable_declaration")) {
+                    if (tsType(fieldChild) != QStringLiteral("variable_declaration")) {
                         continue;
                     }
                     const uint32_t varCount = ts_node_named_child_count(fieldChild);
                     for (uint32_t varIndex = 0; varIndex < varCount; ++varIndex) {
                         TSNode declarator = ts_node_named_child(fieldChild, varIndex);
-                        if (QString::fromUtf8(ts_node_type(declarator)) != QStringLiteral("variable_declarator")) {
+                        if (tsType(declarator) != QStringLiteral("variable_declarator")) {
                             continue;
                         }
                         const QString name = nodeText(fieldNode(declarator, "name"), source);
@@ -4290,7 +4300,7 @@ QVariantMap SymbolParser::parseCSharpTreeSitter(const QString &path, const QStri
         const uint32_t count = ts_node_named_child_count(node);
         for (uint32_t i = 0; i < count; ++i) {
             TSNode child = ts_node_named_child(node, i);
-            const QString type = QString::fromUtf8(ts_node_type(child));
+            const QString type = tsType(child);
             if (type == QStringLiteral("using_directive")) {
                 appendDependency(child);
             } else if (type == QStringLiteral("namespace_declaration")
@@ -4335,7 +4345,7 @@ QVariantMap SymbolParser::parseCSharpTreeSitter(const QString &path, const QStri
                 activeKey = nodeKey;
             }
 
-            const QString nodeType = QString::fromUtf8(ts_node_type(node));
+            const QString nodeType = tsType(node);
             if (!activeKey.isEmpty()
                 && (nodeType == QStringLiteral("invocation_expression")
                     || nodeType == QStringLiteral("object_creation_expression"))) {
@@ -4458,7 +4468,7 @@ QVariantMap SymbolParser::parseRustTreeSitter(const QString &path, const QString
     auto hasVisibilityModifier = [](TSNode node) {
         const uint32_t count = ts_node_named_child_count(node);
         for (uint32_t i = 0; i < count; ++i) {
-            if (QString::fromUtf8(ts_node_type(ts_node_named_child(node, i))) == QStringLiteral("visibility_modifier")) {
+            if (tsType(ts_node_named_child(node, i)) == QStringLiteral("visibility_modifier")) {
                 return true;
             }
         }
@@ -4533,7 +4543,7 @@ QVariantMap SymbolParser::parseRustTreeSitter(const QString &path, const QString
         const uint32_t count = ts_node_named_child_count(bodyNode);
         for (uint32_t i = 0; i < count; ++i) {
             TSNode child = ts_node_named_child(bodyNode, i);
-            const QString type = QString::fromUtf8(ts_node_type(child));
+            const QString type = tsType(child);
             if (type == QStringLiteral("function_item") || type == QStringLiteral("function_signature_item")) {
                 const QString name = nodeText(fieldNode(child, "name"), source);
                 QString detail = hasVisibilityModifier(child) ? QStringLiteral("public") : QString();
@@ -4551,7 +4561,7 @@ QVariantMap SymbolParser::parseRustTreeSitter(const QString &path, const QString
     const uint32_t count = ts_node_named_child_count(root);
     for (uint32_t i = 0; i < count; ++i) {
         TSNode child = ts_node_named_child(root, i);
-        const QString type = QString::fromUtf8(ts_node_type(child));
+        const QString type = tsType(child);
 
         if (type == QStringLiteral("use_declaration")) {
             QString target = nodeText(child, source).trimmed();
@@ -4582,7 +4592,7 @@ QVariantMap SymbolParser::parseRustTreeSitter(const QString &path, const QString
             const uint32_t variantCount = ts_node_named_child_count(body);
             for (uint32_t variantIndex = 0; variantIndex < variantCount; ++variantIndex) {
                 TSNode variant = ts_node_named_child(body, variantIndex);
-                if (QString::fromUtf8(ts_node_type(variant)) != QStringLiteral("enum_variant")) {
+                if (tsType(variant) != QStringLiteral("enum_variant")) {
                     continue;
                 }
                 members.append(makeSymbol(QStringLiteral("variant"),
@@ -4629,7 +4639,7 @@ QVariantMap SymbolParser::parseRustTreeSitter(const QString &path, const QString
                 activeKey = nodeKey;
             }
 
-            if (!activeKey.isEmpty() && QString::fromUtf8(ts_node_type(node)) == QStringLiteral("call_expression")) {
+            if (!activeKey.isEmpty() && tsType(node) == QStringLiteral("call_expression")) {
                 const QString targetName = rustCallTargetName(node, source);
                 const QStringList candidateKeys = keysByName.value(targetName);
                 if (!targetName.isEmpty() && !candidateKeys.isEmpty()) {
