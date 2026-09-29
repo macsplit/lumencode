@@ -1,5 +1,46 @@
 # Implementation Log
 
+## 2026-09-29
+
+Worked entirely through the CLI in a cloud container (Ubuntu 24.04, Qt 5.15 /
+KF5 from apt), against a new pinned public corpus instead of `/home/user/Code`.
+
+- **Corpus and measurement tooling:**
+    - `tools/corpus.json` + `tools/fetch_corpus.py`: 27 public repos pinned by commit (≈6.4k candidate files, 17 languages incl. VB.NET via a sparse dotnet/samples checkout).
+    - `tools/corpus_scan.py`: parallel `--dump-file` over the whole corpus with per-language coverage/timing tables, the regression-sweep contract validator, and `--save` / `--compare` diffs that flag per-file symbol/relation drops.
+    - `tools/damage_probe.py`: injects a garbage line / unclosed call / unclosed string into one function of a clean file and measures how many *other* declarations (or, for single-type files, members) survive.
+    - `regression_sweep.py --corpus-root` / `$LUMENCODE_CORPUS`; `lumencode-cli --debug-ast` prints Tree-sitter ERROR/MISSING nodes and the repair outcome.
+- **Crash fix:** the first corpus scan found a segfault in 3 TS files: `ts_node_type()` on a null field node (`let x: T` has no value). All node-type lookups now go through a null-safe `tsType()`. This was most likely the "stability problem on real-world JS" that had kept plain JS on the heuristic path.
+- **Branch-scoped AST repair (all Tree-sitter languages):**
+    - On syntax errors, the lines the parser flags are blanked byte-for-byte and the file re-parsed, greedily, while the error shrinks. Candidates are ranked by how much declaration structure they preserve, so an intact `class Foo {` header is not sacrificed. Python blanks the damaged line's indented block.
+    - AST parse functions read the repaired bytes via a thread-local override; snippets still come from the original text.
+    - Heuristic symbols are admitted only on blanked lines. A repair is rejected if it loses declarations the unrepaired tree had, or keeps under 60% of what the heuristic parser sees; the previous AST+heuristic merge is then used.
+    - The budget is deterministic (80 trial parses, 3s safety cap). `parseFile` now has one `analyseWithAst` path, which brought Swift and CSS into recovery.
+    - Damage-probe retention: 91.0% → 97.0% overall (C# garbage line 80.5% → ~97%, Java unclosed string 57% → 89%, PHP unclosed string 96% → 100%).
+- **JS/JSX on Tree-sitter:**
+    - The AST walker now covers wrapper bodies (IIFE/UMD, AMD `define`/`require`, jQuery ready, DOMContentLoaded) and member assignments (`X.prototype.m`, `X.prototype = {}`, `X.m = fn`, `window.f`).
+    - It also covers closure-module and constructor-function members, and `X.extend({...})` / `createClass` / `defineComponent` classes.
+    - Routes are found anywhere in the tree. `require()` bindings are no longer symbols.
+    - Corpus JS vs the old regex path: members 1239 → 1668, routes 303 → 390, retention under damage 98.5%.
+- **Python signatures from the syntax tree (issue #1):**
+    - Parameters come from the tree, with types, defaults, `*args` and `**kw`.
+    - Returns use the `-> T` annotation when present. Otherwise every return path is classified into a type and grouped with its lines, plus implicit `None` on fall-through and `Generator` for yield, e.g. `str | None (3 return paths)`.
+    - `mergeSymbolData` treated `returns` as a string (fixed).
+- **Web links (new `src/weblinks.{h,cpp}`, vendored tree-sitter-html v0.23.2):**
+    - A cached HTML page model built from the syntax tree: ids, classes, handlers, inline script/style blocks, custom elements and local assets. Consumer pages are found in the asset's folder or the nearest ancestor folder that links it.
+    - JS DOM references resolve to HTML elements and CSS rules, and are flagged when missing. Handlers give `Called By` edges into JS; custom elements link to the pages that use them.
+    - HTML files gained symbols for ids, handlers, custom elements, forms and inline script/style contents, parsed by the real parsers on line-aligned text.
+    - CSS gained `scriptAppliedClasses`, `unusedClasses` and `@import` / `url()` dependencies.
+    - Fixed: compound class selectors (`li.completed`) were indexed under the whole selector text in four places.
+    - Corpus HTML files with symbols: 0% → 77.6%.
+- **PHP links:** `use` imports resolved through composer PSR-4 roots; `require`/`include` resolved relative to the file and its ancestors; Slim/Lumen, Laravel and CodeIgniter routes; template asset links (PHP regions blanked before HTML parsing). PHP files with dependencies: 0% → 32.8%.
+- **Fixtures:** 27 → 33 cases (`python_returns`, `web_app` ×3, `php_links` ×2). Recovery fixtures now expect `high` confidence for AST-derived symbols in repaired files.
+- **Known remaining gaps** (next steps are in the README roadmap, Phase 2b):
+    - C/C++, QML and Objective-C are heuristic only, and have no call relations.
+    - Swift imports and Java routes are not extracted.
+    - Go, Kotlin, Ruby, Bash, VB.NET and SQL are not yet supported.
+    - Signatures outside Python are still snippet-derived.
+
 ## 2026-06-26
 
 - **Regression sweep hardening: provenance and signature contracts:**
