@@ -653,6 +653,9 @@ QString FileSystemModel::detectFileType(const QString &path, bool isDir)
     if (suffix == QStringLiteral("m") || suffix == QStringLiteral("mm")) {
         return QStringLiteral("objc");
     }
+    if (suffix == QStringLiteral("vb")) {
+        return QStringLiteral("vbnet");
+    }
     if (QFileInfo(path).fileName() == QStringLiteral("package.json")) {
         return QStringLiteral("package");
     }
@@ -709,6 +712,7 @@ bool FileSystemModel::shouldIncludeFile(const QString &suffix)
         QStringLiteral("rs"),
         QStringLiteral("m"),
         QStringLiteral("mm"),
+        QStringLiteral("vb"),
     };
     return allowed.contains(suffix);
 }

@@ -2798,7 +2798,7 @@ static QVariantMap enrichCallableSignature(QVariantMap symbol, const QString &la
     if (!isCallableSymbolKind(symbol.value(QStringLiteral("kind")).toString())) {
         return symbol;
     }
-    if (symbol.value(QStringLiteral("signatureSource")).toString() == QStringLiteral("ast")) {
+    if (!symbol.value(QStringLiteral("signatureSource")).toString().isEmpty()) {
         return symbol; // grammar-derived; the snippet heuristics below would only degrade it
     }
 
@@ -3961,6 +3961,9 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
     if (language == QStringLiteral("objc")) {
         return finalizeResult(parseObjectiveC(path, text, language), QStringLiteral("heuristic"));
     }
+    if (language == QStringLiteral("vbnet")) {
+        return finalizeResult(parseVbNet(path, text), QStringLiteral("heuristic"), QStringLiteral("high"));
+    }
     return finalizeResult(result, QStringLiteral("heuristic"), QStringLiteral("low"));
 }
 
@@ -4020,6 +4023,597 @@ QVariantMap SymbolParser::debugAst(const QString &path)
     report.insert(QStringLiteral("repairBlankedLines"), blanked);
     report.insert(QStringLiteral("repairClean"), repair.clean);
     return report;
+}
+
+
+// ---------------------------------------------------------------------------
+// VB.NET: structural line parser
+//
+// There is no maintained Tree-sitter grammar for VB.NET, but its declarations
+// are keyword-delimited blocks (Class ... End Class, Sub ... End Sub), which a
+// line parser can follow precisely. Damage stays local by construction: a
+// missing `End Sub` is closed implicitly by the next member declaration or by
+// the enclosing `End Class`, so one broken member never swallows its
+// siblings. Types are declared (`As T`), so signatures are exact.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+struct VbLogicalLine
+{
+    QString text; // comment-stripped, continuations joined
+    int line = 0; // first physical line (1-based)
+    int lastLine = 0;
+};
+
+QString stripVbComment(const QString &line)
+{
+    bool inString = false;
+    for (int index = 0; index < line.size(); ++index) {
+        const QChar ch = line.at(index);
+        if (ch == QLatin1Char('"')) {
+            inString = !inString;
+        } else if (!inString && (ch == QLatin1Char('\'') || ch == QChar(0x2018) || ch == QChar(0x2019))) {
+            return line.left(index);
+        }
+    }
+    const QString trimmed = line.trimmed();
+    if (trimmed.startsWith(QStringLiteral("REM "), Qt::CaseInsensitive) || trimmed.compare(QStringLiteral("REM"), Qt::CaseInsensitive) == 0) {
+        return {};
+    }
+    return line;
+}
+
+QList<VbLogicalLine> vbLogicalLines(const QString &text)
+{
+    QList<VbLogicalLine> lines;
+    const QStringList physical = text.split(QLatin1Char('\n'));
+    VbLogicalLine current;
+    for (int index = 0; index < physical.size(); ++index) {
+        QString line = stripVbComment(physical.at(index));
+        line.remove(QLatin1Char('\r'));
+        if (index == 0 && line.startsWith(QChar(0xFEFF))) {
+            line.remove(0, 1);
+        }
+        const QString trimmed = line.trimmed();
+        if (current.text.isEmpty()) {
+            current.line = index + 1;
+        }
+        current.lastLine = index + 1;
+        // Explicit ` _` continuation, or implicit continuation after , ( { operators.
+        const bool explicitContinuation = trimmed.endsWith(QStringLiteral(" _")) || trimmed == QStringLiteral("_");
+        QString piece = explicitContinuation ? trimmed.left(trimmed.size() - 1).trimmed() : trimmed;
+        current.text += (current.text.isEmpty() ? QString() : QStringLiteral(" ")) + piece;
+        const bool implicitContinuation = !piece.isEmpty()
+            && (piece.endsWith(QLatin1Char(',')) || piece.endsWith(QLatin1Char('(')) || piece.endsWith(QLatin1Char('{'))
+                || piece.endsWith(QLatin1Char('&')) || piece.endsWith(QLatin1Char('=')));
+        if (explicitContinuation || implicitContinuation) {
+            continue;
+        }
+        if (!current.text.trimmed().isEmpty()) {
+            lines.append(current);
+        }
+        current = VbLogicalLine();
+    }
+    if (!current.text.trimmed().isEmpty()) {
+        lines.append(current);
+    }
+    return lines;
+}
+
+const QString &vbModifiersPattern()
+{
+    static const QString pattern = QStringLiteral(
+        R"((?:(?:Public|Private|Protected|Friend|Shared|Shadows|Overloads|Overrides|Overridable|NotOverridable|MustOverride|MustInherit|NotInheritable|Partial|ReadOnly|WriteOnly|Default|Static|Async|Iterator|WithEvents|Widening|Narrowing|Const|Dim)\s+)*)");
+    return pattern;
+}
+
+QVariantList parseVbParameters(const QString &parameterText)
+{
+    QVariantList parameters;
+    for (QString part : splitTopLevelSignatureParts(parameterText)) {
+        part = part.trimmed();
+        if (part.isEmpty()) {
+            continue;
+        }
+        QString defaultValue;
+        const int equals = part.indexOf(QLatin1Char('='));
+        if (equals >= 0) {
+            defaultValue = part.mid(equals + 1).trimmed();
+            part = part.left(equals).trimmed();
+        }
+        static const QRegularExpression paramPattern(QStringLiteral(
+            R"(^(?:(?:ByVal|ByRef|Optional|ParamArray)\s+)*([A-Za-z_]\w*)(\(\s*\))?(?:\s+As\s+(?:New\s+)?(.+))?$)"),
+            QRegularExpression::CaseInsensitiveOption);
+        const auto match = paramPattern.match(part);
+        if (!match.hasMatch()) {
+            continue;
+        }
+        QString type = match.captured(3).trimmed();
+        if (!match.captured(2).isEmpty()) {
+            type = type.isEmpty() ? QStringLiteral("Object()") : type + QStringLiteral("()");
+        }
+        QVariantMap parameter = makeSignatureParameter(match.captured(1), type);
+        if (part.contains(QStringLiteral("ByRef"), Qt::CaseInsensitive)) {
+            parameter.insert(QStringLiteral("passing"), QStringLiteral("ByRef"));
+        }
+        if (!defaultValue.isEmpty()) {
+            parameter.insert(QStringLiteral("default"), defaultValue);
+        }
+        parameters.append(parameter);
+    }
+    return parameters;
+}
+
+// Text inside the first balanced (...) after `start`.
+QString balancedParenthesis(const QString &text, int start, int *endOut = nullptr)
+{
+    const int open = text.indexOf(QLatin1Char('('), start);
+    if (open < 0) {
+        return {};
+    }
+    int depth = 0;
+    bool inString = false;
+    for (int index = open; index < text.size(); ++index) {
+        const QChar ch = text.at(index);
+        if (ch == QLatin1Char('"')) {
+            inString = !inString;
+        } else if (!inString && ch == QLatin1Char('(')) {
+            ++depth;
+        } else if (!inString && ch == QLatin1Char(')')) {
+            if (--depth == 0) {
+                if (endOut) {
+                    *endOut = index + 1;
+                }
+                return text.mid(open + 1, index - open - 1);
+            }
+        }
+    }
+    return {};
+}
+
+} // namespace
+
+QVariantMap SymbolParser::parseVbNet(const QString &path, const QString &text) const
+{
+    QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("vbnet"));
+    const QList<VbLogicalLine> lines = vbLogicalLines(text);
+    const QString modifiers = vbModifiersPattern();
+
+    static const QRegularExpression typeOpen(
+        QStringLiteral(R"(^%1(Namespace|Class|Module|Structure|Interface|Enum)\s+([A-Za-z_][\w.]*))").arg(vbModifiersPattern()),
+        QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression memberOpen(
+        QStringLiteral(R"(^%1(?:(Sub|Function|Operator)\s+([A-Za-z_]\w*|New)|(Property)\s+([A-Za-z_]\w*)|(Event)\s+([A-Za-z_]\w*)|Custom\s+Event\s+([A-Za-z_]\w*)|Declare\s+(?:Auto\s+|Ansi\s+|Unicode\s+)?(Sub|Function)\s+([A-Za-z_]\w*)))").arg(vbModifiersPattern()),
+        QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression fieldDecl(
+        QStringLiteral(R"(^(?:(?:Public|Private|Protected|Friend|Shared|Shadows|ReadOnly|WithEvents|Dim|Const|Static)\s+)+([A-Za-z_]\w*)(?:\([^)]*\))*\s*(?:As\s+(?:New\s+)?([^=]+))?(?:=.*)?$)"),
+        QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression endPattern(
+        QStringLiteral(R"(^End\s+(Namespace|Class|Module|Structure|Interface|Enum|Sub|Function|Property|Operator|Event|Get|Set)\b)"),
+        QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression importsPattern(
+        QStringLiteral(R"(^Imports\s+(?:([A-Za-z_]\w*)\s*=\s*)?([A-Za-z_][\w.]*))"),
+        QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression attributeRoute(
+        QStringLiteral(R"re(<(Http(Get|Post|Put|Delete|Patch)|Route)(?:Attribute)?\s*\(\s*"([^"]*)")re"),
+        QRegularExpression::CaseInsensitiveOption);
+
+    struct Frame
+    {
+        QVariantMap symbol;
+        QString blockKeyword; // Class, Sub, ... (the word after End)
+        int startIndex = 0; // logical line index
+        bool isType = false;
+    };
+    QList<Frame> stack;
+    QVariantList topLevel;
+    QVariantList dependencies;
+    QVariantList routes;
+    QString pendingRoutePrefix;
+    QList<QPair<QString, QString>> pendingMethodRoutes; // method, path
+    struct BodyRange
+    {
+        QString key;
+        int firstLine;
+        int lastLine;
+    };
+    QList<BodyRange> bodies;
+    const QStringList physicalLines = text.split(QLatin1Char('\n'));
+
+    auto snippetFor = [&](int startLine, int endLine) {
+        QStringList out;
+        for (int line = startLine; line <= endLine && line <= physicalLines.size() && out.size() < 10; ++line) {
+            QString physical = physicalLines.at(line - 1);
+            physical.remove(QLatin1Char('\r'));
+            if (line == 1 && physical.startsWith(QChar(0xFEFF))) {
+                physical.remove(0, 1);
+            }
+            out.append(physical);
+        }
+        if (endLine - startLine + 1 > 10) {
+            out.append(QStringLiteral("..."));
+        }
+        return out.join(QLatin1Char('\n'));
+    };
+
+    auto attach = [&](const QVariantMap &symbol) {
+        for (int index = stack.size() - 1; index >= 0; --index) {
+            if (stack.at(index).isType) {
+                QVariantList members = stack[index].symbol.value(QStringLiteral("members")).toList();
+                members.append(symbol);
+                stack[index].symbol.insert(QStringLiteral("members"), members);
+                return;
+            }
+        }
+        topLevel.append(symbol);
+    };
+
+    auto closeFrame = [&](int endLine) {
+        Frame frame = stack.takeLast();
+        const int startLine = frame.symbol.value(QStringLiteral("line")).toInt();
+        frame.symbol.insert(QStringLiteral("endLine"), endLine);
+        frame.symbol.insert(QStringLiteral("snippet"), snippetFor(startLine, endLine));
+        if (!frame.isType) {
+            bodies.append({symbolKey(frame.symbol), startLine + 1, endLine});
+        }
+        // Namespaces are transparent: their types are listed directly.
+        if (frame.blockKeyword.compare(QStringLiteral("Namespace"), Qt::CaseInsensitive) == 0) {
+            const QVariantList members = frame.symbol.value(QStringLiteral("members")).toList();
+            for (const QVariant &member : members) {
+                QVariantMap type = member.toMap();
+                const QString ns = frame.symbol.value(QStringLiteral("name")).toString();
+                const QString detail = type.value(QStringLiteral("detail")).toString();
+                type.insert(QStringLiteral("detail"), detail.isEmpty() ? QStringLiteral("in %1").arg(ns)
+                                                                       : detail + QStringLiteral(", in %1").arg(ns));
+                attach(type);
+            }
+            return;
+        }
+        attach(frame.symbol);
+    };
+
+    // Close open members (not types) - used when a new member starts or a type ends
+    // without the member's End statement: the damage stays with that member.
+    QStringList unterminated;
+    auto noteUnterminated = [&](const Frame &frame) {
+        unterminated.append(QStringLiteral("%1 %2 (line %3) has no End %1")
+                                .arg(frame.blockKeyword, frame.symbol.value(QStringLiteral("name")).toString())
+                                .arg(frame.symbol.value(QStringLiteral("line")).toInt()));
+    };
+    auto closeOpenMembers = [&](int endLine) {
+        while (!stack.isEmpty() && !stack.constLast().isType) {
+            noteUnterminated(stack.constLast());
+            closeFrame(endLine);
+        }
+    };
+
+    for (int index = 0; index < lines.size(); ++index) {
+        const VbLogicalLine &logical = lines.at(index);
+        QString statement = logical.text.trimmed();
+        // Attributes: <HttpGet("x")> Public Function ...
+        auto routeIt = attributeRoute.globalMatch(statement);
+        while (routeIt.hasNext()) {
+            const auto match = routeIt.next();
+            if (match.captured(1).compare(QStringLiteral("Route"), Qt::CaseInsensitive) == 0) {
+                pendingMethodRoutes.append({QStringLiteral("ROUTE"), match.captured(3)});
+            } else {
+                pendingMethodRoutes.append({match.captured(2).toUpper(), match.captured(3)});
+            }
+        }
+        if (statement.startsWith(QLatin1Char('<'))) {
+            int depth = 0;
+            int cut = 0;
+            for (int i = 0; i < statement.size(); ++i) {
+                if (statement.at(i) == QLatin1Char('<')) ++depth;
+                else if (statement.at(i) == QLatin1Char('>') && --depth == 0) { cut = i + 1; if (i + 1 < statement.size() && statement.at(i + 1) != QLatin1Char('<')) break; }
+            }
+            statement = statement.mid(cut).trimmed();
+            if (statement.isEmpty()) {
+                continue;
+            }
+        }
+
+        const auto importMatch = importsPattern.match(statement);
+        if (importMatch.hasMatch()) {
+            QVariantMap item = makeSourceContextItem(path, QStringLiteral("vbnet"), logical.line,
+                                                     snippetFor(logical.line, logical.line), QStringLiteral("imports dependency"));
+            item.insert(QStringLiteral("target"), importMatch.captured(2));
+            item.insert(QStringLiteral("type"), QStringLiteral("imports"));
+            item.insert(QStringLiteral("label"), importMatch.captured(1).isEmpty()
+                                                     ? importMatch.captured(2)
+                                                     : QStringLiteral("%1 = %2").arg(importMatch.captured(1), importMatch.captured(2)));
+            item.insert(QStringLiteral("path"), QString());
+            item.insert(QStringLiteral("exists"), true);
+            dependencies.append(item);
+            continue;
+        }
+
+        const auto endMatch = endPattern.match(statement);
+        if (endMatch.hasMatch()) {
+            const QString keyword = endMatch.captured(1);
+            if (keyword.compare(QStringLiteral("Get"), Qt::CaseInsensitive) == 0
+                || keyword.compare(QStringLiteral("Set"), Qt::CaseInsensitive) == 0) {
+                continue;
+            }
+            // Find the innermost frame this End closes; frames above it were
+            // left open by damage and are closed here too.
+            int target = -1;
+            for (int i = stack.size() - 1; i >= 0; --i) {
+                if (stack.at(i).blockKeyword.compare(keyword, Qt::CaseInsensitive) == 0) {
+                    target = i;
+                    break;
+                }
+            }
+            if (target < 0) {
+                continue; // stray End: ignore rather than unwind everything
+            }
+            while (stack.size() > target + 1) {
+                noteUnterminated(stack.constLast());
+                closeFrame(logical.lastLine - 1);
+            }
+            closeFrame(logical.lastLine);
+            if (keyword.compare(QStringLiteral("Class"), Qt::CaseInsensitive) == 0
+                || keyword.compare(QStringLiteral("Module"), Qt::CaseInsensitive) == 0) {
+                pendingRoutePrefix.clear();
+            }
+            continue;
+        }
+
+        const auto typeMatch = typeOpen.match(statement);
+        if (typeMatch.hasMatch()) {
+            closeOpenMembers(logical.line - 1);
+            QString keyword = typeMatch.captured(1);
+            keyword = keyword.left(1).toUpper() + keyword.mid(1).toLower();
+            QString kind = keyword.toLower();
+            if (kind == QStringLiteral("structure")) {
+                kind = QStringLiteral("struct");
+            }
+            Frame frame;
+            frame.blockKeyword = keyword;
+            frame.isType = true;
+            frame.startIndex = index;
+            QString detail;
+            if (statement.contains(QRegularExpression(QStringLiteral(R"(\bPartial\b)"), QRegularExpression::CaseInsensitiveOption))) {
+                detail = QStringLiteral("partial");
+            }
+            // Inherits / Implements on following lines.
+            for (int look = index + 1; look < lines.size() && look <= index + 3; ++look) {
+                const QString next = lines.at(look).text.trimmed();
+                static const QRegularExpression inherits(QStringLiteral(R"(^(Inherits|Implements)\s+(.+)$)"),
+                                                         QRegularExpression::CaseInsensitiveOption);
+                const auto inheritsMatch = inherits.match(next);
+                if (!inheritsMatch.hasMatch()) {
+                    break;
+                }
+                const QString part = inheritsMatch.captured(1).toLower() + QLatin1Char(' ') + inheritsMatch.captured(2).simplified();
+                detail = detail.isEmpty() ? part : detail + QStringLiteral(", ") + part;
+            }
+            frame.symbol = makeSymbol(kind, typeMatch.captured(2), logical.line, detail, {}, QString());
+            for (const auto &route : std::as_const(pendingMethodRoutes)) {
+                if (route.first == QStringLiteral("ROUTE")) {
+                    pendingRoutePrefix = route.second;
+                }
+            }
+            pendingMethodRoutes.clear();
+            stack.append(frame);
+            continue;
+        }
+
+        // Enum members.
+        if (!stack.isEmpty() && stack.constLast().blockKeyword == QStringLiteral("Enum")) {
+            static const QRegularExpression enumMember(QStringLiteral(R"(^([A-Za-z_]\w*)\s*(?:=\s*(.+))?$)"));
+            const auto match = enumMember.match(statement);
+            if (match.hasMatch()) {
+                QVariantList members = stack.last().symbol.value(QStringLiteral("members")).toList();
+                members.append(makeSymbol(QStringLiteral("enum member"), match.captured(1), logical.line,
+                                          match.captured(2).trimmed(), {}, snippetFor(logical.line, logical.line)));
+                stack.last().symbol.insert(QStringLiteral("members"), members);
+            }
+            continue;
+        }
+
+        const auto memberMatch = memberOpen.match(statement);
+        const bool insideType = !stack.isEmpty() && std::any_of(stack.cbegin(), stack.cend(), [](const Frame &f) { return f.isType; });
+        if (memberMatch.hasMatch()) {
+            QString keyword;
+            QString name;
+            bool declared = false;
+            if (!memberMatch.captured(1).isEmpty()) {
+                keyword = memberMatch.captured(1);
+                name = memberMatch.captured(2);
+            } else if (!memberMatch.captured(3).isEmpty()) {
+                keyword = QStringLiteral("Property");
+                name = memberMatch.captured(4);
+            } else if (!memberMatch.captured(5).isEmpty()) {
+                keyword = QStringLiteral("EventDecl");
+                name = memberMatch.captured(6);
+            } else if (!memberMatch.captured(7).isEmpty()) {
+                keyword = QStringLiteral("Event");
+                name = memberMatch.captured(7);
+            } else {
+                keyword = memberMatch.captured(8);
+                name = memberMatch.captured(9);
+                declared = true;
+            }
+            keyword = keyword.left(1).toUpper() + keyword.mid(1).toLower();
+            if (keyword == QStringLiteral("Eventdecl")) {
+                keyword = QStringLiteral("EventDecl");
+            }
+            // A member starting while another member is still open: the
+            // previous one lost its End statement. Close it here.
+            closeOpenMembers(logical.line - 1);
+
+            const bool inInterface = !stack.isEmpty() && stack.constLast().blockKeyword == QStringLiteral("Interface");
+            const bool mustOverride = statement.contains(QRegularExpression(QStringLiteral(R"(\bMustOverride\b)"), QRegularExpression::CaseInsensitiveOption));
+            bool hasBody = !(inInterface || mustOverride || declared || keyword == QStringLiteral("EventDecl"));
+            if (keyword == QStringLiteral("Property") && hasBody) {
+                // Auto-property unless Get/Set/End Property follows before the next declaration.
+                hasBody = false;
+                for (int look = index + 1; look < lines.size(); ++look) {
+                    const QString next = lines.at(look).text.trimmed();
+                    static const QRegularExpression accessor(QStringLiteral(R"(^(?:(?:Public|Private|Protected|Friend)\s+)?(Get|Set)\b|^End\s+Property\b)"),
+                                                             QRegularExpression::CaseInsensitiveOption);
+                    if (accessor.match(next).hasMatch()) {
+                        hasBody = true;
+                        break;
+                    }
+                    if (memberOpen.match(next).hasMatch() || typeOpen.match(next).hasMatch() || endPattern.match(next).hasMatch()
+                        || fieldDecl.match(next).hasMatch()) {
+                        break;
+                    }
+                }
+            }
+
+            QString kind = QStringLiteral("method");
+            if (name.compare(QStringLiteral("New"), Qt::CaseInsensitive) == 0) {
+                kind = QStringLiteral("constructor");
+            } else if (keyword == QStringLiteral("Property")) {
+                kind = QStringLiteral("property");
+            } else if (keyword == QStringLiteral("Event") || keyword == QStringLiteral("EventDecl")) {
+                kind = QStringLiteral("event");
+            } else if (keyword == QStringLiteral("Operator")) {
+                kind = QStringLiteral("operator");
+            } else if (!insideType) {
+                kind = QStringLiteral("function");
+            }
+            int afterParams = 0;
+            const int nameAt = statement.indexOf(name, memberMatch.capturedStart(0) + (memberMatch.capturedLength(0) - name.size()));
+            const QString parameterText = balancedParenthesis(statement, qMax(0, nameAt), &afterParams);
+            QString returnType;
+            if (keyword == QStringLiteral("Function") || keyword == QStringLiteral("Property") || keyword == QStringLiteral("Operator")) {
+                static const QRegularExpression asPattern(QStringLiteral(R"(^\s*As\s+(?:New\s+)?([^=]+?)(?:\s+(?:Implements|Handles)\b.*)?\s*$)"),
+                                                          QRegularExpression::CaseInsensitiveOption);
+                const QString tail = afterParams > 0 ? statement.mid(afterParams)
+                                                     : statement.mid(memberMatch.capturedEnd(0));
+                returnType = asPattern.match(tail).captured(1).trimmed();
+            }
+            QString detail;
+            static const QRegularExpression handles(QStringLiteral(R"(\bHandles\s+([\w.]+(?:\s*,\s*[\w.]+)*))"),
+                                                    QRegularExpression::CaseInsensitiveOption);
+            const auto handlesMatch = handles.match(statement);
+            if (handlesMatch.hasMatch()) {
+                detail = QStringLiteral("handles ") + handlesMatch.captured(1);
+            }
+            if (mustOverride) {
+                detail = detail.isEmpty() ? QStringLiteral("MustOverride") : detail + QStringLiteral(", MustOverride");
+            }
+            QVariantMap symbol = makeSymbol(kind, name, logical.line, detail, {}, snippetFor(logical.line, logical.lastLine));
+            if (kind != QStringLiteral("event")) {
+                symbol.insert(QStringLiteral("parameters"), parseVbParameters(parameterText));
+                QVariantList returns;
+                returns.append(QVariantMap{{QStringLiteral("text"),
+                                            returnType.isEmpty() ? (keyword == QStringLiteral("Sub") ? QStringLiteral("none")
+                                                                                                      : QStringLiteral("Object"))
+                                                                 : returnType}});
+                symbol.insert(QStringLiteral("returns"), returns);
+                symbol.insert(QStringLiteral("signatureSource"), QStringLiteral("parser"));
+            }
+            for (const auto &route : std::as_const(pendingMethodRoutes)) {
+                QString full = pendingRoutePrefix;
+                if (!route.second.isEmpty()) {
+                    full = full.isEmpty() ? route.second : full + QLatin1Char('/') + route.second;
+                }
+                QVariantMap item = makeSourceContextItem(path, QStringLiteral("vbnet"), logical.line,
+                                                         snippetFor(logical.line, logical.line), QStringLiteral("route"));
+                const QString method = route.first == QStringLiteral("ROUTE") ? QStringLiteral("ANY") : route.first;
+                item.insert(QStringLiteral("method"), method);
+                item.insert(QStringLiteral("path"), full);
+                item.insert(QStringLiteral("label"), method + QStringLiteral(" ") + full);
+                routes.append(item);
+            }
+            pendingMethodRoutes.clear();
+
+            if (hasBody) {
+                Frame frame;
+                frame.symbol = symbol;
+                frame.blockKeyword = keyword == QStringLiteral("EventDecl") ? QStringLiteral("Event") : keyword;
+                frame.startIndex = index;
+                stack.append(frame);
+            } else {
+                attach(symbol);
+            }
+            continue;
+        }
+
+        // Fields at type level.
+        if (!stack.isEmpty() && stack.constLast().isType) {
+            const auto fieldMatch = fieldDecl.match(statement);
+            if (fieldMatch.hasMatch()) {
+                const bool isConst = statement.contains(QRegularExpression(QStringLiteral(R"(\bConst\b)"), QRegularExpression::CaseInsensitiveOption));
+                attach(makeSymbol(isConst ? QStringLiteral("constant") : QStringLiteral("field"), fieldMatch.captured(1),
+                                  logical.line, fieldMatch.captured(2).trimmed(), {},
+                                  snippetFor(logical.line, logical.lastLine)));
+            }
+        }
+    }
+    const int lastLine = physicalLines.size();
+    while (!stack.isEmpty()) {
+        noteUnterminated(stack.constLast());
+        closeFrame(lastLine); // unterminated blocks run to end of file
+    }
+
+    // Calls: callable names referenced from each member body.
+    QHash<QString, QVariantMap> byKey;
+    QHash<QString, QStringList> keysByName;
+    collectSymbolsByKey(topLevel, byKey, keysByName);
+    QHash<QString, QStringList> keysByLowerName;
+    for (auto it = keysByName.constBegin(); it != keysByName.constEnd(); ++it) {
+        keysByLowerName[it.key().toLower()].append(it.value());
+    }
+    QHash<QString, QVariantList> callsByKey;
+    QHash<QString, QVariantList> calledByByKey;
+    static const QRegularExpression identifier(QStringLiteral(R"((?:^|[^\w."])(?:Me\.|MyBase\.|MyClass\.)?([A-Za-z_]\w*)\b)"));
+    static const QSet<QString> keywords = {
+        QStringLiteral("if"), QStringLiteral("then"), QStringLiteral("else"), QStringLiteral("end"), QStringLiteral("dim"),
+        QStringLiteral("as"), QStringLiteral("new"), QStringLiteral("return"), QStringLiteral("for"), QStringLiteral("next"),
+        QStringLiteral("call"), QStringLiteral("raiseevent"), QStringLiteral("not"), QStringLiteral("and"), QStringLiteral("or"),
+    };
+    for (const BodyRange &body : std::as_const(bodies)) {
+        const QString ownerKey = body.key;
+        for (int line = body.firstLine; line < body.lastLine && line <= physicalLines.size(); ++line) {
+            const QString code = stripVbComment(physicalLines.at(line - 1));
+            // Remove string literals.
+            QString cleaned = code;
+            cleaned.remove(QRegularExpression(QStringLiteral(R"("[^"]*")")));
+            auto it = identifier.globalMatch(cleaned);
+            while (it.hasNext()) {
+                const QString name = it.next().captured(1).toLower();
+                if (keywords.contains(name)) {
+                    continue;
+                }
+                const QStringList candidates = keysByLowerName.value(name);
+                if (candidates.isEmpty()) {
+                    continue;
+                }
+                const QString targetKey = bestRelationTargetKey(candidates, byKey);
+                if (targetKey.isEmpty() || targetKey == ownerKey || !byKey.contains(targetKey)) {
+                    continue;
+                }
+                const QString targetKind = byKey.value(targetKey).value(QStringLiteral("kind")).toString();
+                if (!isCallableSymbolKind(targetKind) && targetKind != QStringLiteral("event")) {
+                    continue;
+                }
+                appendUniqueRelation(callsByKey, ownerKey, relationFromSymbol(byKey.value(targetKey)), QStringLiteral("calls"));
+                appendUniqueRelation(calledByByKey, targetKey, relationFromSymbol(byKey.value(ownerKey)), QStringLiteral("called by"));
+            }
+        }
+    }
+    topLevel = applyRelationsToSymbols(topLevel, callsByKey, calledByByKey);
+
+    result.insert(QStringLiteral("symbols"), topLevel);
+    result.insert(QStringLiteral("dependencies"), dependencies);
+    result.insert(QStringLiteral("routes"), routes);
+    result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
+    result.insert(QStringLiteral("summary"), QStringLiteral("%1 top-level symbols").arg(topLevel.size()));
+    if (!unterminated.isEmpty()) {
+        result.insert(QStringLiteral("analysisHasAstErrors"), true);
+        appendParserAnalysisNotice(result, QStringLiteral("warning"),
+                                   QStringLiteral("Unterminated block(s), closed at the next declaration: %1.")
+                                       .arg(unterminated.mid(0, 5).join(QStringLiteral("; "))),
+                                   true);
+    }
+    return result;
 }
 
 QVariantMap SymbolParser::parseSwiftTreeSitter(const QString &path, const QString &text) const
@@ -7602,6 +8196,9 @@ QString SymbolParser::detectLanguage(const QString &path)
         || suffix == QStringLiteral("h") || suffix == QStringLiteral("hh")
         || suffix == QStringLiteral("hpp") || suffix == QStringLiteral("hxx")) {
         return QStringLiteral("cpp");
+    }
+    if (suffix == QStringLiteral("vb")) {
+        return QStringLiteral("vbnet");
     }
     return QStringLiteral("text");
 }

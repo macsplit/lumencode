@@ -63,6 +63,7 @@ search**. See [Recent History](#recent-history) for how it got here and
 | HTML | tree-sitter-html | tolerant grammar | ids, event handlers, custom elements, forms, inline `<script>` / `<style>` contents | handlers → JS functions | linked assets | — | — |
 | QML | heuristic | — | components, properties, signals, functions | — (gap) | imports | — | snippet-derived |
 | C / C++, Objective-C | heuristic | — | top-level declarations / classes | — (gap) | `#include` / `#import` | — | snippet-derived |
+| VB.NET | structural line parser (block-aware) | unterminated blocks closed at the next declaration, reported | namespaces, classes, modules, structures, interfaces, enums, members, fields, events | yes (incl. `RaiseEvent`) | `Imports` (incl. aliases) | ASP.NET attributes (`<Route>`, `<HttpGet>`, ...) | **exact** from declarations (`ByVal x As T`, `Optional ... = v`, `As T`) |
 | JSON | — | — | `package.json` scripts, entry, dependencies | — | — | — | — |
 
 "repair → heuristic" is the parser authority model:

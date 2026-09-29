@@ -44,6 +44,10 @@ MUTATIONS = {
 
 # Languages where "garbage" differs a lot per grammar get the same mutations; the
 # point is to see real parser behaviour, not to be clever per language.
+# Languages without a Tree-sitter grammar but with a structural (block-aware)
+# parser, which should be just as damage-tolerant.
+STRUCTURAL_HEURISTIC_LANGUAGES = {"vbnet", "sql"}
+
 SKIP_LANGUAGES = {"json", "html", "css", "unknown"}
 
 
@@ -115,7 +119,8 @@ def pick_target(units: list[dict], line_count: int, rng: random.Random) -> tuple
 def probe_file(path: Path, rng_seed: int) -> list[dict]:
     rng = random.Random(rng_seed)
     clean = dump(path)
-    if not clean or clean.get("analysisHasAstErrors") or clean.get("analysisSourceMode") != "ast":
+    structural = clean and clean.get("language") in STRUCTURAL_HEURISTIC_LANGUAGES
+    if not clean or clean.get("analysisHasAstErrors") or (clean.get("analysisSourceMode") != "ast" and not structural):
         return []
     language = clean.get("language", "unknown")
     symbols = clean.get("symbols", []) or []

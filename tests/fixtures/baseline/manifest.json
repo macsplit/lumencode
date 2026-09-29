@@ -1094,6 +1094,122 @@
           "name": "UserResource"
         }
       ]
+    },
+    {
+      "name": "vbnet_structure_signatures",
+      "root": "tests/fixtures/baseline/vbnet_basic",
+      "file": "Inventory.vb",
+      "file_expectations": {
+        "dependencies": 2
+      },
+      "expectations": [
+        {
+          "kind": "class",
+          "name": "Inventory"
+        },
+        {
+          "kind": "method",
+          "name": "Add",
+          "parameters": [
+            "item: String",
+            "quantity: Integer"
+          ],
+          "returns": [
+            "Boolean"
+          ],
+          "calls": [
+            "Notify"
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Notify",
+          "calledBy": [
+            "Add"
+          ],
+          "calls": [
+            "Changed"
+          ]
+        },
+        {
+          "kind": "constructor",
+          "name": "New",
+          "parameters": [
+            "name: String"
+          ]
+        },
+        {
+          "kind": "property",
+          "name": "Count",
+          "returns": [
+            "Integer"
+          ]
+        },
+        {
+          "kind": "event",
+          "name": "Changed"
+        },
+        {
+          "kind": "enum",
+          "name": "Status"
+        }
+      ]
+    },
+    {
+      "name": "vbnet_unterminated_member",
+      "root": "tests/fixtures/baseline/vbnet_basic",
+      "file": "Broken.vb",
+      "file_expectations": {
+        "analysis_has_ast_errors": true,
+        "analysis_notices": 1
+      },
+      "expectations": [
+        {
+          "kind": "method",
+          "name": "First",
+          "calls": [
+            "Helper"
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Second",
+          "returns": [
+            "Integer"
+          ],
+          "calls": [
+            "Helper"
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "Helper",
+          "calledBy": [
+            "First",
+            "Second"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "vbnet_aspnet_routes",
+      "root": "tests/fixtures/baseline/vbnet_basic",
+      "file": "OrdersController.vb",
+      "file_expectations": {
+        "routes": 2
+      },
+      "expectations": [
+        {
+          "kind": "method",
+          "name": "Ship",
+          "parameters": [
+            "id: Integer"
+          ],
+          "returns": [
+            "IActionResult"
+          ]
+        }
+      ]
     }
   ]
 }

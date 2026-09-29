@@ -35,6 +35,7 @@ private:
     QVariantMap parseJava(const QString &path, const QString &text) const;
     QVariantMap parseCSharp(const QString &path, const QString &text) const;
     QVariantMap parseRust(const QString &path, const QString &text) const;
+    QVariantMap parseVbNet(const QString &path, const QString &text) const;
     QVariantMap parseObjectiveC(const QString &path, const QString &text, const QString &language) const;
 
     QVariantMap parsePhp(const QString &path, const QString &text) const;
