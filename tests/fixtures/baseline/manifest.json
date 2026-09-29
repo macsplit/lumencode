@@ -154,7 +154,7 @@
           "confidence": "high",
           "parameters": [],
           "returns": [
-            "helper_value()"
+            "result of helper_value()"
           ]
         },
         {
@@ -167,7 +167,7 @@
           "confidence": "high",
           "parameters": [],
           "returns": [
-            "1"
+            "int"
           ]
         }
       ],
@@ -211,7 +211,7 @@
           "confidence": "high",
           "parameters": [],
           "returns": [
-            "7"
+            "int"
           ]
         },
         {

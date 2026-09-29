@@ -3698,6 +3698,413 @@ static void enrichJavaRoutes(QVariantMap &result, const QString &path, const QSt
     result.insert(QStringLiteral("routes"), routes);
 }
 
+
+// ---------------------------------------------------------------------------
+// Signatures from the syntax tree for TS/JS, C#, Java and PHP
+//
+// A post-pass over an AST analysis: re-parse, index every callable node by
+// its start line (and its declarator's line, for `const f = () => {}`), and
+// give each callable symbol parameters and returns read from the grammar
+// (types, defaults, modifiers). Where no return type is declared (JS, untyped
+// PHP), return paths are classified as for Python.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+bool isAstCallableNode(const char *type)
+{
+    if (!type) {
+        return false;
+    }
+    static const QSet<QByteArray> types = {
+        "function_declaration", "generator_function_declaration", "method_definition", "method_signature",
+        "abstract_method_signature", "function_signature", "function_expression", "function", "arrow_function",
+        "generator_function", "method_declaration", "constructor_declaration", "local_function_statement",
+        "operator_declaration", "delegate_declaration", "destructor_declaration", "function_definition",
+        "anonymous_function", "anonymous_function_creation_expression", "arrow_function",
+    };
+    return types.contains(QByteArray(type));
+}
+
+QString stripTypeAnnotation(QString text)
+{
+    text = text.simplified();
+    if (text.startsWith(QLatin1Char(':'))) {
+        text = text.mid(1).trimmed();
+    }
+    return text;
+}
+
+QString astCallableName(TSNode node, const QByteArray &source)
+{
+    QString name = nodeText(fieldNode(node, "name"), source).trimmed();
+    if (!name.isEmpty()) {
+        return name;
+    }
+    TSNode parent = ts_node_parent(node);
+    const QString parentType = tsType(parent);
+    if (parentType == QStringLiteral("variable_declarator") || parentType == QStringLiteral("public_field_definition")
+        || parentType == QStringLiteral("field_definition")) {
+        return nodeText(fieldNode(parent, "name"), source).trimmed();
+    }
+    if (parentType == QStringLiteral("pair")) {
+        return nodeText(fieldNode(parent, "key"), source).trimmed();
+    }
+    if (parentType == QStringLiteral("assignment_expression")) {
+        return nodeText(fieldNode(parent, "left"), source).trimmed().section(QLatin1Char('.'), -1);
+    }
+    return {};
+}
+
+QVariantList astParameters(TSNode function, const QByteArray &source, const QString &language)
+{
+    QVariantList parameters;
+    TSNode list = fieldNode(function, "parameters");
+    if (ts_node_is_null(list)) {
+        TSNode single = fieldNode(function, "parameter"); // x => ...
+        if (!ts_node_is_null(single)) {
+            parameters.append(makeSignatureParameter(nodeText(single, source), QString()));
+        }
+        return parameters;
+    }
+    const uint32_t count = ts_node_named_child_count(list);
+    for (uint32_t index = 0; index < count; ++index) {
+        TSNode param = ts_node_named_child(list, index);
+        const QString type = tsType(param);
+        QString name;
+        QString paramType;
+        QString defaultValue;
+        QString prefix;
+        if (type == QStringLiteral("comment") || type == QStringLiteral("attribute_list")) {
+            continue;
+        }
+        if (language == QStringLiteral("csharp")) {
+            if (type != QStringLiteral("parameter")) {
+                continue;
+            }
+            name = nodeText(fieldNode(param, "name"), source);
+            paramType = nodeText(fieldNode(param, "type"), source).simplified();
+            for (uint32_t k = 0; k < ts_node_named_child_count(param); ++k) {
+                TSNode child = ts_node_named_child(param, k);
+                const QString childType = tsType(child);
+                if (childType == QStringLiteral("modifier")) {
+                    prefix += nodeText(child, source) + QLatin1Char(' ');
+                } else if (childType != QStringLiteral("identifier") && childType != QStringLiteral("attribute_list")
+                           && ts_node_start_byte(child) > ts_node_start_byte(fieldNode(param, "name"))) {
+                    defaultValue = nodeText(child, source).simplified();
+                    if (defaultValue.startsWith(QLatin1Char('='))) {
+                        defaultValue = defaultValue.mid(1).trimmed();
+                    }
+                }
+            }
+        } else if (language == QStringLiteral("java")) {
+            if (type == QStringLiteral("formal_parameter")) {
+                name = nodeText(fieldNode(param, "name"), source);
+                paramType = nodeText(fieldNode(param, "type"), source).simplified() + nodeText(fieldNode(param, "dimensions"), source);
+            } else if (type == QStringLiteral("spread_parameter")) {
+                for (uint32_t k = 0; k < ts_node_named_child_count(param); ++k) {
+                    TSNode child = ts_node_named_child(param, k);
+                    if (tsType(child) == QStringLiteral("variable_declarator")) {
+                        name = nodeText(fieldNode(child, "name"), source);
+                    } else if (tsType(child) != QStringLiteral("modifiers")) {
+                        paramType = nodeText(child, source).simplified() + QStringLiteral("...");
+                    }
+                }
+            } else {
+                continue;
+            }
+        } else if (language == QStringLiteral("php")) {
+            if (type != QStringLiteral("simple_parameter") && type != QStringLiteral("variadic_parameter")
+                && type != QStringLiteral("property_promotion_parameter")) {
+                continue;
+            }
+            name = nodeText(fieldNode(param, "name"), source);
+            paramType = nodeText(fieldNode(param, "type"), source).simplified();
+            defaultValue = nodeText(fieldNode(param, "default_value"), source).simplified();
+            if (type == QStringLiteral("variadic_parameter")) {
+                name = QStringLiteral("...") + name;
+            } else if (type == QStringLiteral("property_promotion_parameter")) {
+                prefix = nodeText(fieldNode(param, "visibility"), source) + QLatin1Char(' ');
+            }
+        } else { // ts / tsx / js
+            if (type == QStringLiteral("required_parameter") || type == QStringLiteral("optional_parameter")) {
+                TSNode pattern = fieldNode(param, "pattern");
+                if (ts_node_is_null(pattern)) {
+                    pattern = fieldNode(param, "name");
+                }
+                name = nodeText(pattern, source).simplified();
+                if (type == QStringLiteral("optional_parameter")) {
+                    name += QLatin1Char('?');
+                }
+                paramType = stripTypeAnnotation(nodeText(fieldNode(param, "type"), source));
+                defaultValue = nodeText(fieldNode(param, "value"), source).simplified();
+                for (uint32_t k = 0; k < ts_node_named_child_count(param); ++k) {
+                    TSNode child = ts_node_named_child(param, k);
+                    if (tsType(child) == QStringLiteral("accessibility_modifier")) {
+                        prefix = nodeText(child, source) + QLatin1Char(' ');
+                    }
+                }
+            } else if (type == QStringLiteral("assignment_pattern")) {
+                name = nodeText(fieldNode(param, "left"), source).simplified();
+                defaultValue = nodeText(fieldNode(param, "right"), source).simplified();
+            } else if (type == QStringLiteral("identifier") || type == QStringLiteral("rest_pattern")
+                       || type == QStringLiteral("object_pattern") || type == QStringLiteral("array_pattern")) {
+                name = nodeText(param, source).simplified();
+            } else {
+                continue;
+            }
+        }
+        if (name.isEmpty()) {
+            continue;
+        }
+        QVariantMap parameter = makeSignatureParameter(name, (prefix + paramType).trimmed());
+        if (!defaultValue.isEmpty()) {
+            parameter.insert(QStringLiteral("default"), defaultValue.left(60));
+        }
+        parameters.append(parameter);
+    }
+    return parameters;
+}
+
+QString classifyReturnExpression(TSNode expression, const QByteArray &source, const QString &language)
+{
+    const QString type = tsType(expression);
+    const bool php = language == QStringLiteral("php");
+    if (type.isEmpty()) {
+        return php ? QStringLiteral("null") : QStringLiteral("undefined");
+    }
+    if (type == QStringLiteral("parenthesized_expression") && ts_node_named_child_count(expression) > 0) {
+        return classifyReturnExpression(ts_node_named_child(expression, 0), source, language);
+    }
+    if (type == QStringLiteral("string") || type == QStringLiteral("template_string") || type == QStringLiteral("encapsed_string")) {
+        return QStringLiteral("string");
+    }
+    if (type == QStringLiteral("number")) return QStringLiteral("number");
+    if (type == QStringLiteral("integer")) return QStringLiteral("int");
+    if (type == QStringLiteral("float")) return QStringLiteral("float");
+    if (type == QStringLiteral("true") || type == QStringLiteral("false") || type == QStringLiteral("boolean")) {
+        return php ? QStringLiteral("bool") : QStringLiteral("boolean");
+    }
+    if (type == QStringLiteral("null")) return QStringLiteral("null");
+    if (type == QStringLiteral("undefined")) return QStringLiteral("undefined");
+    if (type == QStringLiteral("object")) return QStringLiteral("object");
+    if (type == QStringLiteral("array") || type == QStringLiteral("array_creation_expression")) return QStringLiteral("array");
+    if (type == QStringLiteral("arrow_function") || type == QStringLiteral("function_expression")
+        || type == QStringLiteral("anonymous_function") || type == QStringLiteral("anonymous_function_creation_expression")) {
+        return QStringLiteral("function");
+    }
+    if (type == QStringLiteral("new_expression")) {
+        return nodeText(fieldNode(expression, "constructor"), source).simplified();
+    }
+    if (type == QStringLiteral("object_creation_expression")) {
+        for (uint32_t k = 0; k < ts_node_named_child_count(expression); ++k) {
+            const QString childType = tsType(ts_node_named_child(expression, k));
+            if (childType == QStringLiteral("name") || childType == QStringLiteral("qualified_name")) {
+                return nodeText(ts_node_named_child(expression, k), source);
+            }
+        }
+        return QStringLiteral("object");
+    }
+    if (type == QStringLiteral("await_expression") && ts_node_named_child_count(expression) > 0) {
+        return classifyReturnExpression(ts_node_named_child(expression, 0), source, language);
+    }
+    if (type == QStringLiteral("unary_expression") || type == QStringLiteral("unary_op_expression")) {
+        if (nodeText(expression, source).trimmed().startsWith(QLatin1Char('!'))) {
+            return php ? QStringLiteral("bool") : QStringLiteral("boolean");
+        }
+    }
+    if (type == QStringLiteral("binary_expression")) {
+        static const QSet<QString> comparisons = {
+            QStringLiteral("==="), QStringLiteral("!=="), QStringLiteral("=="), QStringLiteral("!="),
+            QStringLiteral("<"), QStringLiteral(">"), QStringLiteral("<="), QStringLiteral(">="),
+            QStringLiteral("instanceof"), QStringLiteral("in"), QStringLiteral("<>"),
+        };
+        if (comparisons.contains(nodeText(fieldNode(expression, "operator"), source).trimmed())) {
+            return php ? QStringLiteral("bool") : QStringLiteral("boolean");
+        }
+    }
+    if (type == QStringLiteral("call_expression") || type == QStringLiteral("function_call_expression")
+        || type == QStringLiteral("member_call_expression")) {
+        QString callee = nodeText(fieldNode(expression, "function"), source).simplified();
+        if (callee.isEmpty()) {
+            callee = nodeText(fieldNode(expression, "name"), source).simplified();
+        }
+        return QStringLiteral("result of %1()").arg(callee.size() > 40 ? callee.section(QLatin1Char('.'), -1) : callee);
+    }
+    if (type == QStringLiteral("identifier") || type == QStringLiteral("variable_name") || type == QStringLiteral("member_expression")
+        || type == QStringLiteral("member_access_expression")) {
+        const QString text = nodeText(expression, source).simplified();
+        if (text == QStringLiteral("this") || text == QStringLiteral("$this")) {
+            return QStringLiteral("this");
+        }
+        return QStringLiteral("value of %1").arg(text.left(40));
+    }
+    if (type == QStringLiteral("this")) return QStringLiteral("this");
+    return QStringLiteral("expression");
+}
+
+void collectReturnStatements(TSNode node, QList<TSNode> &returns, bool root = true)
+{
+    if (ts_node_is_null(node)) {
+        return; // abstract / interface members have no body
+    }
+    if (!root && isAstCallableNode(ts_node_type(node))) {
+        return;
+    }
+    const QString type = tsType(node);
+    if (!root && (type == QStringLiteral("class_declaration") || type == QStringLiteral("class"))) {
+        return;
+    }
+    if (type == QStringLiteral("return_statement")) {
+        returns.append(node);
+    }
+    const uint32_t count = ts_node_named_child_count(node);
+    for (uint32_t index = 0; index < count; ++index) {
+        collectReturnStatements(ts_node_named_child(node, index), returns, false);
+    }
+}
+
+QVariantList astReturns(TSNode function, const QByteArray &source, const QString &language, bool *declared)
+{
+    QVariantList returns;
+    const QString functionType = tsType(function);
+    *declared = false;
+    if (functionType == QStringLiteral("constructor_declaration") || functionType == QStringLiteral("destructor_declaration")) {
+        *declared = true;
+        returns.append(QVariantMap{{QStringLiteral("text"), QStringLiteral("none")}});
+        return returns;
+    }
+    QString declaredType;
+    if (language == QStringLiteral("csharp")) {
+        declaredType = nodeText(fieldNode(function, "returns"), source).simplified();
+        if (declaredType.isEmpty()) {
+            declaredType = nodeText(fieldNode(function, "type"), source).simplified();
+        }
+    } else if (language == QStringLiteral("java")) {
+        declaredType = nodeText(fieldNode(function, "type"), source).simplified() + nodeText(fieldNode(function, "dimensions"), source);
+    } else {
+        declaredType = stripTypeAnnotation(nodeText(fieldNode(function, "return_type"), source));
+    }
+    if (!declaredType.isEmpty()) {
+        *declared = true;
+        returns.append(QVariantMap{{QStringLiteral("text"), declaredType == QStringLiteral("void") ? QStringLiteral("none") : declaredType},
+                                   {QStringLiteral("source"), QStringLiteral("declared")}});
+        return returns;
+    }
+    if (language == QStringLiteral("csharp") || language == QStringLiteral("java")) {
+        returns.append(QVariantMap{{QStringLiteral("text"), QStringLiteral("none")}});
+        *declared = true;
+        return returns;
+    }
+    // Arrow function with an expression body returns that expression.
+    TSNode body = fieldNode(function, "body");
+    const bool asyncFunction = nodeText(function, source).trimmed().startsWith(QStringLiteral("async"));
+    QStringList types;
+    int paths = 0;
+    if (!ts_node_is_null(body) && tsType(body) != QStringLiteral("statement_block") && tsType(body) != QStringLiteral("compound_statement")) {
+        types.append(classifyReturnExpression(body, source, language));
+        paths = 1;
+    } else {
+        QList<TSNode> statements;
+        collectReturnStatements(body, statements);
+        for (const TSNode &statement : std::as_const(statements)) {
+            const QString type = ts_node_named_child_count(statement) > 0
+                ? classifyReturnExpression(ts_node_named_child(statement, 0), source, language)
+                : (language == QStringLiteral("php") ? QStringLiteral("null") : QStringLiteral("undefined"));
+            ++paths;
+            if (!types.contains(type)) {
+                types.append(type);
+            }
+        }
+    }
+    QString text;
+    if (types.isEmpty()) {
+        text = QStringLiteral("none");
+    } else {
+        text = types.join(QStringLiteral(" | "));
+        if (paths > 1) {
+            text += QStringLiteral(" (%1 return paths)").arg(paths);
+        }
+    }
+    if (asyncFunction && language != QStringLiteral("php")) {
+        text = QStringLiteral("Promise<%1>").arg(types.isEmpty() ? QStringLiteral("void") : types.join(QStringLiteral(" | ")));
+    }
+    returns.append(QVariantMap{{QStringLiteral("text"), text}, {QStringLiteral("source"), QStringLiteral("inferred")}});
+    return returns;
+}
+
+} // namespace
+
+static QVariantList applyAstSignatures(const QVariantList &symbols, const QByteArray &source, const QString &language)
+{
+    const QString signatureLanguage = (language == QStringLiteral("tsx") || language == QStringLiteral("ts")
+                                       || language == QStringLiteral("script") || language == QStringLiteral("jsx"))
+        ? QStringLiteral("ts") : language;
+    TSLanguage *tsLanguage = languageForName(language);
+    if (!tsLanguage || symbols.isEmpty()) {
+        return symbols;
+    }
+    TSParser *parser = ts_parser_new();
+    if (!parser || !ts_parser_set_language(parser, tsLanguage)) {
+        if (parser) {
+            ts_parser_delete(parser);
+        }
+        return symbols;
+    }
+    TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
+    QMultiHash<int, TSNode> byLine;
+    std::function<void(TSNode)> index = [&](TSNode node) {
+        if (isAstCallableNode(ts_node_type(node))) {
+            byLine.insert(nodeLine(node), node);
+            TSNode parent = ts_node_parent(node);
+            if (!ts_node_is_null(parent) && nodeLine(parent) != nodeLine(node)) {
+                byLine.insert(nodeLine(parent), node);
+            }
+        }
+        const uint32_t count = ts_node_named_child_count(node);
+        for (uint32_t i = 0; i < count; ++i) {
+            index(ts_node_named_child(node, i));
+        }
+    };
+    index(ts_tree_root_node(tree));
+
+    std::function<QVariantList(QVariantList)> apply = [&](QVariantList items) {
+        for (int i = 0; i < items.size(); ++i) {
+            QVariantMap symbol = items.at(i).toMap();
+            symbol.insert(QStringLiteral("members"), apply(symbol.value(QStringLiteral("members")).toList()));
+            if (isCallableSymbolKind(symbol.value(QStringLiteral("kind")).toString())
+                || symbol.value(QStringLiteral("kind")).toString() == QStringLiteral("component")) {
+                const int line = symbol.value(QStringLiteral("line")).toInt();
+                const QString name = symbol.value(QStringLiteral("name")).toString();
+                TSNode match{};
+                bool found = false;
+                const QList<TSNode> candidates = byLine.values(line);
+                for (const TSNode &candidate : candidates) {
+                    const QString candidateName = astCallableName(candidate, source);
+                    if (candidateName == name || candidateName.section(QLatin1Char('.'), -1) == name
+                        || (candidates.size() == 1 && candidateName.isEmpty())) {
+                        match = candidate;
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) {
+                    bool declared = false;
+                    symbol.insert(QStringLiteral("parameters"), astParameters(match, source, signatureLanguage));
+                    symbol.insert(QStringLiteral("returns"), astReturns(match, source, signatureLanguage, &declared));
+                    symbol.insert(QStringLiteral("signatureSource"), QStringLiteral("ast"));
+                }
+            }
+            items[i] = symbol;
+        }
+        return items;
+    };
+    const QVariantList result = apply(symbols);
+    ts_tree_delete(tree);
+    ts_parser_delete(parser);
+    return result;
+}
+
 QVariantMap SymbolParser::makeSymbol(const QString &kind, const QString &name, int line,
                                      const QString &detail, const QVariantList &members,
                                      const QString &snippet)
@@ -3836,7 +4243,18 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
                                   : analysisHasMeaningfulContent(analysis);
         };
 
-        QVariantMap astResult = astParse();
+        static const QSet<QString> astSignatureLanguages = {
+            QStringLiteral("ts"), QStringLiteral("tsx"), QStringLiteral("script"), QStringLiteral("jsx"),
+            QStringLiteral("csharp"), QStringLiteral("java"), QStringLiteral("php"),
+        };
+        auto withAstSignatures = [&](QVariantMap analysis, const QByteArray &bytes) {
+            if (astSignatureLanguages.contains(astLanguage)) {
+                analysis.insert(QStringLiteral("symbols"),
+                                applyAstSignatures(analysis.value(QStringLiteral("symbols")).toList(), bytes, astLanguage));
+            }
+            return analysis;
+        };
+        QVariantMap astResult = withAstSignatures(astParse(), text.toUtf8());
         if (!astResult.value(QStringLiteral("analysisHasAstErrors")).toBool()) {
             if (hasContent(astResult)) {
                 return finalizeResult(astResult, QStringLiteral("ast"));
@@ -3852,7 +4270,7 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
         bool repairAccepted = false;
         if (!repair.blankedLines.isEmpty()) {
             ScopedAstSourceOverride guard(repair.source);
-            const QVariantMap repaired = astParse();
+            const QVariantMap repaired = withAstSignatures(astParse(), repair.source);
             // Blanking must never cost declarations the unrepaired tree already
             // had (grammar gaps can flag valid code); otherwise keep the original.
             // It must also stay in the same league as what the heuristic parser
