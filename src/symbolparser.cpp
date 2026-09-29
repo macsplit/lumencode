@@ -32,6 +32,8 @@ const TSLanguage *tree_sitter_rust(void);
 const TSLanguage *tree_sitter_python(void);
 const TSLanguage *tree_sitter_java(void);
 const TSLanguage *tree_sitter_c_sharp(void);
+const TSLanguage *tree_sitter_go(void);
+const TSLanguage *tree_sitter_cpp(void);
 }
 
 static QVariantList toVariantList(const QStringList &values)
@@ -165,6 +167,12 @@ static TSLanguage *languageForName(const QString &language)
     }
     if (language == QStringLiteral("ts")) {
         return const_cast<TSLanguage *>(tree_sitter_typescript());
+    }
+    if (language == QStringLiteral("go")) {
+        return const_cast<TSLanguage *>(tree_sitter_go());
+    }
+    if (language == QStringLiteral("cpp")) {
+        return const_cast<TSLanguage *>(tree_sitter_cpp());
     }
     return nullptr;
 }
@@ -3961,6 +3969,12 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
     if (language == QStringLiteral("objc")) {
         return finalizeResult(parseObjectiveC(path, text, language), QStringLiteral("heuristic"));
     }
+    if (language == QStringLiteral("go")) {
+        return analyseWithAst(language,
+                              [&] { return parseGoTreeSitter(path, text); },
+                              {},
+                              false);
+    }
     if (language == QStringLiteral("sql")) {
         return finalizeResult(parseSql(path, text), QStringLiteral("heuristic"), QStringLiteral("high"));
     }
@@ -5065,6 +5079,354 @@ QVariantMap SymbolParser::parseSql(const QString &path, const QString &text) con
         routines += (object.kind == QStringLiteral("procedure") || object.kind == QStringLiteral("function")) ? 1 : 0;
     }
     result.insert(QStringLiteral("summary"), QStringLiteral("%1 objects (%2 tables, %3 routines)").arg(objects.size()).arg(tables).arg(routines));
+    return result;
+}
+
+
+// All children of `node` stored under field `fieldName` (e.g. every name of
+// a Go `a, b int` parameter declaration).
+static QList<TSNode> fieldNodes(TSNode node, const char *fieldName)
+{
+    QList<TSNode> nodes;
+    const uint32_t count = ts_node_child_count(node);
+    for (uint32_t index = 0; index < count; ++index) {
+        const char *name = ts_node_field_name_for_child(node, index);
+        if (name && std::strcmp(name, fieldName) == 0) {
+            nodes.append(ts_node_child(node, index));
+        }
+    }
+    return nodes;
+}
+
+static QVariantMap makeSymbolStatic(const QString &kind, const QString &name, int line, const QString &detail,
+                                    const QVariantList &members, const QString &snippet)
+{
+    return SymbolParser::makeSymbolPublic(kind, name, line, detail, members, snippet);
+}
+
+// Call relations for AST languages whose callable symbols were registered by
+// node position: walk the tree, attribute each call to the innermost
+// registered owner, and link it to same-file callables by name.
+static QVariantList applyPositionalCallRelations(const QVariantList &symbols,
+                                                 TSNode root,
+                                                 const QByteArray &source,
+                                                 const QHash<uint32_t, QString> &ownerKeyByStart,
+                                                 const QSet<QString> &callNodeTypes,
+                                                 const std::function<QString(TSNode)> &calleeName)
+{
+    QHash<QString, QVariantMap> byKey;
+    QHash<QString, QStringList> keysByName;
+    collectSymbolsByKey(symbols, byKey, keysByName);
+    QHash<QString, QVariantList> callsByKey;
+    QHash<QString, QVariantList> calledByByKey;
+    std::function<void(TSNode, const QString &)> visit = [&](TSNode node, const QString &currentKey) {
+        QString activeKey = currentKey;
+        const auto owner = ownerKeyByStart.constFind(ts_node_start_byte(node));
+        if (owner != ownerKeyByStart.constEnd() && byKey.contains(*owner)) {
+            activeKey = *owner;
+        }
+        if (!activeKey.isEmpty() && callNodeTypes.contains(tsType(node))) {
+            const QString target = calleeName(node);
+            const QStringList candidates = keysByName.value(target);
+            if (!target.isEmpty() && !candidates.isEmpty()) {
+                const QString targetKey = bestRelationTargetKey(candidates, byKey);
+                if (!targetKey.isEmpty() && targetKey != activeKey && byKey.contains(targetKey)
+                    && isCallableSymbolKind(byKey.value(targetKey).value(QStringLiteral("kind")).toString())) {
+                    appendUniqueRelation(callsByKey, activeKey, relationFromSymbol(byKey.value(targetKey)), QStringLiteral("calls"));
+                    appendUniqueRelation(calledByByKey, targetKey, relationFromSymbol(byKey.value(activeKey)), QStringLiteral("called by"));
+                }
+            }
+        }
+        const uint32_t count = ts_node_named_child_count(node);
+        for (uint32_t index = 0; index < count; ++index) {
+            visit(ts_node_named_child(node, index), activeKey);
+        }
+    };
+    visit(root, QString());
+    Q_UNUSED(source);
+    return applyRelationsToSymbols(symbols, callsByKey, calledByByKey);
+}
+
+// Attach `member` to the top-level symbol named `ownerName`, creating a
+// grouping symbol when the owner is declared elsewhere (another file of the
+// package, or a class declared in a header).
+static void attachToOwner(QVariantList &symbols, const QString &ownerName, const QVariantMap &member,
+                          const QString &kindIfNew, const QString &detailIfNew)
+{
+    for (int index = 0; index < symbols.size(); ++index) {
+        QVariantMap owner = symbols.at(index).toMap();
+        if (owner.value(QStringLiteral("name")).toString() == ownerName
+            && owner.value(QStringLiteral("kind")).toString() != QStringLiteral("function")) {
+            QVariantList members = owner.value(QStringLiteral("members")).toList();
+            members.append(member);
+            owner.insert(QStringLiteral("members"), members);
+            symbols[index] = owner;
+            return;
+        }
+    }
+    symbols.append(makeSymbolStatic(kindIfNew, ownerName, member.value(QStringLiteral("line")).toInt(), detailIfNew, {member},
+                                    member.value(QStringLiteral("snippet")).toString()));
+}
+
+QVariantMap SymbolParser::parseGoTreeSitter(const QString &path, const QString &text) const
+{
+    const QByteArray source = text.toUtf8();
+    QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("go"));
+    TSParser *parser = ts_parser_new();
+    if (!parser || !ts_parser_set_language(parser, languageForName(QStringLiteral("go")))) {
+        if (parser) {
+            ts_parser_delete(parser);
+        }
+        return result;
+    }
+    TSTree *tree = parseAnalysedSource(parser, source);
+    TSNode root = ts_tree_root_node(tree);
+
+    QVariantList symbols;
+    QVariantList dependencies;
+    QVariantList routes;
+    QHash<uint32_t, QString> ownerKeyByStart;
+    QString packageName;
+
+    auto parametersOf = [&](TSNode list) {
+        QVariantList parameters;
+        const uint32_t count = ts_node_named_child_count(list);
+        for (uint32_t index = 0; index < count; ++index) {
+            TSNode declaration = ts_node_named_child(list, index);
+            const QString declarationType = tsType(declaration);
+            if (declarationType != QStringLiteral("parameter_declaration")
+                && declarationType != QStringLiteral("variadic_parameter_declaration")) {
+                continue;
+            }
+            QString type = nodeText(fieldNode(declaration, "type"), source).simplified();
+            if (declarationType == QStringLiteral("variadic_parameter_declaration")) {
+                type = QStringLiteral("...") + type;
+            }
+            const QList<TSNode> names = fieldNodes(declaration, "name");
+            if (names.isEmpty()) {
+                parameters.append(makeSignatureParameter(QStringLiteral("_"), type));
+            }
+            for (const TSNode &name : names) {
+                parameters.append(makeSignatureParameter(nodeText(name, source), type));
+            }
+        }
+        return parameters;
+    };
+    auto returnsOf = [&](TSNode result) {
+        QVariantList returns;
+        const QString text = nodeText(result, source).simplified();
+        returns.append(QVariantMap{{QStringLiteral("text"), text.isEmpty() ? QStringLiteral("none") : text}});
+        return returns;
+    };
+    auto makeCallable = [&](const QString &kind, const QString &name, TSNode node, const QString &detail) {
+        QVariantMap symbol = makeSymbol(kind, name, nodeLine(node), detail, {}, nodeSnippet(node, source));
+        symbol.insert(QStringLiteral("endLine"), static_cast<int>(ts_node_end_point(node).row) + 1);
+        symbol.insert(QStringLiteral("parameters"), parametersOf(fieldNode(node, "parameters")));
+        symbol.insert(QStringLiteral("returns"), returnsOf(fieldNode(node, "result")));
+        symbol.insert(QStringLiteral("signatureSource"), QStringLiteral("ast"));
+        return symbol;
+    };
+
+    const uint32_t count = ts_node_named_child_count(root);
+    for (uint32_t i = 0; i < count; ++i) {
+        TSNode node = ts_node_named_child(root, i);
+        const QString type = tsType(node);
+        if (type == QStringLiteral("package_clause")) {
+            packageName = nodeText(ts_node_named_child(node, 0), source);
+        } else if (type == QStringLiteral("import_declaration")) {
+            std::function<void(TSNode)> collect = [&](TSNode n) {
+                if (tsType(n) == QStringLiteral("import_spec")) {
+                    QString target = nodeText(fieldNode(n, "path"), source);
+                    target = target.mid(1, target.size() - 2);
+                    const QString alias = nodeText(fieldNode(n, "name"), source);
+                    QVariantMap item = makeSourceContextItem(path, QStringLiteral("go"), nodeLine(n), nodeSnippet(n, source, 1),
+                                                             QStringLiteral("import dependency"));
+                    item.insert(QStringLiteral("target"), target);
+                    item.insert(QStringLiteral("type"), QStringLiteral("import"));
+                    item.insert(QStringLiteral("label"), alias.isEmpty() ? target : QStringLiteral("%1 %2").arg(alias, target));
+                    item.insert(QStringLiteral("path"), QString());
+                    item.insert(QStringLiteral("exists"), true);
+                    dependencies.append(item);
+                    return;
+                }
+                const uint32_t c = ts_node_named_child_count(n);
+                for (uint32_t k = 0; k < c; ++k) {
+                    collect(ts_node_named_child(n, k));
+                }
+            };
+            collect(node);
+        } else if (type == QStringLiteral("function_declaration")) {
+            const QString name = nodeText(fieldNode(node, "name"), source);
+            const QVariantMap symbol = makeCallable(QStringLiteral("function"), name, node, QString());
+            ownerKeyByStart.insert(ts_node_start_byte(node), symbolKey(symbol));
+            symbols.append(symbol);
+        } else if (type == QStringLiteral("method_declaration")) {
+            const QString name = nodeText(fieldNode(node, "name"), source);
+            TSNode receiver = ts_node_named_child(fieldNode(node, "receiver"), 0);
+            QString receiverType = nodeText(fieldNode(receiver, "type"), source).trimmed();
+            receiverType.remove(QLatin1Char('*'));
+            receiverType = receiverType.section(QLatin1Char('['), 0, 0).trimmed(); // generic receivers
+            const QVariantMap symbol = makeCallable(QStringLiteral("method"), name, node,
+                                                    QStringLiteral("(%1)").arg(nodeText(receiver, source).simplified()));
+            ownerKeyByStart.insert(ts_node_start_byte(node), symbolKey(symbol));
+            attachToOwner(symbols, receiverType, symbol, QStringLiteral("type"),
+                          QStringLiteral("methods; type declared in another file"));
+        } else if (type == QStringLiteral("type_declaration")) {
+            const uint32_t specs = ts_node_named_child_count(node);
+            for (uint32_t k = 0; k < specs; ++k) {
+                TSNode spec = ts_node_named_child(node, k);
+                const QString specType = tsType(spec);
+                if (specType != QStringLiteral("type_spec") && specType != QStringLiteral("type_alias")) {
+                    continue;
+                }
+                const QString name = nodeText(fieldNode(spec, "name"), source);
+                TSNode typeNode = fieldNode(spec, "type");
+                const QString typeKind = tsType(typeNode);
+                QString kind = QStringLiteral("type");
+                QVariantList members;
+                if (typeKind == QStringLiteral("struct_type")) {
+                    kind = QStringLiteral("struct");
+                    std::function<void(TSNode)> fields = [&](TSNode n) {
+                        if (tsType(n) == QStringLiteral("field_declaration")) {
+                            const QString fieldType = nodeText(fieldNode(n, "type"), source).simplified();
+                            const QList<TSNode> names = fieldNodes(n, "name");
+                            if (names.isEmpty()) {
+                                members.append(makeSymbol(QStringLiteral("field"), fieldType, nodeLine(n), QStringLiteral("embedded"), {}, nodeSnippet(n, source, 1)));
+                            }
+                            for (const TSNode &fieldName : names) {
+                                members.append(makeSymbol(QStringLiteral("field"), nodeText(fieldName, source), nodeLine(n), fieldType, {}, nodeSnippet(n, source, 1)));
+                            }
+                            return;
+                        }
+                        const uint32_t c = ts_node_named_child_count(n);
+                        for (uint32_t m = 0; m < c; ++m) {
+                            fields(ts_node_named_child(n, m));
+                        }
+                    };
+                    fields(typeNode);
+                } else if (typeKind == QStringLiteral("interface_type")) {
+                    kind = QStringLiteral("interface");
+                    const uint32_t c = ts_node_named_child_count(typeNode);
+                    for (uint32_t m = 0; m < c; ++m) {
+                        TSNode element = ts_node_named_child(typeNode, m);
+                        if (tsType(element) == QStringLiteral("method_elem")) {
+                            members.append(makeCallable(QStringLiteral("method"), nodeText(fieldNode(element, "name"), source), element,
+                                                        QStringLiteral("interface method")));
+                        } else {
+                            members.append(makeSymbol(QStringLiteral("embedded"), nodeText(element, source).simplified(), nodeLine(element),
+                                                      QString(), {}, nodeSnippet(element, source, 1)));
+                        }
+                    }
+                }
+                QVariantMap symbol = makeSymbol(kind, name, nodeLine(spec),
+                                                specType == QStringLiteral("type_alias") ? QStringLiteral("alias of %1").arg(nodeText(typeNode, source).simplified())
+                                                : (kind == QStringLiteral("type") ? nodeText(typeNode, source).simplified().left(60) : QString()),
+                                                members, nodeSnippet(spec, source));
+                symbol.insert(QStringLiteral("endLine"), static_cast<int>(ts_node_end_point(spec).row) + 1);
+                // Methods may already have been grouped under a placeholder.
+                bool merged = false;
+                for (int index = 0; index < symbols.size(); ++index) {
+                    QVariantMap existing = symbols.at(index).toMap();
+                    if (existing.value(QStringLiteral("name")).toString() == name
+                        && existing.value(QStringLiteral("kind")).toString() == QStringLiteral("type")
+                        && existing.value(QStringLiteral("detail")).toString().startsWith(QStringLiteral("methods;"))) {
+                        QVariantList combined = members;
+                        combined.append(existing.value(QStringLiteral("members")).toList());
+                        symbol.insert(QStringLiteral("members"), combined);
+                        symbols[index] = symbol;
+                        merged = true;
+                        break;
+                    }
+                }
+                if (!merged) {
+                    symbols.append(symbol);
+                }
+            }
+        } else if (type == QStringLiteral("const_declaration") || type == QStringLiteral("var_declaration")) {
+            std::function<void(TSNode)> specs = [&](TSNode n) {
+                const QString specType = tsType(n);
+                if (specType == QStringLiteral("const_spec") || specType == QStringLiteral("var_spec")) {
+                    for (const TSNode &name : fieldNodes(n, "name")) {
+                        symbols.append(makeSymbol(specType == QStringLiteral("const_spec") ? QStringLiteral("constant") : QStringLiteral("variable"),
+                                                  nodeText(name, source), nodeLine(n),
+                                                  nodeText(fieldNode(n, "type"), source).simplified(), {}, nodeSnippet(n, source, 2)));
+                    }
+                    return;
+                }
+                const uint32_t c = ts_node_named_child_count(n);
+                for (uint32_t m = 0; m < c; ++m) {
+                    specs(ts_node_named_child(n, m));
+                }
+            };
+            specs(node);
+        }
+    }
+
+    // Methods of types declared later in the file were attached to a
+    // placeholder; merge happens above. Now calls and routes.
+    auto calleeName = [&](TSNode call) {
+        TSNode function = fieldNode(call, "function");
+        if (tsType(function) == QStringLiteral("selector_expression")) {
+            return nodeText(fieldNode(function, "field"), source);
+        }
+        if (tsType(function) == QStringLiteral("identifier")) {
+            return nodeText(function, source);
+        }
+        return QString();
+    };
+    symbols = applyPositionalCallRelations(symbols, root, source, ownerKeyByStart, {QStringLiteral("call_expression")}, calleeName);
+
+    static const QSet<QString> routeMethods = {
+        QStringLiteral("GET"), QStringLiteral("POST"), QStringLiteral("PUT"), QStringLiteral("DELETE"), QStringLiteral("PATCH"),
+        QStringLiteral("HEAD"), QStringLiteral("OPTIONS"), QStringLiteral("Any"), QStringLiteral("Get"), QStringLiteral("Post"),
+        QStringLiteral("Put"), QStringLiteral("Delete"), QStringLiteral("Patch"), QStringLiteral("Handle"), QStringLiteral("HandleFunc"),
+    };
+    std::function<void(TSNode)> scanRoutes = [&](TSNode node) {
+        if (tsType(node) == QStringLiteral("call_expression")) {
+            TSNode function = fieldNode(node, "function");
+            if (tsType(function) == QStringLiteral("selector_expression")) {
+                const QString method = nodeText(fieldNode(function, "field"), source);
+                TSNode arguments = fieldNode(node, "arguments");
+                TSNode first = ts_node_named_child(arguments, 0);
+                const QString firstType = tsType(first);
+                if (routeMethods.contains(method) && (firstType == QStringLiteral("interpreted_string_literal") || firstType == QStringLiteral("raw_string_literal"))) {
+                    QString routePath = nodeText(first, source);
+                    routePath = routePath.mid(1, routePath.size() - 2);
+                    // net/http 1.22 patterns: "GET /x"
+                    QString verb = method.startsWith(QStringLiteral("Handle")) ? QStringLiteral("ANY") : method.toUpper();
+                    static const QRegularExpression verbPrefix(QStringLiteral(R"(^([A-Z]+)\s+(/.*)$)"));
+                    const auto prefixed = verbPrefix.match(routePath);
+                    if (prefixed.hasMatch()) {
+                        verb = prefixed.captured(1);
+                        routePath = prefixed.captured(2);
+                    }
+                    if (routePath.startsWith(QLatin1Char('/'))) {
+                        QVariantMap route = makeSourceContextItem(path, QStringLiteral("go"), nodeLine(node), nodeSnippet(node, source, 2),
+                                                                  QStringLiteral("route"));
+                        route.insert(QStringLiteral("owner"), nodeText(fieldNode(function, "operand"), source).left(40));
+                        route.insert(QStringLiteral("method"), verb);
+                        route.insert(QStringLiteral("path"), routePath);
+                        route.insert(QStringLiteral("label"), verb + QStringLiteral(" ") + routePath);
+                        routes.append(route);
+                    }
+                }
+            }
+        }
+        const uint32_t c = ts_node_named_child_count(node);
+        for (uint32_t k = 0; k < c && routes.size() < 200; ++k) {
+            scanRoutes(ts_node_named_child(node, k));
+        }
+    };
+    scanRoutes(root);
+
+    result.insert(QStringLiteral("analysisHasAstErrors"), ts_node_has_error(root));
+    ts_tree_delete(tree);
+    ts_parser_delete(parser);
+    result.insert(QStringLiteral("symbols"), symbols);
+    result.insert(QStringLiteral("dependencies"), dependencies);
+    result.insert(QStringLiteral("routes"), routes);
+    result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
+    result.insert(QStringLiteral("summary"), QStringLiteral("package %1: %2 top-level symbols").arg(packageName).arg(symbols.size()));
     return result;
 }
 
@@ -8649,6 +9011,9 @@ QString SymbolParser::detectLanguage(const QString &path)
         || suffix == QStringLiteral("hpp") || suffix == QStringLiteral("hxx")) {
         return QStringLiteral("cpp");
     }
+    if (suffix == QStringLiteral("go")) {
+        return QStringLiteral("go");
+    }
     if (suffix == QStringLiteral("sql")) {
         return QStringLiteral("sql");
     }
@@ -9549,6 +9914,12 @@ QVariantList SymbolParser::extractAspNetRoutes(const QString &path, const QStrin
         routes.append(route);
     }
     return routes;
+}
+
+QVariantMap SymbolParser::makeSymbolPublic(const QString &kind, const QString &name, int line, const QString &detail,
+                                           const QVariantList &members, const QString &snippet)
+{
+    return makeSymbol(kind, name, line, detail, members, snippet);
 }
 
 QVariantList SymbolParser::findRelatedFilesPublic(const QString &path)

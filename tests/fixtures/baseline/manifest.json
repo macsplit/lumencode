@@ -1290,6 +1290,54 @@
           ]
         }
       ]
+    },
+    {
+      "name": "go_structure_signatures_routes",
+      "root": "tests/fixtures/baseline/go_basic",
+      "file": "server.go",
+      "file_expectations": {
+        "dependencies": 2,
+        "routes": 2,
+        "analysis_source_mode": "ast"
+      },
+      "expectations": [
+        {
+          "kind": "struct",
+          "name": "Store"
+        },
+        {
+          "kind": "method",
+          "name": "Put",
+          "parameters": [
+            "key: string",
+            "value: int"
+          ],
+          "returns": [
+            "error"
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "NewStore",
+          "parameters": [
+            "limit: int"
+          ],
+          "returns": [
+            "*Store"
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "Register",
+          "calls": [
+            "Get"
+          ]
+        },
+        {
+          "kind": "interface",
+          "name": "Reader"
+        }
+      ]
     }
   ]
 }

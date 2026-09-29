@@ -44,6 +44,22 @@ LumenCode vendors parser sources directly in `third_party/` so the application c
 - License: MIT
 - License file retained at: `third_party/tree-sitter-html/LICENSE`
 
+### Tree-sitter Go Grammar
+
+- Source: https://github.com/tree-sitter/tree-sitter-go
+- Vendored path: `third_party/tree-sitter-go`
+- Revision: `3c3775faa968158a8b4ac190a7fda867fd5fb748` (v0.23.4)
+- License: MIT
+- License file retained at: `third_party/tree-sitter-go/LICENSE`
+
+### Tree-sitter C++ Grammar (also used for C)
+
+- Source: https://github.com/tree-sitter/tree-sitter-cpp
+- Vendored path: `third_party/tree-sitter-cpp`
+- Revision: `f41e1a044c8a84ea9fa8577fdd2eab92ec96de02` (v0.23.4)
+- License: MIT
+- License file retained at: `third_party/tree-sitter-cpp/LICENSE`
+
 ### Tree-sitter CSS Grammar
 
 - Source: https://github.com/tree-sitter/tree-sitter-css

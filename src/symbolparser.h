@@ -18,6 +18,8 @@ public:
     // the branch-scoped repair pass for one file (see lumencode-cli --debug-ast).
     static QVariantMap debugAst(const QString &path);
     static QVariantList findRelatedFilesPublic(const QString &path);
+    static QVariantMap makeSymbolPublic(const QString &kind, const QString &name, int line, const QString &detail,
+                                        const QVariantList &members, const QString &snippet);
 
 private:
     static QVariantMap makeOversizedFileResult(const QString &path, const QString &language,
@@ -35,6 +37,7 @@ private:
     QVariantMap parseJava(const QString &path, const QString &text) const;
     QVariantMap parseCSharp(const QString &path, const QString &text) const;
     QVariantMap parseRust(const QString &path, const QString &text) const;
+    QVariantMap parseGoTreeSitter(const QString &path, const QString &text) const;
     QVariantMap parseSql(const QString &path, const QString &text) const;
     QVariantMap parseVbNet(const QString &path, const QString &text) const;
     QVariantMap parseObjectiveC(const QString &path, const QString &text, const QString &language) const;

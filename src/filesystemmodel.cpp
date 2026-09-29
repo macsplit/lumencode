@@ -659,6 +659,9 @@ QString FileSystemModel::detectFileType(const QString &path, bool isDir)
     if (suffix == QStringLiteral("sql")) {
         return QStringLiteral("sql");
     }
+    if (suffix == QStringLiteral("go")) {
+        return QStringLiteral("go");
+    }
     if (QFileInfo(path).fileName() == QStringLiteral("package.json")) {
         return QStringLiteral("package");
     }
@@ -717,6 +720,7 @@ bool FileSystemModel::shouldIncludeFile(const QString &suffix)
         QStringLiteral("mm"),
         QStringLiteral("vb"),
         QStringLiteral("sql"),
+        QStringLiteral("go"),
     };
     return allowed.contains(suffix);
 }

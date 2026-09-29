@@ -152,6 +152,27 @@ target_include_directories(vendor-tree-sitter-html
         third_party/tree-sitter-html/src
 )
 
+add_library(vendor-tree-sitter-go STATIC
+    third_party/tree-sitter-go/src/parser.c
+)
+target_include_directories(vendor-tree-sitter-go
+    PUBLIC
+        third_party/tree-sitter/lib/include
+    PRIVATE
+        third_party/tree-sitter-go/src
+)
+
+add_library(vendor-tree-sitter-cpp STATIC
+    third_party/tree-sitter-cpp/src/parser.c
+    third_party/tree-sitter-cpp/src/scanner.c
+)
+target_include_directories(vendor-tree-sitter-cpp
+    PUBLIC
+        third_party/tree-sitter/lib/include
+    PRIVATE
+        third_party/tree-sitter-cpp/src
+)
+
 add_executable(lumencode
     src/main.cpp
     src/filesystemmodel.cpp
@@ -185,6 +206,8 @@ target_link_libraries(lumencode
     vendor-tree-sitter-java
     vendor-tree-sitter-c-sharp
     vendor-tree-sitter-html
+    vendor-tree-sitter-go
+    vendor-tree-sitter-cpp
 )
 
 add_executable(lumencode-cli
@@ -216,6 +239,8 @@ target_link_libraries(lumencode-cli
     vendor-tree-sitter-java
     vendor-tree-sitter-c-sharp
     vendor-tree-sitter-html
+    vendor-tree-sitter-go
+    vendor-tree-sitter-cpp
 )
 
 install(TARGETS lumencode lumencode-cli ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
