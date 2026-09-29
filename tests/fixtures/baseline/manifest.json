@@ -705,8 +705,8 @@
         {
           "kind": "function",
           "name": "helper_cpp",
-          "sourceMode": "heuristic",
-          "confidence": "medium",
+          "sourceMode": "ast",
+          "confidence": "high",
           "parameters": [],
           "returns": [
             "int"
@@ -714,13 +714,13 @@
         }
       ],
       "file_expectations": {
-        "analysis_source_mode": "heuristic",
-        "analysis_confidence": "medium",
+        "analysis_source_mode": "ast",
+        "analysis_confidence": "high",
         "symbol_source_modes": {
-          "heuristic": 3
+          "ast": 3
         },
         "symbol_confidences": {
-          "medium": 3
+          "high": 3
         }
       }
     },
@@ -1336,6 +1336,102 @@
         {
           "kind": "interface",
           "name": "Reader"
+        }
+      ]
+    },
+    {
+      "name": "cpp_header_classes",
+      "root": "tests/fixtures/baseline/cpp_classes",
+      "file": "shape.h",
+      "file_expectations": {
+        "analysis_source_mode": "ast"
+      },
+      "expectations": [
+        {
+          "kind": "class",
+          "name": "Circle"
+        },
+        {
+          "kind": "method",
+          "name": "name",
+          "returns": [
+            "const std::string&"
+          ]
+        },
+        {
+          "kind": "destructor",
+          "name": "~Shape"
+        },
+        {
+          "kind": "enum",
+          "name": "Kind"
+        },
+        {
+          "kind": "function",
+          "name": "totalArea",
+          "parameters": [
+            "shapes: const Shape**",
+            "count: int"
+          ],
+          "returns": [
+            "double"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "cpp_out_of_line_definitions",
+      "root": "tests/fixtures/baseline/cpp_classes",
+      "file": "shape.cpp",
+      "file_expectations": {
+        "dependencies": 2
+      },
+      "expectations": [
+        {
+          "kind": "method",
+          "name": "area",
+          "calls": [
+            "square"
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "square",
+          "calledBy": [
+            "area"
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "totalArea",
+          "calls": [
+            "area"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "c_functions_and_structs",
+      "root": "tests/fixtures/baseline/cpp_classes",
+      "file": "legacy.c",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "run",
+          "parameters": [
+            "argc: int",
+            "argv: char**"
+          ],
+          "returns": [
+            "int"
+          ],
+          "calls": [
+            "helper"
+          ]
+        },
+        {
+          "kind": "struct",
+          "name": "sorter_t"
         }
       ]
     }

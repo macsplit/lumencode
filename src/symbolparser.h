@@ -37,6 +37,7 @@ private:
     QVariantMap parseJava(const QString &path, const QString &text) const;
     QVariantMap parseCSharp(const QString &path, const QString &text) const;
     QVariantMap parseRust(const QString &path, const QString &text) const;
+    QVariantMap parseCppTreeSitter(const QString &path, const QString &text) const;
     QVariantMap parseGoTreeSitter(const QString &path, const QString &text) const;
     QVariantMap parseSql(const QString &path, const QString &text) const;
     QVariantMap parseVbNet(const QString &path, const QString &text) const;
