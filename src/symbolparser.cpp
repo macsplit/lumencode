@@ -1009,9 +1009,9 @@ static QVariantMap mergeSymbolData(QVariantMap primary, const QVariantMap &secon
         && !secondary.value(QStringLiteral("parameters")).toList().isEmpty()) {
         primary.insert(QStringLiteral("parameters"), secondary.value(QStringLiteral("parameters")).toList());
     }
-    if (primary.value(QStringLiteral("returns")).toString().isEmpty()
-        && !secondary.value(QStringLiteral("returns")).toString().isEmpty()) {
-        primary.insert(QStringLiteral("returns"), secondary.value(QStringLiteral("returns")).toString());
+    if (primary.value(QStringLiteral("returns")).toList().isEmpty()
+        && !secondary.value(QStringLiteral("returns")).toList().isEmpty()) {
+        primary.insert(QStringLiteral("returns"), secondary.value(QStringLiteral("returns")).toList());
     }
 
     primary.insert(QStringLiteral("calls"),
@@ -2776,6 +2776,9 @@ static QVariantMap enrichCallableSignature(QVariantMap symbol, const QString &la
     if (!isCallableSymbolKind(symbol.value(QStringLiteral("kind")).toString())) {
         return symbol;
     }
+    if (symbol.value(QStringLiteral("signatureSource")).toString() == QStringLiteral("ast")) {
+        return symbol; // grammar-derived; the snippet heuristics below would only degrade it
+    }
 
     const QString snippet = symbol.value(QStringLiteral("snippet")).toString();
     if (snippet.trimmed().isEmpty()) {
@@ -4186,6 +4189,342 @@ QVariantMap SymbolParser::parsePython(const QString &path, const QString &text) 
     return result;
 }
 
+// ---------------------------------------------------------------------------
+// Python signatures from the syntax tree (issue #1)
+//
+// Python rarely annotates return types, and echoing the text after `return`
+// (the old snippet heuristic) says little and misses every path past the
+// snippet's first lines. With an annotation (`-> T`) that is the answer.
+// Otherwise every return path in the body is classified into a type where the
+// expression makes it evident (literals, constructors, comparisons, builtins),
+// grouped by type with its path count and lines, plus an implicit `None` when
+// control can fall off the end, and `Generator` for yield.
+// ---------------------------------------------------------------------------
+
+static QString pythonCallName(TSNode call, const QByteArray &source)
+{
+    const QString function = nodeText(fieldNode(call, "function"), source).trimmed();
+    return function;
+}
+
+static QStringList pythonExpressionTypes(TSNode node, const QByteArray &source)
+{
+    const QString type = tsType(node);
+    if (type.isEmpty()) {
+        return {QStringLiteral("None")};
+    }
+    if (type == QStringLiteral("parenthesized_expression") && ts_node_named_child_count(node) == 1) {
+        return pythonExpressionTypes(ts_node_named_child(node, 0), source);
+    }
+    if (type == QStringLiteral("none")) return {QStringLiteral("None")};
+    if (type == QStringLiteral("true") || type == QStringLiteral("false")
+        || type == QStringLiteral("comparison_operator") || type == QStringLiteral("not_operator")) {
+        return {QStringLiteral("bool")};
+    }
+    if (type == QStringLiteral("integer")) return {QStringLiteral("int")};
+    if (type == QStringLiteral("float")) return {QStringLiteral("float")};
+    if (type == QStringLiteral("string") || type == QStringLiteral("concatenated_string")) {
+        const QString text = nodeText(node, source).trimmed();
+        if (text.startsWith(QLatin1Char('b')) || text.startsWith(QLatin1Char('B'))) {
+            return {QStringLiteral("bytes")};
+        }
+        return {QStringLiteral("str")};
+    }
+    if (type == QStringLiteral("list") || type == QStringLiteral("list_comprehension")) return {QStringLiteral("list")};
+    if (type == QStringLiteral("dictionary") || type == QStringLiteral("dictionary_comprehension")) return {QStringLiteral("dict")};
+    if (type == QStringLiteral("set") || type == QStringLiteral("set_comprehension")) return {QStringLiteral("set")};
+    if (type == QStringLiteral("tuple") || type == QStringLiteral("expression_list")) return {QStringLiteral("tuple")};
+    if (type == QStringLiteral("generator_expression")) return {QStringLiteral("Generator")};
+    if (type == QStringLiteral("lambda")) return {QStringLiteral("Callable")};
+    if (type == QStringLiteral("conditional_expression")) {
+        QStringList merged;
+        const uint32_t count = ts_node_named_child_count(node);
+        // `a if cond else b`: children are a, cond, b.
+        for (uint32_t index = 0; index < count; index += 2) {
+            for (const QString &part : pythonExpressionTypes(ts_node_named_child(node, index), source)) {
+                if (!merged.contains(part)) {
+                    merged.append(part);
+                }
+            }
+        }
+        return merged;
+    }
+    if (type == QStringLiteral("await")) {
+        const QStringList inner = ts_node_named_child_count(node) > 0
+            ? pythonExpressionTypes(ts_node_named_child(node, 0), source)
+            : QStringList{};
+        return inner.isEmpty() ? QStringList{QStringLiteral("awaited value")} : inner;
+    }
+    if (type == QStringLiteral("call")) {
+        const QString name = pythonCallName(node, source);
+        const QString last = name.section(QLatin1Char('.'), -1);
+        static const QHash<QString, QString> builtins = {
+            {QStringLiteral("str"), QStringLiteral("str")}, {QStringLiteral("repr"), QStringLiteral("str")},
+            {QStringLiteral("int"), QStringLiteral("int")}, {QStringLiteral("len"), QStringLiteral("int")},
+            {QStringLiteral("float"), QStringLiteral("float")}, {QStringLiteral("bool"), QStringLiteral("bool")},
+            {QStringLiteral("isinstance"), QStringLiteral("bool")}, {QStringLiteral("hasattr"), QStringLiteral("bool")},
+            {QStringLiteral("list"), QStringLiteral("list")}, {QStringLiteral("sorted"), QStringLiteral("list")},
+            {QStringLiteral("dict"), QStringLiteral("dict")}, {QStringLiteral("set"), QStringLiteral("set")},
+            {QStringLiteral("frozenset"), QStringLiteral("frozenset")}, {QStringLiteral("tuple"), QStringLiteral("tuple")},
+            {QStringLiteral("bytes"), QStringLiteral("bytes")}, {QStringLiteral("iter"), QStringLiteral("Iterator")},
+            {QStringLiteral("format"), QStringLiteral("str")}, {QStringLiteral("join"), QStringLiteral("str")},
+        };
+        if (name == last && builtins.contains(last)) {
+            return {builtins.value(last)};
+        }
+        if (name != last && (last == QStringLiteral("join") || last == QStringLiteral("format")
+                             || last == QStringLiteral("strip") || last == QStringLiteral("lower")
+                             || last == QStringLiteral("upper") || last == QStringLiteral("replace"))) {
+            return {QStringLiteral("str")};
+        }
+        if (!last.isEmpty() && last.at(0).isUpper()) {
+            return {last};
+        }
+        return {QStringLiteral("result of %1()").arg(name.size() > 40 ? last : name)};
+    }
+    if (type == QStringLiteral("identifier") || type == QStringLiteral("attribute")) {
+        const QString text = nodeText(node, source).trimmed();
+        if (text == QStringLiteral("self")) {
+            return {QStringLiteral("self")};
+        }
+        if (text == QStringLiteral("NotImplemented")) {
+            return {QStringLiteral("NotImplemented")};
+        }
+        return {QStringLiteral("value of %1").arg(text)};
+    }
+    if (type == QStringLiteral("subscript")) {
+        const QString container = nodeText(fieldNode(node, "value"), source).trimmed();
+        return {container.size() <= 40 ? QStringLiteral("item of %1").arg(container) : QStringLiteral("item")};
+    }
+    if (type == QStringLiteral("binary_operator")) {
+        const QStringList left = pythonExpressionTypes(fieldNode(node, "left"), source);
+        const QStringList right = pythonExpressionTypes(fieldNode(node, "right"), source);
+        if (left == right && left.size() == 1
+            && (left.first() == QStringLiteral("str") || left.first() == QStringLiteral("int")
+                || left.first() == QStringLiteral("float") || left.first() == QStringLiteral("list"))) {
+            return left;
+        }
+        return {QStringLiteral("expression")};
+    }
+    return {QStringLiteral("expression")};
+}
+
+// Whether control can reach the end of a statement block (very conservative:
+// only a trailing return/raise, or an if/else chain whose every branch ends
+// that way, counts as terminating).
+static bool pythonBlockTerminates(TSNode block)
+{
+    const uint32_t count = ts_node_named_child_count(block);
+    if (count == 0) {
+        return false;
+    }
+    TSNode last = ts_node_named_child(block, count - 1);
+    const QString type = tsType(last);
+    if (type == QStringLiteral("return_statement") || type == QStringLiteral("raise_statement")) {
+        return true;
+    }
+    if (type == QStringLiteral("if_statement")) {
+        bool hasElse = false;
+        if (!pythonBlockTerminates(fieldNode(last, "consequence"))) {
+            return false;
+        }
+        const uint32_t childCount = ts_node_named_child_count(last);
+        for (uint32_t index = 0; index < childCount; ++index) {
+            TSNode clause = ts_node_named_child(last, index);
+            const QString clauseType = tsType(clause);
+            if (clauseType == QStringLiteral("elif_clause")) {
+                if (!pythonBlockTerminates(fieldNode(clause, "consequence"))) {
+                    return false;
+                }
+            } else if (clauseType == QStringLiteral("else_clause")) {
+                hasElse = true;
+                if (!pythonBlockTerminates(fieldNode(clause, "body"))) {
+                    return false;
+                }
+            }
+        }
+        return hasElse;
+    }
+    if (type == QStringLiteral("while_statement")) {
+        const QString condition = tsType(fieldNode(last, "condition"));
+        return condition == QStringLiteral("true");
+    }
+    if (type == QStringLiteral("try_statement") || type == QStringLiteral("with_statement")) {
+        TSNode body = fieldNode(last, "body");
+        return !ts_node_is_null(body) && pythonBlockTerminates(body);
+    }
+    return false;
+}
+
+static void collectPythonReturns(TSNode node, QList<TSNode> &returns, bool &yields)
+{
+    const QString type = tsType(node);
+    if (type == QStringLiteral("function_definition") || type == QStringLiteral("class_definition")
+        || type == QStringLiteral("lambda") || type == QStringLiteral("decorated_definition")) {
+        return;
+    }
+    if (type == QStringLiteral("return_statement")) {
+        returns.append(node);
+    } else if (type == QStringLiteral("yield")) {
+        yields = true;
+    }
+    const uint32_t count = ts_node_named_child_count(node);
+    for (uint32_t index = 0; index < count; ++index) {
+        collectPythonReturns(ts_node_named_child(node, index), returns, yields);
+    }
+}
+
+static QVariantList pythonReturnsForFunction(TSNode function, const QByteArray &source)
+{
+    QVariantList returns;
+    const QString annotation = nodeText(fieldNode(function, "return_type"), source).simplified();
+    if (!annotation.isEmpty()) {
+        returns.append(QVariantMap{{QStringLiteral("text"), annotation},
+                                   {QStringLiteral("source"), QStringLiteral("annotation")}});
+        return returns;
+    }
+
+    TSNode body = fieldNode(function, "body");
+    QList<TSNode> statements;
+    bool yields = false;
+    const uint32_t count = ts_node_named_child_count(body);
+    for (uint32_t index = 0; index < count; ++index) {
+        collectPythonReturns(ts_node_named_child(body, index), statements, yields);
+    }
+
+    if (yields) {
+        returns.append(QVariantMap{{QStringLiteral("text"), QStringLiteral("Generator (yields)")},
+                                   {QStringLiteral("source"), QStringLiteral("inferred")}});
+        return returns;
+    }
+
+    QStringList order;
+    QHash<QString, QList<int>> linesByType;
+    for (const TSNode &statement : std::as_const(statements)) {
+        const QStringList types = ts_node_named_child_count(statement) > 0
+            ? pythonExpressionTypes(ts_node_named_child(statement, 0), source)
+            : QStringList{QStringLiteral("None")};
+        for (const QString &type : types) {
+            if (!linesByType.contains(type)) {
+                order.append(type);
+            }
+            linesByType[type].append(nodeLine(statement));
+        }
+    }
+    const bool fallsThrough = !pythonBlockTerminates(body);
+    if (fallsThrough) {
+        const QString implicitNone = QStringLiteral("None");
+        if (!linesByType.contains(implicitNone)) {
+            order.append(implicitNone);
+        }
+        linesByType[implicitNone].append(-1);
+    }
+
+    const int totalPaths = statements.size() + (fallsThrough ? 1 : 0);
+    for (const QString &type : std::as_const(order)) {
+        const QList<int> lines = linesByType.value(type);
+        QStringList lineTexts;
+        bool implicit = false;
+        for (int line : lines) {
+            if (line < 0) {
+                implicit = true;
+            } else {
+                lineTexts.append(QString::number(line));
+            }
+        }
+        QString text = type;
+        QStringList notes;
+        if (!lineTexts.isEmpty() && totalPaths > 1) {
+            notes.append(lineTexts.size() == 1 ? QStringLiteral("line %1").arg(lineTexts.first())
+                                               : QStringLiteral("lines %1").arg(lineTexts.join(QStringLiteral(", "))));
+        }
+        if (implicit) {
+            notes.append(statements.isEmpty() ? QStringLiteral("no return statement")
+                                              : QStringLiteral("falls off the end"));
+        }
+        if (!notes.isEmpty()) {
+            text += QStringLiteral(" (%1)").arg(notes.join(QStringLiteral("; ")));
+        }
+        QVariantList lineValues;
+        for (int line : lines) {
+            if (line > 0) {
+                lineValues.append(line);
+            }
+        }
+        returns.append(QVariantMap{{QStringLiteral("text"), text},
+                                   {QStringLiteral("type"), type},
+                                   {QStringLiteral("source"), QStringLiteral("inferred")},
+                                   {QStringLiteral("lines"), lineValues}});
+    }
+    if (returns.size() > 1) {
+        // Lead with a one-line summary so the inspector says up front that
+        // there are several possible outcomes.
+        QStringList typeNames;
+        for (const QString &type : std::as_const(order)) {
+            typeNames.append(type);
+        }
+        returns.prepend(QVariantMap{{QStringLiteral("text"),
+                                     QStringLiteral("%1 (%2 return paths)").arg(typeNames.join(QStringLiteral(" | ")))
+                                         .arg(totalPaths)},
+                                    {QStringLiteral("source"), QStringLiteral("inferred")},
+                                    {QStringLiteral("summary"), true}});
+    }
+    return returns;
+}
+
+static QVariantList pythonParametersForFunction(TSNode function, const QByteArray &source, bool isMethod)
+{
+    QVariantList parameters;
+    TSNode params = fieldNode(function, "parameters");
+    const uint32_t count = ts_node_named_child_count(params);
+    for (uint32_t index = 0; index < count; ++index) {
+        TSNode param = ts_node_named_child(params, index);
+        const QString type = tsType(param);
+        QString name;
+        QString annotation;
+        QString defaultValue;
+        if (type == QStringLiteral("identifier")) {
+            name = nodeText(param, source);
+        } else if (type == QStringLiteral("typed_parameter")) {
+            name = nodeText(ts_node_named_child(param, 0), source);
+            annotation = nodeText(fieldNode(param, "type"), source);
+        } else if (type == QStringLiteral("default_parameter")) {
+            name = nodeText(fieldNode(param, "name"), source);
+            defaultValue = nodeText(fieldNode(param, "value"), source);
+        } else if (type == QStringLiteral("typed_default_parameter")) {
+            name = nodeText(fieldNode(param, "name"), source);
+            annotation = nodeText(fieldNode(param, "type"), source);
+            defaultValue = nodeText(fieldNode(param, "value"), source);
+        } else if (type == QStringLiteral("list_splat_pattern") || type == QStringLiteral("dictionary_splat_pattern")) {
+            name = nodeText(param, source);
+        } else {
+            continue; // keyword_separator `*`, positional_separator `/`, comments
+        }
+        name = name.simplified();
+        if (name.isEmpty()) {
+            continue;
+        }
+        if (isMethod && parameters.isEmpty() && index == 0
+            && (name == QStringLiteral("self") || name == QStringLiteral("cls"))) {
+            continue;
+        }
+        QVariantMap item = makeSignatureParameter(name, annotation.simplified());
+        if (!defaultValue.isEmpty()) {
+            item.insert(QStringLiteral("default"), defaultValue.simplified());
+        }
+        parameters.append(item);
+    }
+    return parameters;
+}
+
+static QVariantMap withPythonSignature(QVariantMap symbol, TSNode function, const QByteArray &source, bool isMethod)
+{
+    symbol.insert(QStringLiteral("parameters"), pythonParametersForFunction(function, source, isMethod));
+    symbol.insert(QStringLiteral("returns"), pythonReturnsForFunction(function, source));
+    symbol.insert(QStringLiteral("signatureSource"), QStringLiteral("ast"));
+    return symbol;
+}
+
 QVariantMap SymbolParser::parsePythonTreeSitter(const QString &path, const QString &text) const
 {
     QVariantList symbols;
@@ -4263,7 +4602,9 @@ QVariantMap SymbolParser::parsePythonTreeSitter(const QString &path, const QStri
             if (detail.contains(QStringLiteral("@property"))) {
                 kind = QStringLiteral("property");
             }
-            members.append(makeSymbol(kind, name, nodeLine(child), detail, {}, nodeSnippet(snippetNode, source)));
+            members.append(withPythonSignature(makeSymbol(kind, name, nodeLine(child), detail, {},
+                                                          nodeSnippet(snippetNode, source)),
+                                               child, source, true));
         }
         return members;
     };
@@ -4278,8 +4619,9 @@ QVariantMap SymbolParser::parsePythonTreeSitter(const QString &path, const QStri
         }
         if (type == QStringLiteral("function_definition")) {
             const QString name = nodeText(fieldNode(rawNode, "name"), source);
-            return makeSymbol(QStringLiteral("function"), name, nodeLine(rawNode), detail, {},
-                              nodeSnippet(snippetNode, source));
+            return withPythonSignature(makeSymbol(QStringLiteral("function"), name, nodeLine(rawNode), detail, {},
+                                                  nodeSnippet(snippetNode, source)),
+                                       rawNode, source, false);
         }
         return {};
     };

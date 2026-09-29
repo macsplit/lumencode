@@ -277,7 +277,7 @@
           "confidence": "high",
           "parameters": [],
           "returns": [
-            "os.getcwd()"
+            "result of os.getcwd()"
           ]
         },
         {
@@ -290,7 +290,7 @@
           "confidence": "high",
           "parameters": [],
           "returns": [
-            "helper_py()"
+            "result of helper_py()"
           ]
         },
         {
@@ -307,7 +307,7 @@
           "confidence": "high",
           "parameters": [],
           "returns": [
-            "helper_py()"
+            "result of helper_py()"
           ]
         },
         {
@@ -357,7 +357,7 @@
           "confidence": "high",
           "parameters": [],
           "returns": [
-            "os.getcwd()"
+            "result of os.getcwd()"
           ]
         },
         {
@@ -852,6 +852,79 @@
       "file_expectations": {
         "package_scripts": 2
       }
+    },
+    {
+      "name": "python_return_paths",
+      "root": "tests/fixtures/baseline/python_returns",
+      "file": "returns.py",
+      "expectations": [
+        {
+          "kind": "method",
+          "name": "name",
+          "parameters": [],
+          "returns": [
+            "str"
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "describe",
+          "parameters": [
+            "verbose"
+          ],
+          "returns": [
+            "str | None (3 return paths)",
+            "str (lines 14, 17)",
+            "None (line 16)"
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "find",
+          "parameters": [
+            "key",
+            "default",
+            "*args",
+            "strict: bool",
+            "**kw"
+          ],
+          "returns": [
+            "item of self.cache | value of default (2 return paths)",
+            "item of self.cache (line 4)",
+            "value of default (line 7)"
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "rows",
+          "returns": [
+            "Generator (yields)"
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "build",
+          "returns": [
+            "Repo | list (2 return paths)",
+            "Repo (line 25)",
+            "list (line 26)"
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "check",
+          "returns": [
+            "bool"
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "log",
+          "returns": [
+            "None (no return statement)"
+          ]
+        }
+      ]
     }
   ]
 }
