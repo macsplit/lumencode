@@ -234,6 +234,7 @@ struct AstErrorScore
 {
     int errorNodes = 0;
     qint64 errorBytes = 0;
+    int declarations = 0; // declaration-like nodes the tree still forms
     bool operator<(const AstErrorScore &other) const
     {
         if (errorBytes != other.errorBytes) {
@@ -244,7 +245,51 @@ struct AstErrorScore
     bool isClean() const { return errorNodes == 0; }
 };
 
-static void collectAstErrors(TSNode node, AstErrorScore &score, QList<int> &candidateRows)
+// A repair candidate must shrink the error; among those, the one that keeps
+// the most declaration structure wins. That stops the greedy pass from
+// "fixing" a file by blanking an intact `class Foo {` header, which also makes
+// the ERROR smaller but dissolves the type.
+static bool isBetterRepair(const AstErrorScore &candidate, const AstErrorScore &best, bool bestIsCurrent)
+{
+    if (bestIsCurrent) {
+        return candidate < best;
+    }
+    if (candidate.declarations != best.declarations) {
+        return candidate.declarations > best.declarations;
+    }
+    return candidate < best;
+}
+
+static bool isDeclarationLikeType(const char *type)
+{
+    return std::strstr(type, "declaration") || std::strstr(type, "definition")
+        || std::strstr(type, "_item") || std::strstr(type, "method") || std::strstr(type, "function")
+        || std::strstr(type, "class");
+}
+
+static int countDeclarationNodes(TSNode node)
+{
+    int total = (ts_node_is_named(node) && !ts_node_is_error(node) && isDeclarationLikeType(ts_node_type(node))) ? 1 : 0;
+    const uint32_t count = ts_node_named_child_count(node);
+    for (uint32_t index = 0; index < count; ++index) {
+        total += countDeclarationNodes(ts_node_named_child(node, index));
+    }
+    return total;
+}
+
+// Candidate rows are split in two tiers. Primary: rows of stray tokens inside
+// an ERROR node (unnamed leaves, nested ERROR/MISSING nodes) other than the
+// ERROR node's own first row, plus MISSING positions - these are where the
+// parse actually went wrong. Secondary: the first row of each ERROR node,
+// which is frequently an intact declaration header (e.g. `class Foo {`) whose
+// node could not be completed; blanking it is a last resort.
+struct AstRepairCandidates
+{
+    QList<int> primary;
+    QList<int> secondary;
+};
+
+static void collectAstErrors(TSNode node, AstErrorScore &score, AstRepairCandidates &candidates)
 {
     if (ts_node_is_null(node) || !ts_node_has_error(node)) {
         return;
@@ -253,9 +298,9 @@ static void collectAstErrors(TSNode node, AstErrorScore &score, QList<int> &cand
         ++score.errorNodes;
         score.errorBytes += 1;
         const int row = static_cast<int>(ts_node_start_point(node).row);
-        candidateRows.append(row);
+        candidates.primary.append(row);
         if (row > 0) {
-            candidateRows.append(row - 1);
+            candidates.primary.append(row - 1);
         }
         return;
     }
@@ -263,28 +308,24 @@ static void collectAstErrors(TSNode node, AstErrorScore &score, QList<int> &cand
         ++score.errorNodes;
         score.errorBytes += qMax<qint64>(1, ts_node_end_byte(node) - ts_node_start_byte(node));
         const int startRow = static_cast<int>(ts_node_start_point(node).row);
-        candidateRows.append(startRow);
-        // The unexpected token is usually the first child that is not a
-        // well-formed subtree; its row is a better blanking target than the
-        // start of a large ERROR node.
+        candidates.secondary.append(startRow);
         const uint32_t childCount = ts_node_child_count(node);
-        int added = 0;
-        for (uint32_t index = 0; index < childCount && added < 3; ++index) {
+        for (uint32_t index = 0; index < childCount; ++index) {
             TSNode child = ts_node_child(node, index);
+            const int row = static_cast<int>(ts_node_start_point(child).row);
             if (ts_node_is_error(child) || ts_node_is_missing(child) || !ts_node_is_named(child)
-                || ts_node_has_error(child)) {
-                candidateRows.append(static_cast<int>(ts_node_start_point(child).row));
-                ++added;
+                || ts_node_child_count(child) == 0) {
+                candidates.primary.append(row);
             }
         }
     }
     const uint32_t childCount = ts_node_child_count(node);
     for (uint32_t index = 0; index < childCount; ++index) {
-        collectAstErrors(ts_node_child(node, index), score, candidateRows);
+        collectAstErrors(ts_node_child(node, index), score, candidates);
     }
 }
 
-static AstErrorScore scoreAstSource(TSParser *parser, const QByteArray &source, QList<int> *candidateRows)
+static AstErrorScore scoreAstSource(TSParser *parser, const QByteArray &source, AstRepairCandidates *candidateRows)
 {
     AstErrorScore score;
     TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
@@ -293,8 +334,9 @@ static AstErrorScore scoreAstSource(TSParser *parser, const QByteArray &source, 
         score.errorBytes = source.size();
         return score;
     }
-    QList<int> rows;
+    AstRepairCandidates rows;
     collectAstErrors(ts_tree_root_node(tree), score, rows);
+    score.declarations = countDeclarationNodes(ts_tree_root_node(tree));
     ts_tree_delete(tree);
     if (candidateRows) {
         *candidateRows = rows;
@@ -396,7 +438,7 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
                                           bool indentationBlocks = false)
 {
     constexpr int kMaxBlankedLines = 12;
-    constexpr int kMaxCandidatesPerRound = 6;
+    constexpr int kMaxCandidatesPerRound = 10;
     constexpr qint64 kBudgetMs = 600;
 
     AstRepairResult result;
@@ -415,51 +457,57 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
     QElapsedTimer timer;
     timer.start();
     const QVector<int> starts = lineStartOffsets(original);
-    QList<int> candidates;
+    AstRepairCandidates candidates;
     AstErrorScore current = scoreAstSource(parser, result.source, &candidates);
     QSet<int> blanked;
 
-    while (!current.isClean() && blanked.size() < kMaxBlankedLines && timer.elapsed() < kBudgetMs) {
+    auto normalizeRows = [&](const QList<int> &rows) {
         QList<int> ordered;
-        for (int row : std::as_const(candidates)) {
+        for (int row : rows) {
             if (row >= 0 && row < starts.size() && !blanked.contains(row) && !ordered.contains(row)) {
                 ordered.append(row);
             }
         }
         std::sort(ordered.begin(), ordered.end());
-        if (ordered.size() > kMaxCandidatesPerRound) {
-            ordered = ordered.mid(0, kMaxCandidatesPerRound);
-        }
+        return ordered;
+    };
 
+    while (!current.isClean() && blanked.size() < kMaxBlankedLines && timer.elapsed() < kBudgetMs) {
         QList<int> bestRows;
         AstErrorScore bestScore = current;
-        QList<int> bestCandidates;
+        AstRepairCandidates bestCandidates;
         QByteArray bestSource;
-        for (int row : std::as_const(ordered)) {
-            const QList<int> rows = indentationBlocks ? indentedBlockRows(result.source, starts, row)
-                                                      : QList<int>{row};
-            QByteArray trial = result.source;
-            for (int blankRow : rows) {
-                trial = blankSourceRow(trial, starts, blankRow);
+
+        auto tryTier = [&](const QList<int> &tierRows) {
+            QList<int> ordered = normalizeRows(tierRows);
+            if (ordered.size() > kMaxCandidatesPerRound) {
+                ordered = ordered.mid(0, kMaxCandidatesPerRound);
             }
-            if (trial == result.source) {
-                continue;
-            }
-            QList<int> trialCandidates;
-            const AstErrorScore trialScore = scoreAstSource(parser, trial, &trialCandidates);
-            if (trialScore < bestScore) {
-                bestScore = trialScore;
-                bestRows = rows;
-                bestCandidates = trialCandidates;
-                bestSource = trial;
-                if (trialScore.isClean()) {
-                    break;
+            for (int row : std::as_const(ordered)) {
+                const QList<int> rows = indentationBlocks ? indentedBlockRows(result.source, starts, row)
+                                                          : QList<int>{row};
+                QByteArray trial = result.source;
+                for (int blankRow : rows) {
+                    trial = blankSourceRow(trial, starts, blankRow);
+                }
+                if (trial == result.source) {
+                    continue;
+                }
+                AstRepairCandidates trialCandidates;
+                const AstErrorScore trialScore = scoreAstSource(parser, trial, &trialCandidates);
+                if (trialScore < current && isBetterRepair(trialScore, bestScore, bestRows.isEmpty())) {
+                    bestScore = trialScore;
+                    bestRows = rows;
+                    bestCandidates = trialCandidates;
+                    bestSource = trial;
+                }
+                if (timer.elapsed() >= kBudgetMs) {
+                    return;
                 }
             }
-            if (timer.elapsed() >= kBudgetMs) {
-                break;
-            }
-        }
+        };
+
+        tryTier(candidates.primary + candidates.secondary);
         if (bestRows.isEmpty()) {
             break;
         }
@@ -3041,8 +3089,15 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
             const QVariantMap repaired = astParse();
             // Blanking must never cost declarations the unrepaired tree already
             // had (grammar gaps can flag valid code); otherwise keep the original.
-            if (countSymbolTree(repaired.value(QStringLiteral("symbols")).toList())
-                >= countSymbolTree(astResult.value(QStringLiteral("symbols")).toList())) {
+            // It must also stay in the same league as what the heuristic parser
+            // sees: blanking that merely dissolves an enclosing type (e.g. to
+            // "balance" a missing brace) is worse than the AST+heuristic merge.
+            const int repairedCount = countSymbolTree(repaired.value(QStringLiteral("symbols")).toList());
+            const int heuristicCount = heuristicParse
+                ? countSymbolTree(heuristicParse().value(QStringLiteral("symbols")).toList())
+                : 0;
+            if (repairedCount >= countSymbolTree(astResult.value(QStringLiteral("symbols")).toList())
+                && repairedCount * 10 >= heuristicCount * 6) {
                 astResult = repaired;
                 repairAccepted = true;
             }
@@ -3186,6 +3241,64 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
         return finalizeResult(parseObjectiveC(path, text, language), QStringLiteral("heuristic"));
     }
     return finalizeResult(result, QStringLiteral("heuristic"), QStringLiteral("low"));
+}
+
+QVariantMap SymbolParser::debugAst(const QString &path)
+{
+    QVariantMap report;
+    const QString language = detectLanguage(path);
+    report.insert(QStringLiteral("language"), language);
+    QFile file(path);
+    TSLanguage *tsLanguage = languageForName(language);
+    if (!file.open(QIODevice::ReadOnly) || !tsLanguage) {
+        report.insert(QStringLiteral("error"), QStringLiteral("unreadable file or no Tree-sitter grammar"));
+        return report;
+    }
+    const QByteArray source = file.readAll();
+    TSParser *parser = ts_parser_new();
+    ts_parser_set_language(parser, tsLanguage);
+    TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
+    QVariantList errors;
+    std::function<void(TSNode, int)> visit = [&](TSNode node, int depth) {
+        if (!ts_node_has_error(node) || errors.size() >= 40) {
+            return;
+        }
+        if (ts_node_is_error(node) || ts_node_is_missing(node)) {
+            QVariantMap entry;
+            entry.insert(QStringLiteral("kind"), ts_node_is_missing(node) ? QStringLiteral("MISSING") : QStringLiteral("ERROR"));
+            entry.insert(QStringLiteral("type"), tsType(node));
+            entry.insert(QStringLiteral("depth"), depth);
+            entry.insert(QStringLiteral("startLine"), static_cast<int>(ts_node_start_point(node).row) + 1);
+            entry.insert(QStringLiteral("endLine"), static_cast<int>(ts_node_end_point(node).row) + 1);
+            TSNode parent = ts_node_parent(node);
+            entry.insert(QStringLiteral("parent"), tsType(parent));
+            QStringList children;
+            const uint32_t count = ts_node_child_count(node);
+            for (uint32_t index = 0; index < count && index < 12; ++index) {
+                TSNode child = ts_node_child(node, index);
+                children.append(QStringLiteral("%1@%2").arg(tsType(child)).arg(ts_node_start_point(child).row + 1));
+            }
+            entry.insert(QStringLiteral("children"), children);
+            errors.append(entry);
+        }
+        const uint32_t count = ts_node_child_count(node);
+        for (uint32_t index = 0; index < count; ++index) {
+            visit(ts_node_child(node, index), depth + 1);
+        }
+    };
+    visit(ts_tree_root_node(tree), 0);
+    ts_tree_delete(tree);
+    ts_parser_delete(parser);
+    report.insert(QStringLiteral("errors"), errors);
+
+    const AstRepairResult repair = repairSourceForAst(source, tsLanguage, language == QStringLiteral("python"));
+    QVariantList blanked;
+    for (int line : repair.blankedLines) {
+        blanked.append(line);
+    }
+    report.insert(QStringLiteral("repairBlankedLines"), blanked);
+    report.insert(QStringLiteral("repairClean"), repair.clean);
+    return report;
 }
 
 QVariantMap SymbolParser::parseSwiftTreeSitter(const QString &path, const QString &text) const

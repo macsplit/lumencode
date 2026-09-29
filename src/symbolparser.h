@@ -14,6 +14,9 @@ public:
 
     static QVariantMap makeResultSkeleton(const QString &path, const QString &fileName, const QString &language);
     static QString formatByteSize(qint64 bytes);
+    // Parser development aid: Tree-sitter error/missing nodes and the result of
+    // the branch-scoped repair pass for one file (see lumencode-cli --debug-ast).
+    static QVariantMap debugAst(const QString &path);
 
 private:
     static QVariantMap makeOversizedFileResult(const QString &path, const QString &language,

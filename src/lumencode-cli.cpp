@@ -105,7 +105,19 @@ int main(int argc, char *argv[])
                                       QStringLiteral("path"));
     parser.addOption(dumpFileOption);
 
+    QCommandLineOption debugAstOption(QStringList() << "debug-ast",
+                                      QStringLiteral("Print the Tree-sitter error nodes and the repair pass for a file (parser development aid)."),
+                                      QStringLiteral("path"));
+    parser.addOption(debugAstOption);
+
     parser.process(app);
+
+    if (parser.isSet(debugAstOption)) {
+        const QString targetPath = resolveCliPath(parser.value(debugAstOption), QDir::currentPath());
+        const QJsonDocument doc(QJsonObject::fromVariantMap(SymbolParser::debugAst(targetPath)));
+        std::cout << doc.toJson(QJsonDocument::Indented).toStdString() << std::endl;
+        return 0;
+    }
 
     if (parser.isSet(dumpFileOption)) {
         const QString targetPath = resolveCliPath(parser.value(dumpFileOption), QDir::currentPath());
