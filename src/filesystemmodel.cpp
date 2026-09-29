@@ -612,7 +612,7 @@ QString FileSystemModel::detectFileType(const QString &path, bool isDir)
     if (suffix == QStringLiteral("php")) {
         return QStringLiteral("php");
     }
-    if (suffix == QStringLiteral("html")) {
+    if (suffix == QStringLiteral("html") || suffix == QStringLiteral("htm")) {
         return QStringLiteral("html");
     }
     if (suffix == QStringLiteral("qml")) {
@@ -624,7 +624,9 @@ QString FileSystemModel::detectFileType(const QString &path, bool isDir)
     if (suffix == QStringLiteral("tsx") || suffix == QStringLiteral("jsx")) {
         return QStringLiteral("react");
     }
-    if (suffix == QStringLiteral("ts") || suffix == QStringLiteral("js")) {
+    if (suffix == QStringLiteral("ts") || suffix == QStringLiteral("js")
+        || suffix == QStringLiteral("mjs") || suffix == QStringLiteral("cjs")
+        || suffix == QStringLiteral("mts") || suffix == QStringLiteral("cts")) {
         return QStringLiteral("script");
     }
     if (suffix == QStringLiteral("py")) {
@@ -679,7 +681,12 @@ bool FileSystemModel::shouldIncludeFile(const QString &suffix)
 {
     static const QSet<QString> allowed = {
         QStringLiteral("js"),
+        QStringLiteral("mjs"),
+        QStringLiteral("cjs"),
         QStringLiteral("jsx"),
+        QStringLiteral("mts"),
+        QStringLiteral("cts"),
+        QStringLiteral("htm"),
         QStringLiteral("json"),
         QStringLiteral("ts"),
         QStringLiteral("tsx"),
