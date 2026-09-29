@@ -1,6 +1,7 @@
 #include "symbolparser.h"
 
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -180,6 +181,306 @@ static QString nodeSnippet(TSNode node, const QByteArray &source, int maxLines =
         return text;
     }
     return lines.mid(0, maxLines).join(QLatin1Char('\n')) + QStringLiteral("\n...");
+}
+
+// ---------------------------------------------------------------------------
+// Branch-scoped AST repair
+//
+// Tree-sitter recovers from a syntax error by wrapping the damaged region in an
+// ERROR node, and on real files that region often swallows every declaration
+// after the error (one half-typed line can hide the rest of a class). Instead of
+// giving up on the AST for the whole file, the repair pass finds the lines the
+// parser flags, blanks them (byte-for-byte, keeping newlines so every offset and
+// line number stays identical) and re-parses, greedily, while that strictly
+// shrinks the error. The resulting tree stays authoritative for everything
+// except the blanked lines, so the damage is limited to the branch that
+// contains them.
+//
+// The AST parse functions read the repaired bytes through a thread-local
+// override, while snippets keep coming from the original text (offsets match).
+// ---------------------------------------------------------------------------
+
+static thread_local const QByteArray *t_astSourceOverride = nullptr;
+
+class ScopedAstSourceOverride
+{
+public:
+    explicit ScopedAstSourceOverride(const QByteArray &source)
+        : m_previous(t_astSourceOverride)
+    {
+        t_astSourceOverride = &source;
+    }
+    ~ScopedAstSourceOverride() { t_astSourceOverride = m_previous; }
+    ScopedAstSourceOverride(const ScopedAstSourceOverride &) = delete;
+    ScopedAstSourceOverride &operator=(const ScopedAstSourceOverride &) = delete;
+
+private:
+    const QByteArray *m_previous;
+};
+
+// Parse the file currently being analysed. Honours the repair override when it
+// is active and describes the same bytes (same length); auxiliary parses of
+// *other* files must call ts_parser_parse_string directly.
+static TSTree *parseAnalysedSource(TSParser *parser, const QByteArray &source)
+{
+    const QByteArray *effective = &source;
+    if (t_astSourceOverride && t_astSourceOverride->size() == source.size()) {
+        effective = t_astSourceOverride;
+    }
+    return ts_parser_parse_string(parser, nullptr, effective->constData(), effective->size());
+}
+
+struct AstErrorScore
+{
+    int errorNodes = 0;
+    qint64 errorBytes = 0;
+    bool operator<(const AstErrorScore &other) const
+    {
+        if (errorBytes != other.errorBytes) {
+            return errorBytes < other.errorBytes;
+        }
+        return errorNodes < other.errorNodes;
+    }
+    bool isClean() const { return errorNodes == 0; }
+};
+
+static void collectAstErrors(TSNode node, AstErrorScore &score, QList<int> &candidateRows)
+{
+    if (ts_node_is_null(node) || !ts_node_has_error(node)) {
+        return;
+    }
+    if (ts_node_is_missing(node)) {
+        ++score.errorNodes;
+        score.errorBytes += 1;
+        const int row = static_cast<int>(ts_node_start_point(node).row);
+        candidateRows.append(row);
+        if (row > 0) {
+            candidateRows.append(row - 1);
+        }
+        return;
+    }
+    if (ts_node_is_error(node)) {
+        ++score.errorNodes;
+        score.errorBytes += qMax<qint64>(1, ts_node_end_byte(node) - ts_node_start_byte(node));
+        const int startRow = static_cast<int>(ts_node_start_point(node).row);
+        candidateRows.append(startRow);
+        // The unexpected token is usually the first child that is not a
+        // well-formed subtree; its row is a better blanking target than the
+        // start of a large ERROR node.
+        const uint32_t childCount = ts_node_child_count(node);
+        int added = 0;
+        for (uint32_t index = 0; index < childCount && added < 3; ++index) {
+            TSNode child = ts_node_child(node, index);
+            if (ts_node_is_error(child) || ts_node_is_missing(child) || !ts_node_is_named(child)
+                || ts_node_has_error(child)) {
+                candidateRows.append(static_cast<int>(ts_node_start_point(child).row));
+                ++added;
+            }
+        }
+    }
+    const uint32_t childCount = ts_node_child_count(node);
+    for (uint32_t index = 0; index < childCount; ++index) {
+        collectAstErrors(ts_node_child(node, index), score, candidateRows);
+    }
+}
+
+static AstErrorScore scoreAstSource(TSParser *parser, const QByteArray &source, QList<int> *candidateRows)
+{
+    AstErrorScore score;
+    TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
+    if (!tree) {
+        score.errorNodes = 1;
+        score.errorBytes = source.size();
+        return score;
+    }
+    QList<int> rows;
+    collectAstErrors(ts_tree_root_node(tree), score, rows);
+    ts_tree_delete(tree);
+    if (candidateRows) {
+        *candidateRows = rows;
+    }
+    return score;
+}
+
+static QVector<int> lineStartOffsets(const QByteArray &source)
+{
+    QVector<int> starts{0};
+    for (int index = 0; index < source.size(); ++index) {
+        if (source.at(index) == '\n') {
+            starts.append(index + 1);
+        }
+    }
+    return starts;
+}
+
+static QByteArray blankSourceRow(QByteArray source, const QVector<int> &starts, int row)
+{
+    if (row < 0 || row >= starts.size()) {
+        return source;
+    }
+    const int begin = starts.at(row);
+    const int end = row + 1 < starts.size() ? starts.at(row + 1) - 1 : source.size();
+    for (int index = begin; index < end; ++index) {
+        const char ch = source.at(index);
+        if (ch != '\n' && ch != '\r') {
+            source[index] = ' ';
+        }
+    }
+    return source;
+}
+
+static int rowIndentWidth(const QByteArray &source, const QVector<int> &starts, int row, bool *blank)
+{
+    const int begin = starts.at(row);
+    const int end = row + 1 < starts.size() ? starts.at(row + 1) - 1 : source.size();
+    int width = 0;
+    for (int index = begin; index < end; ++index) {
+        const char ch = source.at(index);
+        if (ch == ' ') {
+            ++width;
+        } else if (ch == '\t') {
+            width += 8 - (width % 8);
+        } else if (ch == '\r') {
+            continue;
+        } else {
+            *blank = false;
+            return width;
+        }
+    }
+    *blank = true;
+    return width;
+}
+
+// For indentation-scoped languages the "branch" owned by a line is the line
+// plus every following line indented deeper than it. Blanking only a damaged
+// header would otherwise re-home its body under the previous declaration.
+static QList<int> indentedBlockRows(const QByteArray &source, const QVector<int> &starts, int row)
+{
+    QList<int> rows{row};
+    bool blank = false;
+    const int headerIndent = rowIndentWidth(source, starts, row, &blank);
+    if (blank) {
+        return rows;
+    }
+    for (int next = row + 1; next < starts.size(); ++next) {
+        bool nextBlank = false;
+        const int indent = rowIndentWidth(source, starts, next, &nextBlank);
+        if (nextBlank) {
+            rows.append(next);
+            continue;
+        }
+        if (indent <= headerIndent) {
+            break;
+        }
+        rows.append(next);
+    }
+    while (rows.size() > 1) {
+        bool trailingBlank = false;
+        rowIndentWidth(source, starts, rows.constLast(), &trailingBlank);
+        if (!trailingBlank) {
+            break;
+        }
+        rows.removeLast();
+    }
+    return rows;
+}
+
+struct AstRepairResult
+{
+    QByteArray source;
+    QList<int> blankedLines; // 1-based
+    bool clean = false;
+};
+
+static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage *language,
+                                          bool indentationBlocks = false)
+{
+    constexpr int kMaxBlankedLines = 12;
+    constexpr int kMaxCandidatesPerRound = 6;
+    constexpr qint64 kBudgetMs = 600;
+
+    AstRepairResult result;
+    result.source = original;
+    if (!language) {
+        return result;
+    }
+    TSParser *parser = ts_parser_new();
+    if (!parser || !ts_parser_set_language(parser, language)) {
+        if (parser) {
+            ts_parser_delete(parser);
+        }
+        return result;
+    }
+
+    QElapsedTimer timer;
+    timer.start();
+    const QVector<int> starts = lineStartOffsets(original);
+    QList<int> candidates;
+    AstErrorScore current = scoreAstSource(parser, result.source, &candidates);
+    QSet<int> blanked;
+
+    while (!current.isClean() && blanked.size() < kMaxBlankedLines && timer.elapsed() < kBudgetMs) {
+        QList<int> ordered;
+        for (int row : std::as_const(candidates)) {
+            if (row >= 0 && row < starts.size() && !blanked.contains(row) && !ordered.contains(row)) {
+                ordered.append(row);
+            }
+        }
+        std::sort(ordered.begin(), ordered.end());
+        if (ordered.size() > kMaxCandidatesPerRound) {
+            ordered = ordered.mid(0, kMaxCandidatesPerRound);
+        }
+
+        QList<int> bestRows;
+        AstErrorScore bestScore = current;
+        QList<int> bestCandidates;
+        QByteArray bestSource;
+        for (int row : std::as_const(ordered)) {
+            const QList<int> rows = indentationBlocks ? indentedBlockRows(result.source, starts, row)
+                                                      : QList<int>{row};
+            QByteArray trial = result.source;
+            for (int blankRow : rows) {
+                trial = blankSourceRow(trial, starts, blankRow);
+            }
+            if (trial == result.source) {
+                continue;
+            }
+            QList<int> trialCandidates;
+            const AstErrorScore trialScore = scoreAstSource(parser, trial, &trialCandidates);
+            if (trialScore < bestScore) {
+                bestScore = trialScore;
+                bestRows = rows;
+                bestCandidates = trialCandidates;
+                bestSource = trial;
+                if (trialScore.isClean()) {
+                    break;
+                }
+            }
+            if (timer.elapsed() >= kBudgetMs) {
+                break;
+            }
+        }
+        if (bestRows.isEmpty()) {
+            break;
+        }
+        for (int row : std::as_const(bestRows)) {
+            blanked.insert(row);
+        }
+        result.source = bestSource;
+        current = bestScore;
+        candidates = bestCandidates;
+    }
+
+    ts_parser_delete(parser);
+    for (int row : std::as_const(blanked)) {
+        result.blankedLines.append(row + 1);
+    }
+    std::sort(result.blankedLines.begin(), result.blankedLines.end());
+    result.clean = current.isClean();
+    if (!result.clean && result.blankedLines.isEmpty()) {
+        result.source = original;
+    }
+    return result;
 }
 
 static QString rustDependencyLabel(const QString &target)
@@ -776,6 +1077,143 @@ static QVariantMap mergeRecoveredAnalysis(QVariantMap primary,
                        || recovery.value(QStringLiteral("analysisHasAstErrors")).toBool());
     appendParserAnalysisNotice(primary, QStringLiteral("warning"), message, true);
     return primary;
+}
+
+// Heuristic symbols that start on lines the AST repair had to blank. These are
+// the only places where the heuristic parser is allowed to add structure once
+// the repaired tree is clean: a damaged header line keeps its declaration, but
+// everything else stays AST-derived.
+static QVariantList heuristicSymbolsOnLines(const QVariantList &heuristicSymbols,
+                                            const QSet<int> &lines,
+                                            QVariantList astSymbols,
+                                            QVariantList *mergedAstSymbols)
+{
+    QVariantList admitted;
+    for (const QVariant &entry : heuristicSymbols) {
+        QVariantMap symbol = entry.toMap();
+        const int line = symbol.value(QStringLiteral("line")).toInt();
+        if (lines.contains(line)) {
+            symbol.insert(QStringLiteral("calledBy"), QVariantList{});
+            admitted.append(symbol);
+            continue;
+        }
+        // A damaged member header inside an intact type: graft the member onto
+        // the matching AST type instead of duplicating the type.
+        QVariantList damagedMembers;
+        for (const QVariant &memberEntry : symbol.value(QStringLiteral("members")).toList()) {
+            QVariantMap member = memberEntry.toMap();
+            if (lines.contains(member.value(QStringLiteral("line")).toInt())) {
+                member.insert(QStringLiteral("calls"), QVariantList{});
+                member.insert(QStringLiteral("calledBy"), QVariantList{});
+                member.insert(QStringLiteral("sourceMode"), QStringLiteral("heuristic"));
+                member.insert(QStringLiteral("confidence"), QStringLiteral("medium"));
+                damagedMembers.append(member);
+            }
+        }
+        if (damagedMembers.isEmpty()) {
+            continue;
+        }
+        for (int index = 0; index < astSymbols.size(); ++index) {
+            QVariantMap astSymbol = astSymbols.at(index).toMap();
+            if (astSymbol.value(QStringLiteral("name")).toString() != symbol.value(QStringLiteral("name")).toString()) {
+                continue;
+            }
+            QVariantList members = astSymbol.value(QStringLiteral("members")).toList();
+            for (const QVariant &memberEntry : std::as_const(damagedMembers)) {
+                const QString memberName = memberEntry.toMap().value(QStringLiteral("name")).toString();
+                const bool present = std::any_of(members.cbegin(), members.cend(), [&](const QVariant &existing) {
+                    return existing.toMap().value(QStringLiteral("name")).toString() == memberName;
+                });
+                if (!present) {
+                    members.append(memberEntry);
+                }
+            }
+            astSymbol.insert(QStringLiteral("members"), members);
+            astSymbols[index] = astSymbol;
+            break;
+        }
+    }
+    if (mergedAstSymbols) {
+        *mergedAstSymbols = astSymbols;
+    }
+    return admitted;
+}
+
+// Keep an admitted heuristic symbol's outgoing calls only where the target is a
+// real symbol of the merged tree, and give each target the reverse edge.
+static QVariantList linkAdmittedHeuristicCalls(QVariantList symbols, const QVariantList &admitted)
+{
+    auto identity = [](const QVariantMap &item) {
+        return QStringLiteral("%1|%2|%3").arg(item.value(QStringLiteral("kind")).toString(),
+                                              item.value(QStringLiteral("name")).toString(),
+                                              QString::number(item.value(QStringLiteral("line")).toInt()));
+    };
+    QSet<QString> admittedIds;
+    for (const QVariant &entry : admitted) {
+        admittedIds.insert(identity(entry.toMap()));
+    }
+    QHash<QString, QVariantList> reverseEdges;
+    QSet<QString> knownIds;
+    std::function<void(const QVariantList &)> collect = [&](const QVariantList &items) {
+        for (const QVariant &entry : items) {
+            const QVariantMap item = entry.toMap();
+            knownIds.insert(identity(item));
+            collect(item.value(QStringLiteral("members")).toList());
+        }
+    };
+    collect(symbols);
+
+    for (int index = 0; index < symbols.size(); ++index) {
+        QVariantMap symbol = symbols.at(index).toMap();
+        if (!admittedIds.contains(identity(symbol))) {
+            continue;
+        }
+        QVariantList kept;
+        for (const QVariant &callEntry : symbol.value(QStringLiteral("calls")).toList()) {
+            const QVariantMap call = callEntry.toMap();
+            if (knownIds.contains(identity(call))) {
+                kept.append(call);
+                reverseEdges[identity(call)].append(relationFromSymbol(symbol));
+            }
+        }
+        symbol.insert(QStringLiteral("calls"), kept);
+        symbols[index] = symbol;
+    }
+    if (reverseEdges.isEmpty()) {
+        return symbols;
+    }
+    std::function<QVariantList(QVariantList)> apply = [&](QVariantList items) {
+        for (int index = 0; index < items.size(); ++index) {
+            QVariantMap item = items.at(index).toMap();
+            const auto edges = reverseEdges.constFind(identity(item));
+            if (edges != reverseEdges.constEnd()) {
+                item.insert(QStringLiteral("calledBy"),
+                            mergeUniqueRelations(item.value(QStringLiteral("calledBy")).toList(), *edges));
+            }
+            item.insert(QStringLiteral("members"), apply(item.value(QStringLiteral("members")).toList()));
+            items[index] = item;
+        }
+        return items;
+    };
+    return apply(symbols);
+}
+
+static int countSymbolTree(const QVariantList &symbols)
+{
+    int total = 0;
+    for (const QVariant &entry : symbols) {
+        total += 1 + countSymbolTree(entry.toMap().value(QStringLiteral("members")).toList());
+    }
+    return total;
+}
+
+static QString describeLineList(const QList<int> &lines)
+{
+    QStringList parts;
+    for (int line : lines) {
+        parts.append(QString::number(line));
+    }
+    return parts.join(QStringLiteral(", "));
 }
 
 static QVariantMap makeLineRange(int startLine, int endLine)
@@ -2568,28 +3006,126 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
                               QStringLiteral("low"));
     }
 
+    // AST-first analysis shared by every Tree-sitter language:
+    //  1. parse; a clean tree is authoritative;
+    //  2. on syntax errors, blank the offending lines and re-parse (branch-scoped
+    //     repair), so the damage stays local to those lines;
+    //  3. only if the tree is still broken, supplement with the heuristic parser,
+    //     restricted to AST-uncovered ranges.
+    const QString recoveryMessage = QStringLiteral("Heuristic recovery supplemented AST-uncovered ranges only.");
+    auto analyseWithAst = [&](const QString &astLanguage,
+                              const std::function<QVariantMap()> &astParse,
+                              const std::function<QVariantMap()> &heuristicParse,
+                              bool requireSymbols) -> QVariantMap {
+        auto hasContent = [&](const QVariantMap &analysis) {
+            return requireSymbols ? !analysis.value(QStringLiteral("symbols")).toList().isEmpty()
+                                  : analysisHasMeaningfulContent(analysis);
+        };
+
+        QVariantMap astResult = astParse();
+        if (!astResult.value(QStringLiteral("analysisHasAstErrors")).toBool()) {
+            if (hasContent(astResult)) {
+                return finalizeResult(astResult, QStringLiteral("ast"));
+            }
+            if (heuristicParse) {
+                return finalizeResult(heuristicParse(), QStringLiteral("heuristic"));
+            }
+            return finalizeResult(astResult, QStringLiteral("ast"));
+        }
+
+        const AstRepairResult repair = repairSourceForAst(text.toUtf8(), languageForName(astLanguage),
+                                                          astLanguage == QStringLiteral("python"));
+        bool repairAccepted = false;
+        if (!repair.blankedLines.isEmpty()) {
+            ScopedAstSourceOverride guard(repair.source);
+            const QVariantMap repaired = astParse();
+            // Blanking must never cost declarations the unrepaired tree already
+            // had (grammar gaps can flag valid code); otherwise keep the original.
+            if (countSymbolTree(repaired.value(QStringLiteral("symbols")).toList())
+                >= countSymbolTree(astResult.value(QStringLiteral("symbols")).toList())) {
+                astResult = repaired;
+                repairAccepted = true;
+            }
+        }
+        const bool stillBroken = !repairAccepted
+            || astResult.value(QStringLiteral("analysisHasAstErrors")).toBool();
+        astResult.insert(QStringLiteral("analysisHasAstErrors"), true);
+        if (repairAccepted) {
+            QVariantList damaged;
+            for (int line : repair.blankedLines) {
+                damaged.append(line);
+            }
+            astResult.insert(QStringLiteral("analysisDamagedLines"), damaged);
+        }
+
+        if (!stillBroken && hasContent(astResult)) {
+            QVariantMap finalized = finalizeResult(astResult, QStringLiteral("ast"), QStringLiteral("high"));
+            QString fileConfidence = QStringLiteral("high");
+            if (heuristicParse) {
+                QSet<int> blankedSet(repair.blankedLines.cbegin(), repair.blankedLines.cend());
+                QVariantList astSymbols;
+                const QVariantMap heuristic = finalizeResult(heuristicParse(), QStringLiteral("heuristic"));
+                const QVariantList admitted = heuristicSymbolsOnLines(heuristic.value(QStringLiteral("symbols")).toList(),
+                                                                      blankedSet,
+                                                                      finalized.value(QStringLiteral("symbols")).toList(),
+                                                                      &astSymbols);
+                if (!admitted.isEmpty() || astSymbols != finalized.value(QStringLiteral("symbols")).toList()) {
+                    QVariantList merged = astSymbols;
+                    merged.append(admitted);
+                    merged = linkAdmittedHeuristicCalls(merged, admitted);
+                    std::stable_sort(merged.begin(), merged.end(), [](const QVariant &left, const QVariant &right) {
+                        return left.toMap().value(QStringLiteral("line")).toInt()
+                            < right.toMap().value(QStringLiteral("line")).toInt();
+                    });
+                    finalized.insert(QStringLiteral("symbols"), merged);
+                    fileConfidence = QStringLiteral("medium");
+                }
+            }
+            appendParserAnalysisNotice(finalized, QStringLiteral("warning"),
+                                       QStringLiteral("Syntax errors on line(s) %1 were excluded; the rest of the file was analysed from the syntax tree.")
+                                           .arg(describeLineList(repair.blankedLines)),
+                                       true);
+            finalized.insert(QStringLiteral("analysisSourceMode"), QStringLiteral("recovered"));
+            finalized.insert(QStringLiteral("analysisConfidence"), fileConfidence);
+            return finalized;
+        }
+        if (heuristicParse) {
+            QVariantMap recovered = finalizeRecoveredResult(astResult, heuristicParse(), recoveryMessage);
+            if (repairAccepted) {
+                appendParserAnalysisNotice(recovered, QStringLiteral("warning"),
+                                           QStringLiteral("Syntax errors on line(s) %1 were excluded before AST analysis.")
+                                               .arg(describeLineList(repair.blankedLines)),
+                                           true);
+            }
+            return recovered;
+        }
+        if (hasContent(astResult)) {
+            QVariantMap finalized = finalizeResult(astResult, QStringLiteral("ast"));
+            appendParserAnalysisNotice(finalized, QStringLiteral("warning"),
+                                       QStringLiteral("The syntax tree contains errors; some declarations may be missing."),
+                                       true);
+            return finalized;
+        }
+        return finalizeResult(astResult, QStringLiteral("ast"), QStringLiteral("low"));
+    };
+
     if (language == QStringLiteral("php")) {
-        const QVariantMap treeSitterResult = parsePhpTreeSitter(path, text);
-        const bool hasAstErrors = treeSitterResult.value(QStringLiteral("analysisHasAstErrors")).toBool();
-        const bool hasAstContent = analysisHasMeaningfulContent(treeSitterResult);
-        if (hasAstErrors) {
-            return finalizeRecoveredResult(treeSitterResult,
-                                           parsePhp(path, text),
-                                           QStringLiteral("Heuristic recovery supplemented AST-uncovered ranges only."));
-        }
-        if (hasAstContent) {
-            return finalizeResult(treeSitterResult, QStringLiteral("ast"));
-        }
-        return finalizeResult(parsePhp(path, text), QStringLiteral("heuristic"));
+        return analyseWithAst(language,
+                              [&] { return parsePhpTreeSitter(path, text); },
+                              [&] { return parsePhp(path, text); },
+                              false);
     }
     if (language == QStringLiteral("swift")) {
-        const QVariantMap treeSitterResult = parseSwiftTreeSitter(path, text);
-        if (!treeSitterResult.value(QStringLiteral("symbols")).toList().isEmpty()) {
-            return finalizeResult(treeSitterResult, QStringLiteral("ast"));
+        QVariantMap analysis = analyseWithAst(language,
+                                              [&] { return parseSwiftTreeSitter(path, text); },
+                                              {},
+                                              true);
+        if (analysis.value(QStringLiteral("symbols")).toList().isEmpty()) {
+            QVariantMap fallback = makeResultSkeleton(path, info.fileName(), language);
+            fallback.insert(QStringLiteral("summary"), QStringLiteral("No Swift symbols extracted"));
+            return finalizeResult(fallback, QStringLiteral("heuristic"), QStringLiteral("low"));
         }
-        QVariantMap fallback = makeResultSkeleton(path, info.fileName(), language);
-        fallback.insert(QStringLiteral("summary"), QStringLiteral("No Swift symbols extracted"));
-        return finalizeResult(fallback, QStringLiteral("heuristic"), QStringLiteral("low"));
+        return analysis;
     }
     if (language == QStringLiteral("html")) {
         return finalizeResult(parseHtml(path, text), QStringLiteral("heuristic"));
@@ -2598,11 +3134,10 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
         return finalizeResult(parseQml(path, text), QStringLiteral("heuristic"));
     }
     if (language == QStringLiteral("css")) {
-        const QVariantMap treeSitterResult = parseCssTreeSitter(path, text);
-        if (!treeSitterResult.value(QStringLiteral("symbols")).toList().isEmpty()) {
-            return finalizeResult(treeSitterResult, QStringLiteral("ast"));
-        }
-        return finalizeResult(parseCss(path, text), QStringLiteral("heuristic"));
+        return analyseWithAst(language,
+                              [&] { return parseCssTreeSitter(path, text); },
+                              [&] { return parseCss(path, text); },
+                              true);
     }
     if (language == QStringLiteral("script")) {
         return finalizeResult(parseScriptLike(path, text, false), QStringLiteral("heuristic"));
@@ -2612,83 +3147,40 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
     }
     if (language == QStringLiteral("tsx")
         || language == QStringLiteral("ts")) {
-        const QVariantMap treeSitterResult = parseScriptLikeTreeSitter(path, text, language);
-        const bool hasAstErrors = treeSitterResult.value(QStringLiteral("analysisHasAstErrors")).toBool();
-        const bool hasAstContent = analysisHasMeaningfulContent(treeSitterResult);
-        if (hasAstErrors) {
-            return finalizeRecoveredResult(treeSitterResult,
-                                           parseScriptLike(path, text, language == QStringLiteral("tsx")),
-                                           QStringLiteral("Heuristic recovery supplemented AST-uncovered ranges only."));
-        }
-        if (hasAstContent) {
-            return finalizeResult(treeSitterResult, QStringLiteral("ast"));
-        }
-        if (language == QStringLiteral("tsx")) {
-            return finalizeResult(parseScriptLike(path, text, true), QStringLiteral("heuristic"));
-        }
-        return finalizeResult(parseScriptLike(path, text, false), QStringLiteral("heuristic"));
+        return analyseWithAst(language,
+                              [&] { return parseScriptLikeTreeSitter(path, text, language); },
+                              [&] { return parseScriptLike(path, text, language == QStringLiteral("tsx")); },
+                              false);
     }
     if (language == QStringLiteral("json")) {
         return finalizeResult(parseJson(path, text), QStringLiteral("heuristic"));
     }
     if (language == QStringLiteral("python")) {
-        const QVariantMap treeSitterResult = parsePythonTreeSitter(path, text);
-        const bool hasAstErrors = treeSitterResult.value(QStringLiteral("analysisHasAstErrors")).toBool();
-        const bool hasAstContent = analysisHasMeaningfulContent(treeSitterResult);
-        if (hasAstErrors) {
-            return finalizeRecoveredResult(treeSitterResult,
-                                           parsePython(path, text),
-                                           QStringLiteral("Heuristic recovery supplemented AST-uncovered ranges only."));
-        }
-        if (hasAstContent) {
-            return finalizeResult(treeSitterResult, QStringLiteral("ast"));
-        }
-        return finalizeResult(parsePython(path, text), QStringLiteral("heuristic"));
+        return analyseWithAst(language,
+                              [&] { return parsePythonTreeSitter(path, text); },
+                              [&] { return parsePython(path, text); },
+                              false);
     }
     if (language == QStringLiteral("cpp")) {
         return finalizeResult(parseCppLike(path, text, language), QStringLiteral("heuristic"));
     }
     if (language == QStringLiteral("java")) {
-        const QVariantMap treeSitterResult = parseJavaTreeSitter(path, text);
-        const bool hasAstErrors = treeSitterResult.value(QStringLiteral("analysisHasAstErrors")).toBool();
-        const bool hasAstContent = analysisHasMeaningfulContent(treeSitterResult);
-        if (hasAstErrors) {
-            return finalizeRecoveredResult(treeSitterResult,
-                                           parseJava(path, text),
-                                           QStringLiteral("Heuristic recovery supplemented AST-uncovered ranges only."));
-        }
-        if (hasAstContent) {
-            return finalizeResult(treeSitterResult, QStringLiteral("ast"));
-        }
-        return finalizeResult(parseJava(path, text), QStringLiteral("heuristic"));
+        return analyseWithAst(language,
+                              [&] { return parseJavaTreeSitter(path, text); },
+                              [&] { return parseJava(path, text); },
+                              false);
     }
     if (language == QStringLiteral("csharp")) {
-        const QVariantMap treeSitterResult = parseCSharpTreeSitter(path, text);
-        const bool hasAstErrors = treeSitterResult.value(QStringLiteral("analysisHasAstErrors")).toBool();
-        const bool hasAstContent = analysisHasMeaningfulContent(treeSitterResult);
-        if (hasAstErrors) {
-            return finalizeRecoveredResult(treeSitterResult,
-                                           parseCSharp(path, text),
-                                           QStringLiteral("Heuristic recovery supplemented AST-uncovered ranges only."));
-        }
-        if (hasAstContent) {
-            return finalizeResult(treeSitterResult, QStringLiteral("ast"));
-        }
-        return finalizeResult(parseCSharp(path, text), QStringLiteral("heuristic"));
+        return analyseWithAst(language,
+                              [&] { return parseCSharpTreeSitter(path, text); },
+                              [&] { return parseCSharp(path, text); },
+                              false);
     }
     if (language == QStringLiteral("rust")) {
-        const QVariantMap treeSitterResult = parseRustTreeSitter(path, text);
-        const bool hasAstErrors = treeSitterResult.value(QStringLiteral("analysisHasAstErrors")).toBool();
-        const bool hasAstContent = analysisHasMeaningfulContent(treeSitterResult);
-        if (hasAstErrors) {
-            return finalizeRecoveredResult(treeSitterResult,
-                                           parseRust(path, text),
-                                           QStringLiteral("Heuristic recovery supplemented AST-uncovered ranges only."));
-        }
-        if (hasAstContent) {
-            return finalizeResult(treeSitterResult, QStringLiteral("ast"));
-        }
-        return finalizeResult(parseRust(path, text), QStringLiteral("heuristic"));
+        return analyseWithAst(language,
+                              [&] { return parseRustTreeSitter(path, text); },
+                              [&] { return parseRust(path, text); },
+                              false);
     }
     if (language == QStringLiteral("objc")) {
         return finalizeResult(parseObjectiveC(path, text, language), QStringLiteral("heuristic"));
@@ -2713,7 +3205,7 @@ QVariantMap SymbolParser::parseSwiftTreeSitter(const QString &path, const QStrin
         return makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("swift"));
     }
 
-    TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
+    TSTree *tree = parseAnalysedSource(parser, source);
     TSNode root = ts_tree_root_node(tree);
     const bool hasAstErrors = ts_node_has_error(root);
 
@@ -2839,7 +3331,7 @@ QVariantMap SymbolParser::parsePhpTreeSitter(const QString &path, const QString 
         return makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("php"));
     }
 
-    TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
+    TSTree *tree = parseAnalysedSource(parser, source);
     TSNode root = ts_tree_root_node(tree);
     const bool hasAstErrors = ts_node_has_error(root);
 
@@ -2982,7 +3474,7 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
         return makeResultSkeleton(path, QFileInfo(path).fileName(), language);
     }
 
-    TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
+    TSTree *tree = parseAnalysedSource(parser, source);
     TSNode root = ts_tree_root_node(tree);
     const bool hasAstErrors = ts_node_has_error(root);
 
@@ -3468,7 +3960,7 @@ QVariantMap SymbolParser::parseCssTreeSitter(const QString &path, const QString 
         return makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("css"));
     }
 
-    TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
+    TSTree *tree = parseAnalysedSource(parser, source);
     TSNode root = ts_tree_root_node(tree);
     const bool hasAstErrors = ts_node_has_error(root);
 
@@ -3598,7 +4090,7 @@ QVariantMap SymbolParser::parsePythonTreeSitter(const QString &path, const QStri
         return makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("python"));
     }
 
-    TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
+    TSTree *tree = parseAnalysedSource(parser, source);
     TSNode root = ts_tree_root_node(tree);
     const bool hasAstErrors = ts_node_has_error(root);
 
@@ -3857,7 +4349,7 @@ QVariantMap SymbolParser::parseJavaTreeSitter(const QString &path, const QString
         return makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("java"));
     }
 
-    TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
+    TSTree *tree = parseAnalysedSource(parser, source);
     TSNode root = ts_tree_root_node(tree);
     const bool hasAstErrors = ts_node_has_error(root);
 
@@ -4158,7 +4650,7 @@ QVariantMap SymbolParser::parseCSharpTreeSitter(const QString &path, const QStri
         return makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("csharp"));
     }
 
-    TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
+    TSTree *tree = parseAnalysedSource(parser, source);
     TSNode root = ts_tree_root_node(tree);
     const bool hasAstErrors = ts_node_has_error(root);
 
@@ -4461,7 +4953,7 @@ QVariantMap SymbolParser::parseRustTreeSitter(const QString &path, const QString
         return makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("rust"));
     }
 
-    TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
+    TSTree *tree = parseAnalysedSource(parser, source);
     TSNode root = ts_tree_root_node(tree);
     const bool hasAstErrors = ts_node_has_error(root);
 

@@ -190,13 +190,13 @@
         "analysis_source_mode": "recovered",
         "analysis_partial": true,
         "analysis_notices": 1,
-        "analysis_confidence": "medium",
+        "analysis_confidence": "high",
         "analysis_has_ast_errors": true,
         "symbol_source_modes": {
           "ast": 3
         },
         "symbol_confidences": {
-          "medium": 3
+          "high": 3
         }
       },
       "expectations": [
@@ -208,7 +208,7 @@
           "kind": "method",
           "name": "helperValue",
           "sourceMode": "ast",
-          "confidence": "medium",
+          "confidence": "high",
           "parameters": [],
           "returns": [
             "7"
@@ -218,7 +218,7 @@
           "kind": "method",
           "name": "runValue",
           "sourceMode": "ast",
-          "confidence": "medium"
+          "confidence": "high"
         }
       ]
     },
@@ -345,7 +345,8 @@
           "heuristic": 1
         },
         "symbol_confidences": {
-          "medium": 4
+          "high": 3,
+          "medium": 1
         }
       },
       "expectations": [
@@ -353,7 +354,7 @@
           "kind": "function",
           "name": "helper_broken_py",
           "sourceMode": "ast",
-          "confidence": "medium",
+          "confidence": "high",
           "parameters": [],
           "returns": [
             "os.getcwd()"
@@ -376,7 +377,7 @@
           "kind": "class",
           "name": "WorkerBroken",
           "sourceMode": "ast",
-          "confidence": "medium"
+          "confidence": "high"
         }
       ]
     },
@@ -450,13 +451,13 @@
         "analysis_source_mode": "recovered",
         "analysis_partial": true,
         "analysis_notices": 1,
-        "analysis_confidence": "medium",
+        "analysis_confidence": "high",
         "analysis_has_ast_errors": true,
         "symbol_source_modes": {
           "ast": 3
         },
         "symbol_confidences": {
-          "medium": 3
+          "high": 3
         }
       },
       "expectations": [
@@ -464,7 +465,7 @@
           "kind": "function",
           "name": "helper_broken_rs",
           "sourceMode": "ast",
-          "confidence": "medium",
+          "confidence": "high",
           "parameters": [],
           "returns": [
             "i32"
@@ -477,7 +478,7 @@
             "helper_broken_rs"
           ],
           "sourceMode": "ast",
-          "confidence": "medium",
+          "confidence": "high",
           "parameters": [],
           "returns": [
             "i32"
@@ -487,7 +488,7 @@
           "kind": "struct",
           "name": "WorkerBrokenRs",
           "sourceMode": "ast",
-          "confidence": "medium"
+          "confidence": "high"
         }
       ]
     },
@@ -560,13 +561,13 @@
         "analysis_source_mode": "recovered",
         "analysis_partial": true,
         "analysis_notices": 1,
-        "analysis_confidence": "medium",
+        "analysis_confidence": "high",
         "analysis_has_ast_errors": true,
         "symbol_source_modes": {
           "ast": 3
         },
         "symbol_confidences": {
-          "medium": 3
+          "high": 3
         }
       },
       "expectations": [
@@ -574,7 +575,7 @@
           "kind": "class",
           "name": "Broken",
           "sourceMode": "ast",
-          "confidence": "medium"
+          "confidence": "high"
         },
         {
           "kind": "method",
@@ -583,7 +584,7 @@
             "helperBrokenJava"
           ],
           "sourceMode": "ast",
-          "confidence": "medium",
+          "confidence": "high",
           "parameters": [],
           "returns": [
             "String"
