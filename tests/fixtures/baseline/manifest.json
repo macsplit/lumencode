@@ -822,6 +822,9 @@
           "confidence": "medium",
           "parameters": [
             "name"
+          ],
+          "calledBy": [
+            "onClicked"
           ]
         },
         {
@@ -831,6 +834,13 @@
         {
           "kind": "signal",
           "name": "accepted"
+        },
+        {
+          "kind": "method",
+          "name": "onClicked",
+          "calls": [
+            "greet"
+          ]
         }
       ],
       "file_expectations": {

@@ -62,7 +62,7 @@ search**. See [Recent History](#recent-history) for how it got here and
 | Go | Tree-sitter | repair | structs (fields), interfaces (methods, embeds), types/aliases, functions, receiver methods grouped under their type, consts/vars | yes | imports (incl. aliases) | net/http (`HandleFunc`, Go 1.22 `"GET /x"` patterns), gin, chi, echo | **from the syntax tree** (grouped params, variadics, multiple results) |
 | CSS | Tree-sitter | repair → heuristic | rules, custom properties | — | `@import`, `url()` | — | — |
 | HTML | tree-sitter-html | tolerant grammar | ids, event handlers, custom elements, forms, inline `<script>` / `<style>` contents | handlers → JS functions | linked assets | — | — |
-| QML | heuristic | — | components, properties, signals, functions | — (gap) | imports | — | snippet-derived |
+| QML | heuristic | — | components, properties, signals, functions, signal handlers | functions ↔ handlers (from handler blocks) | imports | — | snippet-derived |
 | C / C++ | Tree-sitter (C++ grammar, used for C too; heuristic fallback) | repair → heuristic; macro-noisy files (>25 initial errors) go straight to the merge | namespaces, classes/structs/unions (access levels, bases, fields, methods, ctors/dtors, function-pointer fields), out-of-line `A::f` definitions grouped by scope, enums, typedefs, prototypes | yes | `#include` (resolved for local headers) | — | **from the syntax tree** (qualifiers, pointers/references, defaults) |
 | Objective-C | heuristic | — | classes, members | — (gap) | `#import` | — | snippet-derived |
 | VB.NET | structural line parser (block-aware) | unterminated blocks closed at the next declaration, reported | namespaces, classes, modules, structures, interfaces, enums, members, fields, events | yes (incl. `RaiseEvent`) | `Imports` (incl. aliases) | ASP.NET attributes (`<Route>`, `<HttpGet>`, ...) | **exact** from declarations (`ByVal x As T`, `Optional ... = v`, `As T`) |
@@ -225,7 +225,7 @@ Phase 2. Better source inspection
 Phase 2b. Language breadth and link parity
 
 - Add new languages seen in the corpus: Kotlin, Ruby and Bash. (Go and AST-backed C/C++ done 2026-09.) (VB.NET and SQL done 2026-09 with structural parsers.)
-- Close per-language link gaps: ~~Swift imports, Java (Spring / JAX-RS) routes~~ (done 2026-09), QML and Objective-C call relations.
+- Close per-language link gaps: ~~Swift imports, Java (Spring / JAX-RS) routes~~ (done 2026-09), Objective-C call relations. (QML done 2026-09.)
 - Use `tools/corpus_scan.py --compare` and `tools/damage_probe.py` as the acceptance gates for each language.
 
 Phase 3. Better usability

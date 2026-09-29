@@ -9807,8 +9807,14 @@ QVariantMap SymbolParser::parseQml(const QString &path, const QString &text) con
     while (handlers.hasNext()) {
         const auto match = handlers.next();
         const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        // Block handlers (onClicked: { ... }) own their whole block.
+        const int lineEnd = text.indexOf(QLatin1Char('\n'), match.capturedEnd(0));
+        const QString rest = text.mid(match.capturedEnd(0), (lineEnd < 0 ? text.size() : lineEnd) - match.capturedEnd(0));
+        const QString handlerSnippet = rest.contains(QLatin1Char('{'))
+            ? snippetFromBraceBlock(text, match.capturedStart(0))
+            : snippetFromLine(text, line, 0);
         appendRootMember(makeSymbol(QStringLiteral("method"), match.captured(1), line,
-                                    QStringLiteral("signal handler"), {}, snippetFromLine(text, line, 1)));
+                                    QStringLiteral("signal handler"), {}, handlerSnippet));
     }
 
     const QRegularExpression rootComponentPattern(
@@ -9828,6 +9834,8 @@ QVariantMap SymbolParser::parseQml(const QString &path, const QString &text) con
             symbols.append(member);
         }
     }
+
+    symbols = applySnippetCallRelations(symbols);
 
     QVariantMap result = makeResultSkeleton(path, fileInfo.fileName(), QStringLiteral("qml"));
     result.insert(QStringLiteral("symbols"), symbols);
