@@ -1444,6 +1444,48 @@
           "name": "sorter_t"
         }
       ]
+    },
+    {
+      "name": "shell_functions_calls",
+      "root": "tests/fixtures/baseline/shell_basic",
+      "file": "deploy.sh",
+      "file_expectations": {
+        "dependencies": 1,
+        "quick_link_labels": []
+      },
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "build_image",
+          "parameters": [
+            "tag: $1",
+            "context: $2"
+          ],
+          "calls": [
+            "log"
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "deploy",
+          "calls": [
+            "build_image",
+            "log",
+            "summary"
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "log",
+          "calledBy": [
+            "build_image",
+            "deploy"
+          ],
+          "returns": [
+            "exit status + stdout"
+          ]
+        }
+      ]
     }
   ]
 }

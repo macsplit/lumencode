@@ -44,7 +44,7 @@ CLI_PATH = REPO_ROOT / "build" / "bin" / "lumencode-cli"
 # Files worth scanning even if lumencode does not (yet) support them, so the
 # report shows the coverage gap instead of silently skipping it.
 SCAN_EXTENSIONS = sweep.SUPPORTED_EXTENSIONS | {
-    ".mjs", ".cjs", ".mts", ".cts", ".go", ".rb", ".kt", ".kts", ".sh", ".bash",
+    ".mjs", ".cjs", ".mts", ".cts", ".go", ".rb", ".kt", ".kts", ".sh", ".bash", ".zsh",
     ".vb", ".sql", ".c", ".h", ".scss", ".less", ".htm", ".phtml",
 }
 

@@ -39,6 +39,7 @@ private:
     QVariantMap parseRust(const QString &path, const QString &text) const;
     QVariantMap parseCppTreeSitter(const QString &path, const QString &text) const;
     QVariantMap parseGoTreeSitter(const QString &path, const QString &text) const;
+    QVariantMap parseShell(const QString &path, const QString &text) const;
     QVariantMap parseSql(const QString &path, const QString &text) const;
     QVariantMap parseVbNet(const QString &path, const QString &text) const;
     QVariantMap parseObjectiveC(const QString &path, const QString &text, const QString &language) const;

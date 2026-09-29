@@ -662,6 +662,9 @@ QString FileSystemModel::detectFileType(const QString &path, bool isDir)
     if (suffix == QStringLiteral("go")) {
         return QStringLiteral("go");
     }
+    if (suffix == QStringLiteral("sh") || suffix == QStringLiteral("bash") || suffix == QStringLiteral("zsh")) {
+        return QStringLiteral("shell");
+    }
     if (QFileInfo(path).fileName() == QStringLiteral("package.json")) {
         return QStringLiteral("package");
     }
@@ -721,6 +724,9 @@ bool FileSystemModel::shouldIncludeFile(const QString &suffix)
         QStringLiteral("vb"),
         QStringLiteral("sql"),
         QStringLiteral("go"),
+        QStringLiteral("sh"),
+        QStringLiteral("bash"),
+        QStringLiteral("zsh"),
     };
     return allowed.contains(suffix);
 }

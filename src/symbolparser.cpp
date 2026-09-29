@@ -4444,6 +4444,9 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
     if (language == QStringLiteral("sql")) {
         return finalizeResult(parseSql(path, text), QStringLiteral("heuristic"), QStringLiteral("high"));
     }
+    if (language == QStringLiteral("shell")) {
+        return finalizeResult(parseShell(path, text), QStringLiteral("heuristic"));
+    }
     if (language == QStringLiteral("vbnet")) {
         return finalizeResult(parseVbNet(path, text), QStringLiteral("heuristic"), QStringLiteral("high"));
     }
@@ -6394,6 +6397,342 @@ QVariantMap SymbolParser::parseCppTreeSitter(const QString &path, const QString 
     result.insert(QStringLiteral("dependencies"), dependencies);
     result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
     result.insert(QStringLiteral("summary"), QStringLiteral("%1 top-level symbols").arg(symbols.size()));
+    return result;
+}
+
+
+// ---------------------------------------------------------------------------
+// Shell (bash / sh / zsh): structural parser
+//
+// Functions (`name() {`, `function name {`, `function name() {`) are found at
+// statement starts and extended to their matching brace, skipping quotes,
+// comments and here-documents. Parameters are read from `local x="$1"`
+// style assignments (else the positional parameters used), calls are
+// function names in command position, and `source` / `.` are dependencies.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+// Blank comments, quoted string text and here-doc bodies (newlines kept),
+// while keeping $( ... ) / `...` command substitutions visible even inside
+// double quotes - calls live there, and their own quotes nest.
+class ShellNoiseBlanker
+{
+public:
+    explicit ShellNoiseBlanker(const QString &text) : m_out(text), m_size(text.size()) {}
+
+    QString run()
+    {
+        scanCode(0, QChar());
+        return m_out;
+    }
+
+private:
+    void blank(int from, int to)
+    {
+        for (int i = from; i < to && i < m_size; ++i) {
+            if (m_out.at(i) != QLatin1Char('\n')) {
+                m_out[i] = QLatin1Char(' ');
+            }
+        }
+    }
+
+    // Scan code until `terminator` (')' for $( ), '`' for backticks, none for
+    // top level). Returns the index just past the terminator.
+    int scanCode(int index, QChar terminator)
+    {
+        int parenDepth = 0;
+        while (index < m_size) {
+            const QChar ch = m_out.at(index);
+            if (ch == QLatin1Char('\\')) {
+                index += 2;
+                continue;
+            }
+            if (!terminator.isNull() && ch == terminator && (terminator != QLatin1Char(')') || parenDepth == 0)) {
+                return index + 1;
+            }
+            if (ch == QLatin1Char('(')) {
+                ++parenDepth;
+            } else if (ch == QLatin1Char(')') && parenDepth > 0) {
+                --parenDepth;
+            } else if (ch == QLatin1Char('#') && (index == 0 || m_out.at(index - 1).isSpace() || m_out.at(index - 1) == QLatin1Char(';'))) {
+                int end = m_out.indexOf(QLatin1Char('\n'), index);
+                if (end < 0) end = m_size;
+                blank(index, end);
+                index = end;
+                continue;
+            } else if (ch == QLatin1Char('\'')) {
+                const bool ansi = index > 0 && m_out.at(index - 1) == QLatin1Char('$');
+                int end = index + 1;
+                while (end < m_size && m_out.at(end) != QLatin1Char('\'')) {
+                    if (ansi && m_out.at(end) == QLatin1Char('\\')) ++end;
+                    ++end;
+                }
+                blank(index + 1, end);
+                index = end + 1;
+                continue;
+            } else if (ch == QLatin1Char('"')) {
+                index = scanDouble(index + 1);
+                continue;
+            } else if (ch == QLatin1Char('`')) {
+                index = scanCode(index + 1, QLatin1Char('`'));
+                continue;
+            } else if (ch == QLatin1Char('$') && index + 1 < m_size && m_out.at(index + 1) == QLatin1Char('(')) {
+                index = scanCode(index + 2, QLatin1Char(')'));
+                continue;
+            } else if (ch == QLatin1Char('<') && index + 1 < m_size && m_out.at(index + 1) == QLatin1Char('<')) {
+                static const QRegularExpression heredoc(QStringLiteral(R"(<<-?\s*['"]?([A-Za-z_]\w*)['"]?)"));
+                const auto match = heredoc.match(m_out, index);
+                if (match.hasMatch() && match.capturedStart(0) == index) {
+                    const int bodyStart = m_out.indexOf(QLatin1Char('\n'), index);
+                    if (bodyStart >= 0) {
+                        const QRegularExpression endMarker(QStringLiteral("^\\s*%1\\s*$").arg(QRegularExpression::escape(match.captured(1))),
+                                                           QRegularExpression::MultilineOption);
+                        const auto endMatch = endMarker.match(m_out, bodyStart + 1);
+                        const int end = endMatch.hasMatch() ? endMatch.capturedEnd(0) : m_size;
+                        blank(bodyStart + 1, end);
+                        index = end;
+                        continue;
+                    }
+                }
+            }
+            ++index;
+        }
+        return m_size;
+    }
+
+    // Inside "...": blank literal text, recurse into substitutions.
+    int scanDouble(int index)
+    {
+        int literalStart = index;
+        while (index < m_size) {
+            const QChar ch = m_out.at(index);
+            if (ch == QLatin1Char('\\')) {
+                index += 2;
+                continue;
+            }
+            if (ch == QLatin1Char('"')) {
+                blank(literalStart, index);
+                return index + 1;
+            }
+            if (ch == QLatin1Char('$') && index + 1 < m_size && m_out.at(index + 1) == QLatin1Char('(')) {
+                blank(literalStart, index);
+                index = scanCode(index + 2, QLatin1Char(')'));
+                literalStart = index;
+                continue;
+            }
+            if (ch == QLatin1Char('`')) {
+                blank(literalStart, index);
+                index = scanCode(index + 1, QLatin1Char('`'));
+                literalStart = index;
+                continue;
+            }
+            ++index;
+        }
+        blank(literalStart, m_size);
+        return m_size;
+    }
+
+    QString m_out;
+    int m_size;
+};
+
+QString blankShellNoise(const QString &text)
+{
+    return ShellNoiseBlanker(text).run();
+}
+
+} // namespace
+
+QVariantMap SymbolParser::parseShell(const QString &path, const QString &text) const
+{
+    QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("shell"));
+    const QString clean = blankShellNoise(text);
+    const QStringList physicalLines = text.split(QLatin1Char('\n'));
+    static const QRegularExpression functionPattern(
+        QStringLiteral(R"(^[ \t]*(?:function\s+([A-Za-z_][\w:.-]*)\s*(?:\(\s*\))?|([A-Za-z_][\w:.-]*)\s*\(\s*\))\s*(?:\n\s*)?\{)"),
+        QRegularExpression::MultilineOption);
+
+    struct ShellFunction
+    {
+        QVariantMap symbol;
+        int bodyStart = 0;
+        int bodyEnd = 0;
+    };
+    QList<ShellFunction> functions;
+    auto it = functionPattern.globalMatch(clean);
+    int resumeAt = 0;
+    while (it.hasNext()) {
+        const auto match = it.next();
+        if (match.capturedStart(0) < resumeAt) {
+            continue; // nested function inside a previous body
+        }
+        const QString name = match.captured(1).isEmpty() ? match.captured(2) : match.captured(1);
+        const int open = match.capturedEnd(0) - 1;
+        int depth = 0;
+        int close = clean.size();
+        for (int i = open; i < clean.size(); ++i) {
+            const QChar ch = clean.at(i);
+            if (ch == QLatin1Char('{')) {
+                ++depth;
+            } else if (ch == QLatin1Char('}')) {
+                if (--depth == 0) {
+                    close = i;
+                    break;
+                }
+            }
+        }
+        // Damage limit: an unbalanced body stops at the next function header.
+        const auto next = functionPattern.match(clean, match.capturedEnd(0));
+        if (close == clean.size() && next.hasMatch()) {
+            close = next.capturedStart(0) - 1;
+        }
+        const int line = lineNumberAtOffset(clean, match.capturedStart(0));
+        const int endLine = lineNumberAtOffset(clean, qMax(match.capturedStart(0), close));
+        QStringList snippetLines;
+        for (int l = line; l <= endLine && l <= physicalLines.size() && snippetLines.size() < 10; ++l) {
+            snippetLines.append(physicalLines.at(l - 1));
+        }
+        if (endLine - line + 1 > 10) {
+            snippetLines.append(QStringLiteral("..."));
+        }
+        QVariantMap symbol = makeSymbol(QStringLiteral("function"), name, line, QString(), {}, snippetLines.join(QLatin1Char('\n')));
+        symbol.insert(QStringLiteral("endLine"), endLine);
+
+        // Parameters: local/declare x="$1" names, else the positional parameters used.
+        // Original text (parameter expansions live inside double quotes), with
+        // single-quoted spans removed ('{print $1}' is awk, not a parameter).
+        QString body = text.mid(open, close - open);
+        static const QRegularExpression singleQuoted(QStringLiteral(R"('[^'\n]*')"));
+        body.replace(singleQuoted, QStringLiteral("''"));
+        QMap<int, QString> named;
+        static const QRegularExpression localParam(QStringLiteral(R"(\b(?:local|declare|typeset|readonly)\s+(?:-\w+\s+)*([A-Za-z_]\w*)=["']?\$\{?([1-9])\b)"));
+        auto localIt = localParam.globalMatch(body);
+        while (localIt.hasNext()) {
+            const auto localMatch = localIt.next();
+            named.insert(localMatch.captured(2).toInt(), localMatch.captured(1));
+        }
+        static const QRegularExpression positional(QStringLiteral(R"(\$\{?([1-9])\b)"));
+        int highest = 0;
+        auto positionalIt = positional.globalMatch(body);
+        while (positionalIt.hasNext()) {
+            highest = qMax(highest, positionalIt.next().captured(1).toInt());
+        }
+        QVariantList parameters;
+        for (int n = 1; n <= highest; ++n) {
+            parameters.append(makeSignatureParameter(named.value(n, QStringLiteral("$%1").arg(n)),
+                                                     named.contains(n) ? QStringLiteral("$%1").arg(n) : QString()));
+        }
+        if (body.contains(QStringLiteral("$@")) || body.contains(QStringLiteral("${@")) || body.contains(QStringLiteral("$*"))) {
+            parameters.append(makeSignatureParameter(QStringLiteral("$@"), QStringLiteral("remaining arguments")));
+        }
+        symbol.insert(QStringLiteral("parameters"), parameters);
+        QStringList outputs{QStringLiteral("exit status")};
+        static const QRegularExpression printsOutput(QStringLiteral(R"(\b(?:echo|printf|cat)\b)"));
+        if (printsOutput.match(clean.mid(open, close - open)).hasMatch()) {
+            outputs.append(QStringLiteral("stdout"));
+        }
+        symbol.insert(QStringLiteral("returns"), QVariantList{QVariantMap{{QStringLiteral("text"), outputs.join(QStringLiteral(" + "))}}});
+        symbol.insert(QStringLiteral("signatureSource"), QStringLiteral("parser"));
+        functions.append({symbol, open + 1, close});
+        resumeAt = close;
+    }
+
+    // Calls: function names in command position.
+    QHash<QString, int> byName;
+    for (int i = 0; i < functions.size(); ++i) {
+        byName.insert(functions.at(i).symbol.value(QStringLiteral("name")).toString(), i);
+    }
+    QHash<QString, QVariantList> callsByKey;
+    QHash<QString, QVariantList> calledByByKey;
+    static const QRegularExpression commandWord(QStringLiteral(R"((?:^|[;&|({`]|\$\(|\bthen\b|\bdo\b|\belse\b|&&|\|\|)\s*(?:command\s+|exec\s+|time\s+)?([A-Za-z_][\w:.-]*))"),
+                                                QRegularExpression::MultilineOption);
+    for (int i = 0; i < functions.size(); ++i) {
+        const QString body = clean.mid(functions.at(i).bodyStart, functions.at(i).bodyEnd - functions.at(i).bodyStart);
+        auto callIt = commandWord.globalMatch(body);
+        while (callIt.hasNext()) {
+            const QString name = callIt.next().captured(1);
+            const int target = byName.value(name, -1);
+            if (target < 0 || target == i) {
+                continue;
+            }
+            const QVariantMap &source = functions.at(i).symbol;
+            const QVariantMap &callee = functions.at(target).symbol;
+            appendUniqueRelation(callsByKey, symbolKey(source), relationFromSymbol(callee), QStringLiteral("calls"));
+            appendUniqueRelation(calledByByKey, symbolKey(callee), relationFromSymbol(source), QStringLiteral("called by"));
+        }
+    }
+    QVariantList symbols;
+    for (const ShellFunction &function : std::as_const(functions)) {
+        symbols.append(function.symbol);
+    }
+    // Exported / readonly configuration at top level.
+    static const QRegularExpression exported(QStringLiteral(R"(^(?:export|readonly|declare\s+-[xr]+)\s+([A-Za-z_]\w*)=)"),
+                                             QRegularExpression::MultilineOption);
+    auto exportIt = exported.globalMatch(clean);
+    while (exportIt.hasNext()) {
+        const auto match = exportIt.next();
+        bool insideFunction = false;
+        for (const ShellFunction &function : std::as_const(functions)) {
+            if (match.capturedStart(0) > function.bodyStart && match.capturedStart(0) < function.bodyEnd) {
+                insideFunction = true;
+                break;
+            }
+        }
+        if (!insideFunction) {
+            const int line = lineNumberAtOffset(clean, match.capturedStart(0));
+            symbols.append(makeSymbol(QStringLiteral("variable"), match.captured(1), line, QStringLiteral("exported"), {},
+                                      physicalLines.value(line - 1)));
+        }
+    }
+    symbols = applyRelationsToSymbols(symbols, callsByKey, calledByByKey);
+    std::stable_sort(symbols.begin(), symbols.end(), [](const QVariant &a, const QVariant &b) {
+        return a.toMap().value(QStringLiteral("line")).toInt() < b.toMap().value(QStringLiteral("line")).toInt();
+    });
+
+    // Dependencies: source / . files (literal paths; $DIR-relative resolved by basename).
+    QVariantList dependencies;
+    static const QRegularExpression sourcePattern(QStringLiteral(R"(^[ \t]*(?:source|\.)[ \t]+([^;&|#\n]+))"),
+                                                  QRegularExpression::MultilineOption);
+    auto sourceIt = sourcePattern.globalMatch(text);
+    QSet<QString> seen;
+    while (sourceIt.hasNext()) {
+        const auto match = sourceIt.next();
+        QString target = match.captured(1).trimmed();
+        if (target.startsWith(QLatin1Char('-'))) {
+            continue;
+        }
+        // Drop directory-prefix idioms: $(dirname "$0"), ${BASH_SOURCE%/*}, $DIR, ...
+        QString literal = target;
+        static const QRegularExpression substitution(QStringLiteral(R"(\$\((?:[^()]|\([^()]*\))*\)|\$\{[^}]*\}|\$[A-Za-z_]\w*)"));
+        literal.remove(substitution);
+        literal.remove(QLatin1Char('"'));
+        literal.remove(QLatin1Char('\''));
+        literal = literal.trimmed();
+        while (literal.startsWith(QLatin1Char('/')) && target.contains(QLatin1Char('$'))) {
+            literal = literal.mid(1);
+        }
+        if (literal.isEmpty() || seen.contains(literal)) {
+            continue;
+        }
+        seen.insert(literal);
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        const QString resolved = literal.startsWith(QLatin1Char('/')) ? literal
+                                                                      : QDir::cleanPath(QFileInfo(path).dir().absoluteFilePath(literal));
+        QVariantMap item = makeSourceContextItem(path, QStringLiteral("shell"), line, physicalLines.value(line - 1).trimmed(),
+                                                 QStringLiteral("source dependency"));
+        item.insert(QStringLiteral("target"), target);
+        item.insert(QStringLiteral("type"), QStringLiteral("source"));
+        item.insert(QStringLiteral("label"), QFileInfo(literal).fileName());
+        item.insert(QStringLiteral("path"), QFileInfo::exists(resolved) ? resolved : QString());
+        item.insert(QStringLiteral("exists"), QFileInfo::exists(resolved) || target.contains(QLatin1Char('$')));
+        dependencies.append(item);
+    }
+
+    result.insert(QStringLiteral("symbols"), symbols);
+    result.insert(QStringLiteral("dependencies"), dependencies);
+    result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
+    result.insert(QStringLiteral("summary"), QStringLiteral("%1 functions").arg(functions.size()));
     return result;
 }
 
@@ -9985,6 +10324,9 @@ QString SymbolParser::detectLanguage(const QString &path)
         || suffix == QStringLiteral("h") || suffix == QStringLiteral("hh")
         || suffix == QStringLiteral("hpp") || suffix == QStringLiteral("hxx")) {
         return QStringLiteral("cpp");
+    }
+    if (suffix == QStringLiteral("sh") || suffix == QStringLiteral("bash") || suffix == QStringLiteral("zsh")) {
+        return QStringLiteral("shell");
     }
     if (suffix == QStringLiteral("go")) {
         return QStringLiteral("go");

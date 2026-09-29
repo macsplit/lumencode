@@ -67,6 +67,7 @@ search**. See [Recent History](#recent-history) for how it got here and
 | Objective-C | heuristic | — | classes, members | — (gap) | `#import` | — | snippet-derived |
 | VB.NET | structural line parser (block-aware) | unterminated blocks closed at the next declaration, reported | namespaces, classes, modules, structures, interfaces, enums, members, fields, events | yes (incl. `RaiseEvent`) | `Imports` (incl. aliases) | ASP.NET attributes (`<Route>`, `<HttpGet>`, ...) | **exact** from declarations (`ByVal x As T`, `Optional ... = v`, `As T`) |
 | SQL (MySQL / MariaDB, SQL Server T-SQL) | statement-aware parser | objects end at the next `CREATE`/`ALTER`, `GO` or `DELIMITER`; strings cannot cross batches | tables (columns, keys), views, procedures, functions, triggers, indexes | table → table *references* (FKs); views/routines/triggers *read* / *write* tables; routines *execute* / *call* routines; triggers *fire on* tables | `USE`, `source` / `\.` / `:r` scripts | — | from declarations (`IN`/`OUT`/`@p ... OUTPUT`, defaults, `RETURNS`) |
+| Shell (bash / sh / zsh) | structural parser | unbalanced bodies stop at the next function header; quoting (incl. nested `"$(… "…")"`), comments and here-docs handled | functions (all three forms), exported / readonly variables | yes (command position, incl. inside `$( … )`) | `source` / `.` (directory-prefix idioms resolved) | — | named from `local x="$1"`, else positional; `$@`; exit status / stdout |
 | JSON | — | — | `package.json` scripts, entry, dependencies | — | — | — | — |
 
 "repair → heuristic" is the parser authority model:
@@ -224,7 +225,7 @@ Phase 2. Better source inspection
 
 Phase 2b. Language breadth and link parity
 
-- Add new languages seen in the corpus: Kotlin, Ruby and Bash. (Go and AST-backed C/C++ done 2026-09.) (VB.NET and SQL done 2026-09 with structural parsers.)
+- Add new languages seen in the corpus: Kotlin and Ruby. (Go, AST-backed C/C++ and shell done 2026-09.) Their Tree-sitter grammars are large (≈23 MB and 15 MB of generated source), so a structural parser like the VB.NET / SQL / shell ones may be the better trade-off. (VB.NET and SQL done 2026-09 with structural parsers.)
 - Close per-language link gaps: ~~Swift imports, Java (Spring / JAX-RS) routes~~ (done 2026-09), Objective-C call relations. (QML done 2026-09.)
 - Use `tools/corpus_scan.py --compare` and `tools/damage_probe.py` as the acceptance gates for each language.
 
