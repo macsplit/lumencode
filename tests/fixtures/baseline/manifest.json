@@ -1210,6 +1210,86 @@
           ]
         }
       ]
+    },
+    {
+      "name": "sql_tsql_objects_relations",
+      "root": "tests/fixtures/baseline/sql_tsql",
+      "file": "schema.sql",
+      "file_expectations": {
+        "dependencies": 1
+      },
+      "expectations": [
+        {
+          "kind": "table",
+          "name": "dbo.Orders",
+          "calls": [
+            "dbo.Customers"
+          ],
+          "calledBy": [
+            "dbo.usp_PlaceOrder",
+            "dbo.usp_LogOrder",
+            "dbo.fn_OrderCount"
+          ]
+        },
+        {
+          "kind": "procedure",
+          "name": "dbo.usp_PlaceOrder",
+          "parameters": [
+            "@CustomerId: INT",
+            "@Total: DECIMAL(10, 2)",
+            "@OrderId: INT"
+          ],
+          "calls": [
+            "dbo.Orders",
+            "dbo.usp_LogOrder",
+            "dbo.fn_OrderCount"
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "dbo.fn_OrderCount",
+          "returns": [
+            "INT"
+          ]
+        },
+        {
+          "kind": "trigger",
+          "name": "dbo.trg_Orders_Audit",
+          "calls": [
+            "dbo.Orders",
+            "dbo.Customers"
+          ]
+        },
+        {
+          "kind": "index",
+          "name": "IX_Orders_Customer",
+          "calls": [
+            "dbo.Orders"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sql_tsql_damage_stays_in_batch",
+      "root": "tests/fixtures/baseline/sql_tsql",
+      "file": "broken.sql",
+      "expectations": [
+        {
+          "kind": "procedure",
+          "name": "dbo.usp_AfterBroken",
+          "calls": [
+            "Items"
+          ]
+        },
+        {
+          "kind": "table",
+          "name": "Items",
+          "calledBy": [
+            "dbo.usp_Broken",
+            "dbo.usp_AfterBroken"
+          ]
+        }
+      ]
     }
   ]
 }

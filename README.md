@@ -64,6 +64,7 @@ search**. See [Recent History](#recent-history) for how it got here and
 | QML | heuristic | — | components, properties, signals, functions | — (gap) | imports | — | snippet-derived |
 | C / C++, Objective-C | heuristic | — | top-level declarations / classes | — (gap) | `#include` / `#import` | — | snippet-derived |
 | VB.NET | structural line parser (block-aware) | unterminated blocks closed at the next declaration, reported | namespaces, classes, modules, structures, interfaces, enums, members, fields, events | yes (incl. `RaiseEvent`) | `Imports` (incl. aliases) | ASP.NET attributes (`<Route>`, `<HttpGet>`, ...) | **exact** from declarations (`ByVal x As T`, `Optional ... = v`, `As T`) |
+| SQL (MySQL / MariaDB, SQL Server T-SQL) | statement-aware parser | objects end at the next `CREATE`/`ALTER`, `GO` or `DELIMITER`; strings cannot cross batches | tables (columns, keys), views, procedures, functions, triggers, indexes | table → table *references* (FKs); views/routines/triggers *read* / *write* tables; routines *execute* / *call* routines; triggers *fire on* tables | `USE`, `source` / `\.` / `:r` scripts | — | from declarations (`IN`/`OUT`/`@p ... OUTPUT`, defaults, `RETURNS`) |
 | JSON | — | — | `package.json` scripts, entry, dependencies | — | — | — | — |
 
 "repair → heuristic" is the parser authority model:
@@ -221,7 +222,7 @@ Phase 2. Better source inspection
 
 Phase 2b. Language breadth and link parity
 
-- Add AST-backed C/C++ (members, relations) and new languages seen in the corpus: Go, Kotlin, Ruby, Bash, VB.NET and SQL (heuristic where no suitable grammar exists).
+- Add AST-backed C/C++ (members, relations) and new languages seen in the corpus: Go, Kotlin, Ruby and Bash. (VB.NET and SQL done 2026-09 with structural parsers.)
 - Close per-language link gaps: ~~Swift imports, Java (Spring / JAX-RS) routes~~ (done 2026-09), QML and Objective-C call relations.
 - Use `tools/corpus_scan.py --compare` and `tools/damage_probe.py` as the acceptance gates for each language.
 

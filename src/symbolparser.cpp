@@ -3961,6 +3961,9 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
     if (language == QStringLiteral("objc")) {
         return finalizeResult(parseObjectiveC(path, text, language), QStringLiteral("heuristic"));
     }
+    if (language == QStringLiteral("sql")) {
+        return finalizeResult(parseSql(path, text), QStringLiteral("heuristic"), QStringLiteral("high"));
+    }
     if (language == QStringLiteral("vbnet")) {
         return finalizeResult(parseVbNet(path, text), QStringLiteral("heuristic"), QStringLiteral("high"));
     }
@@ -4613,6 +4616,455 @@ QVariantMap SymbolParser::parseVbNet(const QString &path, const QString &text) c
                                        .arg(unterminated.mid(0, 5).join(QStringLiteral("; "))),
                                    true);
     }
+    return result;
+}
+
+
+// ---------------------------------------------------------------------------
+// SQL (MySQL / MariaDB and SQL Server T-SQL): statement-aware parser
+//
+// Comments and string literals are blanked first (newlines kept, so every
+// offset still maps to its line). Objects are found at statement starts;
+// a routine body ends at the next statement-level CREATE/ALTER, a T-SQL `GO`
+// line or the MySQL custom DELIMITER, so a broken body never swallows the
+// next object. Relations between objects defined in the file:
+//   table  -> table      references (foreign keys)
+//   view / routine / trigger -> table   reads / writes
+//   routine -> routine   executes (CALL / EXEC / function calls)
+// ---------------------------------------------------------------------------
+
+namespace {
+
+QString blankSqlCommentsAndStrings(const QString &text)
+{
+    QString out = text;
+    const int size = out.size();
+    int index = 0;
+    auto blank = [&](int from, int to) {
+        for (int i = from; i < to && i < size; ++i) {
+            if (out.at(i) != QLatin1Char('\n')) {
+                out[i] = QLatin1Char(' ');
+            }
+        }
+    };
+    while (index < size) {
+        const QChar ch = out.at(index);
+        const QChar next = index + 1 < size ? out.at(index + 1) : QChar();
+        if ((ch == QLatin1Char('-') && next == QLatin1Char('-')) || ch == QLatin1Char('#')) {
+            int end = out.indexOf(QLatin1Char('\n'), index);
+            if (end < 0) end = size;
+            blank(index, end);
+            index = end;
+        } else if (ch == QLatin1Char('/') && next == QLatin1Char('*')) {
+            int end = out.indexOf(QStringLiteral("*/"), index + 2);
+            end = end < 0 ? size : end + 2;
+            blank(index, end);
+            index = end;
+        } else if (ch == QLatin1Char('\'')) {
+            int end = index + 1;
+            while (end < size) {
+                if (out.at(end) == QLatin1Char('\n')) {
+                    // An unterminated string must not run across a batch or
+                    // delimiter boundary (a GO / DELIMITER line).
+                    static const QRegularExpression batchLine(QStringLiteral(R"(^[ \t]*(GO|DELIMITER)\b)"),
+                                                              QRegularExpression::CaseInsensitiveOption);
+                    const int lineEnd = out.indexOf(QLatin1Char('\n'), end + 1);
+                    if (batchLine.match(out.mid(end + 1, (lineEnd < 0 ? size : lineEnd) - end - 1)).hasMatch()) {
+                        break;
+                    }
+                }
+                if (out.at(end) == QLatin1Char('\'')) {
+                    if (end + 1 < size && out.at(end + 1) == QLatin1Char('\'')) { end += 2; continue; }
+                    break;
+                }
+                if (out.at(end) == QLatin1Char('\\')) { ++end; }
+                ++end;
+            }
+            blank(index + 1, end); // keep the quotes
+            index = end + 1;
+        } else {
+            ++index;
+        }
+    }
+    return out;
+}
+
+QString sqlUnquote(QString name)
+{
+    name = name.trimmed();
+    QStringList parts;
+    for (QString part : name.split(QLatin1Char('.'))) {
+        part = part.trimmed();
+        if ((part.startsWith(QLatin1Char('`')) && part.endsWith(QLatin1Char('`')))
+            || (part.startsWith(QLatin1Char('[')) && part.endsWith(QLatin1Char(']')))
+            || (part.startsWith(QLatin1Char('"')) && part.endsWith(QLatin1Char('"')))) {
+            part = part.mid(1, part.size() - 2);
+        }
+        parts.append(part);
+    }
+    return parts.join(QLatin1Char('.'));
+}
+
+QString sqlBaseName(const QString &qualified)
+{
+    return qualified.section(QLatin1Char('.'), -1).toLower();
+}
+
+const QString &sqlNamePattern()
+{
+    static const QString pattern = QStringLiteral(
+        R"((?:(?:`[^`]+`|\[[^\]]+\]|"[^"]+"|[A-Za-z_@#][\w$#@]*)\s*\.\s*)*(?:`[^`]+`|\[[^\]]+\]|"[^"]+"|[A-Za-z_@#][\w$#@]*))");
+    return pattern;
+}
+
+} // namespace
+
+QVariantMap SymbolParser::parseSql(const QString &path, const QString &text) const
+{
+    QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("sql"));
+    const QString clean = blankSqlCommentsAndStrings(text);
+    const QStringList physicalLines = text.split(QLatin1Char('\n'));
+
+    // Statement boundaries that always end an object: GO lines, DELIMITER lines,
+    // and the start of the next top-level CREATE / ALTER / DROP statement.
+    static const QRegularExpression boundaryPattern(
+        QStringLiteral(R"(^[ \t]*(?:GO\b|DELIMITER\s|(?:CREATE|ALTER|DROP)\s))"),
+        QRegularExpression::MultilineOption | QRegularExpression::CaseInsensitiveOption);
+    QList<int> boundaries;
+    auto boundaryIt = boundaryPattern.globalMatch(clean);
+    while (boundaryIt.hasNext()) {
+        boundaries.append(boundaryIt.next().capturedStart(0));
+    }
+    boundaries.append(clean.size());
+
+    static const QRegularExpression createPattern(
+        QStringLiteral(R"(^[ \t]*CREATE\s+(?:OR\s+(?:REPLACE|ALTER)\s+)?(?:DEFINER\s*=\s*\S+\s+)?(?:ALGORITHM\s*=\s*\w+\s+)?(?:SQL\s+SECURITY\s+\w+\s+)?(?:TEMPORARY\s+|TEMP\s+)?(?:UNIQUE\s+|CLUSTERED\s+|NONCLUSTERED\s+)*(TABLE|VIEW|PROCEDURE|PROC|FUNCTION|TRIGGER|INDEX|TYPE|SEQUENCE|SCHEMA|DATABASE)\s+(?:IF\s+NOT\s+EXISTS\s+)?(%1))").arg(sqlNamePattern()),
+        QRegularExpression::MultilineOption | QRegularExpression::CaseInsensitiveOption);
+
+    struct SqlObject
+    {
+        QVariantMap symbol;
+        int start = 0;
+        int end = 0;
+        QString kind;
+    };
+    QList<SqlObject> objects;
+    auto snippetFor = [&](int startLine, int endLine) {
+        QStringList out;
+        for (int line = startLine; line <= endLine && line <= physicalLines.size() && out.size() < 10; ++line) {
+            QString physical = physicalLines.at(line - 1);
+            physical.remove(QLatin1Char('\r'));
+            out.append(physical);
+        }
+        if (endLine - startLine + 1 > 10) {
+            out.append(QStringLiteral("..."));
+        }
+        return out.join(QLatin1Char('\n'));
+    };
+
+    auto createIt = createPattern.globalMatch(clean);
+    while (createIt.hasNext()) {
+        const auto match = createIt.next();
+        const int start = match.capturedStart(0);
+        int end = clean.size();
+        for (int boundary : std::as_const(boundaries)) {
+            if (boundary > start + 1) {
+                end = boundary;
+                break;
+            }
+        }
+        QString kind = match.captured(1).toLower();
+        if (kind == QStringLiteral("proc")) {
+            kind = QStringLiteral("procedure");
+        }
+        const QString name = sqlUnquote(match.captured(2));
+        const QString body = clean.mid(start, end - start);
+        const int startLine = lineNumberAtOffset(clean, start);
+        int endLine = lineNumberAtOffset(clean, qMax(start, end - 1));
+        // Trim trailing blank lines from the extent.
+        while (endLine > startLine && endLine <= physicalLines.size() && physicalLines.at(endLine - 1).trimmed().isEmpty()) {
+            --endLine;
+        }
+
+        QVariantMap symbol = makeSymbol(kind, name, startLine, QString(), {}, snippetFor(startLine, endLine));
+        symbol.insert(QStringLiteral("endLine"), endLine);
+        QVariantList members;
+
+        if (kind == QStringLiteral("table")) {
+            // Column list: the first balanced (...) after the name.
+            const int open = body.indexOf(QLatin1Char('('), match.capturedEnd(0) - start);
+            int depth = 0;
+            int itemStart = open + 1;
+            auto handleItem = [&](int from, int to) {
+                const QString item = body.mid(from, to - from).simplified();
+                if (item.isEmpty()) {
+                    return;
+                }
+                const int line = lineNumberAtOffset(clean, start + from + (body.mid(from, to - from).size() - body.mid(from, to - from).trimmed().size() > 0
+                                                                               ? body.mid(from, to - from).indexOf(body.mid(from, to - from).trimmed().left(1))
+                                                                               : 0));
+                static const QRegularExpression constraintStart(
+                    QStringLiteral(R"(^(?:CONSTRAINT\s+\S+\s+)?(PRIMARY\s+KEY|FOREIGN\s+KEY|UNIQUE(?:\s+(?:KEY|INDEX))?|KEY|INDEX|CHECK|FULLTEXT|SPATIAL)\b)"),
+                    QRegularExpression::CaseInsensitiveOption);
+                const auto constraint = constraintStart.match(item);
+                if (constraint.hasMatch()) {
+                    QString constraintKind = constraint.captured(1).simplified().toLower();
+                    static const QRegularExpression references(
+                        QStringLiteral(R"(REFERENCES\s+(%1))").arg(sqlNamePattern()), QRegularExpression::CaseInsensitiveOption);
+                    const auto ref = references.match(item);
+                    QVariantMap member = makeSymbol(constraintKind == QStringLiteral("foreign key") ? QStringLiteral("foreign key")
+                                                                                                    : QStringLiteral("key"),
+                                                    item.left(80), line,
+                                                    ref.hasMatch() ? QStringLiteral("references %1").arg(sqlUnquote(ref.captured(1))) : constraintKind,
+                                                    {}, snippetFor(line, line));
+                    if (ref.hasMatch()) {
+                        member.insert(QStringLiteral("references"), sqlUnquote(ref.captured(1)));
+                    }
+                    members.append(member);
+                    return;
+                }
+                static const QRegularExpression columnPattern(
+                    QStringLiteral(R"(^(%1)\s+(.+)$)").arg(sqlNamePattern()), QRegularExpression::CaseInsensitiveOption);
+                const auto column = columnPattern.match(item);
+                if (column.hasMatch()) {
+                    QVariantMap member = makeSymbol(QStringLiteral("column"), sqlUnquote(column.captured(1)), line,
+                                                    column.captured(2).left(80), {}, snippetFor(line, line));
+                    static const QRegularExpression inlineRef(
+                        QStringLiteral(R"(REFERENCES\s+(%1))").arg(sqlNamePattern()), QRegularExpression::CaseInsensitiveOption);
+                    const auto ref = inlineRef.match(column.captured(2));
+                    if (ref.hasMatch()) {
+                        member.insert(QStringLiteral("references"), sqlUnquote(ref.captured(1)));
+                    }
+                    members.append(member);
+                }
+            };
+            if (open >= 0) {
+                for (int i = open; i < body.size(); ++i) {
+                    const QChar ch = body.at(i);
+                    if (ch == QLatin1Char('(')) {
+                        ++depth;
+                    } else if (ch == QLatin1Char(')')) {
+                        if (--depth == 0) {
+                            handleItem(itemStart, i);
+                            break;
+                        }
+                    } else if (ch == QLatin1Char(',') && depth == 1) {
+                        handleItem(itemStart, i);
+                        itemStart = i + 1;
+                    }
+                }
+            }
+        } else if (kind == QStringLiteral("procedure") || kind == QStringLiteral("function")) {
+            // Parameters: (...) after the name, or T-SQL @params up to AS / RETURNS.
+            QString parameterText;
+            const int afterName = match.capturedEnd(0) - start;
+            int cursor = afterName;
+            while (cursor < body.size() && body.at(cursor).isSpace()) {
+                ++cursor;
+            }
+            int paramsEnd = cursor;
+            if (cursor < body.size() && body.at(cursor) == QLatin1Char('(')) {
+                int depth = 0;
+                for (int i = cursor; i < body.size(); ++i) {
+                    if (body.at(i) == QLatin1Char('(')) ++depth;
+                    else if (body.at(i) == QLatin1Char(')') && --depth == 0) {
+                        parameterText = body.mid(cursor + 1, i - cursor - 1);
+                        paramsEnd = i + 1;
+                        break;
+                    }
+                }
+            } else {
+                static const QRegularExpression tsqlEnd(QStringLiteral(R"(\b(AS|RETURNS|WITH)\b)"), QRegularExpression::CaseInsensitiveOption);
+                const auto endMatch = tsqlEnd.match(body, cursor);
+                if (endMatch.hasMatch()) {
+                    parameterText = body.mid(cursor, endMatch.capturedStart(0) - cursor);
+                    paramsEnd = endMatch.capturedStart(0);
+                }
+            }
+            QVariantList parameters;
+            for (QString part : splitTopLevelSignatureParts(parameterText.simplified())) {
+                part = part.trimmed();
+                static const QRegularExpression paramPattern(
+                    QStringLiteral(R"(^(?:(IN|OUT|INOUT)\s+)?(@?[A-Za-z_][\w@$#]*)\s+(?:AS\s+)?(.+?)(?:\s*=\s*(\S.*?))?(?:\s+(OUTPUT|OUT|READONLY))?$)"),
+                    QRegularExpression::CaseInsensitiveOption);
+                const auto param = paramPattern.match(part);
+                if (!param.hasMatch()) {
+                    continue;
+                }
+                QVariantMap parameter = makeSignatureParameter(param.captured(2), param.captured(3).trimmed());
+                const QString direction = !param.captured(1).isEmpty() ? param.captured(1).toUpper()
+                                                                         : (param.captured(5).isEmpty() ? QString() : QStringLiteral("OUT"));
+                if (!direction.isEmpty()) {
+                    parameter.insert(QStringLiteral("direction"), direction);
+                }
+                if (!param.captured(4).isEmpty()) {
+                    parameter.insert(QStringLiteral("default"), param.captured(4).trimmed());
+                }
+                parameters.append(parameter);
+            }
+            symbol.insert(QStringLiteral("parameters"), parameters);
+            QVariantList returns;
+            static const QRegularExpression returnsPattern(QStringLiteral(R"(\bRETURNS\s+(@\w+\s+)?(TABLE\b|[A-Za-z_][\w]*(?:\s*\([^)]*\))?))"),
+                                                           QRegularExpression::CaseInsensitiveOption);
+            const auto returnsMatch = returnsPattern.match(body, paramsEnd);
+            if (kind == QStringLiteral("function") && returnsMatch.hasMatch()) {
+                returns.append(QVariantMap{{QStringLiteral("text"), returnsMatch.captured(2).simplified()}});
+            } else {
+                returns.append(QVariantMap{{QStringLiteral("text"),
+                                            kind == QStringLiteral("function") ? QStringLiteral("value") : QStringLiteral("result sets / OUT parameters")}});
+            }
+            symbol.insert(QStringLiteral("returns"), returns);
+            symbol.insert(QStringLiteral("signatureSource"), QStringLiteral("parser"));
+        } else if (kind == QStringLiteral("trigger")) {
+            static const QRegularExpression triggerPattern(
+                QStringLiteral(R"(\b(BEFORE|AFTER|INSTEAD\s+OF|FOR)\s+(INSERT|UPDATE|DELETE)(?:\s*,\s*(?:INSERT|UPDATE|DELETE))*\s+ON\s+(%1))").arg(sqlNamePattern()),
+                QRegularExpression::CaseInsensitiveOption);
+            static const QRegularExpression tsqlTrigger(
+                QStringLiteral(R"(\bON\s+(%1)\s+(?:AFTER|FOR|INSTEAD\s+OF)\s+([\w\s,]+?)\s+AS\b)").arg(sqlNamePattern()),
+                QRegularExpression::CaseInsensitiveOption);
+            const auto trigger = triggerPattern.match(body);
+            if (trigger.hasMatch()) {
+                symbol.insert(QStringLiteral("detail"), QStringLiteral("%1 %2 on %3").arg(trigger.captured(1).toUpper(), trigger.captured(2).toUpper(), sqlUnquote(trigger.captured(3))));
+                symbol.insert(QStringLiteral("triggerTable"), sqlUnquote(trigger.captured(3)));
+            } else {
+                const auto tsql = tsqlTrigger.match(body);
+                if (tsql.hasMatch()) {
+                    symbol.insert(QStringLiteral("detail"), QStringLiteral("%1 on %2").arg(tsql.captured(2).simplified().toUpper(), sqlUnquote(tsql.captured(1))));
+                    symbol.insert(QStringLiteral("triggerTable"), sqlUnquote(tsql.captured(1)));
+                }
+            }
+        } else if (kind == QStringLiteral("index")) {
+            static const QRegularExpression onTable(QStringLiteral(R"(\bON\s+(%1))").arg(sqlNamePattern()), QRegularExpression::CaseInsensitiveOption);
+            const auto on = onTable.match(body);
+            if (on.hasMatch()) {
+                symbol.insert(QStringLiteral("detail"), QStringLiteral("on %1").arg(sqlUnquote(on.captured(1))));
+                symbol.insert(QStringLiteral("indexTable"), sqlUnquote(on.captured(1)));
+            }
+        }
+        symbol.insert(QStringLiteral("members"), members);
+        objects.append({symbol, start, end, kind});
+    }
+
+    // Relations between objects of this file.
+    QHash<QString, int> tableIndex;   // base name -> object index
+    QHash<QString, int> routineIndex; // base name -> object index
+    for (int i = 0; i < objects.size(); ++i) {
+        const QString base = sqlBaseName(objects.at(i).symbol.value(QStringLiteral("name")).toString());
+        if (objects.at(i).kind == QStringLiteral("table") || objects.at(i).kind == QStringLiteral("view")) {
+            tableIndex.insert(base, i);
+        } else if (objects.at(i).kind == QStringLiteral("procedure") || objects.at(i).kind == QStringLiteral("function")) {
+            routineIndex.insert(base, i);
+        }
+    }
+    QHash<QString, QVariantList> callsByKey;
+    QHash<QString, QVariantList> calledByByKey;
+    auto link = [&](int from, int to, const QString &forward, const QString &backward) {
+        if (from == to || from < 0 || to < 0) {
+            return;
+        }
+        const QVariantMap &source = objects.at(from).symbol;
+        const QVariantMap &target = objects.at(to).symbol;
+        appendUniqueRelation(callsByKey, symbolKey(source), relationFromSymbol(target), forward);
+        appendUniqueRelation(calledByByKey, symbolKey(target), relationFromSymbol(source), backward);
+    };
+    static const QRegularExpression readPattern(QStringLiteral(R"(\b(?:FROM|JOIN)\s+(%1))").arg(sqlNamePattern()),
+                                                QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression writePattern(QStringLiteral(R"(\b(?:INSERT\s+(?:IGNORE\s+)?(?:INTO\s+)?|UPDATE\s+|DELETE\s+FROM\s+|MERGE\s+(?:INTO\s+)?|REPLACE\s+INTO\s+|TRUNCATE\s+TABLE\s+)(%1))").arg(sqlNamePattern()),
+                                                 QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression execPattern(QStringLiteral(R"(\b(?:CALL|EXEC|EXECUTE)\s+(?:@\w+\s*=\s*)?(%1))").arg(sqlNamePattern()),
+                                                QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression callPattern(QStringLiteral(R"((%1)\s*\()").arg(sqlNamePattern()));
+    for (int i = 0; i < objects.size(); ++i) {
+        const SqlObject &object = objects.at(i);
+        if (object.kind == QStringLiteral("table")) {
+            for (const QVariant &memberValue : object.symbol.value(QStringLiteral("members")).toList()) {
+                const QString referenced = memberValue.toMap().value(QStringLiteral("references")).toString();
+                if (!referenced.isEmpty()) {
+                    link(i, tableIndex.value(sqlBaseName(referenced), -1), QStringLiteral("references"), QStringLiteral("referenced by"));
+                }
+            }
+            continue;
+        }
+        if (object.kind == QStringLiteral("trigger")) {
+            link(i, tableIndex.value(sqlBaseName(object.symbol.value(QStringLiteral("triggerTable")).toString()), -1),
+                 QStringLiteral("fires on"), QStringLiteral("trigger"));
+        }
+        if (object.kind == QStringLiteral("index")) {
+            link(i, tableIndex.value(sqlBaseName(object.symbol.value(QStringLiteral("indexTable")).toString()), -1),
+                 QStringLiteral("indexes"), QStringLiteral("indexed by"));
+            continue;
+        }
+        const QString body = clean.mid(object.start, object.end - object.start);
+        // Writes first: a table that is both written and read (DELETE FROM x,
+        // UPDATE x ... FROM x) is reported as written.
+        auto writeIt = writePattern.globalMatch(body);
+        while (writeIt.hasNext()) {
+            link(i, tableIndex.value(sqlBaseName(sqlUnquote(writeIt.next().captured(1))), -1), QStringLiteral("writes"), QStringLiteral("written by"));
+        }
+        auto readIt = readPattern.globalMatch(body);
+        while (readIt.hasNext()) {
+            link(i, tableIndex.value(sqlBaseName(sqlUnquote(readIt.next().captured(1))), -1), QStringLiteral("reads"), QStringLiteral("read by"));
+        }
+        auto execIt = execPattern.globalMatch(body);
+        while (execIt.hasNext()) {
+            link(i, routineIndex.value(sqlBaseName(sqlUnquote(execIt.next().captured(1))), -1), QStringLiteral("executes"), QStringLiteral("executed by"));
+        }
+        // Function calls in the body (skip the object's own header).
+        const int headerEnd = body.indexOf(QLatin1Char('('));
+        auto callIt = callPattern.globalMatch(body, headerEnd >= 0 ? headerEnd + 1 : 0);
+        while (callIt.hasNext()) {
+            const QString called = sqlBaseName(sqlUnquote(callIt.next().captured(1)));
+            const int target = routineIndex.value(called, -1);
+            if (target >= 0 && objects.at(target).kind == QStringLiteral("function")) {
+                link(i, target, QStringLiteral("calls"), QStringLiteral("called by"));
+            }
+        }
+    }
+
+    QVariantList symbols;
+    for (const SqlObject &object : std::as_const(objects)) {
+        symbols.append(object.symbol);
+    }
+    symbols = applyRelationsToSymbols(symbols, callsByKey, calledByByKey);
+
+    // Dependencies: USE db, SOURCE file (mysql), :r file (sqlcmd).
+    QVariantList dependencies;
+    static const QRegularExpression usePattern(QStringLiteral(R"(^[ \t]*(USE|SOURCE|\\\.|:r)\s+([^\s;]+))"),
+                                               QRegularExpression::MultilineOption | QRegularExpression::CaseInsensitiveOption);
+    auto useIt = usePattern.globalMatch(clean);
+    while (useIt.hasNext()) {
+        const auto match = useIt.next();
+        const QString verb = match.captured(1).toUpper();
+        QString target = match.captured(2);
+        const int line = lineNumberAtOffset(clean, match.capturedStart(0));
+        const bool isFile = verb != QStringLiteral("USE");
+        if (isFile) {
+            // the blanked text lost quoted file names; read from the original
+            const QString original = physicalLines.value(line - 1);
+            static const QRegularExpression fileName(QStringLiteral(R"((?:SOURCE|\\\.|:r)\s+['"]?([^'";\s]+))"), QRegularExpression::CaseInsensitiveOption);
+            target = fileName.match(original).captured(1);
+        }
+        QVariantMap item = makeSourceContextItem(path, QStringLiteral("sql"), line, snippetFor(line, line),
+                                                 isFile ? QStringLiteral("script dependency") : QStringLiteral("database"));
+        item.insert(QStringLiteral("target"), sqlUnquote(target));
+        item.insert(QStringLiteral("type"), isFile ? QStringLiteral("include") : QStringLiteral("use"));
+        item.insert(QStringLiteral("label"), sqlUnquote(target));
+        const QString resolved = isFile ? QDir::cleanPath(QFileInfo(path).dir().absoluteFilePath(target)) : QString();
+        item.insert(QStringLiteral("path"), resolved);
+        item.insert(QStringLiteral("exists"), isFile ? QFileInfo::exists(resolved) : true);
+        dependencies.append(item);
+    }
+
+    result.insert(QStringLiteral("symbols"), symbols);
+    result.insert(QStringLiteral("dependencies"), dependencies);
+    result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
+    int tables = 0;
+    int routines = 0;
+    for (const SqlObject &object : std::as_const(objects)) {
+        tables += object.kind == QStringLiteral("table") ? 1 : 0;
+        routines += (object.kind == QStringLiteral("procedure") || object.kind == QStringLiteral("function")) ? 1 : 0;
+    }
+    result.insert(QStringLiteral("summary"), QStringLiteral("%1 objects (%2 tables, %3 routines)").arg(objects.size()).arg(tables).arg(routines));
     return result;
 }
 
@@ -8196,6 +8648,9 @@ QString SymbolParser::detectLanguage(const QString &path)
         || suffix == QStringLiteral("h") || suffix == QStringLiteral("hh")
         || suffix == QStringLiteral("hpp") || suffix == QStringLiteral("hxx")) {
         return QStringLiteral("cpp");
+    }
+    if (suffix == QStringLiteral("sql")) {
+        return QStringLiteral("sql");
     }
     if (suffix == QStringLiteral("vb")) {
         return QStringLiteral("vbnet");
