@@ -34,7 +34,25 @@ KF5 from apt), against a new pinned public corpus instead of `/home/user/Code`.
     - Fixed: compound class selectors (`li.completed`) were indexed under the whole selector text in four places.
     - Corpus HTML files with symbols: 0% → 77.6%.
 - **PHP links:** `use` imports resolved through composer PSR-4 roots; `require`/`include` resolved relative to the file and its ancestors; Slim/Lumen, Laravel and CodeIgniter routes; template asset links (PHP regions blanked before HTML parsing). PHP files with dependencies: 0% → 32.8%.
-- **Fixtures:** 27 → 33 cases (`python_returns`, `web_app` ×3, `php_links` ×2). Recovery fixtures now expect `high` confidence for AST-derived symbols in repaired files.
+- **Later the same session: languages, parity and AST signatures:**
+    - **VB.NET** (new): a structural, block-aware line parser. It gives exact signatures (`ByVal`/`Optional`/`As T`), members, events, `Handles` clauses, `Imports`, ASP.NET attribute routes and call edges. A missing `End` is closed at the next declaration and reported. Corpus: 470 files; damage probe 100%.
+    - **SQL** (new, MySQL/MariaDB and T-SQL): statement-aware. It covers tables/columns/keys, views, procedures, functions, triggers and indexes. Relations are labelled `references`, `reads`, `writes`, `executes`, `calls` and `fires on`. `USE`, `source` and `:r` are dependencies. Objects end at the next `CREATE`/`ALTER`, `GO` or `DELIMITER`, and strings cannot cross batches.
+    - **Go** (new, tree-sitter-go v0.23.4): structs, interfaces, receiver methods grouped under their type, exact signatures, imports, and net/http, gin, chi and echo routes. Damage probe 99.4%.
+    - **C/C++ on Tree-sitter** (tree-sitter-cpp v0.23.4, used for C too): classes with access levels, out-of-line definitions, enums, typedefs, `#include` resolution, call edges and declarator-derived signatures.
+        - Members went from 0 to 5.2k and call edges from 0 to 3.4k on 437 corpus files.
+        - Macro-noisy files (more than 25 initial errors) skip the repair pass. The repair budget scales with file size, and the declaration counter uses a per-grammar symbol table (p95 569 → 184 ms).
+    - **Shell** (new): functions, named or positional parameters, call edges and `source` resolution. A recursive quoting scanner handles nested `"$(… "…")"` (nvm.sh: 13 → 125 functions).
+    - **AST signatures for TS/JS, C#, Java and PHP** via one post-pass:
+        - Parameters come with types, defaults and modifiers. Returns use the declared type, or inferred return paths for JS and untyped PHP.
+        - Callables with parameters: TS 27% → 85%, C# 23% → 40%.
+        - A null-body crash on PHP interface methods was caught by the corpus comparison before commit, and an ASan run over 1,109 files of all 20 types was clean.
+    - **Parity:**
+        - Swift imports (dependencies 0.9% → 98%).
+        - Java Spring and JAX-RS routes.
+        - QML call relations between functions and signal handlers (0% → 22% of files).
+    - **Damage probe**, all 13 analysed language groups: 97.2% over 1,041 probes. The weakest cases are unclosed strings in Swift (59%), Java (87%) and Rust (91%).
+    - **Not done, on purpose:** Kotlin and Ruby. Their Tree-sitter grammars are ≈23 MB and 15 MB of generated source; a structural parser is likely the better trade-off. JS `fetch()` → backend-route links and Objective-C relations remain open too.
+- **Fixtures:** 27 → 45 cases (`python_returns`, `web_app` ×3, `php_links` ×2, `java_routes` ×2, `vbnet_basic` ×3, `sql_tsql` ×2, `go_basic`, `cpp_classes` ×3, `shell_basic`). Recovery fixtures now expect `high` confidence for AST-derived symbols in repaired files.
 - **Known remaining gaps** (next steps are in the README roadmap, Phase 2b):
     - C/C++, QML and Objective-C are heuristic only, and have no call relations.
     - Swift imports and Java routes are not extracted.

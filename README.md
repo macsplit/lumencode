@@ -119,7 +119,7 @@ cmake -S . -B build && cmake --build build --target lumencode-cli
 ./build/bin/lumencode-cli --debug-ast path/to/file      # Tree-sitter error nodes + repair outcome
 ./build/bin/lumencode-cli -i                            # scripted selection session (JSON commands on stdin)
 
-python3 tools/regression_sweep.py --fixtures-only       # first gate: 33 fixture cases, relation round-trips
+python3 tools/regression_sweep.py --fixtures-only       # first gate: 45 fixture cases, relation round-trips
 python3 tools/fetch_corpus.py                           # pinned public corpus (27 repos, ~6.4k files)
 python3 tools/corpus_scan.py --save before.json         # whole-corpus coverage / timing / contract scan
 python3 tools/corpus_scan.py --compare before.json      # ... then diff after a change
@@ -138,8 +138,9 @@ python3 tools/regression_sweep.py --corpus-root ~/.cache/lumencode-corpus --max-
   a cloud container. `$LUMENCODE_CORPUS` points the tools at it.
 - **Damage probe:** injects a garbage line, an unclosed call or an unclosed
   string into one function of a clean file, and measures how many *other*
-  declarations survive. It is currently 97% overall across 852 probes
-  (JavaScript 98.5%).
+  declarations survive. It is currently 97.2% overall across 1,041 probes in
+  13 language groups; the weakest cases are unclosed strings in Swift (59%),
+  Java (87%) and Rust (91%).
 
 ## Build
 
@@ -193,6 +194,11 @@ For backend work only the CLI target is needed:
     no symbols to 78% of corpus pages with structure
   - PHP dependencies (PSR-4-resolved `use`, `require`/`include`), framework
     routes and template asset links (previously none)
+  - new languages: VB.NET and SQL (MySQL and T-SQL) with purpose-built
+    structural parsers, Go on Tree-sitter, and shell scripts; C/C++ moved
+    onto Tree-sitter (members and call edges, previously none)
+  - signatures from the syntax tree for TS/JS, C#, Java, PHP, Go and C/C++;
+    Swift imports, Java Spring/JAX-RS routes and QML call relations
 
 ## Roadmap
 Next major milestone: stabilization and trustworthiness of the inspection pipeline, before search.
