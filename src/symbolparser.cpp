@@ -1,4 +1,5 @@
 #include "symbolparser.h"
+#include "weblinks.h"
 
 #include <QDir>
 #include <QElapsedTimer>
@@ -7,6 +8,9 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QMutex>
+#include <QMutexLocker>
+#include <QDateTime>
 #include <QRegularExpression>
 #include <QSet>
 #include <QStringList>
@@ -439,7 +443,11 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
 {
     constexpr int kMaxBlankedLines = 12;
     constexpr int kMaxCandidatesPerRound = 10;
-    constexpr qint64 kBudgetMs = 600;
+    // Deterministic budget (parse attempts), so results do not depend on
+    // machine load; the time cap is only a safety net for pathological input.
+    constexpr int kMaxTrialParses = 80;
+    constexpr qint64 kBudgetMs = 3000;
+    int trialParses = 0;
 
     AstRepairResult result;
     result.source = original;
@@ -472,7 +480,8 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
         return ordered;
     };
 
-    while (!current.isClean() && blanked.size() < kMaxBlankedLines && timer.elapsed() < kBudgetMs) {
+    while (!current.isClean() && blanked.size() < kMaxBlankedLines && timer.elapsed() < kBudgetMs
+           && trialParses < kMaxTrialParses) {
         QList<int> bestRows;
         AstErrorScore bestScore = current;
         AstRepairCandidates bestCandidates;
@@ -492,6 +501,9 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
                 }
                 if (trial == result.source) {
                     continue;
+                }
+                if (++trialParses > kMaxTrialParses) {
+                    return;
                 }
                 AstRepairCandidates trialCandidates;
                 const AstErrorScore trialScore = scoreAstSource(parser, trial, &trialCandidates);
@@ -2198,6 +2210,25 @@ static QString normalizeCssSelectorText(const QString &text)
     return cleaned;
 }
 
+// Class name of a CSS class_selector node: `li.completed` and `.a.b` parse as
+// class_selector nodes whose text includes the tag / outer class, so read the
+// class_name child rather than the node text.
+static QString cssClassSelectorName(TSNode node, const QByteArray &source)
+{
+    QString name;
+    const uint32_t childCount = ts_node_named_child_count(node);
+    for (uint32_t i = 0; i < childCount; ++i) {
+        TSNode child = ts_node_named_child(node, i);
+        if (tsType(child) == QStringLiteral("class_name")) {
+            name = nodeText(child, source).trimmed();
+        }
+    }
+    if (name.isEmpty()) {
+        name = nodeText(node, source).trimmed().section(QLatin1Char('.'), -1);
+    }
+    return name;
+}
+
 static QStringList extractCssClassesTreeSitter(const QString &text)
 {
     QStringList classes;
@@ -2230,10 +2261,7 @@ static QStringList extractCssClassesTreeSitter(const QString &text)
 
         const QString type = tsType(node);
         if (type == QStringLiteral("class_selector")) {
-            QString name = nodeText(node, source).trimmed();
-            if (name.startsWith(QLatin1Char('.'))) {
-                name.remove(0, 1);
-            }
+            const QString name = cssClassSelectorName(node, source);
             if (!name.isEmpty() && !seen.contains(name)) {
                 seen.insert(name);
                 classes.append(name);
@@ -2288,10 +2316,7 @@ static QVariantMap findCssClassSummaryEntryTreeSitter(const QString &cssPath, co
 
         const QString type = tsType(node);
         if (type == QStringLiteral("class_selector")) {
-            QString className = nodeText(node, source).trimmed();
-            if (className.startsWith(QLatin1Char('.'))) {
-                className.remove(0, 1);
-            }
+            const QString className = cssClassSelectorName(node, source);
             if (className == name) {
                 const TSNode snippetNode = firstAncestorOfType(node, {"rule_set", "block"});
                 const TSNode effectiveNode = ts_node_is_null(snippetNode) ? node : snippetNode;
@@ -2387,10 +2412,7 @@ static QMap<QString, QVariantMap> buildCssClassIndex(const QString &cssPath, con
         }
         const QString type = tsType(node);
         if (type == QStringLiteral("class_selector")) {
-            QString name = nodeText(node, source).trimmed();
-            if (name.startsWith(QLatin1Char('.'))) {
-                name.remove(0, 1);
-            }
+            const QString name = cssClassSelectorName(node, source);
             if (!name.isEmpty() && !index.contains(name)) {
                 const TSNode snippetNode = firstAncestorOfType(node, {"rule_set", "block"});
                 const TSNode effectiveNode = ts_node_is_null(snippetNode) ? node : snippetNode;
@@ -2935,6 +2957,311 @@ static QVariantMap enrichAnalysisSignatures(QVariantMap result)
     return result;
 }
 
+static QString detectLanguageForWebLinks(const QString &path)
+{
+    const QString suffix = QFileInfo(path).suffix().toLower();
+    if (suffix == QStringLiteral("ts") || suffix == QStringLiteral("mts") || suffix == QStringLiteral("cts")) {
+        return QStringLiteral("ts");
+    }
+    if (suffix == QStringLiteral("tsx") || suffix == QStringLiteral("jsx")) {
+        return suffix;
+    }
+    return QStringLiteral("script");
+}
+
+// ---------------------------------------------------------------------------
+// Web links: HTML <-> CSS <-> JavaScript (see weblinks.h)
+// ---------------------------------------------------------------------------
+
+static QMap<QString, QVariantMap> cachedCssClassIndex(const QString &cssPath)
+{
+    struct Entry
+    {
+        qint64 size = -1;
+        QDateTime modified;
+        QMap<QString, QVariantMap> index;
+    };
+    static QMutex mutex;
+    static QHash<QString, Entry> cache;
+    const QFileInfo info(cssPath);
+    if (!info.exists() || shouldSkipFileBySize(info, kMaxAuxiliaryFileBytes)) {
+        return {};
+    }
+    {
+        QMutexLocker locker(&mutex);
+        const auto it = cache.constFind(info.absoluteFilePath());
+        if (it != cache.constEnd() && it->size == info.size() && it->modified == info.lastModified()) {
+            return it->index;
+        }
+    }
+    QFile file(info.absoluteFilePath());
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return {};
+    }
+    Entry entry;
+    entry.size = info.size();
+    entry.modified = info.lastModified();
+    entry.index = buildCssClassIndex(info.absoluteFilePath(), QString::fromUtf8(file.readAll()));
+    QMutexLocker locker(&mutex);
+    cache.insert(info.absoluteFilePath(), entry);
+    return entry.index;
+}
+
+// Text with the same line structure as the host file, containing only `content`
+// starting at `startLine`, so an embedded block parses with host line numbers.
+static QString linePaddedBlock(const QString &content, int startLine)
+{
+    return QString(qMax(0, startLine - 1), QLatin1Char('\n')) + content;
+}
+
+// CSS classes (name -> entry with path/line/snippet) available to a page: its
+// linked local stylesheets and its inline <style> blocks.
+static QMap<QString, QVariantMap> cssClassesForPage(const WebLinks::HtmlPage &page)
+{
+    QMap<QString, QVariantMap> classes;
+    for (const WebLinks::HtmlAsset &asset : page.assets) {
+        if (asset.kind != QStringLiteral("stylesheet") || !asset.local || !asset.exists) {
+            continue;
+        }
+        const QMap<QString, QVariantMap> index = cachedCssClassIndex(asset.resolvedPath);
+        for (auto it = index.constBegin(); it != index.constEnd(); ++it) {
+            if (!classes.contains(it.key())) {
+                classes.insert(it.key(), it.value());
+            }
+        }
+    }
+    for (const WebLinks::HtmlInlineBlock &block : page.inlineBlocks) {
+        if (block.kind != QStringLiteral("style")) {
+            continue;
+        }
+        const QMap<QString, QVariantMap> index = buildCssClassIndex(page.path, linePaddedBlock(block.content, block.startLine));
+        for (auto it = index.constBegin(); it != index.constEnd(); ++it) {
+            if (!classes.contains(it.key())) {
+                classes.insert(it.key(), it.value());
+            }
+        }
+    }
+    return classes;
+}
+
+// Text of a linked local script worth scanning for DOM references (not huge,
+// not a minified bundle); empty otherwise.
+static QString readScanableScript(const QString &scriptPath)
+{
+    const QFileInfo info(scriptPath);
+    if (!info.exists() || shouldSkipFileBySize(info, kMaxAuxiliaryFileBytes)) {
+        return {};
+    }
+    QFile file(scriptPath);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return {};
+    }
+    const QString text = QString::fromUtf8(file.readAll());
+    if (looksLikeMinifiedSource(scriptPath, QStringLiteral("script"), text)) {
+        return {};
+    }
+    return text;
+}
+
+static QVariantMap makeWebLinkItem(const QString &type,
+                                   const QString &label,
+                                   const QString &targetPath,
+                                   const QString &targetLanguage,
+                                   int line,
+                                   const QString &snippet,
+                                   const QString &detail,
+                                   bool exists = true)
+{
+    QVariantMap item = makeSourceContextItem(targetPath, targetLanguage, line, snippet, detail);
+    item.insert(QStringLiteral("label"), label);
+    item.insert(QStringLiteral("target"), QFileInfo(targetPath).fileName());
+    item.insert(QStringLiteral("type"), type);
+    item.insert(QStringLiteral("path"), targetPath);
+    item.insert(QStringLiteral("targetPath"), targetPath);
+    item.insert(QStringLiteral("language"), targetLanguage);
+    item.insert(QStringLiteral("exists"), exists);
+    item.insert(QStringLiteral("sourceMode"), QStringLiteral("ast"));
+    item.insert(QStringLiteral("confidence"), exists ? QStringLiteral("high") : QStringLiteral("medium"));
+    return item;
+}
+
+static QString fileLineLabel(const QString &path, int line)
+{
+    return line > 0 ? QStringLiteral("%1:%2").arg(QFileInfo(path).fileName()).arg(line)
+                    : QFileInfo(path).fileName();
+}
+
+static QVariantMap makeCrossFileRelation(const QString &kind, const QString &name, const QString &path,
+                                         const QString &language, int line, const QString &snippet,
+                                         const QString &detail)
+{
+    QVariantMap relation;
+    relation.insert(QStringLiteral("kind"), kind);
+    relation.insert(QStringLiteral("name"), name);
+    relation.insert(QStringLiteral("line"), line);
+    relation.insert(QStringLiteral("detail"), detail);
+    relation.insert(QStringLiteral("snippet"), snippet);
+    relation.insert(QStringLiteral("path"), path);
+    relation.insert(QStringLiteral("sourcePath"), path);
+    relation.insert(QStringLiteral("language"), language);
+    relation.insert(QStringLiteral("sourceLanguage"), language);
+    relation.insert(QStringLiteral("sourceMode"), QStringLiteral("ast"));
+    relation.insert(QStringLiteral("confidence"), QStringLiteral("high"));
+    relation.insert(QStringLiteral("calls"), QVariantList{});
+    relation.insert(QStringLiteral("calledBy"), QVariantList{});
+    return relation;
+}
+
+static QString handlerSymbolName(const WebLinks::HtmlHandler &handler)
+{
+    return QStringLiteral("<%1 %2>").arg(handler.tag, handler.attribute);
+}
+
+// JS/TS file: consumer pages, DOM references resolved to HTML elements and
+// CSS rules, and `calledBy` edges from inline HTML event handlers.
+static void enrichScriptWithWebLinks(QVariantMap &result, const QString &path, const QString &text)
+{
+    const QList<WebLinks::HtmlPage> pages = WebLinks::pagesReferencingAsset(path, QStringLiteral("script"));
+    QVariantList quickLinks;
+    for (const QVariant &entry : result.value(QStringLiteral("quickLinks")).toList()) {
+        if (entry.toMap().value(QStringLiteral("type")).toString() != QStringLiteral("consumer")) {
+            quickLinks.append(entry);
+        }
+    }
+    const QString absolute = QFileInfo(path).absoluteFilePath();
+    for (const WebLinks::HtmlPage &page : pages) {
+        int line = 1;
+        QString snippet;
+        for (const WebLinks::HtmlAsset &asset : page.assets) {
+            if (asset.kind == QStringLiteral("script") && asset.resolvedPath == absolute) {
+                line = asset.line;
+                snippet = asset.snippet;
+                break;
+            }
+        }
+        quickLinks.append(makeWebLinkItem(QStringLiteral("consumer"), QFileInfo(page.path).fileName(), page.path,
+                                          QStringLiteral("html"), line, snippet,
+                                          QStringLiteral("referenced by HTML file")));
+    }
+
+    if (!pages.isEmpty()) {
+        QHash<QString, QMap<QString, QVariantMap>> cssByPage;
+        for (const WebLinks::HtmlPage &page : pages) {
+            cssByPage.insert(page.path, cssClassesForPage(page));
+        }
+        QSet<QString> seenLinks;
+        int domLinks = 0;
+        for (const WebLinks::DomReference &ref : WebLinks::extractDomReferences(text)) {
+            if (domLinks >= 80) {
+                break;
+            }
+            const QString key = ref.kind + QLatin1Char('|') + ref.name;
+            if (seenLinks.contains(key)) {
+                continue;
+            }
+            seenLinks.insert(key);
+            const QString via = QStringLiteral("%1 at line %2").arg(ref.via).arg(ref.line);
+            bool resolved = false;
+            if (ref.kind == QStringLiteral("id")) {
+                for (const WebLinks::HtmlPage &page : pages) {
+                    if (const WebLinks::HtmlElement *element = page.elementWithId(ref.name)) {
+                        quickLinks.append(makeWebLinkItem(QStringLiteral("dom-id"),
+                                                          QStringLiteral("#%1 → %2").arg(ref.name, fileLineLabel(page.path, element->line)),
+                                                          page.path, QStringLiteral("html"), element->line, element->snippet, via));
+                        resolved = true;
+                        break;
+                    }
+                }
+                if (!resolved) {
+                    quickLinks.append(makeWebLinkItem(QStringLiteral("dom-id-missing"),
+                                                      QStringLiteral("#%1 — no such element in %2").arg(ref.name, QFileInfo(pages.first().path).fileName()),
+                                                      path, detectLanguageForWebLinks(path), ref.line, ref.snippet, via, false));
+                }
+            } else if (ref.kind == QStringLiteral("class")) {
+                for (const WebLinks::HtmlPage &page : pages) {
+                    const QMap<QString, QVariantMap> &css = cssByPage[page.path];
+                    if (css.contains(ref.name)) {
+                        const QVariantMap rule = css.value(ref.name);
+                        const QString rulePath = rule.value(QStringLiteral("path")).toString();
+                        const int ruleLine = rule.value(QStringLiteral("line")).toInt();
+                        quickLinks.append(makeWebLinkItem(QStringLiteral("css-class"),
+                                                          QStringLiteral(".%1 → %2").arg(ref.name, fileLineLabel(rulePath, ruleLine)),
+                                                          rulePath, QStringLiteral("css"), ruleLine,
+                                                          rule.value(QStringLiteral("snippet")).toString(), via));
+                        resolved = true;
+                        break;
+                    }
+                    const QList<const WebLinks::HtmlElement *> elements = page.elementsWithClass(ref.name);
+                    if (!elements.isEmpty()) {
+                        quickLinks.append(makeWebLinkItem(QStringLiteral("dom-class"),
+                                                          QStringLiteral(".%1 → %2").arg(ref.name, fileLineLabel(page.path, elements.first()->line)),
+                                                          page.path, QStringLiteral("html"), elements.first()->line,
+                                                          elements.first()->snippet, via));
+                        resolved = true;
+                        break;
+                    }
+                }
+                if (!resolved) {
+                    quickLinks.append(makeWebLinkItem(QStringLiteral("css-class-missing"),
+                                                      QStringLiteral(".%1 — no rule or element in linked pages").arg(ref.name),
+                                                      path, detectLanguageForWebLinks(path), ref.line, ref.snippet, via, false));
+                }
+            }
+            ++domLinks;
+        }
+
+        // Inline event handlers in consumer pages that call this file's functions.
+        QVariantList symbols = result.value(QStringLiteral("symbols")).toList();
+        bool changed = false;
+        for (int index = 0; index < symbols.size(); ++index) {
+            QVariantMap symbol = symbols.at(index).toMap();
+            const QString name = symbol.value(QStringLiteral("name")).toString();
+            if (!isCallableSymbolKind(symbol.value(QStringLiteral("kind")).toString())
+                && symbol.value(QStringLiteral("kind")).toString() != QStringLiteral("component")) {
+                continue;
+            }
+            QVariantList calledBy = symbol.value(QStringLiteral("calledBy")).toList();
+            for (const WebLinks::HtmlPage &page : pages) {
+                for (const WebLinks::HtmlHandler &handler : page.handlers) {
+                    if (handler.calledNames.contains(name)) {
+                        calledBy.append(makeCrossFileRelation(QStringLiteral("handler"), handlerSymbolName(handler),
+                                                              page.path, QStringLiteral("html"), handler.line,
+                                                              handler.snippet, handler.code));
+                        changed = true;
+                    }
+                }
+            }
+            symbol.insert(QStringLiteral("calledBy"), calledBy);
+            symbols[index] = symbol;
+        }
+        if (changed) {
+            result.insert(QStringLiteral("symbols"), symbols);
+        }
+    }
+
+    // Custom elements this file defines, and the pages that use them.
+    const QHash<QString, QString> definitions = WebLinks::extractCustomElementDefinitions(text);
+    if (!definitions.isEmpty()) {
+        const QList<WebLinks::HtmlPage> usingPages = pages.isEmpty()
+            ? WebLinks::pagesReferencingAsset(path, QStringLiteral("script"))
+            : pages;
+        for (auto it = definitions.constBegin(); it != definitions.constEnd(); ++it) {
+            for (const WebLinks::HtmlPage &page : usingPages) {
+                for (const WebLinks::HtmlElement &element : page.customElements) {
+                    if (element.tag == it.key()) {
+                        quickLinks.append(makeWebLinkItem(QStringLiteral("custom-element"),
+                                                          QStringLiteral("<%1> (%2) used in %3").arg(it.key(), it.value(), fileLineLabel(page.path, element.line)),
+                                                          page.path, QStringLiteral("html"), element.line, element.snippet,
+                                                          QStringLiteral("custom element")));
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    result.insert(QStringLiteral("quickLinks"), quickLinks);
+}
+
 QVariantMap SymbolParser::makeSymbol(const QString &kind, const QString &name, int line,
                                      const QString &detail, const QVariantList &members,
                                      const QString &snippet)
@@ -3186,7 +3513,7 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
         return analysis;
     }
     if (language == QStringLiteral("html")) {
-        return finalizeResult(parseHtml(path, text), QStringLiteral("heuristic"));
+        return finalizeResult(parseHtml(path, text), QStringLiteral("ast"));
     }
     if (language == QStringLiteral("qml")) {
         return finalizeResult(parseQml(path, text), QStringLiteral("heuristic"));
@@ -3201,11 +3528,13 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
         || language == QStringLiteral("ts")
         || language == QStringLiteral("script")
         || language == QStringLiteral("jsx")) {
-        return analyseWithAst(language,
+        QVariantMap analysis = analyseWithAst(language,
                               [&] { return parseScriptLikeTreeSitter(path, text, language); },
                               [&] { return parseScriptLike(path, text, language == QStringLiteral("tsx")
                                                                              || language == QStringLiteral("jsx")); },
                               false);
+        enrichScriptWithWebLinks(analysis, path, text);
+        return analysis;
     }
     if (language == QStringLiteral("json")) {
         return finalizeResult(parseJson(path, text), QStringLiteral("heuristic"));
@@ -4411,10 +4740,7 @@ QVariantMap SymbolParser::parseCssTreeSitter(const QString &path, const QString 
     std::function<void(TSNode)> visit = [&](TSNode node) {
         const QString type = tsType(node);
         if (type == QStringLiteral("class_selector")) {
-            QString name = nodeText(node, source);
-            if (name.startsWith(QLatin1Char('.'))) {
-                name.remove(0, 1);
-            }
+            const QString name = cssClassSelectorName(node, source);
             const TSNode snippetNode = firstAncestorOfType(node, {"rule_set", "block"});
             const TSNode effectiveNode = ts_node_is_null(snippetNode) ? node : snippetNode;
             const int symbolLine = nodeLine(effectiveNode);
@@ -4446,7 +4772,9 @@ QVariantMap SymbolParser::parseCssTreeSitter(const QString &path, const QString 
     QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("css"));
     result.insert(QStringLiteral("analysisHasAstErrors"), hasAstErrors);
     result.insert(QStringLiteral("symbols"), symbols);
-    enrichCssAnalysisWithHtmlUsage(result, path, text);
+    if (detectLanguage(path) == QStringLiteral("css")) { // not for inline <style> blocks
+        enrichCssAnalysisWithHtmlUsage(result, path, text);
+    }
     return result;
 }
 
@@ -6371,118 +6699,215 @@ QVariantMap SymbolParser::parseScriptLike(const QString &path, const QString &te
 
 QVariantMap SymbolParser::parseHtml(const QString &path, const QString &text) const
 {
+    const WebLinks::HtmlPage page = WebLinks::parseHtmlPage(path, text);
+    const QDir dir = QFileInfo(path).dir();
     QVariantList links;
-    QDir dir = QFileInfo(path).dir();
-    QSet<QString> linkedCssFiles;
-    bool hasLocalCssSource = false;
+    QVariantList symbols;
+    QVariantList dependencies;
 
-    auto collectLink = [&](const QString &target, const QString &type, int line, const QString &snippet) {
-        const bool isLocalTarget = target.startsWith(QStringLiteral("./"))
-            || target.startsWith(QStringLiteral("../"))
-            || target.startsWith(QLatin1Char('/'))
-            || (!target.contains(QStringLiteral("://")) && !target.startsWith(QStringLiteral("//")));
-        const QString resolved = isLocalTarget ? QDir::cleanPath(dir.filePath(target)) : QString();
-        QVariantMap item = makeSourceContextItem(path, QStringLiteral("html"), line, snippet,
-                                                 QStringLiteral("%1 link").arg(type));
-        item.insert(QStringLiteral("label"), QFileInfo(target).fileName().isEmpty() ? target : QFileInfo(target).fileName());
-        item.insert(QStringLiteral("target"), target);
-        item.insert(QStringLiteral("type"), type);
-        item.insert(QStringLiteral("path"), resolved);
-        item.insert(QStringLiteral("targetPath"), resolved);
-        item.insert(QStringLiteral("exists"), isLocalTarget ? QFileInfo::exists(resolved) : true);
+    // Linked assets (scripts, stylesheets, pages, form targets, frames).
+    for (const WebLinks::HtmlAsset &asset : page.assets) {
+        QVariantMap item = makeSourceContextItem(path, QStringLiteral("html"), asset.line, asset.snippet,
+                                                 QStringLiteral("%1 link").arg(asset.kind));
+        const QString fileName = QFileInfo(asset.target).fileName();
+        item.insert(QStringLiteral("label"), fileName.isEmpty() ? asset.target : fileName);
+        item.insert(QStringLiteral("target"), asset.target);
+        item.insert(QStringLiteral("type"), asset.kind);
+        item.insert(QStringLiteral("path"), asset.resolvedPath);
+        item.insert(QStringLiteral("targetPath"), asset.resolvedPath);
+        item.insert(QStringLiteral("exists"), asset.exists);
         links.append(item);
-        if (type == QStringLiteral("stylesheet") && isLocalTarget && QFileInfo::exists(resolved)) {
-            linkedCssFiles.insert(resolved);
+    }
+
+    // Inline <script> and <style> blocks, parsed with the real JS / CSS parsers
+    // on line-aligned text so their symbols point at the right HTML lines.
+    QVariantList inlineScriptSymbols;
+    for (const WebLinks::HtmlInlineBlock &block : page.inlineBlocks) {
+        const QString padded = linePaddedBlock(block.content, block.startLine);
+        if (block.kind == QStringLiteral("script")) {
+            const QVariantMap analysis = parseScriptLikeTreeSitter(path, padded, QStringLiteral("script"));
+            for (const QVariant &entry : analysis.value(QStringLiteral("symbols")).toList()) {
+                QVariantMap symbol = entry.toMap();
+                const QString detail = symbol.value(QStringLiteral("detail")).toString();
+                symbol.insert(QStringLiteral("detail"), detail.isEmpty() ? QStringLiteral("inline <script>")
+                                                                         : detail + QStringLiteral(", inline <script>"));
+                inlineScriptSymbols.append(symbol);
+            }
+            for (const QVariant &entry : analysis.value(QStringLiteral("dependencies")).toList()) {
+                dependencies.append(entry);
+            }
+        } else {
+            const QVariantMap analysis = parseCssTreeSitter(path, padded);
+            const QVariantList cssSymbols = analysis.value(QStringLiteral("symbols")).toList();
+            if (!cssSymbols.isEmpty()) {
+                symbols.append(makeSymbol(QStringLiteral("style"), QStringLiteral("<style>"), block.startLine,
+                                          QStringLiteral("inline stylesheet"), cssSymbols,
+                                          snippetFromLine(text, block.startLine, 3)));
+            }
+        }
+    }
+    symbols.append(inlineScriptSymbols);
+
+    // Functions a handler can call: inline script functions (this file) and
+    // global functions of the linked local scripts.
+    QHash<QString, QVariantMap> inlineFunctions;
+    for (const QVariant &entry : std::as_const(inlineScriptSymbols)) {
+        const QVariantMap symbol = entry.toMap();
+        if (isCallableSymbolKind(symbol.value(QStringLiteral("kind")).toString())) {
+            inlineFunctions.insert(symbol.value(QStringLiteral("name")).toString(), symbol);
+        }
+    }
+    QList<QPair<QString, QHash<QString, int>>> scriptFunctions;
+    for (const WebLinks::HtmlAsset &asset : page.assets) {
+        if (asset.kind == QStringLiteral("script") && asset.local && asset.exists) {
+            scriptFunctions.append({asset.resolvedPath, WebLinks::globalFunctionsOfScript(asset.resolvedPath)});
+        }
+    }
+
+    for (const WebLinks::HtmlHandler &handler : page.handlers) {
+        QVariantMap symbol = makeSymbol(QStringLiteral("handler"), handlerSymbolName(handler), handler.line,
+                                        handler.code, {}, handler.snippet);
+        QVariantList calls;
+        for (const QString &name : handler.calledNames) {
+            if (inlineFunctions.contains(name)) {
+                calls.append(relationFromSymbol(inlineFunctions.value(name)));
+                continue;
+            }
+            for (const auto &script : std::as_const(scriptFunctions)) {
+                if (script.second.contains(name)) {
+                    const int line = script.second.value(name);
+                    const QString snippet = snippetFromLine(readScanableScript(script.first), line, 0);
+                    calls.append(makeCrossFileRelation(QStringLiteral("function"), name, script.first,
+                                                       QStringLiteral("script"), line, snippet,
+                                                       QStringLiteral("defined in %1").arg(QFileInfo(script.first).fileName())));
+                    break;
+                }
+            }
+        }
+        symbol.insert(QStringLiteral("calls"), calls);
+        symbols.append(symbol);
+        // Reverse edge on inline functions of this file.
+        for (const QString &name : handler.calledNames) {
+            if (!inlineFunctions.contains(name)) {
+                continue;
+            }
+            const QVariantMap target = inlineFunctions.value(name);
+            for (int index = 0; index < symbols.size(); ++index) {
+                QVariantMap candidate = symbols.at(index).toMap();
+                if (symbolKey(candidate) == symbolKey(target)) {
+                    QVariantList calledBy = candidate.value(QStringLiteral("calledBy")).toList();
+                    calledBy.append(relationFromSymbol(symbol));
+                    candidate.insert(QStringLiteral("calledBy"), calledBy);
+                    symbols[index] = candidate;
+                }
+            }
+        }
+    }
+
+    // Elements with ids, forms and custom elements.
+    for (const WebLinks::HtmlElement &element : page.elements) {
+        if (element.id.isEmpty()) {
+            continue;
+        }
+        QString detail = QStringLiteral("<%1>").arg(element.tag);
+        if (!element.classes.isEmpty()) {
+            detail += QStringLiteral(" .") + element.classes.join(QStringLiteral(" ."));
+        }
+        symbols.append(makeSymbol(QStringLiteral("element"), QStringLiteral("#") + element.id, element.line,
+                                  detail, {}, element.snippet));
+    }
+    QSet<QString> seenCustomTags;
+    for (const WebLinks::HtmlElement &element : page.customElements) {
+        if (seenCustomTags.contains(element.tag)) {
+            continue;
+        }
+        seenCustomTags.insert(element.tag);
+        symbols.append(makeSymbol(QStringLiteral("component"), QStringLiteral("<%1>").arg(element.tag), element.line,
+                                  QStringLiteral("custom element"), {}, element.snippet));
+    }
+    for (const WebLinks::HtmlAsset &asset : page.assets) {
+        if (asset.kind == QStringLiteral("form")) {
+            symbols.append(makeSymbol(QStringLiteral("form"), asset.target, asset.line,
+                                      QStringLiteral("form action"), {}, asset.snippet));
+        }
+    }
+    std::stable_sort(symbols.begin(), symbols.end(), [](const QVariant &left, const QVariant &right) {
+        return left.toMap().value(QStringLiteral("line")).toInt() < right.toMap().value(QStringLiteral("line")).toInt();
+    });
+
+    // Where linked scripts use this page's ids (reverse of the JS-side links).
+    int usageLinks = 0;
+    for (const auto &script : std::as_const(scriptFunctions)) {
+        const QString scriptText = readScanableScript(script.first);
+        if (scriptText.isEmpty()) {
+            continue;
+        }
+        QSet<QString> seenIds;
+        for (const WebLinks::DomReference &ref : WebLinks::extractDomReferences(scriptText)) {
+            if (usageLinks >= 60 || ref.kind != QStringLiteral("id") || seenIds.contains(ref.name)
+                || !page.elementWithId(ref.name)) {
+                continue;
+            }
+            seenIds.insert(ref.name);
+            links.append(makeWebLinkItem(QStringLiteral("dom-id-use"),
+                                         QStringLiteral("#%1 ← %2").arg(ref.name, fileLineLabel(script.first, ref.line)),
+                                         script.first, QStringLiteral("script"), ref.line, ref.snippet,
+                                         ref.via));
+            ++usageLinks;
+        }
+    }
+
+    // Class usage vs available CSS (linked sheets, inline styles, sibling sheets).
+    const QStringList usedClasses = page.usedClasses();
+    QMap<QString, QVariantMap> availableClassEntries = cssClassesForPage(page);
+    bool hasLocalCssSource = !availableClassEntries.isEmpty();
+    for (const WebLinks::HtmlAsset &asset : page.assets) {
+        if (asset.kind == QStringLiteral("stylesheet") && asset.local && asset.exists) {
             hasLocalCssSource = true;
         }
-    };
-
-    const QStringList scriptTargets = extractHtmlLinkedAssets(text, QStringLiteral("script"));
-    for (const QString &target : scriptTargets) {
-        const int line = lineNumberAtOffset(text, text.indexOf(target));
-        collectLink(target, QStringLiteral("script"), line, snippetFromLine(text, line, 1));
     }
-
-    const QStringList stylesheetTargets = extractHtmlLinkedAssets(text, QStringLiteral("stylesheet"));
-    for (const QString &target : stylesheetTargets) {
-        const int line = lineNumberAtOffset(text, text.indexOf(target));
-        collectLink(target, QStringLiteral("stylesheet"), line, snippetFromLine(text, line, 1));
-    }
-
-    const QStringList usedClasses = extractHtmlClasses(text);
-    QSet<QString> availableClasses;
-    QVariantMap availableClassEntries;
-
-    for (const QString &cssPath : linkedCssFiles) {
-        QFile cssFile(cssPath);
-        if (!cssFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            continue;
-        }
-        if (shouldSkipFileBySize(QFileInfo(cssPath), kMaxAuxiliaryFileBytes)) {
-            continue;
-        }
-        const QString cssText = QString::fromUtf8(cssFile.readAll());
-        const QMap<QString, QVariantMap> classIndex = buildCssClassIndex(cssPath, cssText);
-        for (auto it = classIndex.constBegin(); it != classIndex.constEnd(); ++it) {
-            availableClasses.insert(it.key());
-            if (!availableClassEntries.contains(it.key())) {
-                availableClassEntries.insert(it.key(), it.value());
-            }
-        }
-    }
-
-    QRegularExpression siblingCssPattern(QStringLiteral(R"(.*\.css$)"), QRegularExpression::CaseInsensitiveOption);
-    const QFileInfoList siblings = dir.entryInfoList(QDir::Files | QDir::NoDotAndDotDot, QDir::Name);
+    const QFileInfoList siblings = dir.entryInfoList({QStringLiteral("*.css")}, QDir::Files | QDir::NoDotAndDotDot, QDir::Name);
     for (const QFileInfo &entry : siblings) {
-        if (!siblingCssPattern.match(entry.fileName()).hasMatch()) {
-            continue;
-        }
         hasLocalCssSource = true;
-        QFile cssFile(entry.absoluteFilePath());
-        if (!cssFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            continue;
-        }
-        if (shouldSkipFileBySize(entry, kMaxAuxiliaryFileBytes)) {
-            continue;
-        }
-        const QString cssText = QString::fromUtf8(cssFile.readAll());
-        const QMap<QString, QVariantMap> classIndex = buildCssClassIndex(entry.absoluteFilePath(), cssText);
-        for (auto it = classIndex.constBegin(); it != classIndex.constEnd(); ++it) {
-            availableClasses.insert(it.key());
+        const QMap<QString, QVariantMap> index = cachedCssClassIndex(entry.absoluteFilePath());
+        for (auto it = index.constBegin(); it != index.constEnd(); ++it) {
             if (!availableClassEntries.contains(it.key())) {
                 availableClassEntries.insert(it.key(), it.value());
             }
         }
     }
-
     QVariantList matchedClasses;
     QVariantList missingClasses;
     for (const QString &name : usedClasses) {
-        if (availableClasses.contains(name)) {
-            matchedClasses.append(availableClassEntries.value(name).toMap());
+        if (availableClassEntries.contains(name)) {
+            matchedClasses.append(availableClassEntries.value(name));
         } else {
-            missingClasses.append(makeCssClassSummaryEntry(name, false));
+            const QList<const WebLinks::HtmlElement *> elements = page.elementsWithClass(name);
+            const int line = elements.isEmpty() ? 0 : elements.first()->line;
+            missingClasses.append(makeCssClassSummaryEntry(name, false, path, line,
+                                                           elements.isEmpty() ? QString() : elements.first()->snippet));
         }
     }
-
     QVariantMap cssSummary;
-    if (hasLocalCssSource && (!usedClasses.isEmpty() || !availableClasses.isEmpty())) {
+    if (hasLocalCssSource && (!usedClasses.isEmpty() || !availableClassEntries.isEmpty())) {
         cssSummary.insert(QStringLiteral("usedClasses"), toVariantList(usedClasses));
         cssSummary.insert(QStringLiteral("matchedClasses"), matchedClasses);
         cssSummary.insert(QStringLiteral("missingClasses"), missingClasses);
-        cssSummary.insert(QStringLiteral("availableClasses"), toVariantList(availableClasses.values()));
+        cssSummary.insert(QStringLiteral("availableClasses"), toVariantList(availableClassEntries.keys()));
     }
 
-    QVariantMap result;
-    result.insert(QStringLiteral("path"), path);
-    result.insert(QStringLiteral("fileName"), QFileInfo(path).fileName());
-    result.insert(QStringLiteral("language"), QStringLiteral("html"));
-    result.insert(QStringLiteral("symbols"), QVariantList{});
+    QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("html"));
+    result.insert(QStringLiteral("symbols"), symbols);
     result.insert(QStringLiteral("quickLinks"), links);
+    result.insert(QStringLiteral("dependencies"), dependencies);
+    result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
     result.insert(QStringLiteral("cssSummary"), cssSummary);
-    result.insert(QStringLiteral("summary"), QStringLiteral("%1 quick links, %2 classes used")
-                                         .arg(links.size())
-                                         .arg(usedClasses.size()));
+    result.insert(QStringLiteral("summary"), QStringLiteral("%1 elements with ids, %2 handlers, %3 quick links, %4 classes used")
+                                                 .arg(std::count_if(page.elements.cbegin(), page.elements.cend(),
+                                                                    [](const WebLinks::HtmlElement &e) { return !e.id.isEmpty(); }))
+                                                 .arg(page.handlers.size())
+                                                 .arg(links.size())
+                                                 .arg(usedClasses.size()));
     return result;
 }
 
@@ -7025,123 +7450,163 @@ void SymbolParser::enrichCssAnalysisWithHtmlUsage(QVariantMap &result, const QSt
     QVariantList matchedClasses;
     QVariantList missingClasses;
     QStringList usedClasses;
-    QSet<QString> seenQuickLinkPaths;
     const QStringList extractedClasses = extractCssClasses(text);
     const QSet<QString> cssClassNames(extractedClasses.cbegin(), extractedClasses.cend());
-    const QFileInfo cssInfo(path);
-    const QString absoluteCssPath = cssInfo.absoluteFilePath();
-    const QFileInfoList siblings = cssInfo.dir().entryInfoList({QStringLiteral("*.html"), QStringLiteral("*.htm")},
-                                                               QDir::Files | QDir::NoDotAndDotDot,
-                                                               QDir::Name);
+    const QString absoluteCssPath = QFileInfo(path).absoluteFilePath();
 
-    for (const QFileInfo &htmlInfo : siblings) {
-        if (shouldSkipFileBySize(htmlInfo, kMaxAuxiliaryFileBytes)) {
-            continue;
-        }
-
-        QFile htmlFile(htmlInfo.absoluteFilePath());
-        if (!htmlFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            continue;
-        }
-
-        const QString htmlText = QString::fromUtf8(htmlFile.readAll());
-        const QStringList stylesheetTargets = extractHtmlLinkedAssets(htmlText, QStringLiteral("stylesheet"));
-        bool referencesThisCss = false;
-        for (const QString &target : stylesheetTargets) {
-            const bool isLocalTarget = target.startsWith(QStringLiteral("./"))
-                || target.startsWith(QStringLiteral("../"))
-                || target.startsWith(QLatin1Char('/'))
-                || (!target.contains(QStringLiteral("://")) && !target.startsWith(QStringLiteral("//")));
-            if (!isLocalTarget) {
-                continue;
-            }
-            const QString resolved = QDir::cleanPath(htmlInfo.dir().filePath(target));
-            if (QFileInfo(resolved).absoluteFilePath() == absoluteCssPath) {
-                referencesThisCss = true;
+    // Consumer pages: the stylesheet's folder or the nearest ancestor folder
+    // whose pages link it (pages usually sit above css/).
+    const QList<WebLinks::HtmlPage> pages = WebLinks::pagesReferencingAsset(path, QStringLiteral("stylesheet"));
+    QSet<QString> seenScripts;
+    QMap<QString, QVariantMap> ownIndex;
+    QHash<QString, QVariantMap> scriptApplied; // class -> first JS use
+    for (const WebLinks::HtmlPage &page : pages) {
+        int line = 1;
+        QString snippet;
+        for (const WebLinks::HtmlAsset &asset : page.assets) {
+            if (asset.kind == QStringLiteral("stylesheet") && asset.resolvedPath == absoluteCssPath) {
+                line = asset.line;
+                snippet = asset.snippet;
                 break;
             }
         }
+        quickLinks.append(makeWebLinkItem(QStringLiteral("consumer"), QFileInfo(page.path).fileName(), page.path,
+                                          QStringLiteral("html"), line, snippet,
+                                          QStringLiteral("referenced by HTML file")));
 
-        if (!referencesThisCss) {
-            continue;
-        }
-
-        const QString htmlPath = htmlInfo.absoluteFilePath();
-        if (!seenQuickLinkPaths.contains(htmlPath)) {
-            seenQuickLinkPaths.insert(htmlPath);
-            int line = 1;
-            const int offset = htmlText.indexOf(cssInfo.fileName());
-            if (offset >= 0) {
-                line = lineNumberAtOffset(htmlText, offset);
-            }
-            QVariantMap link = makeSourceContextItem(path, QStringLiteral("css"), line,
-                                                     snippetFromLine(htmlText, line, 1),
-                                                     QStringLiteral("referenced by HTML file"));
-            link.insert(QStringLiteral("label"), htmlInfo.fileName());
-            link.insert(QStringLiteral("target"), htmlInfo.fileName());
-            link.insert(QStringLiteral("type"), QStringLiteral("consumer"));
-            link.insert(QStringLiteral("path"), htmlPath);
-            link.insert(QStringLiteral("targetPath"), htmlPath);
-            link.insert(QStringLiteral("language"), QStringLiteral("html"));
-            link.insert(QStringLiteral("exists"), true);
-            quickLinks.append(link);
-        }
-
-        const QStringList htmlClasses = extractHtmlClasses(htmlText);
-        for (const QString &className : htmlClasses) {
+        for (const QString &className : page.usedClasses()) {
             if (!usedClasses.contains(className)) {
                 usedClasses.append(className);
             }
+            const auto containsName = [&](const QVariantList &list) {
+                return std::any_of(list.cbegin(), list.cend(), [&](const QVariant &existing) {
+                    return existing.toMap().value(QStringLiteral("name")).toString() == className;
+                });
+            };
             if (cssClassNames.contains(className)) {
-                QVariantMap entry = findCssClassSummaryEntry(path, text, className);
-                entry.insert(QStringLiteral("language"), QStringLiteral("css"));
-                bool exists = false;
-                for (const QVariant &existing : std::as_const(matchedClasses)) {
-                    if (existing.toMap().value(QStringLiteral("name")).toString() == className) {
-                        exists = true;
-                        break;
+                if (!containsName(matchedClasses)) {
+                    if (ownIndex.isEmpty()) {
+                        ownIndex = buildCssClassIndex(path, text);
                     }
-                }
-                if (!exists) {
+                    QVariantMap entry = ownIndex.value(className,
+                                                       makeCssClassSummaryEntry(className, true, path));
+                    entry.insert(QStringLiteral("language"), QStringLiteral("css"));
                     matchedClasses.append(entry);
                 }
-            } else {
-                QVariantMap missing = makeCssClassSummaryEntry(className, false, htmlPath, 0,
-                                                               QStringLiteral("Used in %1").arg(htmlInfo.fileName()));
+            } else if (!containsName(missingClasses)) {
+                const QList<const WebLinks::HtmlElement *> elements = page.elementsWithClass(className);
+                const int elementLine = elements.isEmpty() ? 0 : elements.first()->line;
+                QVariantMap missing = makeCssClassSummaryEntry(className, false, page.path, elementLine,
+                                                               QStringLiteral("Used in %1").arg(QFileInfo(page.path).fileName()));
                 missing.insert(QStringLiteral("language"), QStringLiteral("html"));
-                bool exists = false;
-                for (const QVariant &existing : std::as_const(missingClasses)) {
-                    if (existing.toMap().value(QStringLiteral("name")).toString() == className) {
-                        exists = true;
-                        break;
-                    }
-                }
-                if (!exists) {
-                    missingClasses.append(missing);
+                missingClasses.append(missing);
+            }
+        }
+
+        // Classes applied from the page's scripts (classList, className, jQuery).
+        for (const WebLinks::HtmlAsset &asset : page.assets) {
+            if (asset.kind != QStringLiteral("script") || !asset.local || !asset.exists
+                || seenScripts.contains(asset.resolvedPath)
+                || shouldSkipFileBySize(QFileInfo(asset.resolvedPath), kMaxAuxiliaryFileBytes)) {
+                continue;
+            }
+            seenScripts.insert(asset.resolvedPath);
+            const QString scriptText = readScanableScript(asset.resolvedPath);
+            if (scriptText.isEmpty()) {
+                continue;
+            }
+            for (const WebLinks::DomReference &ref : WebLinks::extractDomReferences(scriptText)) {
+                if (ref.kind == QStringLiteral("class") && cssClassNames.contains(ref.name)
+                    && !scriptApplied.contains(ref.name)) {
+                    QVariantMap use;
+                    use.insert(QStringLiteral("name"), ref.name);
+                    use.insert(QStringLiteral("path"), asset.resolvedPath);
+                    use.insert(QStringLiteral("line"), ref.line);
+                    use.insert(QStringLiteral("snippet"), ref.snippet);
+                    use.insert(QStringLiteral("via"), ref.via);
+                    scriptApplied.insert(ref.name, use);
                 }
             }
         }
     }
 
+    QVariantList scriptAppliedClasses;
+    for (auto it = scriptApplied.constBegin(); it != scriptApplied.constEnd(); ++it) {
+        const QVariantMap use = it.value();
+        scriptAppliedClasses.append(use);
+        if (quickLinks.size() < 80) {
+            quickLinks.append(makeWebLinkItem(QStringLiteral("script-class"),
+                                              QStringLiteral(".%1 ← %2").arg(it.key(), fileLineLabel(use.value(QStringLiteral("path")).toString(),
+                                                                                                    use.value(QStringLiteral("line")).toInt())),
+                                              use.value(QStringLiteral("path")).toString(), QStringLiteral("script"),
+                                              use.value(QStringLiteral("line")).toInt(),
+                                              use.value(QStringLiteral("snippet")).toString(),
+                                              use.value(QStringLiteral("via")).toString()));
+        }
+    }
+
     QVariantMap cssSummary;
-    if (!quickLinks.isEmpty() || !matchedClasses.isEmpty() || !missingClasses.isEmpty()) {
+    if (!pages.isEmpty()) {
         QStringList availableClasses = extractedClasses;
         availableClasses.sort(Qt::CaseInsensitive);
         usedClasses.sort(Qt::CaseInsensitive);
+        QStringList unusedClasses;
+        for (const QString &name : std::as_const(availableClasses)) {
+            if (!usedClasses.contains(name) && !scriptApplied.contains(name)) {
+                unusedClasses.append(name);
+            }
+        }
         cssSummary.insert(QStringLiteral("usedClasses"), toVariantList(usedClasses));
         cssSummary.insert(QStringLiteral("matchedClasses"), matchedClasses);
         cssSummary.insert(QStringLiteral("missingClasses"), missingClasses);
         cssSummary.insert(QStringLiteral("availableClasses"), toVariantList(availableClasses));
+        cssSummary.insert(QStringLiteral("scriptAppliedClasses"), scriptAppliedClasses);
+        cssSummary.insert(QStringLiteral("unusedClasses"), toVariantList(unusedClasses));
     }
 
     result.insert(QStringLiteral("quickLinks"), quickLinks);
     result.insert(QStringLiteral("cssSummary"), cssSummary);
 
+    // @import and url() references are the stylesheet's dependencies.
+    QVariantList dependencies = result.value(QStringLiteral("dependencies")).toList();
+    static const QRegularExpression importPattern(QStringLiteral(R"(@import\s+(?:url\()?\s*['"]?([^'")\s;]+))"));
+    static const QRegularExpression urlPattern(QStringLiteral(R"(url\(\s*['"]?([^'")]+?)['"]?\s*\))"));
+    QSet<QString> seenTargets;
+    auto addDependency = [&](const QString &target, const QString &type, int offset) {
+        if (target.startsWith(QStringLiteral("data:")) || seenTargets.contains(target) || dependencies.size() >= 60) {
+            return;
+        }
+        seenTargets.insert(target);
+        const int line = lineNumberAtOffset(text, offset);
+        QVariantMap item = makeSourceContextItem(path, QStringLiteral("css"), line, snippetFromLine(text, line, 0),
+                                                 QStringLiteral("%1 dependency").arg(type));
+        item.insert(QStringLiteral("target"), target);
+        item.insert(QStringLiteral("type"), type);
+        item.insert(QStringLiteral("label"), target);
+        const bool local = !target.contains(QStringLiteral("://")) && !target.startsWith(QStringLiteral("//"));
+        const QString resolved = local ? QDir::cleanPath(QFileInfo(path).dir().absoluteFilePath(target.section(QLatin1Char('?'), 0, 0).section(QLatin1Char('#'), 0, 0)))
+                                       : QString();
+        item.insert(QStringLiteral("path"), resolved);
+        item.insert(QStringLiteral("exists"), local ? QFileInfo::exists(resolved) : true);
+        dependencies.append(item);
+    };
+    auto importIt = importPattern.globalMatch(text);
+    while (importIt.hasNext()) {
+        const auto match = importIt.next();
+        addDependency(match.captured(1), QStringLiteral("import"), match.capturedStart(0));
+    }
+    auto urlIt = urlPattern.globalMatch(text);
+    while (urlIt.hasNext()) {
+        const auto match = urlIt.next();
+        addDependency(match.captured(1).trimmed(), QStringLiteral("asset"), match.capturedStart(0));
+    }
+    result.insert(QStringLiteral("dependencies"), dependencies);
+
     const int symbolCount = result.value(QStringLiteral("symbols")).toList().size();
     result.insert(QStringLiteral("summary"),
                   QStringLiteral("%1 selectors and variables, %2 HTML consumers")
                       .arg(symbolCount)
-                      .arg(quickLinks.size()));
+                      .arg(pages.size()));
 }
 
 QVariantList SymbolParser::findHtmlConsumersForAsset(const QString &path, const QString &assetType)

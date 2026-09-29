@@ -40,7 +40,7 @@ LumenCode vendors parser sources directly in `third_party/` so the application c
 
 - Source: https://github.com/tree-sitter/tree-sitter-html
 - Vendored path: `third_party/tree-sitter-html`
-- Revision: `73a3947324f6efddf9e17c0ea58d454843590cc0`
+- Revision: `5a5ca8551a179998360b4a4ca2c0f366a35acc03` (v0.23.2)
 - License: MIT
 - License file retained at: `third_party/tree-sitter-html/LICENSE`
 

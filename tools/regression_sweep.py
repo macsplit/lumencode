@@ -611,6 +611,19 @@ def inspect_fixture_case(case: dict, issues: list[dict]) -> None:
         if actual < int(file_expectations["quick_links"]):
             add_issue(issues, "fixture_missing_quick_links", file_path, case=case_name, expected=file_expectations["quick_links"], actual=actual)
 
+    if "quick_link_labels" in file_expectations:
+        labels = {item.get("label", "") for item in (parsed.get("quickLinks", []) or [])}
+        missing = [label for label in file_expectations["quick_link_labels"] if label not in labels]
+        if missing:
+            add_issue(issues, "fixture_missing_quick_link_labels", file_path, case=case_name, missing=missing, actual=sorted(labels))
+
+    for key, field in (("css_unused_classes", "unusedClasses"), ("css_script_applied_classes", "scriptAppliedClasses")):
+        if key in file_expectations:
+            css_summary = parsed.get("cssSummary", {}) or {}
+            actual = sorted((entry.get("name", "") if isinstance(entry, dict) else entry) for entry in (css_summary.get(field, []) or []))
+            if actual != sorted(file_expectations[key]):
+                add_issue(issues, f"fixture_wrong_{key}", file_path, case=case_name, expected=sorted(file_expectations[key]), actual=actual)
+
     if "dependencies" in file_expectations:
         actual = len(parsed.get("dependencies", []) or [])
         if actual < int(file_expectations["dependencies"]):

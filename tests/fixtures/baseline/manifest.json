@@ -925,6 +925,119 @@
           ]
         }
       ]
+    },
+    {
+      "name": "web_js_dom_links",
+      "root": "tests/fixtures/baseline/web_app",
+      "file": "js/app.js",
+      "file_expectations": {
+        "quick_link_labels": [
+          "index.html",
+          "#todo-list \u2192 index.html:16",
+          "#new-todo \u2192 index.html:14",
+          ".completed \u2192 style.css:9",
+          ".hidden \u2192 style.css:13",
+          "#footer \u2014 no such element in index.html",
+          "<todo-counter> (TodoCounter) used in index.html:18"
+        ]
+      },
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "handleKey",
+          "calledBy": [
+            "<input onkeydown>"
+          ],
+          "calls": [
+            "addTodo"
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "clearCompleted",
+          "calledBy": [
+            "<button onclick>"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "web_html_page",
+      "root": "tests/fixtures/baseline/web_app",
+      "file": "index.html",
+      "file_expectations": {
+        "quick_links": 4,
+        "quick_link_labels": [
+          "style.css",
+          "app.js",
+          "about.html",
+          "login.php",
+          "#todo-list \u2190 app.js:1"
+        ],
+        "css_matched_classes": 4,
+        "css_missing_classes": 1,
+        "analysis_source_mode": "ast"
+      },
+      "expectations": [
+        {
+          "kind": "handler",
+          "name": "<button onclick>",
+          "calls": [
+            "clearCompleted"
+          ]
+        },
+        {
+          "kind": "handler",
+          "name": "<form onsubmit>",
+          "calls": [
+            "validateLogin"
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "validateLogin",
+          "calledBy": [
+            "<form onsubmit>"
+          ]
+        },
+        {
+          "kind": "element",
+          "name": "#todo-list"
+        },
+        {
+          "kind": "component",
+          "name": "<todo-counter>"
+        },
+        {
+          "kind": "style",
+          "name": "<style>"
+        }
+      ]
+    },
+    {
+      "name": "web_css_usage",
+      "root": "tests/fixtures/baseline/web_app",
+      "file": "css/style.css",
+      "file_expectations": {
+        "quick_link_labels": [
+          "index.html",
+          "about.html",
+          ".completed \u2190 app.js:13"
+        ],
+        "css_unused_classes": [
+          "never-used"
+        ],
+        "css_script_applied_classes": [
+          "completed",
+          "hidden"
+        ]
+      },
+      "expectations": [
+        {
+          "kind": "class",
+          "name": "completed"
+        }
+      ]
     }
   ]
 }

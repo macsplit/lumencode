@@ -141,6 +141,17 @@ target_include_directories(vendor-tree-sitter-c-sharp
         third_party/tree-sitter-c-sharp/src
 )
 
+add_library(vendor-tree-sitter-html STATIC
+    third_party/tree-sitter-html/src/parser.c
+    third_party/tree-sitter-html/src/scanner.c
+)
+target_include_directories(vendor-tree-sitter-html
+    PUBLIC
+        third_party/tree-sitter/lib/include
+    PRIVATE
+        third_party/tree-sitter-html/src
+)
+
 add_executable(lumencode
     src/main.cpp
     src/filesystemmodel.cpp
@@ -149,6 +160,8 @@ add_executable(lumencode
     src/projectcontroller.h
     src/symbolparser.cpp
     src/symbolparser.h
+    src/weblinks.cpp
+    src/weblinks.h
     src/resources.qrc
 )
 
@@ -171,6 +184,7 @@ target_link_libraries(lumencode
     vendor-tree-sitter-swift
     vendor-tree-sitter-java
     vendor-tree-sitter-c-sharp
+    vendor-tree-sitter-html
 )
 
 add_executable(lumencode-cli
@@ -181,6 +195,8 @@ add_executable(lumencode-cli
     src/projectcontroller.h
     src/symbolparser.cpp
     src/symbolparser.h
+    src/weblinks.cpp
+    src/weblinks.h
 )
 
 target_link_libraries(lumencode-cli
@@ -199,6 +215,7 @@ target_link_libraries(lumencode-cli
     vendor-tree-sitter-swift
     vendor-tree-sitter-java
     vendor-tree-sitter-c-sharp
+    vendor-tree-sitter-html
 )
 
 install(TARGETS lumencode lumencode-cli ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
