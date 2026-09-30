@@ -634,6 +634,9 @@ bool resolveWith(const Snapshot &snapshot, const FileFacts &from, const CallSite
             }
         }
         const Definition &definition = *resolved;
+        if (definition.path == from.path) {
+            return false; // the body is in the calling file: a same-file call
+        }
         edge->fromPath = from.path;
         edge->fromKey = site.fromKey;
         edge->fromName = site.fromName;
