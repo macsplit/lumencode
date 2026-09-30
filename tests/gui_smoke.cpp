@@ -85,7 +85,7 @@ bool isSupported(const QString &path)
         QStringLiteral("py"), QStringLiteral("java"), QStringLiteral("cs"), QStringLiteral("rs"), QStringLiteral("swift"),
         QStringLiteral("go"), QStringLiteral("c"), QStringLiteral("h"), QStringLiteral("cpp"), QStringLiteral("vb"),
         QStringLiteral("sql"), QStringLiteral("sh"), QStringLiteral("html"), QStringLiteral("css"), QStringLiteral("qml"),
-        QStringLiteral("json"), QStringLiteral("m"),
+        QStringLiteral("json"), QStringLiteral("m"), QStringLiteral("kt"),
     };
     return suffixes.contains(QFileInfo(path).suffix().toLower());
 }

@@ -49,7 +49,7 @@ MUTATIONS = {
 # point is to see real parser behaviour, not to be clever per language.
 # Languages without a Tree-sitter grammar but with a structural (block-aware)
 # parser, which should be just as damage-tolerant.
-STRUCTURAL_HEURISTIC_LANGUAGES = {"vbnet", "sql", "shell", "objc"}
+STRUCTURAL_HEURISTIC_LANGUAGES = {"vbnet", "sql", "shell", "objc", "kotlin"}
 
 SKIP_LANGUAGES = {"json", "html", "css", "unknown"}
 

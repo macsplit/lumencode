@@ -2229,6 +2229,92 @@
           "name": "third"
         }
       ]
+    },
+    {
+      "name": "kotlin_structure_signatures",
+      "root": "tests/fixtures/baseline/kotlin_basic",
+      "file": "src/main/kotlin/com/shop/Model.kt",
+      "expectations": [
+        {
+          "kind": "class",
+          "name": "Line"
+        },
+        {
+          "kind": "enum",
+          "name": "Status"
+        },
+        {
+          "kind": "enum member",
+          "name": "PAID"
+        },
+        {
+          "kind": "type",
+          "name": "Lines"
+        },
+        {
+          "kind": "class",
+          "name": "Cart"
+        },
+        {
+          "kind": "method",
+          "name": "add",
+          "parameters": [
+            "sku: String",
+            "quantity: Int"
+          ],
+          "returns": [
+            "Cart"
+          ],
+          "calls": [
+            "Line",
+            "log"
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "log",
+          "calledBy": [
+            "add"
+          ]
+        },
+        {
+          "kind": "object",
+          "name": "Companion"
+        },
+        {
+          "kind": "function",
+          "name": "checkout"
+        }
+      ]
+    },
+    {
+      "name": "kotlin_ktor_routes",
+      "root": "tests/fixtures/baseline/kotlin_basic",
+      "file": "src/main/kotlin/com/shop/Routes.kt",
+      "file_expectations": {
+        "routes": 2,
+        "dependencies": 2
+      },
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "shopRoutes"
+        }
+      ]
+    },
+    {
+      "name": "index_kotlin_companion_qualifier",
+      "root": "tests/fixtures/baseline/kotlin_basic",
+      "file": "src/main/kotlin/com/shop/Routes.kt",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "shopRoutes",
+          "calls": [
+            "empty"
+          ]
+        }
+      ]
     }
   ]
 }

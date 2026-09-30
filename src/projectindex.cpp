@@ -36,7 +36,7 @@ const QSet<QString> &indexedSuffixes()
         QStringLiteral("c"), QStringLiteral("cc"), QStringLiteral("cpp"), QStringLiteral("cxx"), QStringLiteral("h"),
         QStringLiteral("hh"), QStringLiteral("hpp"), QStringLiteral("hxx"), QStringLiteral("m"), QStringLiteral("mm"),
         QStringLiteral("vb"), QStringLiteral("sql"), QStringLiteral("sh"), QStringLiteral("bash"), QStringLiteral("qml"),
-        QStringLiteral("html"), QStringLiteral("htm"),
+        QStringLiteral("html"), QStringLiteral("htm"), QStringLiteral("kt"), QStringLiteral("kts"),
     };
     return suffixes;
 }
@@ -60,7 +60,7 @@ bool isDefinitionKind(const QString &kind)
         QStringLiteral("component"), QStringLiteral("class"), QStringLiteral("struct"), QStringLiteral("interface"),
         QStringLiteral("trait"), QStringLiteral("enum"), QStringLiteral("type"), QStringLiteral("protocol"),
         QStringLiteral("procedure"), QStringLiteral("operator"), QStringLiteral("destructor"), QStringLiteral("scope"),
-        QStringLiteral("module"), QStringLiteral("union"), QStringLiteral("record"),
+        QStringLiteral("module"), QStringLiteral("union"), QStringLiteral("record"), QStringLiteral("object"),
     };
     return kinds.contains(kind);
 }
@@ -70,7 +70,7 @@ bool isTypeKind(const QString &kind)
     static const QSet<QString> kinds = {
         QStringLiteral("class"), QStringLiteral("struct"), QStringLiteral("interface"), QStringLiteral("trait"),
         QStringLiteral("enum"), QStringLiteral("type"), QStringLiteral("protocol"), QStringLiteral("union"),
-        QStringLiteral("scope"), QStringLiteral("component"), QStringLiteral("record"),
+        QStringLiteral("scope"), QStringLiteral("component"), QStringLiteral("record"), QStringLiteral("object"),
     };
     return kinds.contains(kind);
 }
@@ -142,6 +142,17 @@ bool isGenericName(const QString &name)
         QStringLiteral("intValue"), QStringLiteral("longValue"), QStringLiteral("doubleValue"), QStringLiteral("shortValue"),
         QStringLiteral("byteValue"), QStringLiteral("compareTo"), QStringLiteral("iterator"), QStringLiteral("subList"),
         QStringLiteral("entrySet"), QStringLiteral("keySet"), QStringLiteral("putAll"), QStringLiteral("removeAll"),
+        // Kotlin standard library.
+        QStringLiteral("toLong"), QStringLiteral("toInt"), QStringLiteral("toShort"), QStringLiteral("toByte"),
+        QStringLiteral("toChar"), QStringLiteral("toDouble"), QStringLiteral("toFloat"), QStringLiteral("toList"),
+        QStringLiteral("toMutableList"), QStringLiteral("toSet"), QStringLiteral("toMap"), QStringLiteral("toTypedArray"),
+        QStringLiteral("toByteArray"), QStringLiteral("toUByte"), QStringLiteral("toUInt"), QStringLiteral("toULong"),
+        QStringLiteral("also"), QStringLiteral("takeIf"), QStringLiteral("orEmpty"), QStringLiteral("isNullOrEmpty"),
+        QStringLiteral("isNotEmpty"), QStringLiteral("getOrNull"), QStringLiteral("getOrElse"), QStringLiteral("getOrPut"),
+        QStringLiteral("sumOf"), QStringLiteral("forEach"), QStringLiteral("mapNotNull"), QStringLiteral("firstOrNull"),
+        QStringLiteral("lastOrNull"), QStringLiteral("assertFailsWith"), QStringLiteral("hashCode"), QStringLiteral("compareTo"),
+        QStringLiteral("coerceAtLeast"), QStringLiteral("coerceAtMost"), QStringLiteral("coerceIn"), QStringLiteral("copyInto"),
+        QStringLiteral("copyOf"), QStringLiteral("contentEquals"), QStringLiteral("contentHashCode"), QStringLiteral("readBytes"),
         // NSObject / Foundation selectors that classes override.
         QStringLiteral("class"), QStringLiteral("superclass"), QStringLiteral("conformsToProtocol:"),
         QStringLiteral("respondsToSelector:"), QStringLiteral("isKindOfClass:"), QStringLiteral("isMemberOfClass:"),
@@ -280,7 +291,9 @@ FileFacts factsFromAnalysis(const QVariantMap &analysis, qint64 size, qint64 mod
             }
             if (depth < 3) {
                 QString memberOwner = owner;
-                if (isTypeKind(kind) || kind == QStringLiteral("record") || kind == QStringLiteral("object")
+                if (kind == QStringLiteral("object") && name == QStringLiteral("Companion") && !owner.isEmpty()) {
+                    memberOwner = owner; // Kotlin companion members are called as Owner.member()
+                } else if (isTypeKind(kind) || kind == QStringLiteral("record") || kind == QStringLiteral("object")
                     || kind == QStringLiteral("module")) {
                     memberOwner = name;
                 } else if (kind == QStringLiteral("impl") || kind == QStringLiteral("extension")
