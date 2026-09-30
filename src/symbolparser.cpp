@@ -17,6 +17,8 @@
 #include <QStringList>
 #include <QVector>
 
+#include <cctype>
+#include <climits>
 #include <cstring>
 #include <algorithm>
 #include <functional>
@@ -324,6 +326,7 @@ struct AstRepairCandidates
 {
     QList<int> primary;
     QList<int> secondary;
+    QList<QPair<int, int>> errorSpans; // rows covered by ERROR nodes
 };
 
 static void collectAstErrors(TSNode node, AstErrorScore &score, AstRepairCandidates &candidates)
@@ -346,6 +349,7 @@ static void collectAstErrors(TSNode node, AstErrorScore &score, AstRepairCandida
         score.errorBytes += qMax<qint64>(1, ts_node_end_byte(node) - ts_node_start_byte(node));
         const int startRow = static_cast<int>(ts_node_start_point(node).row);
         candidates.secondary.append(startRow);
+        candidates.errorSpans.append({startRow, static_cast<int>(ts_node_end_point(node).row)});
         const uint32_t childCount = ts_node_child_count(node);
         for (uint32_t index = 0; index < childCount; ++index) {
             TSNode child = ts_node_child(node, index);
@@ -464,6 +468,76 @@ static QList<int> indentedBlockRows(const QByteArray &source, const QVector<int>
     return rows;
 }
 
+// Lines that look damaged regardless of what the parser reports: tree-sitter
+// often blames an intact enclosing line (a `describe('x', () => {` header)
+// for an unclosed call or string further down. Suspects are
+//  - a line opening more brackets than it closes whose next non-blank line
+//    is not indented deeper (a real multi-line construct indents), and
+//  - a line with an unterminated ' or " string.
+static QSet<int> textuallySuspectRows(const QByteArray &source, const QVector<int> &starts)
+{
+    QSet<int> suspects;
+    for (int row = 0; row < starts.size(); ++row) {
+        const int begin = starts.at(row);
+        const int end = row + 1 < starts.size() ? starts.at(row + 1) - 1 : source.size();
+        const QByteArray line = source.mid(begin, end - begin);
+        if (line.contains("\"\"\"") || line.contains("'''") || line.contains('`')) {
+            continue; // multi-line string syntax: not judged per line
+        }
+        int net = 0;
+        char quote = 0;
+        for (int index = 0; index < line.size(); ++index) {
+            const char ch = line.at(index);
+            if (quote) {
+                if (ch == '\\') {
+                    ++index;
+                } else if (ch == quote) {
+                    quote = 0;
+                }
+                continue;
+            }
+            if (ch == '/' && index + 1 < line.size() && (line.at(index + 1) == '/' || line.at(index + 1) == '*')) {
+                break;
+            }
+            if (ch == '#' && (index == 0 || line.at(index - 1) == ' ')) {
+                break; // Python/shell comment (also C preprocessor lines, harmlessly)
+            }
+            if (ch == '"' || ch == '\'') {
+                // an apostrophe after a letter (Rust lifetimes, English text) is not a quote
+                const bool apostrophe = ch == '\'' && index > 0 && std::isalnum(static_cast<unsigned char>(line.at(index - 1)));
+                if (!apostrophe) {
+                    quote = ch;
+                }
+            } else if (ch == '(' || ch == '[' || ch == '{') {
+                ++net;
+            } else if (ch == ')' || ch == ']' || ch == '}') {
+                --net;
+            }
+        }
+        if (quote != 0) {
+            suspects.insert(row);
+            continue;
+        }
+        if (net <= 0) {
+            continue;
+        }
+        bool blank = false;
+        const int indent = rowIndentWidth(source, starts, row, &blank);
+        for (int next = row + 1; next < starts.size(); ++next) {
+            bool nextBlank = false;
+            const int nextIndent = rowIndentWidth(source, starts, next, &nextBlank);
+            if (nextBlank) {
+                continue;
+            }
+            if (nextIndent <= indent) {
+                suspects.insert(row);
+            }
+            break;
+        }
+    }
+    return suspects;
+}
+
 struct AstRepairResult
 {
     QByteArray source;
@@ -500,6 +574,9 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
     QElapsedTimer timer;
     timer.start();
     const QVector<int> starts = lineStartOffsets(original);
+    const QSet<int> suspectRows = textuallySuspectRows(original, starts);
+    constexpr int kMaxSuspectTrials = 12;
+    int suspectTrialsUsed = 0;
     AstRepairCandidates candidates;
     AstErrorScore current = scoreAstSource(parser, result.source, &candidates);
     QSet<int> blanked;
@@ -531,7 +608,7 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
         AstRepairCandidates bestCandidates;
         QByteArray bestSource;
 
-        auto tryTier = [&](const QList<int> &tierRows) {
+        auto tryTier = [&](const QList<int> &tierRows, bool decisiveOnly = false) {
             QList<int> ordered = normalizeRows(tierRows);
             if (ordered.size() > kMaxCandidatesPerRound) {
                 ordered = ordered.mid(0, kMaxCandidatesPerRound);
@@ -551,7 +628,12 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
                 }
                 AstRepairCandidates trialCandidates;
                 const AstErrorScore trialScore = scoreAstSource(parser, trial, &trialCandidates);
-                if (trialScore < current && isBetterRepair(trialScore, bestScore, bestRows.isEmpty())) {
+                // Textual suspects must be decisive (a clean parse); a partial
+                // gain would steer the greedy pass away from the parser's own,
+                // better candidates.
+                const bool decisive = trialScore.isClean();
+                if ((!decisiveOnly || decisive) && trialScore < current
+                    && isBetterRepair(trialScore, bestScore, bestRows.isEmpty())) {
                     bestScore = trialScore;
                     bestRows = rows;
                     bestCandidates = trialCandidates;
@@ -563,7 +645,40 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
             }
         };
 
-        tryTier(candidates.primary + candidates.secondary);
+        // Textual suspects first, but only one that makes the file parse
+        // cleanly counts (tree-sitter often blames an intact enclosing header
+        // for an unclosed call or string further down); otherwise the parser's
+        // own candidates as before.
+        {
+            int firstError = INT_MAX;
+            int lastError = -1;
+            for (const auto &span : std::as_const(candidates.errorSpans)) {
+                firstError = qMin(firstError, span.first);
+                lastError = qMax(lastError, span.second);
+            }
+            // The parser notices damage after it happens: look inside the
+            // error spans and up to 30 rows before the first one, nearest first.
+            QList<int> suspectsInErrors;
+            for (int row : std::as_const(suspectRows)) {
+                if (!blanked.contains(row) && row >= firstError - 30 && row <= lastError) {
+                    suspectsInErrors.append(row);
+                }
+            }
+            std::sort(suspectsInErrors.begin(), suspectsInErrors.end(), [&](int left, int right) {
+                const int leftDistance = qAbs(left - firstError);
+                const int rightDistance = qAbs(right - firstError);
+                return leftDistance != rightDistance ? leftDistance < rightDistance : left < right;
+            });
+            const int suspectTrials = qMin(6, kMaxSuspectTrials - suspectTrialsUsed);
+            if (suspectTrials > 0 && !suspectsInErrors.isEmpty()) {
+                const QList<int> tier = suspectsInErrors.mid(0, suspectTrials);
+                suspectTrialsUsed += tier.size();
+                tryTier(tier, true);
+            }
+        }
+        if (bestRows.isEmpty()) {
+            tryTier(candidates.primary + candidates.secondary);
+        }
         if (bestRows.isEmpty()) {
             break;
         }

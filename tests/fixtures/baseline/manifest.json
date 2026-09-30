@@ -2126,6 +2126,29 @@
         "max_routes": 0
       },
       "expectations": []
+    },
+    {
+      "name": "ts_unclosed_call_in_test_block",
+      "root": "tests/fixtures/baseline/ts_test_recovery",
+      "file": "suite.test.ts",
+      "expectations": [
+        {
+          "kind": "test suite",
+          "name": "first"
+        },
+        {
+          "kind": "test",
+          "name": "second"
+        },
+        {
+          "kind": "test suite",
+          "name": "other"
+        },
+        {
+          "kind": "test",
+          "name": "third"
+        }
+      ]
     }
   ]
 }
