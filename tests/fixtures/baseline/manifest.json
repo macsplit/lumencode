@@ -2012,6 +2012,48 @@
           ]
         }
       ]
+    },
+    {
+      "name": "index_java_import_across_source_sets",
+      "root": "tests/fixtures/baseline/cross_file/java_pkg",
+      "file": "src/test/java/com/shop/MoneyTest.java",
+      "expectations": [
+        {
+          "kind": "method",
+          "name": "keepsCents",
+          "calls": [
+            "ofCents"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_java_import_called_by",
+      "root": "tests/fixtures/baseline/cross_file/java_pkg",
+      "file": "src/main/java/com/shop/util/Money.java",
+      "expectations": [
+        {
+          "kind": "method",
+          "name": "ofCents",
+          "calledBy": [
+            "keepsCents"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_php_use_alias",
+      "root": "tests/fixtures/baseline/cross_file/php_composer",
+      "file": "src/Http/CheckoutController.php",
+      "expectations": [
+        {
+          "kind": "method",
+          "name": "complete",
+          "calls": [
+            "send"
+          ]
+        }
+      ]
     }
   ]
 }

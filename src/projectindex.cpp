@@ -529,6 +529,15 @@ bool resolveWith(const Snapshot &snapshot, const FileFacts &from, const CallSite
         || owner == QStringLiteral("super") || owner == QStringLiteral("parent") || owner == QStringLiteral("static");
     if (selfCall) {
         owner = callerOwner;
+    } else if (!owner.isEmpty()) {
+        // `use Shop\Billing\InvoiceMailer as Mailer`: Mailer::send is InvoiceMailer's.
+        for (const Import &import : from.imports) {
+            const QString imported = import.bindings.value(owner);
+            if (!imported.isEmpty() && imported != QStringLiteral("*") && imported != QStringLiteral("default")) {
+                owner = imported;
+                break;
+            }
+        }
     }
     // Qualifier head (first segment) - a module / namespace binding if imported.
     QString head = rawQualifier;

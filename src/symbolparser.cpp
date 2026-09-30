@@ -3416,6 +3416,80 @@ static QString resolvePhpIncludePath(const QString &filePath, const QString &lit
     return {};
 }
 
+// Java imports resolved to source files: `package a.b;` gives the source
+// root, `import a.b.C;` is root/a/b/C.java (also in sibling source sets,
+// e.g. src/test/java -> src/main/java); static imports bind the member.
+static void resolveJavaImports(QVariantMap &analysis, const QString &path, const QString &text)
+{
+    static const QRegularExpression packagePattern(QStringLiteral(R"(^\s*package\s+([A-Za-z_][\w.]*)\s*;)"),
+                                                   QRegularExpression::MultilineOption);
+    const QString package = packagePattern.match(text).captured(1);
+    QDir root = QFileInfo(path).absoluteDir();
+    for (int up = 0; up < package.count(QLatin1Char('.')) + (package.isEmpty() ? 0 : 1); ++up) {
+        if (!root.cdUp()) {
+            return;
+        }
+    }
+    QStringList roots{root.absolutePath()};
+    QDir sourceSets(root.absolutePath());
+    const QString flavour = sourceSets.dirName(); // java / kotlin
+    if (sourceSets.cdUp() && sourceSets.cdUp() && sourceSets.dirName() == QStringLiteral("src")) {
+        for (const QString &set : sourceSets.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name)) {
+            const QString candidate = sourceSets.filePath(set + QLatin1Char('/') + flavour);
+            if (!roots.contains(candidate) && QFileInfo(candidate).isDir()) {
+                roots.append(candidate);
+            }
+        }
+    }
+    static const QRegularExpression staticPrefix(QStringLiteral(R"(^static\s+)"));
+    QVariantList dependencies = analysis.value(QStringLiteral("dependencies")).toList();
+    for (int index = 0; index < dependencies.size(); ++index) {
+        QVariantMap item = dependencies.at(index).toMap();
+        QString target = item.value(QStringLiteral("target")).toString().trimmed();
+        const bool isStatic = staticPrefix.match(target).hasMatch()
+            || item.value(QStringLiteral("snippet")).toString().contains(QStringLiteral("import static"));
+        target.remove(staticPrefix);
+        if (target.endsWith(QStringLiteral(".*")) || !item.value(QStringLiteral("path")).toString().isEmpty()) {
+            continue;
+        }
+        QStringList parts = target.split(QLatin1Char('.'), Qt::SkipEmptyParts);
+        QString member;
+        if (isStatic && parts.size() > 1) {
+            member = parts.takeLast();
+        }
+        if (parts.isEmpty()) {
+            continue;
+        }
+        const QString local = member.isEmpty() ? parts.last() : member;
+        const QVariantList bindings{QVariantMap{{QStringLiteral("local"), local}, {QStringLiteral("imported"), local}}};
+        bool found = false;
+        // a.b.C, then a.b.C.Nested -> C.java
+        for (int length = parts.size(); length > 0 && !found; --length) {
+            for (const QString &sourceRoot : std::as_const(roots)) {
+                const QString candidate = sourceRoot + QLatin1Char('/') + parts.mid(0, length).join(QLatin1Char('/'))
+                    + QStringLiteral(".java");
+                if (QFileInfo(candidate).isFile()) {
+                    item.insert(QStringLiteral("path"), QFileInfo(candidate).absoluteFilePath());
+                    item.insert(QStringLiteral("bindings"), bindings);
+                    found = true;
+                    break;
+                }
+            }
+            if (length < parts.size() - 1) {
+                break; // at most one level of nesting
+            }
+        }
+        // Outside the project's own package family: a library import, bound
+        // so its names are never linked to project code.
+        const QString family = package.section(QLatin1Char('.'), 0, 1);
+        if (!found && !family.isEmpty() && !target.startsWith(family + QLatin1Char('.'))) {
+            item.insert(QStringLiteral("bindings"), bindings);
+        }
+        dependencies[index] = item;
+    }
+    analysis.insert(QStringLiteral("dependencies"), dependencies);
+}
+
 static void enrichPhpAnalysis(QVariantMap &result, const QString &path, const QString &text)
 {
     QVariantList dependencies = result.value(QStringLiteral("dependencies")).toList();
@@ -3424,7 +3498,7 @@ static void enrichPhpAnalysis(QVariantMap &result, const QString &path, const QS
         seen.insert(entry.toMap().value(QStringLiteral("target")).toString());
     }
     auto addDependency = [&](const QString &target, const QString &type, int offset, const QString &resolved,
-                             const QString &label = QString()) {
+                             const QString &label = QString(), const QString &localName = QString()) {
         if (target.isEmpty() || seen.contains(type + target) || dependencies.size() >= 120) {
             return;
         }
@@ -3437,6 +3511,13 @@ static void enrichPhpAnalysis(QVariantMap &result, const QString &path, const QS
         item.insert(QStringLiteral("label"), label.isEmpty() ? target : label);
         item.insert(QStringLiteral("path"), resolved);
         item.insert(QStringLiteral("exists"), resolved.isEmpty() ? true : QFileInfo::exists(resolved));
+        if (type == QStringLiteral("use") && !resolved.isEmpty()) {
+            // `use App\Mail\Mailer [as M]` binds the short (or alias) name to the class.
+            const QString imported = target.section(QLatin1Char('\\'), -1);
+            item.insert(QStringLiteral("bindings"), QVariantList{QVariantMap{
+                {QStringLiteral("local"), localName.isEmpty() ? imported : localName},
+                {QStringLiteral("imported"), imported}}});
+        }
         dependencies.append(item);
     };
 
@@ -3449,23 +3530,29 @@ static void enrichPhpAnalysis(QVariantMap &result, const QString &path, const QS
         const auto match = useIt.next();
         QString base = match.captured(1);
         const QString group = match.captured(2);
+        static const QRegularExpression aliasPattern(QStringLiteral(R"(\s+as\s+([A-Za-z_]\w*))"));
         QStringList names;
+        QStringList aliases;
         if (!group.isEmpty()) {
             if (base.endsWith(QLatin1Char('\\'))) {
                 base.chop(1);
             }
             for (QString part : group.split(QLatin1Char(','), Qt::SkipEmptyParts)) {
+                const QString alias = aliasPattern.match(part).captured(1);
                 part = part.trimmed().section(QRegularExpression(QStringLiteral(R"(\s+as\s+)")), 0, 0).trimmed();
                 if (!part.isEmpty()) {
                     names.append(base + QLatin1Char('\\') + part);
+                    aliases.append(alias);
                 }
             }
         } else {
             names.append(base);
+            aliases.append(aliasPattern.match(match.captured(0)).captured(1));
         }
-        for (const QString &name : std::as_const(names)) {
+        for (int index = 0; index < names.size(); ++index) {
+            const QString &name = names.at(index);
             addDependency(name, QStringLiteral("use"), match.capturedStart(0), resolvePhpClassPath(path, name),
-                          name.section(QLatin1Char('\\'), -1));
+                          name.section(QLatin1Char('\\'), -1), aliases.at(index));
         }
     }
 
@@ -4740,6 +4827,7 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
                                               [&] { return parseJava(path, text); },
                                               false);
         enrichJavaRoutes(analysis, path, text);
+        resolveJavaImports(analysis, path, text);
         return annotateAnalysisWithProvenance(analysis, analysis.value(QStringLiteral("analysisSourceMode")).toString(),
                                               analysis.value(QStringLiteral("analysisConfidence")).toString());
     }
