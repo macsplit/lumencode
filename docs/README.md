@@ -5,6 +5,7 @@
 - [Specification](./spec.md)
 - [CLI Testing Strategy](./cli-testing-strategy.md)
 - [Implementation Log](./implementation-log.md)
+- [Roadmap: closing the known gaps](./roadmap.md)
 
 These guides are meant to explain how to use and extend LumenCode without forcing the reader through every implementation caveat first.
 
@@ -15,4 +16,3 @@ To render them to `docs/generated/` as SVG and PNG:
 ```bash
 ./tools/generate-doc-diagrams.sh
 ```
-- [Roadmap: closing the known gaps](roadmap.md)
