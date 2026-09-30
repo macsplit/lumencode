@@ -366,7 +366,7 @@ Phase 4. Native parser rehabilitation
 
 Phase 5. General polish
 
-- Add search/filtering.
+- Add search/filtering. **(Completed: symbol and file search on the project index, Ctrl+F)**
 - Improve density and readability. **(Partially completed: denser explorer layout and larger default source pane landed)**
 - Refine navigation and jump behavior. **(Partially completed: open-in-folder, open-in-editor, settings, and desktop launcher integration landed)**
 

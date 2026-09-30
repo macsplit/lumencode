@@ -23,9 +23,10 @@ _Last updated: 2026-09-30._
 
 LumenCode is a working desktop explorer (Qt 5.15 / KF5 Kirigami) with a
 backend that is now developed and regression-tested almost entirely through
-its command-line twin, `lumencode-cli`. The current milestone is still
-**stabilization and trustworthiness of the inspection pipeline, before
-search**. See [Recent History](#recent-history) for how it got here and
+its command-line twin, `lumencode-cli`. Roadmap phases A-G are done
+(project index, cross-file links, resilience, more languages, agent tooling,
+search and warning styling in the GUI); what is left is listed in
+[`docs/roadmap.md`](docs/roadmap.md) and Known Issues below. See [Recent History](#recent-history) for how it got here and
 [`docs/implementation-log.md`](docs/implementation-log.md) for the detail.
 
 ### The product
@@ -382,7 +383,7 @@ integrations live in `tools/agent/`:
   routes
 
 ## Roadmap
-Next major milestone: stabilization and trustworthiness of the inspection pipeline, before search.
+Next: fix the Overview / Detail card binding loops (Known Issues), look at Phase F on a real desktop session, then tests for the agent tooling.
 
 **Current plan:** [`docs/roadmap.md`](docs/roadmap.md) re-examines the gaps below against corpus
 measurements and orders the next work in phases A–F: quick wins and a headless GUI check, a

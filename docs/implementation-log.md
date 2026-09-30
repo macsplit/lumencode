@@ -1,5 +1,11 @@
 # Implementation Log
 
+## 2026-09-30 (continued): agent tooling additions
+
+- **MCP `project_summary` and `web_links`:** wrapper-only. `project_summary` reads `getProjectSummary` from `-i` plus the root `package.json`; `web_links` condenses `--dump-file` of an HTML / CSS / JS file into broken references, links out, handlers, ids, DOM use and class usage.
+- **Edit hooks** (`tools/agent/hooks/lumencode_hook.py`, registration example in `settings.example.json`): `pre` snapshots the file's outline silently, `post` compares and reports new damaged lines, removed or re-signatured functions with callers from the index, and added symbols. A live test showed PreToolUse context reaches the model only with the edit's result, so `pre` no longer prints the outline. Never blocks an edit.
+- Not covered by automated tests yet: the MCP server and the hook script (checked by hand and in headless `claude -p` sessions).
+
 ## 2026-09-30 (continued): phase F
 
 - **Search:** `AgentQueries::searchSymbols` ranks definition names (`Owner.name`) and file names over the project index: exact, prefix, word/camelCase initials, substring, then a 4+ character subsequence; filters by kind, language and path. Used by `lumencode-cli --search/--kind/--language/--in/--limit`, the MCP `search_symbols` tool and `ProjectController::search`.

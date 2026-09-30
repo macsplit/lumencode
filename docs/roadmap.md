@@ -184,8 +184,12 @@ Progress is recorded per phase in [`implementation-log.md`](implementation-log.m
   `--callers`, `--callees`, `--routes`), `tools/agent/SKILL.md`, an MCP
   server (`tools/agent/lumencode_mcp.py`, stdio, no dependencies) and a
   headless `-DLUMENCODE_CLI_ONLY=ON` build that needs only Qt 5 base.
-  Packaging the CLI (distribution packages, a container image) is left
-  for when there is demand.
+  Later additions: MCP `project_summary`, `web_links` and `search_symbols`
+  tools, and edit hooks (`tools/agent/hooks/`: a silent pre-edit snapshot and
+  a post-edit check reporting new syntax damage, removed or re-signatured
+  functions with their callers). Left open: packaging the CLI (distribution
+  packages, a container image) until there is demand, and automated tests
+  for the MCP server and the hook script.
 - **Phase F — done (2026-09-30).** Search box on the project index
   (`AgentQueries::searchSymbols`, shared with `lumencode-cli --search` and
   the MCP `search_symbols` tool); warning styling for broken links, missing
