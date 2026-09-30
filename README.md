@@ -290,7 +290,7 @@ integrations live in `tools/agent/`:
   `.claude/skills/lumencode/SKILL.md` in a project (or `~/.claude/skills/`).
 - `lumencode_mcp.py` — an MCP server (stdio, no third-party packages) with
   `outline_file`, `find_definition`, `find_callers`, `find_callees`,
-  `list_routes` and `index_stats`:
+  `list_routes`, `project_summary`, `web_links` and `index_stats`:
   `claude mcp add lumencode -- python3 /path/to/lumencode/tools/agent/lumencode_mcp.py`
   (`LUMENCODE_CLI` / `LUMENCODE_ROOT` override the binary and default root).
 

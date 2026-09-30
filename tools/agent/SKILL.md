@@ -25,6 +25,8 @@ Locate the binary once: `command -v lumencode-cli` or the project's
 | What breaks if I change `name`? Who uses it? | `lumencode-cli --index-project <root> --callers <name> --format text` |
 | What does `name` depend on? | `lumencode-cli --index-project <root> --callees <name> --format text` |
 | Where is the endpoint for `/api/...`? Which frontend code calls it? | `lumencode-cli --index-project <root> --routes --format text` |
+| Orientation on an unfamiliar project (file types, entry point, package scripts) | MCP `project_summary` |
+| How is this HTML / CSS / JS file wired up? Broken ids or classes? | MCP `web_links` (or `--dump-file` and read `quickLinks` / `cssSummary`) |
 | Every cross-file call edge (bulk analysis) | `lumencode-cli --index-project <root> --index-edges` (JSON lines) |
 
 Drop `--format text` for JSON. The first `--index-project` on a project

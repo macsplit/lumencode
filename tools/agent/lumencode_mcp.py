@@ -7,6 +7,8 @@ Tools:
   find_callers     who calls a name (same-file and cross-file)
   find_callees     what a name calls
   list_routes      backend routes and the browser calls that reach them
+  project_summary  file-type counts, main entry point and package.json summary of a project
+  web_links        HTML / CSS / JS links of one file: assets, handlers, DOM ids, CSS classes, broken references
   index_stats      project index statistics (files, edges, build time)
 
 Configuration (environment):
@@ -102,6 +104,28 @@ TOOLS = [
                        "cross-file edges by evidence, build time).",
         "inputSchema": {"type": "object", "properties": {"root": ROOT_PROPERTY}},
     },
+    {
+        "name": "project_summary",
+        "description": "Orientation for an unfamiliar project: file counts by type, the main entry point, and (when the root has "
+                       "a package.json) its name, version, scripts and dependency counts. Cheap; use it first.",
+        "inputSchema": {"type": "object", "properties": {"root": ROOT_PROPERTY, "format": FORMAT_PROPERTY}},
+    },
+    {
+        "name": "web_links",
+        "description": "How an HTML, CSS or JavaScript file is wired to the rest of a web front end: linked stylesheets and "
+                       "scripts, pages and forms; HTML handlers and the functions they call; ids and the scripts that use them; "
+                       "CSS classes used, unused, applied from JavaScript, or defined nowhere; and broken references "
+                       "(e.g. getElementById('x') with no such element). Check it after editing markup, class names or ids.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "HTML, CSS or JS file (absolute, or relative to the root)."},
+                "root": ROOT_PROPERTY,
+                "format": FORMAT_PROPERTY,
+            },
+            "required": ["path"],
+        },
+    },
 ]
 
 
@@ -120,6 +144,144 @@ def run_cli(args: list[str]) -> tuple[str, bool]:
     if len(output) > MAX_OUTPUT_CHARS:
         output = output[:MAX_OUTPUT_CHARS] + f"\n... (truncated, {len(output)} characters in total)"
     return (output or "(no results)", False)
+
+
+def rel(path: str, root: str) -> str:
+    try:
+        return str(Path(path).resolve().relative_to(root))
+    except (ValueError, OSError):
+        return path
+
+
+def run_cli_json(args: list[str]):
+    """Run the CLI and parse its JSON output; returns (data, error_text)."""
+    cli = find_cli()
+    if not cli:
+        return None, run_cli([])[0]
+    try:
+        result = subprocess.run([cli, *args], capture_output=True, text=True, timeout=600)
+    except subprocess.TimeoutExpired:
+        return None, "lumencode-cli timed out"
+    lines = [line for line in result.stdout.splitlines() if line.strip()]
+    if result.returncode != 0 or not lines:
+        return None, (result.stdout.strip() + "\n" + result.stderr.strip()[-2000:]).strip() or "no output"
+    try:
+        return json.loads(result.stdout), None
+    except json.JSONDecodeError as error:
+        return None, f"unparseable lumencode-cli output: {error}"
+
+
+def project_summary(root: str, output_format: str) -> tuple[str, bool]:
+    if not Path(root).is_dir():
+        return (f"not a directory: {root}", True)
+    cli_input = '{"command":"getProjectSummary"}\n'
+    cli = find_cli()
+    if not cli:
+        return run_cli([])
+    try:
+        result = subprocess.run([cli, root, "-i"], input=cli_input, capture_output=True, text=True, timeout=600)
+    except subprocess.TimeoutExpired:
+        return ("lumencode-cli timed out", True)
+    lines = [line for line in result.stdout.splitlines() if line.strip()]
+    if not lines:
+        return (result.stderr.strip()[-2000:] or "no output", True)
+    try:
+        summary = json.loads(lines[-1]).get("projectSummary") or {}
+    except json.JSONDecodeError as error:
+        return (f"unparseable lumencode-cli output: {error}", True)
+    summary = {
+        "root": root,
+        "totalFiles": summary.get("totalFiles", 0),
+        "fileTypes": summary.get("fileTypes", {}),
+        "mainEntry": rel(summary["mainEntry"], root) if summary.get("mainEntry") else None,
+    }
+    package_file = Path(root) / "package.json"
+    if package_file.is_file():
+        data, _ = run_cli_json(["--dump-file", str(package_file)])
+        package = (data or {}).get("packageSummary") or {}
+        if package:
+            summary["package"] = {key: package[key] for key in ("name", "version", "main", "scripts", "dependencyCount") if key in package}
+    if output_format == "json":
+        return (json.dumps(summary, indent=2), False)
+    types = ", ".join(f"{name} {count}" for name, count in sorted(summary["fileTypes"].items(), key=lambda item: -item[1]))
+    out = [f"{summary['root']}: {summary['totalFiles']} files ({types})",
+           f"main entry: {summary['mainEntry'] or '(none found)'}"]
+    package = summary.get("package")
+    if package:
+        out.append(f"package: {package.get('name', '?')} {package.get('version', '')}".rstrip()
+                   + (f", main {package['main']}" if package.get("main") else "")
+                   + f", {package.get('dependencyCount', 0)} dependencies")
+        for name, command in (package.get("scripts") or {}).items():
+            out.append(f"  script {name}: {command}")
+    return ("\n".join(out), False)
+
+
+def web_links(path: Path, root: str, output_format: str) -> tuple[str, bool]:
+    if not path.is_file():
+        return (f"not a file: {path}", True)
+    data, error = run_cli_json(["--dump-file", str(path)])
+    if error:
+        return (error, True)
+    language = data.get("language")
+    if language not in ("html", "css", "script", "php", "scss", "less"):
+        return (f"{rel(str(path), root)} is a {language} file; web_links covers HTML, CSS and JavaScript "
+                "(PHP templates that render HTML also work)", True)
+    css = data.get("cssSummary") or {}
+    groups: dict[str, list[str]] = {}
+
+    def add(group: str, text: str) -> None:
+        groups.setdefault(group, []).append(text)
+
+    for link in data.get("quickLinks") or []:
+        kind = link.get("type", "")
+        where = f"{rel(link.get('path') or link.get('targetPath') or '', root)}:{link.get('line', '')}".rstrip(":")
+        label = link.get("label", "")
+        if kind.endswith("-missing") or link.get("exists") is False:
+            add("BROKEN", f"{label}  [{link.get('detail', kind)}]")
+        elif kind in ("stylesheet", "script", "page", "form", "import"):
+            add("links out", f"{kind} {link.get('target', label)}  (L{link.get('line', '?')})")
+        elif kind == "consumer":
+            add("referenced by HTML", f"{rel(link.get('path', ''), root)}  (L{link.get('line', '?')})")
+        elif kind in ("dom-id", "dom-id-use"):
+            add("DOM ids", f"{label}  [{link.get('detail', '')}]")
+        elif kind == "script-class" and language == "css":
+            continue  # listed under "classes applied by JS"
+        elif kind in ("css-class", "script-class"):
+            add("CSS classes via JS", f"{label}  [{link.get('detail', '')}]")
+        else:
+            add(kind or "other", f"{label}  [{link.get('detail', '')}]" if label else where)
+    for symbol in data.get("symbols") or []:
+        if data.get("language") == "html" and symbol.get("kind") in ("handler", "element", "component", "form", "style", "script"):
+            calls = ", ".join(f"{c.get('name')} @ {rel(c['path'], root) + ':' + str(c.get('line')) if c.get('path') else 'inline'}"
+                              for c in symbol.get("calls") or [])
+            suffix = f" -> {calls}" if calls else ""
+            add({"handler": "handlers", "element": "ids"}.get(symbol["kind"], symbol["kind"] + "s"),
+                f"L{symbol.get('line')} {symbol.get('name')}  {symbol.get('detail', '')}{suffix}".rstrip())
+        elif language in ("script", "php"):
+            called_by = [c for c in symbol.get("calledBy") or [] if c.get("language") == "html"]
+            for caller in called_by:
+                add("called from HTML", f"{symbol.get('name')} <- {caller.get('name')} @ {rel(caller.get('path', ''), root)}:{caller.get('line')}")
+    for entry in css.get("missingClasses") or []:
+        add("classes used in HTML but not in linked CSS", f"{entry.get('name')} ({rel(entry.get('path', ''), root)}:{entry.get('line')})")
+    if language == "css":
+        if css.get("unusedClasses"):
+            add("unused classes", ", ".join(css["unusedClasses"]))
+        for entry in css.get("scriptAppliedClasses") or []:
+            add("classes applied by JS", f"{entry.get('name')} <- {rel(entry.get('path', ''), root)}:{entry.get('line')} ({entry.get('via')})")
+    payload = {"file": rel(str(path), root), "language": language, "summary": data.get("summary", ""), **groups}
+    if output_format == "json":
+        return (json.dumps(payload, indent=2), False)
+    order = ["BROKEN", "classes used in HTML but not in linked CSS", "links out", "referenced by HTML", "handlers", "ids", "called from HTML",
+             "DOM ids", "CSS classes via JS", "classes applied by JS", "unused classes"]
+    keys = order + [key for key in groups if key not in order]
+    out = [f"{payload['file']} ({language}): {payload['summary']}"]
+    for key in keys:
+        if key in groups:
+            out.append(f"{key}:")
+            out.extend(f"  {item}" for item in groups[key])
+    if len(out) == 1:
+        out.append("(no web links found)")
+    return ("\n".join(out), False)
 
 
 def call_tool(name: str, arguments: dict) -> tuple[str, bool]:
@@ -141,6 +303,13 @@ def call_tool(name: str, arguments: dict) -> tuple[str, bool]:
         return run_cli(["--index-project", root, "--callees", arguments["name"], "--format", output_format])
     if name == "list_routes":
         return run_cli(["--index-project", root, "--routes", "--format", output_format])
+    if name == "project_summary":
+        return project_summary(root, output_format)
+    if name == "web_links":
+        path = Path(arguments["path"])
+        if not path.is_absolute():
+            path = Path(root) / path
+        return web_links(path, root, output_format)
     if name == "index_stats":
         return run_cli(["--index-project", root])
     return (f"unknown tool: {name}", True)
