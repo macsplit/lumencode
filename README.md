@@ -294,12 +294,11 @@ integrations live in `tools/agent/`:
   `claude mcp add lumencode -- python3 /path/to/lumencode/tools/agent/lumencode_mcp.py`
   (`LUMENCODE_CLI` / `LUMENCODE_ROOT` override the binary and default root).
 - `hooks/lumencode_hook.py` — Claude Code edit hooks (`hooks/settings.example.json`
-  shows the registration). `pre` snapshots the file's structure before an
-  `Edit`/`Write`/`MultiEdit` (and offers the outline of files of 150+ lines);
-  `post` compares it afterwards and reports only what matters: new syntax
+  shows the registration). `pre` silently snapshots the file's structure before an
+  `Edit`/`Write`/`MultiEdit`; `post` compares it afterwards and reports only what matters: new syntax
   damage, removed or re-signatured functions with their callers from the
   project index, and added symbols. It never blocks an edit. Tunables:
-  `LUMENCODE_HOOK_MIN_LINES`, `LUMENCODE_HOOK_CALLERS=0`, `LUMENCODE_HOOK_DISABLE=1`.
+  `LUMENCODE_HOOK_CALLERS=0`, `LUMENCODE_HOOK_DISABLE=1`.
 
 ## Recent History
 

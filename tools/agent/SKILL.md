@@ -60,5 +60,5 @@ it and only re-read changed files.
   (`fetch`, axios, jQuery, forms) that reaches it.
 - After editing a file, `--outline` again: if `mode` became `recovered`,
   `damaged lines` point at the syntax error you introduced.
-- Optional: `tools/agent/hooks/lumencode_hook.py` runs the outline before an
-  edit and this check after it automatically (see `hooks/settings.example.json`).
+- Optional: `tools/agent/hooks/lumencode_hook.py` snapshots a file before an
+  edit and runs this check after it automatically (see `hooks/settings.example.json`).

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Claude Code hooks: outline a file before an edit, check its structure after.
+"""Claude Code hooks: snapshot a file's structure before an edit, check it after.
 
   lumencode_hook.py pre    PreToolUse  (Edit|Write|MultiEdit)
   lumencode_hook.py post   PostToolUse (Edit|Write|MultiEdit)
 
 pre   Takes a structural snapshot of the file (`lumencode-cli --outline`) and
-      saves it for the post hook. Files with at least LUMENCODE_HOOK_MIN_LINES
-      lines (default 150) also get their outline offered as additional context.
+      saves it for the post hook. It prints nothing: a live test showed that
+      PreToolUse context reaches the model only with the edit's result, too
+      late to guide the edit, so an outline there would just be noise.
 post  Outlines the file again and compares it with the snapshot. It says
       nothing when the edit is structurally unremarkable. It speaks up when
         - the file now has syntax errors LumenCode had to repair around
@@ -19,7 +20,6 @@ Never blocks and never fails an edit: any problem exits 0 silently.
 
 Environment:
   LUMENCODE_CLI              path to lumencode-cli (default: PATH, then build*/bin next to this repo)
-  LUMENCODE_HOOK_MIN_LINES   outline threshold for the pre hook (default 150)
   LUMENCODE_HOOK_CALLERS     0 disables the caller lookup (it may build the project index)
   LUMENCODE_HOOK_DISABLE     1 turns both hooks off
 """
@@ -38,7 +38,6 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 MAX_FILE_BYTES = 1_000_000
-MAX_CONTEXT_CHARS = 6_000
 MAX_CALLER_SYMBOLS = 5
 MAX_CALLER_LINES = 8
 CALLER_TIMEOUT = 25
@@ -135,17 +134,6 @@ def pre(event: dict) -> None:
     if snapshot is None:
         return
     state_file(str(event.get("session_id", "")), path).write_text(json.dumps(snapshot))
-    try:
-        lines = sum(1 for _ in open(path, "rb"))
-    except OSError:
-        return
-    if lines < int(os.environ.get("LUMENCODE_HOOK_MIN_LINES", "150")):
-        return
-    text = outline(cli, path, "text")
-    if text and text.strip():
-        if len(text) > MAX_CONTEXT_CHARS:
-            text = text[:MAX_CONTEXT_CHARS] + "\n... (outline truncated)"
-        emit("PreToolUse", f"LumenCode outline of {path} before this edit ({lines} lines):\n{text.strip()}")
 
 
 def callers_of(cli: str, root: str, name: str) -> list[str]:
