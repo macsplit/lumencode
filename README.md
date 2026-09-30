@@ -64,7 +64,7 @@ search**. See [Recent History](#recent-history) for how it got here and
 | HTML | tree-sitter-html | tolerant grammar | ids, event handlers, custom elements, forms, inline `<script>` / `<style>` contents | handlers → JS functions | linked assets | — | — |
 | QML | heuristic | — | components, properties, signals, functions, signal handlers | functions ↔ handlers (from handler blocks) | imports | — | snippet-derived |
 | C / C++ | Tree-sitter (C++ grammar, used for C too; heuristic fallback) | repair → heuristic; macro-noisy files (>25 initial errors) go straight to the merge | namespaces, classes/structs/unions (access levels, bases, fields, methods, ctors/dtors, function-pointer fields), out-of-line `A::f` definitions grouped by scope, enums, typedefs, prototypes | yes | `#include` (resolved for local headers) | — | **from the syntax tree** (qualifiers, pointers/references, defaults) |
-| Objective-C | heuristic | — | classes, members | — (gap) | `#import` | — | snippet-derived |
+| Objective-C | structural parser (comment/string-blanked, bracket-matched) | bodies brace-matched within `@implementation … @end` | classes and categories, full multi-part selectors, `@property` declarations, C functions | yes (message sends matched by full selector; C calls) | `#import` | — | from declarations (`(type)name` keyword parts, return type) |
 | VB.NET | structural line parser (block-aware) | unterminated blocks closed at the next declaration, reported | namespaces, classes, modules, structures, interfaces, enums, members, fields, events | yes (incl. `RaiseEvent`) | `Imports` (incl. aliases) | ASP.NET attributes (`<Route>`, `<HttpGet>`, ...) | **exact** from declarations (`ByVal x As T`, `Optional ... = v`, `As T`) |
 | SQL (MySQL / MariaDB, SQL Server T-SQL) | statement-aware parser | objects end at the next `CREATE`/`ALTER`, `GO` or `DELIMITER`; strings cannot cross batches | tables (columns, keys), views, procedures, functions, triggers, indexes | table → table *references* (FKs); views/routines/triggers *read* / *write* tables; routines *execute* / *call* routines; triggers *fire on* tables | `USE`, `source` / `\.` / `:r` scripts | — | from declarations (`IN`/`OUT`/`@p ... OUTPUT`, defaults, `RETURNS`) |
 | Shell (bash / sh / zsh) | structural parser | unbalanced bodies stop at the next function header; quoting (incl. nested `"$(… "…")"`), comments and here-docs handled | functions (all three forms), exported / readonly variables | yes (command position, incl. inside `$( … )`) | `source` / `.` (directory-prefix idioms resolved) | — | named from `local x="$1"`, else positional; `$@`; exit status / stdout |
@@ -243,7 +243,7 @@ Phase 2. Better source inspection
 Phase 2b. Language breadth and link parity
 
 - Add new languages seen in the corpus: Kotlin and Ruby. (Go, AST-backed C/C++ and shell done 2026-09.) Their Tree-sitter grammars are large (≈23 MB and 15 MB of generated source), so a structural parser like the VB.NET / SQL / shell ones may be the better trade-off. (VB.NET and SQL done 2026-09 with structural parsers.)
-- Close per-language link gaps: ~~Swift imports, Java (Spring / JAX-RS) routes~~ (done 2026-09), Objective-C call relations. (QML done 2026-09.)
+- ~~Close per-language link gaps: Swift imports, Java routes, Objective-C call relations, QML relations~~ (done 2026-09).
 - Use `tools/corpus_scan.py --compare` and `tools/damage_probe.py` as the acceptance gates for each language.
 
 Phase 3. Better usability
@@ -263,11 +263,11 @@ Phase 4. Broader project understanding
 ## Known Issues
 
 - Some extracted structure is still shallow or misleading on real projects.
-- QML and Objective-C still use heuristic parsers only; VB.NET and SQL use purpose-built structural parsers. All other supported languages (now including plain JS/JSX, C/C++ and Go) are Tree-sitter-backed with a fallback.
+- QML still uses a heuristic parser; VB.NET, SQL, shell and Objective-C use purpose-built structural parsers. All other supported languages (now including plain JS/JSX, C/C++ and Go) are Tree-sitter-backed with a fallback.
 - C/C++ that relies heavily on unexpanded macros (export/visibility macros, Qt's `Q_OBJECT` etc.) trips the grammar in about two thirds of corpus files; those files are analysed as AST + heuristic merge and can show some macro-shaped noise symbols.
 - Recovery is AST-first for every Tree-sitter language (including Swift and CSS) via branch-scoped repair. A missing closing brace cannot be fixed by blanking lines, so such files still fall back to the AST+heuristic merge. Repair is bounded (80 trial parses), so very large files with grammar gaps (e.g. some valid Swift) may stop repairing early.
 - About 19% of valid Swift files in the corpus trip grammar gaps and go through repair. That costs time (Swift p95 is the highest of the languages) but not declarations: a repair is rejected if it would lose any.
-- Callable signatures come from the syntax tree (or, for VB.NET, SQL and shell, from the declarations) everywhere except QML and Objective-C, which still use snippet heuristics.
+- Callable signatures come from the syntax tree (or, for VB.NET, SQL and shell, from the declarations) everywhere except QML, which still uses snippet heuristics.
 - QML is now supported as a first-class language in the explorer and CLI, but it currently uses heuristic structural extraction rather than a dedicated AST-backed parser.
 - `Calls` / `Called By` support has improved and relation clicks now rehydrate into full destination symbols, but the overall graph is still incomplete and not yet uniformly reciprocal across all languages and project shapes.
 - The new overview warnings are part of the intended safety model. They mean the app stayed responsive and returned a bounded result, but they should still be treated as prompts to inspect why that bound was hit.

@@ -6530,6 +6530,15 @@ private:
         }
     }
 
+    // An unterminated quote must not swallow later functions: a line that is
+    // clearly a function header at column 0 ends any string still open.
+    bool functionHeaderStartsAt(int lineStart) const
+    {
+        static const QRegularExpression header(QStringLiteral(R"(^(?:function\s+[A-Za-z_][\w:.-]*|[A-Za-z_][\w:.-]*\s*\(\s*\))\s*(?:\{|$))"));
+        const int end = m_out.indexOf(QLatin1Char('\n'), lineStart);
+        return header.match(m_out.mid(lineStart, (end < 0 ? m_size : end) - lineStart)).hasMatch();
+    }
+
     // Scan code until `terminator` (')' for $( ), '`' for backticks, none for
     // top level). Returns the index just past the terminator.
     int scanCode(int index, QChar terminator)
@@ -6559,6 +6568,9 @@ private:
                 int end = index + 1;
                 while (end < m_size && m_out.at(end) != QLatin1Char('\'')) {
                     if (ansi && m_out.at(end) == QLatin1Char('\\')) ++end;
+                    if (m_out.at(end) == QLatin1Char('\n') && functionHeaderStartsAt(end + 1)) {
+                        break;
+                    }
                     ++end;
                 }
                 blank(index + 1, end);
@@ -6607,6 +6619,10 @@ private:
             if (ch == QLatin1Char('"')) {
                 blank(literalStart, index);
                 return index + 1;
+            }
+            if (ch == QLatin1Char('\n') && functionHeaderStartsAt(index + 1)) {
+                blank(literalStart, index);
+                return index + 1; // unterminated string: stop before the next function
             }
             if (ch == QLatin1Char('$') && index + 1 < m_size && m_out.at(index + 1) == QLatin1Char('(')) {
                 blank(literalStart, index);
@@ -6675,10 +6691,15 @@ QVariantMap SymbolParser::parseShell(const QString &path, const QString &text) c
                 }
             }
         }
-        // Damage limit: an unbalanced body stops at the next function header.
-        const auto next = functionPattern.match(clean, match.capturedEnd(0));
-        if (close == clean.size() && next.hasMatch()) {
-            close = next.capturedStart(0) - 1;
+        // Damage limit: a body never extends past the next function header at
+        // column 0 (an unbalanced brace or an unterminated quote upstream can
+        // otherwise make it swallow the rest of the file).
+        static const QRegularExpression columnZeroHeader(
+            QStringLiteral(R"(^(?:function\s+[A-Za-z_][\w:.-]*\s*(?:\(\s*\))?|[A-Za-z_][\w:.-]*\s*\(\s*\))\s*(?:\n\s*)?\{)"),
+            QRegularExpression::MultilineOption);
+        const auto nextHeader = columnZeroHeader.match(text, match.capturedEnd(0));
+        if (nextHeader.hasMatch() && nextHeader.capturedStart(0) < close) {
+            close = nextHeader.capturedStart(0) - 1;
         }
         const int line = lineNumberAtOffset(clean, match.capturedStart(0));
         const int endLine = lineNumberAtOffset(clean, qMax(match.capturedStart(0), close));
@@ -9724,62 +9745,321 @@ QVariantMap SymbolParser::parseRustTreeSitter(const QString &path, const QString
     return result;
 }
 
+namespace {
+
+// C-family comments and string/char literals blanked (newlines kept), so
+// brackets and braces can be matched on the result with unchanged offsets.
+QString blankCFamilyNoise(const QString &text)
+{
+    QString out = text;
+    const int size = out.size();
+    auto blank = [&](int from, int to) {
+        for (int i = from; i < to && i < size; ++i) {
+            if (out.at(i) != QLatin1Char('\n')) {
+                out[i] = QLatin1Char(' ');
+            }
+        }
+    };
+    int index = 0;
+    while (index < size) {
+        const QChar ch = out.at(index);
+        const QChar next = index + 1 < size ? out.at(index + 1) : QChar();
+        if (ch == QLatin1Char('/') && next == QLatin1Char('/')) {
+            int end = out.indexOf(QLatin1Char('\n'), index);
+            if (end < 0) end = size;
+            blank(index, end);
+            index = end;
+        } else if (ch == QLatin1Char('/') && next == QLatin1Char('*')) {
+            int end = out.indexOf(QStringLiteral("*/"), index + 2);
+            end = end < 0 ? size : end + 2;
+            blank(index, end);
+            index = end;
+        } else if (ch == QLatin1Char('"') || ch == QLatin1Char('\'')) {
+            int end = index + 1;
+            while (end < size && out.at(end) != ch && out.at(end) != QLatin1Char('\n')) {
+                if (out.at(end) == QLatin1Char('\\')) ++end;
+                ++end;
+            }
+            blank(index + 1, end);
+            index = end + 1;
+        } else {
+            ++index;
+        }
+    }
+    return out;
+}
+
+int matchingClose(const QString &clean, int open, QChar openChar, QChar closeChar)
+{
+    int depth = 0;
+    for (int i = open; i < clean.size(); ++i) {
+        if (clean.at(i) == openChar) {
+            ++depth;
+        } else if (clean.at(i) == closeChar && --depth == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+// Selector of an Objective-C message send whose '[' is at `open`:
+// [receiver name] -> "name", [receiver a:x b:y] -> "a:b:".
+QString objcMessageSelector(const QString &clean, int open, int close)
+{
+    int index = open + 1;
+    // Skip the receiver: an expression up to the first whitespace at depth 0
+    // (nested sends / calls / casts are balanced).
+    int depth = 0;
+    while (index < close) {
+        const QChar ch = clean.at(index);
+        if (ch == QLatin1Char('[') || ch == QLatin1Char('(')) {
+            ++depth;
+        } else if (ch == QLatin1Char(']') || ch == QLatin1Char(')')) {
+            --depth;
+        } else if (ch.isSpace() && depth == 0 && index > open + 1) {
+            break;
+        }
+        ++index;
+    }
+    const QString rest = clean.mid(index, close - index);
+    QString selector;
+    depth = 0;
+    QString word;
+    bool sawColon = false;
+    for (int i = 0; i < rest.size(); ++i) {
+        const QChar ch = rest.at(i);
+        if (ch == QLatin1Char('[') || ch == QLatin1Char('(') || ch == QLatin1Char('{')) {
+            ++depth;
+            word.clear();
+        } else if (ch == QLatin1Char(']') || ch == QLatin1Char(')') || ch == QLatin1Char('}')) {
+            --depth;
+            word.clear();
+        } else if (depth == 0 && (ch.isLetterOrNumber() || ch == QLatin1Char('_'))) {
+            word += ch;
+        } else if (depth == 0 && ch == QLatin1Char(':')) {
+            if (!word.isEmpty()) {
+                selector += word + QLatin1Char(':');
+                sawColon = true;
+            }
+            word.clear();
+        } else if (depth == 0) {
+            if (!sawColon && !word.isEmpty() && selector.isEmpty()) {
+                // unary selector: first word after the receiver
+                return word;
+            }
+            word.clear();
+        }
+    }
+    if (!sawColon) {
+        return word;
+    }
+    return selector;
+}
+
+} // namespace
+
 QVariantMap SymbolParser::parseObjectiveC(const QString &path, const QString &text, const QString &language) const
 {
     QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), language);
+    const QString clean = blankCFamilyNoise(text);
     QVariantList symbols;
-    QSet<QString> seenNames;
+    struct Body
+    {
+        QString key;
+        int open = 0;
+        int close = 0;
+    };
+    QList<Body> bodies;
+    QList<QPair<int, int>> implementationRanges;
 
-    auto appendSymbol = [&](const QVariantMap &symbol) {
-        const QString name = symbol.value(QStringLiteral("name")).toString();
-        if (name.isEmpty() || seenNames.contains(name)) {
-            return;
+    auto snippetBetween = [&](int start, int end) {
+        const int startLine = lineNumberAtOffset(text, start);
+        const int endLine = lineNumberAtOffset(text, qMax(start, end));
+        const QStringList lines = text.split(QLatin1Char('\n'));
+        QStringList out;
+        for (int l = startLine; l <= endLine && l <= lines.size() && out.size() < 10; ++l) {
+            out.append(lines.at(l - 1));
         }
-        seenNames.insert(name);
-        symbols.append(symbol);
+        if (endLine - startLine + 1 > 10) {
+            out.append(QStringLiteral("..."));
+        }
+        return out.join(QLatin1Char('\n'));
     };
 
-    QRegularExpression implementationPattern(QStringLiteral(R"(^\s*@implementation\s+([A-Za-z_]\w*)[\s\S]*?^\s*@end\s*$)"),
-                                             QRegularExpression::MultilineOption);
-    auto implementationIt = implementationPattern.globalMatch(text);
+    // Properties declared in class extensions / interfaces within this file.
+    QHash<QString, QVariantList> propertiesByClass;
+    static const QRegularExpression interfacePattern(QStringLiteral(R"(^[ \t]*@interface\s+([A-Za-z_]\w*)[^\n]*$)"),
+                                                     QRegularExpression::MultilineOption);
+    static const QRegularExpression propertyPattern(QStringLiteral(R"(^[ \t]*@property\s*(\([^)]*\))?\s*([^;]*?)\b([A-Za-z_]\w*)\s*;)"),
+                                                    QRegularExpression::MultilineOption);
+    auto interfaceIt = interfacePattern.globalMatch(clean);
+    while (interfaceIt.hasNext()) {
+        const auto match = interfaceIt.next();
+        const int end = clean.indexOf(QStringLiteral("@end"), match.capturedEnd(0));
+        const QString block = clean.mid(match.capturedStart(0), (end < 0 ? clean.size() : end) - match.capturedStart(0));
+        auto propertyIt = propertyPattern.globalMatch(block);
+        while (propertyIt.hasNext()) {
+            const auto property = propertyIt.next();
+            const int line = lineNumberAtOffset(text, match.capturedStart(0) + property.capturedStart(0));
+            propertiesByClass[match.captured(1)].append(
+                makeSymbol(QStringLiteral("property"), property.captured(3), line,
+                           (property.captured(1) + QLatin1Char(' ') + property.captured(2)).simplified(), {},
+                           snippetFromLine(text, line, 0)));
+        }
+    }
+
+    static const QRegularExpression implementationPattern(QStringLiteral(R"(^[ \t]*@implementation\s+([A-Za-z_]\w*)(?:\s*\(\s*([A-Za-z_]\w*)?\s*\))?)"),
+                                                          QRegularExpression::MultilineOption);
+    static const QRegularExpression methodHeader(QStringLiteral(R"(^[ \t]*([-+])\s*\(([^)]*)\)\s*)"),
+                                                 QRegularExpression::MultilineOption);
+    static const QRegularExpression keywordPart(QStringLiteral(R"(([A-Za-z_]\w*)\s*:\s*(?:\(([^)]*)\))?\s*([A-Za-z_]\w*))"));
+    auto implementationIt = implementationPattern.globalMatch(clean);
     while (implementationIt.hasNext()) {
         const auto match = implementationIt.next();
         const QString className = match.captured(1);
-        const int line = lineNumberAtOffset(text, match.capturedStart(0));
-        const QString block = match.captured(0);
-        QVariantList members;
-        QRegularExpression methodPattern(QStringLiteral(R"(^\s*[-+]\s*\([^)]*\)\s*([A-Za-z_]\w*(?::[A-Za-z_]\w*)*:?)?)"),
-                                         QRegularExpression::MultilineOption);
-        auto methodIt = methodPattern.globalMatch(block);
+        const int blockStart = match.capturedStart(0);
+        int blockEnd = clean.indexOf(QStringLiteral("@end"), match.capturedEnd(0));
+        if (blockEnd < 0) {
+            blockEnd = clean.size();
+        }
+        implementationRanges.append({blockStart, blockEnd});
+        QVariantList members = propertiesByClass.take(className);
+        auto methodIt = methodHeader.globalMatch(clean.mid(0, blockEnd), match.capturedEnd(0));
         while (methodIt.hasNext()) {
             const auto method = methodIt.next();
-            const QString methodName = method.captured(1).trimmed();
-            if (methodName.isEmpty()) {
+            const int headerEnd = [&]() {
+                for (int i = method.capturedEnd(0); i < blockEnd; ++i) {
+                    if (clean.at(i) == QLatin1Char('{') || clean.at(i) == QLatin1Char(';')) {
+                        return i;
+                    }
+                }
+                return blockEnd;
+            }();
+            const QString header = clean.mid(method.capturedEnd(0), headerEnd - method.capturedEnd(0)).simplified();
+            QString selector;
+            QVariantList parameters;
+            auto partIt = keywordPart.globalMatch(header);
+            while (partIt.hasNext()) {
+                const auto part = partIt.next();
+                selector += part.captured(1) + QLatin1Char(':');
+                parameters.append(makeSignatureParameter(part.captured(3), part.captured(2).simplified()));
+            }
+            if (selector.isEmpty()) {
+                static const QRegularExpression unary(QStringLiteral(R"(^([A-Za-z_]\w*))"));
+                selector = unary.match(header).captured(1);
+            }
+            if (selector.isEmpty()) {
                 continue;
             }
-            const int methodLine = lineNumberAtOffset(text, match.capturedStart(0) + method.capturedStart(0));
-            members.append(makeSymbol(QStringLiteral("method"), methodName, methodLine, QString(), {},
-                                      snippetFromLine(text, methodLine, 0)));
+            const int line = lineNumberAtOffset(text, method.capturedStart(0));
+            int close = headerEnd;
+            if (headerEnd < blockEnd && clean.at(headerEnd) == QLatin1Char('{')) {
+                close = matchingClose(clean, headerEnd, QLatin1Char('{'), QLatin1Char('}'));
+                if (close < 0 || close > blockEnd) {
+                    close = blockEnd; // unbalanced body: stop at @end
+                }
+            }
+            QVariantMap symbol = makeSymbol(QStringLiteral("method"), selector, line,
+                                            method.captured(1) == QStringLiteral("+") ? QStringLiteral("class method") : QString(), {},
+                                            snippetBetween(method.capturedStart(0), close));
+            symbol.insert(QStringLiteral("endLine"), lineNumberAtOffset(text, close));
+            symbol.insert(QStringLiteral("parameters"), parameters);
+            const QString returnType = method.captured(2).simplified();
+            symbol.insert(QStringLiteral("returns"), QVariantList{QVariantMap{{QStringLiteral("text"),
+                                                                               returnType == QStringLiteral("void") ? QStringLiteral("none") : returnType}}});
+            symbol.insert(QStringLiteral("signatureSource"), QStringLiteral("parser"));
+            members.append(symbol);
+            if (headerEnd < blockEnd && clean.at(headerEnd) == QLatin1Char('{')) {
+                bodies.append({symbolKey(symbol), headerEnd, close});
+            }
         }
-        appendSymbol(makeSymbol(QStringLiteral("class"), className, line, QString(), members,
-                                snippetFromLine(text, line, 3)));
+        symbols.append(makeSymbol(QStringLiteral("class"), className, lineNumberAtOffset(text, blockStart),
+                                  match.captured(2).isEmpty() ? QString() : QStringLiteral("category (%1)").arg(match.captured(2)), members,
+                                  snippetFromLine(text, lineNumberAtOffset(text, blockStart), 3)));
     }
 
-    QRegularExpression functionPattern(
-        QStringLiteral(R"(^[ \t]*(?:static\s+|extern\s+)?(?:[\w<>*]+\s+)+([A-Za-z_]\w*)\s*\([^;{}]*\)\s*\{)"),
+    // C functions outside @implementation blocks.
+    static const QRegularExpression functionPattern(
+        QStringLiteral(R"(^[ \t]*(?:static\s+|extern\s+|inline\s+|FOUNDATION_EXPORT\s+)*(?:[\w<>*]+\s+)+\**([A-Za-z_]\w*)\s*\(([^;{}]*)\)\s*\{)"),
         QRegularExpression::MultilineOption);
-    auto functionIt = functionPattern.globalMatch(text);
+    auto functionIt = functionPattern.globalMatch(clean);
     while (functionIt.hasNext()) {
         const auto match = functionIt.next();
         const QString name = match.captured(1);
-        if (name == QStringLiteral("if") || name == QStringLiteral("while")
-            || name == QStringLiteral("for") || name == QStringLiteral("switch")) {
+        static const QSet<QString> keywords = {QStringLiteral("if"), QStringLiteral("while"), QStringLiteral("for"),
+                                               QStringLiteral("switch"), QStringLiteral("return")};
+        const bool insideImplementation = std::any_of(implementationRanges.cbegin(), implementationRanges.cend(),
+                                                      [&](const QPair<int, int> &range) {
+                                                          return match.capturedStart(0) > range.first && match.capturedStart(0) < range.second;
+                                                      });
+        if (keywords.contains(name) || insideImplementation) {
             continue;
         }
-        const int line = lineNumberAtOffset(text, match.capturedStart(0));
-        appendSymbol(makeSymbol(QStringLiteral("function"), name, line, QString(), {},
-                                snippetFromLine(text, line, 0)));
+        const int open = match.capturedEnd(0) - 1;
+        int close = matchingClose(clean, open, QLatin1Char('{'), QLatin1Char('}'));
+        if (close < 0) {
+            close = clean.size() - 1;
+        }
+        QVariantMap symbol = makeSymbol(QStringLiteral("function"), name, lineNumberAtOffset(text, match.capturedStart(0)), QString(), {},
+                                        snippetBetween(match.capturedStart(0), close));
+        QVariantList parameters;
+        for (const QString &part : splitTopLevelSignatureParts(match.captured(2).simplified())) {
+            if (part == QStringLiteral("void") || part.isEmpty()) {
+                continue;
+            }
+            static const QRegularExpression trailingName(QStringLiteral(R"(([A-Za-z_]\w*)\s*$)"));
+            const auto nameMatch = trailingName.match(part);
+            parameters.append(makeSignatureParameter(nameMatch.captured(1), part.left(nameMatch.capturedStart(1)).trimmed()));
+        }
+        symbol.insert(QStringLiteral("parameters"), parameters);
+        symbol.insert(QStringLiteral("returns"), QVariantList{QVariantMap{{QStringLiteral("text"),
+            clean.mid(match.capturedStart(0), match.capturedStart(1) - match.capturedStart(0)).simplified()
+                .remove(QRegularExpression(QStringLiteral(R"(\b(static|extern|inline|FOUNDATION_EXPORT)\b)"))).simplified()}}});
+        symbol.insert(QStringLiteral("signatureSource"), QStringLiteral("parser"));
+        symbols.append(symbol);
+        bodies.append({symbolKey(symbol), open, close});
     }
+
+    // Calls: message sends matched to method selectors, C calls to functions.
+    QHash<QString, QVariantMap> byKey;
+    QHash<QString, QStringList> keysByName;
+    collectSymbolsByKey(symbols, byKey, keysByName);
+    QHash<QString, QVariantList> callsByKey;
+    QHash<QString, QVariantList> calledByByKey;
+    static const QRegularExpression cCall(QStringLiteral(R"(\b([A-Za-z_]\w*)\s*\()"));
+    auto link = [&](const QString &ownerKey, const QString &targetName) {
+        const QStringList candidates = keysByName.value(targetName);
+        if (candidates.isEmpty()) {
+            return;
+        }
+        const QString targetKey = bestRelationTargetKey(candidates, byKey);
+        if (targetKey.isEmpty() || targetKey == ownerKey || !byKey.contains(targetKey)
+            || !isCallableSymbolKind(byKey.value(targetKey).value(QStringLiteral("kind")).toString())) {
+            return;
+        }
+        appendUniqueRelation(callsByKey, ownerKey, relationFromSymbol(byKey.value(targetKey)), QStringLiteral("calls"));
+        appendUniqueRelation(calledByByKey, targetKey, relationFromSymbol(byKey.value(ownerKey)), QStringLiteral("called by"));
+    };
+    for (const Body &body : std::as_const(bodies)) {
+        for (int i = body.open; i < body.close; ++i) {
+            if (clean.at(i) != QLatin1Char('[')) {
+                continue;
+            }
+            const int close = matchingClose(clean, i, QLatin1Char('['), QLatin1Char(']'));
+            if (close < 0 || close > body.close) {
+                continue;
+            }
+            const QString selector = objcMessageSelector(clean, i, close);
+            if (!selector.isEmpty()) {
+                link(body.key, selector);
+            }
+        }
+        auto callIt = cCall.globalMatch(clean.mid(body.open, body.close - body.open));
+        while (callIt.hasNext()) {
+            link(body.key, callIt.next().captured(1));
+        }
+    }
+    symbols = applyRelationsToSymbols(symbols, callsByKey, calledByByKey);
 
     result.insert(QStringLiteral("symbols"), symbols);
     result.insert(QStringLiteral("dependencies"), extractObjectiveCDependencies(path, text));

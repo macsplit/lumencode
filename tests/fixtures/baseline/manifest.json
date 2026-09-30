@@ -1589,6 +1589,50 @@
           ]
         }
       ]
+    },
+    {
+      "name": "objc_selectors_relations",
+      "root": "tests/fixtures/baseline/objc_basic",
+      "file": "Cache.m",
+      "expectations": [
+        {
+          "kind": "method",
+          "name": "setObject:forName:version:",
+          "parameters": [
+            "object: id",
+            "name: NSString *",
+            "version: NSInteger"
+          ],
+          "returns": [
+            "none"
+          ],
+          "calls": [
+            "CacheKey",
+            "trimIfNeeded"
+          ],
+          "calledBy": [
+            "dump"
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "initWithCapacity:",
+          "returns": [
+            "instancetype"
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "CacheKey",
+          "calledBy": [
+            "setObject:forName:version:"
+          ]
+        },
+        {
+          "kind": "property",
+          "name": "store"
+        }
+      ]
     }
   ]
 }
