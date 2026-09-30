@@ -40,6 +40,8 @@ public:
     Q_INVOKABLE void setRootPath(const QString &path);
     Q_INVOKABLE void toggleExpanded(const QString &path);
     Q_INVOKABLE bool isExpanded(const QString &path) const;
+    // Expand every folder above `path` so the entry is visible in the tree.
+    Q_INVOKABLE void revealPath(const QString &path);
     QVariantMap collectStats() const;
 
 signals:

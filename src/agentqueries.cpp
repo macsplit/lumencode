@@ -4,6 +4,8 @@
 #include <QFileInfo>
 #include <QStringList>
 
+#include <algorithm>
+
 namespace AgentQueries {
 
 namespace {
@@ -272,6 +274,136 @@ QVariantList findDefinitions(const ProjectIndex::SnapshotPtr &snapshot, const QS
             ? a.value(QStringLiteral("path")).toString() < b.value(QStringLiteral("path")).toString()
             : a.value(QStringLiteral("line")).toInt() < b.value(QStringLiteral("line")).toInt();
     });
+    return out;
+}
+
+namespace {
+
+// Score of `query` against `candidate` (both already lower-cased); 0 = no match.
+// Higher is better. `original` keeps the case for camelCase-initial matching.
+int matchScore(const QString &query, const QString &candidate, const QString &original)
+{
+    if (query.isEmpty() || candidate.isEmpty()) {
+        return 0;
+    }
+    if (candidate == query) {
+        return 1000;
+    }
+    if (candidate.startsWith(query)) {
+        return 800 - qMin(candidate.size() - query.size(), 100);
+    }
+    // Word starts: snake_case, kebab-case, dotted and camelCase boundaries.
+    QString initials;
+    for (int i = 0; i < original.size(); ++i) {
+        const QChar c = original.at(i);
+        const bool boundary = i == 0 || !original.at(i - 1).isLetterOrNumber()
+            || (c.isUpper() && original.at(i - 1).isLower());
+        if (boundary && c.isLetterOrNumber()) {
+            initials.append(c.toLower());
+        }
+    }
+    if (query.size() >= 2 && initials.startsWith(query)) {
+        return 700 - qMin(initials.size() - query.size(), 50);
+    }
+    const int position = candidate.indexOf(query);
+    if (position >= 0) {
+        return 600 - qMin(position, 100) - qMin(candidate.size() - query.size(), 100) / 4;
+    }
+    // Subsequence: every query character in order; tighter spans score higher.
+    if (query.size() >= 4) {
+        int at = 0;
+        int first = -1;
+        int last = -1;
+        for (const QChar c : query) {
+            at = candidate.indexOf(c, at);
+            if (at < 0) {
+                return 0;
+            }
+            first = first < 0 ? at : first;
+            last = at++;
+        }
+        const int span = last - first + 1;
+        if (span <= query.size() * 3) {
+            return 300 - qMin(span - query.size(), 100);
+        }
+    }
+    return 0;
+}
+
+} // namespace
+
+QVariantList searchSymbols(const ProjectIndex::SnapshotPtr &snapshot, const QString &query, const QStringList &kinds,
+                           const QString &language, const QString &pathContains, int limit)
+{
+    QVariantList out;
+    const QString needle = query.trimmed().toLower();
+    if (!snapshot || needle.isEmpty() || limit <= 0) {
+        return out;
+    }
+    QStringList wantedKinds;
+    for (const QString &kind : kinds) {
+        for (const QString &part : kind.split(QLatin1Char(','), Qt::SkipEmptyParts)) {
+            wantedKinds.append(part.trimmed().toLower());
+        }
+    }
+    const QString wantedLanguage = language.trimmed().toLower();
+    const QString wantedPath = pathContains.trimmed().toLower();
+    const bool wantsAny = wantedKinds.isEmpty();
+
+    struct Hit
+    {
+        int score;
+        QVariantMap item;
+    };
+    QVector<Hit> hits;
+    auto consider = [&](const QString &name, const QString &kind, const QString &path, int line, const QString &lang, int bonus) {
+        if (!wantsAny && !wantedKinds.contains(kind.toLower())) {
+            return;
+        }
+        if (!wantedLanguage.isEmpty() && lang.toLower() != wantedLanguage) {
+            return;
+        }
+        const QString shown = relative(snapshot->root, path);
+        if (!wantedPath.isEmpty() && !shown.toLower().contains(wantedPath)) {
+            return;
+        }
+        int score = matchScore(needle, name.toLower(), name);
+        if (score <= 0) {
+            return;
+        }
+        // A query with a slash or dot suffix can also match on the path.
+        score += bonus;
+        hits.append({score, QVariantMap{{QStringLiteral("name"), name},
+                                        {QStringLiteral("kind"), kind},
+                                        {QStringLiteral("path"), shown},
+                                        {QStringLiteral("line"), line},
+                                        {QStringLiteral("language"), lang},
+                                        {QStringLiteral("score"), score}}});
+    };
+    for (const ProjectIndex::Definition &definition : snapshot->allDefinitions) {
+        if (definition.declaration) {
+            continue; // the body's definition is listed instead
+        }
+        const QString name = definition.owner.isEmpty() ? definition.name : definition.owner + QLatin1Char('.') + definition.name;
+        // Members are found by their own name too, but rank slightly below top-level symbols.
+        consider(name, definition.kind, definition.path, definition.line, definition.language, definition.owner.isEmpty() ? 5 : 0);
+    }
+    if (wantsAny || wantedKinds.contains(QStringLiteral("file"))) {
+        for (auto it = snapshot->files.constBegin(); it != snapshot->files.constEnd(); ++it) {
+            consider(QFileInfo(it.key()).fileName(), QStringLiteral("file"), it.key(), 1, it->language, 0);
+        }
+    }
+    std::sort(hits.begin(), hits.end(), [](const Hit &a, const Hit &b) {
+        if (a.score != b.score) {
+            return a.score > b.score;
+        }
+        const QString pa = a.item.value(QStringLiteral("path")).toString();
+        const QString pb = b.item.value(QStringLiteral("path")).toString();
+        return pa != pb ? pa < pb : a.item.value(QStringLiteral("line")).toInt() < b.item.value(QStringLiteral("line")).toInt();
+    });
+    for (int i = 0; i < hits.size() && i < limit; ++i) {
+        out.append(hits.at(i).item);
+    }
     return out;
 }
 

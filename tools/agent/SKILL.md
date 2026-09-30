@@ -21,6 +21,7 @@ Locate the binary once: `command -v lumencode-cli` or the project's
 |---|---|
 | What is in this file? (before opening a large file) | `lumencode-cli --outline <file> --format text` |
 | ...with cross-file callers / callees | `lumencode-cli --index-project <root> --outline <file> --format text` |
+| I half-remember the name (partial, camelCase initials, file name) | `lumencode-cli --index-project <root> --search <text> [--kind function,class] [--in dir] --format text` |
 | Where is `name` defined? | `lumencode-cli --index-project <root> --find <name> --format text` (`Owner.name` narrows) |
 | What breaks if I change `name`? Who uses it? | `lumencode-cli --index-project <root> --callers <name> --format text` |
 | What does `name` depend on? | `lumencode-cli --index-project <root> --callees <name> --format text` |

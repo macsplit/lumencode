@@ -196,6 +196,8 @@ add_executable(lumencode
     src/symbolparser.h
     src/weblinks.cpp
     src/weblinks.h
+    src/agentqueries.cpp
+    src/agentqueries.h
     src/projectindex.cpp
     src/projectindex.h
     src/httpclients.cpp
@@ -280,6 +282,8 @@ add_executable(lumencode-gui-smoke EXCLUDE_FROM_ALL
     src/symbolparser.h
     src/weblinks.cpp
     src/weblinks.h
+    src/agentqueries.cpp
+    src/agentqueries.h
     src/projectindex.cpp
     src/projectindex.h
     src/httpclients.cpp

@@ -21,6 +21,7 @@ Source: [end-user-main-screen.mmd](./diagrams/end-user-main-screen.mmd)
 - Shows the project tree.
 - Lets you move through folders and files.
 - Uses `/` as the visible project root.
+- The search box above the tree (Ctrl+F) finds symbols and files by name once the project index is ready. Partial names, camelCase initials (`spp` finds `SymbolParser.parseFile`) and rough spellings work; the Files / Functions / Types buttons narrow the results. Enter opens the best match, clicking any result opens it and unfolds the tree to its file. Esc clears the search.
 
 ### Middle Pane
 
@@ -79,6 +80,13 @@ Common reasons:
 - minified or bundled asset
 - expensive cross-file relationship work
 - broken source where only partial structure is safe to show
+
+How degraded data looks:
+
+- Orange entries with a warning icon are links that resolve nowhere: a missing stylesheet, script or form target, an unresolved import, a class used in HTML but defined in no stylesheet.
+- A warning mark before a symbol means it sits on a syntax error LumenCode repaired around (red) or was recovered with lower confidence (amber); hover it for the reason. Treat its members as approximate.
+- When the source pane shows a snippet that contains repaired lines, a red note above it names them.
+- In SQL files, relations say what they are: `reads`, `writes`, `references`, `executes`, `fires on`, `indexes` (and the reverse, `read by` ...).
 
 ## Known Product Boundaries
 

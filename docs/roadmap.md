@@ -186,5 +186,13 @@ Progress is recorded per phase in [`implementation-log.md`](implementation-log.m
   headless `-DLUMENCODE_CLI_ONLY=ON` build that needs only Qt 5 base.
   Packaging the CLI (distribution packages, a container image) is left
   for when there is demand.
-- **Phase F** (search UI, visual treatment of the new data) remains: it
-  needs the desktop.
+- **Phase F — done (2026-09-30).** Search box on the project index
+  (`AgentQueries::searchSymbols`, shared with `lumencode-cli --search` and
+  the MCP `search_symbols` tool); warning styling for broken links, missing
+  classes and unresolved dependencies; health marks on repaired / low
+  confidence symbols and a damaged-lines note in the source pane; SQL
+  relation verbs. Verified headless (smoke test drives the search field,
+  screenshots in `LUMENCODE_SMOKE_SHOTS`); not yet looked at on a real
+  desktop session. Found on the way: latent `implicitHeight` binding loops in
+  the Overview / Detail cards that only appear with real rendering (see
+  README Known Issues).

@@ -147,6 +147,29 @@ int main(int argc, char *argv[])
                                   QStringLiteral("name"));
     parser.addOption(findOption);
 
+    QCommandLineOption searchOption(QStringList() << "search",
+                                    QStringLiteral("With --index-project: ranked search over symbol names and file names "
+                                                   "(exact, prefix, camelCase initials, substring, subsequence)."),
+                                    QStringLiteral("query"));
+    parser.addOption(searchOption);
+
+    QCommandLineOption kindOption(QStringList() << "kind",
+                                  QStringLiteral("With --search: only these kinds, comma separated (function,class,method,route,file...)."),
+                                  QStringLiteral("kinds"));
+    parser.addOption(kindOption);
+
+    QCommandLineOption languageOption(QStringList() << "language",
+                                      QStringLiteral("With --search: only this language."), QStringLiteral("language"));
+    parser.addOption(languageOption);
+
+    QCommandLineOption inPathOption(QStringList() << "in",
+                                    QStringLiteral("With --search: only paths containing this text."), QStringLiteral("text"));
+    parser.addOption(inPathOption);
+
+    QCommandLineOption limitOption(QStringList() << "limit",
+                                   QStringLiteral("With --search: maximum results (default 50)."), QStringLiteral("n"), QStringLiteral("50"));
+    parser.addOption(limitOption);
+
     QCommandLineOption callersOption(QStringList() << "callers",
                                      QStringLiteral("With --index-project: everything that calls <name> (same-file and cross-file)."),
                                      QStringLiteral("name"));
@@ -260,6 +283,16 @@ int main(int argc, char *argv[])
                 return QStringLiteral("%1 %2 @ %3:%4").arg(item.value(QStringLiteral("kind")).toString(), item.value(QStringLiteral("name")).toString(),
                                                            item.value(QStringLiteral("path")).toString(), item.value(QStringLiteral("line")).toString());
             });
+            return 0;
+        }
+        if (parser.isSet(searchOption)) {
+            printList(AgentQueries::searchSymbols(snapshot, parser.value(searchOption), QStringList{parser.value(kindOption)},
+                                                  parser.value(languageOption), parser.value(inPathOption),
+                                                  parser.value(limitOption).toInt()),
+                      [](const QVariantMap &item) {
+                          return QStringLiteral("%1 %2 @ %3:%4").arg(item.value(QStringLiteral("kind")).toString(), item.value(QStringLiteral("name")).toString(),
+                                                                     item.value(QStringLiteral("path")).toString(), item.value(QStringLiteral("line")).toString());
+                      });
             return 0;
         }
         if (parser.isSet(callersOption) || parser.isSet(calleesOption)) {

@@ -279,6 +279,7 @@ lumencode-cli --index-project . --find Cart.add --format text        # definitio
 lumencode-cli --index-project . --callers parseBody --format text    # same-file and cross-file callers, with confidence
 lumencode-cli --index-project . --callees checkout --format text
 lumencode-cli --index-project . --routes --format text               # backend routes <- the browser calls that reach them
+lumencode-cli --index-project . --search selsym --kind function,method --format text   # ranked: exact, prefix, camelCase initials, substring, fuzzy
 ```
 
 An outline is roughly an eighth of a full `--dump-file` (a 1,300-line C++
@@ -290,7 +291,7 @@ integrations live in `tools/agent/`:
   `.claude/skills/lumencode/SKILL.md` in a project (or `~/.claude/skills/`).
 - `lumencode_mcp.py` — an MCP server (stdio, no third-party packages) with
   `outline_file`, `find_definition`, `find_callers`, `find_callees`,
-  `list_routes`, `project_summary`, `web_links` and `index_stats`:
+  `search_symbols`, `list_routes`, `project_summary`, `web_links` and `index_stats`:
   `claude mcp add lumencode -- python3 /path/to/lumencode/tools/agent/lumencode_mcp.py`
   (`LUMENCODE_CLI` / `LUMENCODE_ROOT` override the binary and default root).
 - `hooks/lumencode_hook.py` — Claude Code edit hooks (`hooks/settings.example.json`
@@ -335,6 +336,20 @@ integrations live in `tools/agent/`:
   - signatures from the syntax tree for TS/JS, C#, Java, PHP, Go and C/C++;
     Swift imports, Java Spring/JAX-RS routes and QML call relations
 
+- **2026-09-30 — roadmap phase F (GUI):**
+  - search box above the tree (Ctrl+F): ranked symbol and file search on the
+    project index, Files / Functions / Types filters, Enter opens the first
+    hit, and the tree unfolds to the opened file; the same ranking backs
+    `lumencode-cli --search` and the MCP `search_symbols` tool
+  - visual treatment of degraded data: broken links, missing classes and
+    unresolved dependencies in warning colour with an icon; a warning mark on
+    symbols that contain a repaired syntax error (red) or were recovered with
+    lower confidence (amber); a red note above the source when the snippet
+    contains repaired lines; SQL relations labelled `reads` / `writes` /
+    `references` / `executes` / `fires on` / `indexes`
+  - `lumencode-gui-smoke` types into the real search field and opens results;
+    `LUMENCODE_SMOKE_SHOTS=<dir>` also saves screenshots (search, broken links,
+    damaged symbol, SQL relations) for eyeballing
 - **2026-09-30 — roadmap phases A and B:**
   - `lumencode-gui-smoke`: the real `Main.qml` driven headless through every
     fixture (and a corpus sample), failing on any QML warning
@@ -425,6 +440,7 @@ Phase 4. Broader project understanding
 
 ## Known Issues
 
+- With real rendering (`LUMENCODE_SMOKE_SHOTS` set) the smoke test reports a few `Binding loop detected for property "implicitHeight"` warnings in the Overview / Detail cards the first time some files are shown (e.g. `web_app/js/app.js`); they occur with the original UI too and are not gated because the normal smoke run does not render frames.
 - Some extracted structure is still shallow or misleading on real projects.
 - QML still uses a heuristic parser; VB.NET, SQL, shell, Objective-C, Kotlin, Ruby and SCSS/LESS use purpose-built structural parsers. All other supported languages (now including plain JS/JSX, C/C++ and Go) are Tree-sitter-backed with a fallback.
 - C/C++: the macro pre-pass handles export/attribute/Qt macros, but macros that expand to statements or types (`FMT_TYPE_CONSTANT(...)`, `TEST(...)`) still trip the grammar; about half of corpus C/C++ files are analysed as AST + heuristic merge.

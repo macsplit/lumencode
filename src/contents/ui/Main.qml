@@ -87,6 +87,80 @@ Kirigami.ApplicationWindow {
         return Kirigami.Theme.disabledTextColor;
     }
 
+    // Visual treatment of degraded data.
+    readonly property color warningColor: "#f7a072"
+    readonly property color damageColor: "#bf616a"
+    readonly property var sqlRelationVerbs: ({
+        "references": true, "referenced by": true, "reads": true, "read by": true,
+        "writes": true, "written by": true, "executes": true, "executed by": true,
+        "fires on": true, "trigger": true, "indexes": true, "indexed by": true,
+        "calls": true, "called by": true
+    })
+
+    // SQL relations carry a verb (reads / writes / references ...); other languages just call.
+    function relationLabel(entry) {
+        if ((project.selectedFileData.language || "") !== "sql" || !entry || !entry.detail) {
+            return ""
+        }
+        return sqlRelationVerbs[entry.detail] ? entry.detail : ""
+    }
+
+    // A link, dependency or class that resolves nowhere.
+    function isBrokenEntry(entry) {
+        return !!entry && (entry.exists === false || String(entry.type || "").indexOf("missing") >= 0)
+    }
+
+    // "damaged": a repaired syntax error lies inside the symbol; "uncertain": reduced confidence.
+    function symbolHealth(symbol) {
+        if (!symbol) {
+            return "ok"
+        }
+        var damaged = project.selectedFileData.analysisDamagedLines || []
+        var first = symbol.line || 0
+        var last = symbol.endLine || first
+        for (var i = 0; i < damaged.length; ++i) {
+            if (damaged[i] >= first && damaged[i] <= last) {
+                return "damaged"
+            }
+        }
+        if (symbol.confidence && symbol.confidence !== "high") {
+            return "uncertain"
+        }
+        return "ok"
+    }
+
+    function symbolHealthTip(symbol) {
+        var health = symbolHealth(symbol)
+        if (health === "damaged") {
+            return "A syntax error lies inside this symbol; LumenCode repaired around it, so its members may be incomplete."
+        }
+        if (health === "uncertain") {
+            return "Lower confidence (" + symbol.confidence + "): recovered by the heuristic parser."
+        }
+        return ""
+    }
+
+    component EntryButton: Button {
+        property bool broken: false
+        icon.name: broken ? "dialog-warning-symbolic" : ""
+        icon.color: root.warningColor
+        palette.buttonText: broken ? root.warningColor : Kirigami.Theme.textColor
+    }
+
+    component HealthMark: Label {
+        property var symbol: null
+        readonly property string health: root.symbolHealth(symbol)
+        visible: health !== "ok"
+        text: "\u26A0"
+        color: health === "damaged" ? root.damageColor : root.warningColor
+        font.pointSize: root.compactSmallFontSize
+        HoverHandler {
+            id: healthHover
+        }
+        ToolTip.visible: healthHover.hovered && health !== "ok"
+        ToolTip.text: root.symbolHealthTip(symbol)
+    }
+
     function snippetRelativePath(path) {
         if (!path) {
             return "";
@@ -296,9 +370,169 @@ Kirigami.ApplicationWindow {
                             }
                         }
 
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            spacing: root.compactRowSpacing
+
+                            TextField {
+                                id: searchField
+                                objectName: "searchField"
+                                Layout.fillWidth: true
+                                font.pointSize: root.compactSmallFontSize
+                                selectByMouse: true
+                                enabled: project.indexStatus.state === "ready"
+                                placeholderText: {
+                                    var state = project.indexStatus.state
+                                    return state === "ready" ? "Search symbols and files  (Ctrl+F)"
+                                         : state === "building" ? "Search (index is building...)"
+                                         : "Search needs the project index"
+                                }
+                                onTextChanged: searchDebounce.restart()
+                                Keys.onEscapePressed: { text = ""; explorerList.forceActiveFocus() }
+                                Keys.onReturnPressed: {
+                                    if (searchResults.count > 0) {
+                                        searchResults.open(searchResults.model[0])
+                                    }
+                                }
+                                Keys.onDownPressed: searchResults.forceActiveFocus()
+
+                                Shortcut {
+                                    sequence: "Ctrl+F"
+                                    onActivated: { searchField.forceActiveFocus(); searchField.selectAll() }
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                visible: searchField.text.trim().length > 0
+                                spacing: root.compactRowSpacing
+
+                                Repeater {
+                                    model: [
+                                        { "label": "Files", "kinds": "file" },
+                                        { "label": "Functions", "kinds": "function,method,constructor" },
+                                        { "label": "Types", "kinds": "class,struct,interface,enum,type,trait,module,namespace,table,view" }
+                                    ]
+
+                                    delegate: ToolButton {
+                                        required property var modelData
+                                        text: modelData.label
+                                        checkable: true
+                                        checked: searchScope.kinds === modelData.kinds
+                                        font.pointSize: root.compactSmallFontSize
+                                        padding: 2
+                                        onClicked: {
+                                            searchScope.kinds = checked ? modelData.kinds : ""
+                                            searchDebounce.restart()
+                                        }
+                                    }
+                                }
+
+                                Item {
+                                    Layout.fillWidth: true
+                                }
+                            }
+
+                            QtObject {
+                                id: searchScope
+                                property string kinds: ""
+                            }
+
+                            Timer {
+                                id: searchDebounce
+                                interval: 120
+                                onTriggered: searchResults.model = searchField.text.trim().length > 0
+                                    ? project.search(searchField.text, searchScope.kinds, 80)
+                                    : []
+                            }
+
+                            Connections {
+                                target: project
+                                function onIndexStatusChanged() { searchDebounce.restart() }
+                            }
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                visible: searchField.text.trim().length > 0
+                                radius: Math.round(Kirigami.Units.smallSpacing * 0.8)
+                                color: "#141b24"
+                                border.width: 1
+                                border.color: "#243041"
+
+                                ListView {
+                                    id: searchResults
+                                    objectName: "searchResults"
+                                    anchors.fill: parent
+                                    anchors.margins: 1
+                                    clip: true
+                                    model: []
+                                    currentIndex: -1
+                                    keyNavigationEnabled: true
+
+                                    function open(result) {
+                                        project.openSearchResult(result)
+                                    }
+
+                                    Keys.onReturnPressed: if (currentIndex >= 0) open(model[currentIndex])
+                                    Keys.onEscapePressed: { searchField.text = ""; explorerList.forceActiveFocus() }
+
+                                    Label {
+                                        anchors.centerIn: parent
+                                        visible: searchResults.count === 0
+                                        color: Kirigami.Theme.disabledTextColor
+                                        font.pointSize: root.compactSmallFontSize
+                                        text: "No matches"
+                                    }
+
+                                    delegate: ItemDelegate {
+                                        required property var modelData
+                                        required property int index
+                                        width: ListView.view.width
+                                        highlighted: ListView.isCurrentItem
+                                        padding: 0
+                                        implicitHeight: Kirigami.Units.gridUnit * 1.5
+
+                                        contentItem: RowLayout {
+                                            spacing: root.compactRowSpacing
+
+                                            Label {
+                                                Layout.preferredWidth: Kirigami.Units.gridUnit * 4
+                                                text: modelData.kind
+                                                elide: Text.ElideRight
+                                                color: Kirigami.Theme.highlightColor
+                                                font.pointSize: root.compactSmallFontSize
+                                            }
+
+                                            Label {
+                                                Layout.fillWidth: true
+                                                text: modelData.name
+                                                elide: Text.ElideMiddle
+                                                font.pointSize: root.compactFontSize
+                                            }
+
+                                            Label {
+                                                Layout.maximumWidth: parent.width * 0.45
+                                                text: modelData.kind === "file" ? modelData.path : modelData.path + ":" + modelData.line
+                                                elide: Text.ElideLeft
+                                                color: Kirigami.Theme.disabledTextColor
+                                                font.pointSize: root.compactSmallFontSize
+                                            }
+                                        }
+
+                                        onClicked: {
+                                            searchResults.currentIndex = index
+                                            searchResults.open(modelData)
+                                        }
+                                    }
+                                }
+                            }
+
                         Kirigami.AbstractCard {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
+                            visible: searchField.text.trim().length === 0
 
                             contentItem: ListView {
                                 id: explorerList
@@ -409,6 +643,7 @@ Kirigami.ApplicationWindow {
                                 }
                             }
                         }
+                        }
                     }
 
                     Kirigami.AbstractCard {
@@ -515,6 +750,10 @@ Kirigami.ApplicationWindow {
                                                 anchors.rightMargin: Kirigami.Units.smallSpacing
                                                 spacing: root.compactRowSpacing
 
+                                                HealthMark {
+                                                    symbol: modelData
+                                                }
+
                                                 Label {
                                                     text: modelData.kind
                                                     color: Kirigami.Theme.highlightColor
@@ -568,6 +807,10 @@ Kirigami.ApplicationWindow {
                                                     anchors.leftMargin: Kirigami.Units.smallSpacing
                                                     anchors.rightMargin: Kirigami.Units.smallSpacing
                                                     spacing: root.compactRowSpacing
+
+                                                    HealthMark {
+                                                        symbol: modelData
+                                                    }
 
                                                     Label {
                                                         text: modelData.kind
@@ -692,10 +935,11 @@ Kirigami.ApplicationWindow {
                                 Repeater {
                                     model: project.selectedSymbol.calls || []
 
-                                    delegate: Button {
+                                    delegate: EntryButton {
                                         required property var modelData
                                         width: parent.width
-                                        text: (modelData.kind || "symbol") + ": "
+                                        text: (root.relationLabel(modelData) ? root.relationLabel(modelData) + "  " : "")
+                                              + (modelData.kind || "symbol") + ": "
                                               + (modelData.name || "")
                                               + (modelData.line ? " (L" + modelData.line + ")" : "")
                                         font.pointSize: root.compactSmallFontSize
@@ -732,10 +976,11 @@ Kirigami.ApplicationWindow {
                                 Repeater {
                                     model: project.selectedSymbol.calledBy || []
 
-                                    delegate: Button {
+                                    delegate: EntryButton {
                                         required property var modelData
                                         width: parent.width
-                                        text: (modelData.kind || "symbol") + ": "
+                                        text: (root.relationLabel(modelData) ? root.relationLabel(modelData) + "  " : "")
+                                              + (modelData.kind || "symbol") + ": "
                                               + (modelData.name || "")
                                               + (modelData.line ? " (L" + modelData.line + ")" : "")
                                         font.pointSize: root.compactSmallFontSize
@@ -817,8 +1062,9 @@ Kirigami.ApplicationWindow {
                                 Repeater {
                                     model: project.selectedFileData.dependencies || []
 
-                                    delegate: Button {
+                                    delegate: EntryButton {
                                         required property var modelData
+                                        broken: root.isBrokenEntry(modelData)
                                         width: parent.width
                                         text: modelData.type + ": " + modelData.label + (modelData.line ? " (L" + modelData.line + ")" : "")
                                         font.pointSize: root.compactSmallFontSize
@@ -896,8 +1142,9 @@ Kirigami.ApplicationWindow {
                                 Repeater {
                                     model: project.selectedFileData.relatedFiles || []
 
-                                    delegate: Button {
+                                    delegate: EntryButton {
                                         required property var modelData
+                                        broken: root.isBrokenEntry(modelData)
                                         width: parent.width
                                         text: modelData.type + ": " + modelData.label
                                         font.pointSize: root.compactSmallFontSize
@@ -996,8 +1243,9 @@ Kirigami.ApplicationWindow {
                                 Repeater {
                                     model: project.selectedFileData.quickLinks || []
 
-                                    delegate: Button {
+                                    delegate: EntryButton {
                                         required property var modelData
+                                        broken: root.isBrokenEntry(modelData)
                                         width: parent.width
                                         text: modelData.type + ": " + modelData.label + (modelData.exists ? "" : " (missing)")
                                         font.pointSize: root.compactSmallFontSize
@@ -1092,8 +1340,9 @@ Kirigami.ApplicationWindow {
                                         width: parent.width
                                         spacing: 1
 
-                                        Button {
+                                        EntryButton {
                                             Layout.fillWidth: true
+                                            broken: true
                                             text: modelData.name
                                             font.pointSize: root.compactSmallFontSize
                                             onClicked: project.selectSymbolByData({
@@ -1197,6 +1446,16 @@ Kirigami.ApplicationWindow {
                                 color: Kirigami.Theme.disabledTextColor
                                 font.pointSize: root.compactSmallFontSize
                             }
+                        }
+
+                        Label {
+                            Layout.fillWidth: true
+                            visible: (project.selectedSnippet.damagedLines || []).length > 0
+                            wrapMode: Text.WordWrap
+                            color: root.damageColor
+                            font.pointSize: root.compactSmallFontSize
+                            text: "\u26A0 Syntax problem at line(s) " + (project.selectedSnippet.damagedLines || []).join(", ")
+                                  + " in this snippet. LumenCode repaired around it, so treat the analysis here as approximate."
                         }
 
                         Repeater {

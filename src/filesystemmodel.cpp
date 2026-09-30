@@ -430,6 +430,21 @@ void FileSystemModel::toggleExpanded(const QString &path)
     refreshVisibleEntries();
 }
 
+void FileSystemModel::revealPath(const QString &path)
+{
+    const Node *node = m_nodesByPath.value(path, nullptr);
+    if (!node) {
+        return;
+    }
+    bool changed = false;
+    for (const Node *ancestor = node->parent; ancestor; ancestor = ancestor->parent) {
+        changed = m_expandedPaths.contains(ancestor->path) ? changed : (m_expandedPaths.insert(ancestor->path), true);
+    }
+    if (changed) {
+        refreshVisibleEntries();
+    }
+}
+
 bool FileSystemModel::isExpanded(const QString &path) const
 {
     return m_expandedPaths.contains(path);

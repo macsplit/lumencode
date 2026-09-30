@@ -26,6 +26,14 @@ QVariantList findDefinitions(const ProjectIndex::SnapshotPtr &snapshot, const QS
 QVariantList relationsOf(const ProjectIndex::SnapshotPtr &snapshot, const QString &name, const QString &field,
                          const std::function<QVariantMap(const QString &)> &analyse);
 
+// Ranked search over definition names (Owner.name) and file paths. `query` is
+// matched case-insensitively: exact name, prefix, word/camelCase-initial,
+// substring, then a subsequence of 4+ characters ("prjctrl" finds ProjectController). `kinds` (e.g. "function,class"; "file" selects file paths) and
+// `language` narrow the result; `pathContains` restricts to a folder.
+// Results: {name, kind, path, line, language, score}, best first, at most `limit`.
+QVariantList searchSymbols(const ProjectIndex::SnapshotPtr &snapshot, const QString &query, const QStringList &kinds = {},
+                           const QString &language = QString(), const QString &pathContains = QString(), int limit = 50);
+
 // Every route in the project with the HTTP client calls that reach it.
 QVariantList routes(const ProjectIndex::SnapshotPtr &snapshot);
 

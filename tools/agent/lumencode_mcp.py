@@ -4,6 +4,7 @@
 Tools:
   outline_file     compact outline of one file (symbols, signatures, line ranges, relations)
   find_definition  where a name is defined across the project
+  search_symbols   ranked fuzzy search over symbol and file names (partial names, camelCase initials)
   find_callers     who calls a name (same-file and cross-file)
   find_callees     what a name calls
   list_routes      backend routes and the browser calls that reach them
@@ -77,6 +78,26 @@ TOOLS = [
         "description": "Where a function, method, class or other symbol is defined in the project. Accepts 'name' or 'Owner.name'.",
         "inputSchema": {"type": "object", "properties": {"name": {"type": "string"}, "root": ROOT_PROPERTY, "format": FORMAT_PROPERTY},
                         "required": ["name"]},
+    },
+    {
+        "name": "search_symbols",
+        "description": "Find symbols or files when you only half-remember the name: ranked search over definition names "
+                       "(Owner.name) and file names - exact, prefix, camelCase initials ('spp' finds SymbolParser.parseFile), "
+                       "substring, then fuzzy subsequence. Filter by kind (function, class, method, route, table, file...), "
+                       "language or folder. Not a text search: use grep for file contents.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "kind": {"type": "string", "description": "Comma-separated kinds, e.g. 'function,method' or 'file'."},
+                "language": {"type": "string"},
+                "in_path": {"type": "string", "description": "Only paths containing this text."},
+                "limit": {"type": "integer", "description": "Maximum results (default 30)."},
+                "root": ROOT_PROPERTY,
+                "format": FORMAT_PROPERTY,
+            },
+            "required": ["query"],
+        },
     },
     {
         "name": "find_callers",
@@ -297,6 +318,13 @@ def call_tool(name: str, arguments: dict) -> tuple[str, bool]:
         return run_cli(args)
     if name == "find_definition":
         return run_cli(["--index-project", root, "--find", arguments["name"], "--format", output_format])
+    if name == "search_symbols":
+        args = ["--index-project", root, "--search", arguments["query"], "--format", output_format,
+                "--limit", str(int(arguments.get("limit") or 30))]
+        for flag, key in (("--kind", "kind"), ("--language", "language"), ("--in", "in_path")):
+            if arguments.get(key):
+                args += [flag, str(arguments[key])]
+        return run_cli(args)
     if name == "find_callers":
         return run_cli(["--index-project", root, "--callers", arguments["name"], "--format", output_format])
     if name == "find_callees":

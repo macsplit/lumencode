@@ -1,5 +1,13 @@
 # Implementation Log
 
+## 2026-09-30 (continued): phase F
+
+- **Search:** `AgentQueries::searchSymbols` ranks definition names (`Owner.name`) and file names over the project index: exact, prefix, word/camelCase initials, substring, then a 4+ character subsequence; filters by kind, language and path. Used by `lumencode-cli --search/--kind/--language/--in/--limit`, the MCP `search_symbols` tool and `ProjectController::search`.
+- **GUI search:** a text field above the tree (Ctrl+F, debounced 120 ms, disabled until the index is ready) with Files / Functions / Types filters and a result list. `ProjectController::openSearchResult` reveals the file in the tree (`FileSystemModel::revealPath`) and selects the file or the symbol. The GUI targets now compile `agentqueries.cpp`.
+- **Degraded-data styling:** `EntryButton` (warning colour and icon for entries that resolve nowhere), `HealthMark` (symbols on repaired lines or of lower confidence), SQL relation verbs in Calls / Called By, and `damagedLines` on symbol snippets (a red note above the source).
+- **QML lessons:** a `ComboBox` next to the tree made the Overview card report an `implicitHeight` binding loop (replaced by toggle buttons), and `Layout.*` attached properties on an `AbstractCard`'s `contentItem` upset the Kirigami card; the results list is a plain `ListView` in a `Rectangle`.
+- **Smoke test:** finds items in the visual tree (pages pushed on the stack are not `QObject` children), drives the search field, opens results, and with `LUMENCODE_SMOKE_SHOTS=<dir>` saves screenshots via `grabToImage` (`grabWindow` returns an empty image offscreen). Those real frames revealed `implicitHeight` binding loops in the Overview / Detail cards on first display of some files, reproducible with the original UI.
+
 ## 2026-09-30 (continued): phase G
 
 - **`--outline <file>`** (`src/agentqueries.{h,cpp}`):

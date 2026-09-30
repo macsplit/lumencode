@@ -1,5 +1,7 @@
 #include "projectcontroller.h"
 
+#include "agentqueries.h"
+
 #include "filesystemmodel.h"
 #include "symbolparser.h"
 
@@ -1678,6 +1680,43 @@ void ProjectController::selectSymbolByData(const QVariantMap &symbol)
     applyResolvedSelection(symbol);
 }
 
+QVariantList ProjectController::search(const QString &query, const QString &kinds, int limit) const
+{
+    QVariantList results = AgentQueries::searchSymbols(m_indexSnapshot, query, kinds.isEmpty() ? QStringList() : QStringList{kinds},
+                                                       QString(), QString(), limit);
+    for (QVariant &entry : results) {
+        QVariantMap item = entry.toMap();
+        item.insert(QStringLiteral("absolutePath"), QDir(m_rootPath).absoluteFilePath(item.value(QStringLiteral("path")).toString()));
+        entry = item;
+    }
+    return results;
+}
+
+void ProjectController::openSearchResult(const QVariantMap &result)
+{
+    const QString path = result.value(QStringLiteral("absolutePath")).toString();
+    if (path.isEmpty()) {
+        return;
+    }
+    m_fileSystemModel->revealPath(path);
+    if (result.value(QStringLiteral("kind")).toString() == QLatin1String("file")) {
+        selectPath(path);
+        return;
+    }
+    // Symbol: select its file first (if needed), then the symbol by its analysis data.
+    QVariantMap symbol{{QStringLiteral("name"), result.value(QStringLiteral("name")).toString().section(QLatin1Char('.'), -1)},
+                       {QStringLiteral("kind"), result.value(QStringLiteral("kind"))},
+                       {QStringLiteral("line"), result.value(QStringLiteral("line"))},
+                       {QStringLiteral("sourcePath"), path}};
+    if (QFileInfo(m_selectedFileData.value(QStringLiteral("path")).toString()).absoluteFilePath() != QFileInfo(path).absoluteFilePath()) {
+        m_selectedPath = path;
+        emit selectedPathChanged();
+        beginAsyncAnalysis(path, symbol);
+        return;
+    }
+    selectSymbolByData(symbol);
+}
+
 void ProjectController::setPreferredEditor(const QString &command)
 {
     const QString normalized = command.trimmed();
@@ -1922,6 +1961,24 @@ QVariantMap ProjectController::makeSymbolSnippet(const QVariantMap &symbol, cons
     }
     if (symbol.value(QStringLiteral("skipDiagnostics")).toBool()) {
         snippet.insert(QStringLiteral("diagnosticsMode"), kDiagnosticsModeNone);
+    }
+    // Lines of this snippet that the parser had to repair around (same file only).
+    const QVariantList damagedInFile = fileData.value(QStringLiteral("analysisDamagedLines")).toList();
+    if (!damagedInFile.isEmpty()
+        && QFileInfo(snippet.value(QStringLiteral("path")).toString()).absoluteFilePath()
+            == QFileInfo(fileData.value(QStringLiteral("path")).toString()).absoluteFilePath()) {
+        const QString text = snippet.value(QStringLiteral("snippet")).toString();
+        const int first = snippet.value(QStringLiteral("line")).toInt();
+        const int count = text.isEmpty() ? 0 : text.count(QLatin1Char('\n')) + 1;
+        QVariantList inSnippet;
+        for (const QVariant &line : damagedInFile) {
+            if (line.toInt() >= first && line.toInt() < first + count) {
+                inSnippet.append(line);
+            }
+        }
+        if (!inSnippet.isEmpty()) {
+            snippet.insert(QStringLiteral("damagedLines"), inSnippet);
+        }
     }
     return enrichSnippetPayload(snippet);
 }

@@ -54,6 +54,11 @@ public:
     Q_INVOKABLE void selectPath(const QString &path);
     Q_INVOKABLE void selectSymbol(int index);
     Q_INVOKABLE void selectSymbolByData(const QVariantMap &symbol);
+    // Ranked symbol / file search over the project index (empty until the index is ready).
+    // `kinds` is a comma-separated filter such as "function,class" or "file".
+    Q_INVOKABLE QVariantList search(const QString &query, const QString &kinds = QString(), int limit = 60) const;
+    // Show a search result: reveal it in the tree and select the file, or symbol within it.
+    Q_INVOKABLE void openSearchResult(const QVariantMap &result);
     Q_INVOKABLE void setPreferredEditor(const QString &command);
     Q_INVOKABLE bool openCurrentInFolder() const;
     Q_INVOKABLE bool openCurrentInEditor() const;
