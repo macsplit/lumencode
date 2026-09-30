@@ -3722,6 +3722,7 @@ bool isAstCallableNode(const char *type)
         "generator_function", "method_declaration", "constructor_declaration", "local_function_statement",
         "operator_declaration", "delegate_declaration", "destructor_declaration", "function_definition",
         "anonymous_function", "anonymous_function_creation_expression", "arrow_function",
+        "function_item", "function_signature_item", "init_declaration", "protocol_function_declaration",
     };
     return types.contains(QByteArray(type));
 }
@@ -3759,6 +3760,72 @@ QString astCallableName(TSNode node, const QByteArray &source)
 QVariantList astParameters(TSNode function, const QByteArray &source, const QString &language)
 {
     QVariantList parameters;
+    if (language == QStringLiteral("swift")) {
+        // Parameters are direct children; a default value follows its parameter
+        // as a `default_value` field of the declaration.
+        const uint32_t childCount = ts_node_child_count(function);
+        for (uint32_t index = 0; index < childCount; ++index) {
+            TSNode child = ts_node_child(function, index);
+            const char *field = ts_node_field_name_for_child(function, index);
+            if (field && std::strcmp(field, "default_value") == 0 && !parameters.isEmpty()) {
+                QVariantMap last = parameters.last().toMap();
+                last.insert(QStringLiteral("default"), nodeText(child, source).simplified().left(60));
+                parameters.last() = last;
+                continue;
+            }
+            if (tsType(child) != QStringLiteral("parameter")) {
+                continue;
+            }
+            const QString external = nodeText(fieldNode(child, "external_name"), source).trimmed();
+            const QString name = nodeText(fieldNode(child, "name"), source).trimmed();
+            // The full annotation after the name (a function type such as
+            // `@escaping (Request) -> Void` spans several type-field nodes).
+            QString type;
+            TSNode nameNode = fieldNode(child, "name");
+            if (!ts_node_is_null(nameNode)) {
+                const uint32_t from = ts_node_end_byte(nameNode);
+                const uint32_t to = ts_node_end_byte(child);
+                if (to > from) {
+                    type = QString::fromUtf8(source.constData() + from, static_cast<int>(to - from)).simplified();
+                }
+                if (type.startsWith(QLatin1Char(':'))) {
+                    type = type.mid(1).trimmed();
+                }
+            }
+            if (type.isEmpty()) {
+                type = nodeText(fieldNode(child, "type"), source).simplified();
+            }
+            if (nodeText(child, source).contains(QStringLiteral("...")) && !type.endsWith(QStringLiteral("..."))) {
+                type += QStringLiteral("...");
+            }
+            for (uint32_t k = 0; k < ts_node_named_child_count(child); ++k) {
+                if (tsType(ts_node_named_child(child, k)) == QStringLiteral("parameter_modifiers")) {
+                    const QString modifiers = nodeText(ts_node_named_child(child, k), source).simplified();
+                    if (!type.contains(modifiers)) {
+                        type = modifiers + QLatin1Char(' ') + type;
+                    }
+                }
+            }
+            const QString display = (!external.isEmpty() && external != name) ? external + QLatin1Char(' ') + name : name;
+            parameters.append(makeSignatureParameter(display, type));
+        }
+        return parameters;
+    }
+    if (language == QStringLiteral("rust")) {
+        TSNode list = fieldNode(function, "parameters");
+        for (uint32_t index = 0; index < ts_node_named_child_count(list); ++index) {
+            TSNode param = ts_node_named_child(list, index);
+            const QString type = tsType(param);
+            if (type == QStringLiteral("parameter")) {
+                parameters.append(makeSignatureParameter(nodeText(fieldNode(param, "pattern"), source).simplified(),
+                                                         nodeText(fieldNode(param, "type"), source).simplified()));
+            } else if (type == QStringLiteral("variadic_parameter")) {
+                parameters.append(makeSignatureParameter(QStringLiteral("..."), QString()));
+            }
+            // self_parameter is the receiver, not an argument (as for Python's self).
+        }
+        return parameters;
+    }
     TSNode list = fieldNode(function, "parameters");
     if (ts_node_is_null(list)) {
         TSNode single = fieldNode(function, "parameter"); // x => ...
@@ -3975,6 +4042,31 @@ QVariantList astReturns(TSNode function, const QByteArray &source, const QString
         return returns;
     }
     QString declaredType;
+    if (language == QStringLiteral("swift") || language == QStringLiteral("rust")) {
+        *declared = true;
+        if (functionType == QStringLiteral("init_declaration")) {
+            returns.append(QVariantMap{{QStringLiteral("text"), QStringLiteral("none")}});
+            return returns;
+        }
+        QString text = nodeText(fieldNode(function, "return_type"), source).simplified();
+        if (text.isEmpty() || text == QStringLiteral("()") || text == QStringLiteral("Void")) {
+            text = QStringLiteral("none");
+        }
+        if (language == QStringLiteral("swift")) {
+            QStringList effects;
+            for (uint32_t k = 0; k < ts_node_child_count(function); ++k) {
+                const QString childType = tsType(ts_node_child(function, k));
+                if (childType == QStringLiteral("async") || childType == QStringLiteral("throws")) {
+                    effects.append(nodeText(ts_node_child(function, k), source).simplified());
+                }
+            }
+            if (!effects.isEmpty()) {
+                text += QStringLiteral(" (%1)").arg(effects.join(QLatin1Char(' ')));
+            }
+        }
+        returns.append(QVariantMap{{QStringLiteral("text"), text}, {QStringLiteral("source"), QStringLiteral("declared")}});
+        return returns;
+    }
     if (language == QStringLiteral("csharp")) {
         declaredType = nodeText(fieldNode(function, "returns"), source).simplified();
         if (declaredType.isEmpty()) {
@@ -4246,6 +4338,7 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
         static const QSet<QString> astSignatureLanguages = {
             QStringLiteral("ts"), QStringLiteral("tsx"), QStringLiteral("script"), QStringLiteral("jsx"),
             QStringLiteral("csharp"), QStringLiteral("java"), QStringLiteral("php"),
+            QStringLiteral("rust"), QStringLiteral("swift"),
         };
         auto withAstSignatures = [&](QVariantMap analysis, const QByteArray &bytes) {
             if (astSignatureLanguages.contains(astLanguage)) {

@@ -57,8 +57,8 @@ search**. See [Recent History](#recent-history) for how it got here and
 | Python | Tree-sitter | repair (indented blocks) → heuristic | classes, functions, methods, properties | AST walk | imports | Flask / FastAPI | **from the syntax tree**: parameters with types/defaults, annotated or inferred returns per return path |
 | Java | Tree-sitter | repair → heuristic | types, members | yes | imports | Spring (`@RequestMapping`, `@GetMapping`, ...), JAX-RS (`@Path` + verbs) | **from the syntax tree** |
 | C# | Tree-sitter | repair → heuristic | types, members, top-level programs | yes | `using` | ASP.NET attributes / minimal APIs | **from the syntax tree** (`ref`/`out`/`params`/`this`, defaults, generics) |
-| Rust | Tree-sitter | repair → heuristic | items, impls, modules | yes | `use` | — | snippet-derived |
-| Swift | Tree-sitter | repair | types, extensions, members | yes | `import` / `@testable import` | — | snippet-derived |
+| Rust | Tree-sitter | repair → heuristic | items, impls, modules | yes | `use` | — | **from the syntax tree** (patterns, types, return types; `self` receiver omitted) |
+| Swift | Tree-sitter | repair | types, extensions, members | yes | `import` / `@testable import` | — | **from the syntax tree** (argument labels, defaults, variadics, attributes, `async`/`throws`) |
 | Go | Tree-sitter | repair | structs (fields), interfaces (methods, embeds), types/aliases, functions, receiver methods grouped under their type, consts/vars | yes | imports (incl. aliases) | net/http (`HandleFunc`, Go 1.22 `"GET /x"` patterns), gin, chi, echo | **from the syntax tree** (grouped params, variadics, multiple results) |
 | CSS | Tree-sitter | repair → heuristic | rules, custom properties | — | `@import`, `url()` | — | — |
 | HTML | tree-sitter-html | tolerant grammar | ids, event handlers, custom elements, forms, inline `<script>` / `<style>` contents | handlers → JS functions | linked assets | — | — |
@@ -224,7 +224,7 @@ Phase 1. Stabilization
 - Continue AST-backed parity work language by language, using CLI-first verification before GUI iteration.
 - ~~Continue the authority/recovery refactor language by language~~ **Done (2026-09):** every Tree-sitter language now goes through one AST-first path with branch-scoped repair; keep driving the damage-probe retention up (worst remaining: Swift and Java unclosed strings).
 - Keep tightening the current range-aware recovery model language by language, using fixture-gated refinements rather than broad parser-wide error walkers.
-- Move callable signature extraction from parser-layer snippet heuristics to grammar-specific AST fields language by language. **Done (2026-09) for Python (issue #1), TS/JS, PHP, Java, C#, Go and C/C++**; Rust and Swift next.
+- Move callable signature extraction from parser-layer snippet heuristics to grammar-specific AST fields language by language. **Done (2026-09) for Python (issue #1), TS/JS, PHP, Java, C#, Go, C/C++, Rust and Swift**.
 - Keep pragmatic heuristic coverage for valuable local languages such as QML where a dedicated grammar path is not yet integrated, instead of leaving them unsupported.
 - Continue converting cross-file relationship work from name/snippet luck into explicit binding-aware or asset-aware models. **Web (HTML/CSS/JS) and PHP (`use` via PSR-4) done (2026-09)**; next: calls into `use`-resolved PHP classes, JS `fetch()` / `axios` calls to backend routes (Express, Flask, PHP), Python package imports.
 - Treat surfaced analysis warnings as investigation leads, not just acceptable noise: some will indicate algorithmic or integration weaknesses rather than merely large inputs.
@@ -267,7 +267,7 @@ Phase 4. Broader project understanding
 - C/C++ that relies heavily on unexpanded macros (export/visibility macros, Qt's `Q_OBJECT` etc.) trips the grammar in about two thirds of corpus files; those files are analysed as AST + heuristic merge and can show some macro-shaped noise symbols.
 - Recovery is AST-first for every Tree-sitter language (including Swift and CSS) via branch-scoped repair. A missing closing brace cannot be fixed by blanking lines, so such files still fall back to the AST+heuristic merge. Repair is bounded (80 trial parses), so very large files with grammar gaps (e.g. some valid Swift) may stop repairing early.
 - About 19% of valid Swift files in the corpus trip grammar gaps and go through repair. That costs time (Swift p95 is the highest of the languages) but not declarations: a repair is rejected if it would lose any.
-- Callable signatures come from the syntax tree (or, for VB.NET and SQL, from the declarations) everywhere except Rust, Swift, QML and Objective-C, which still use snippet heuristics.
+- Callable signatures come from the syntax tree (or, for VB.NET, SQL and shell, from the declarations) everywhere except QML and Objective-C, which still use snippet heuristics.
 - QML is now supported as a first-class language in the explorer and CLI, but it currently uses heuristic structural extraction rather than a dedicated AST-backed parser.
 - `Calls` / `Called By` support has improved and relation clicks now rehydrate into full destination symbols, but the overall graph is still incomplete and not yet uniformly reciprocal across all languages and project shapes.
 - The new overview warnings are part of the intended safety model. They mean the app stayed responsive and returned a bounded result, but they should still be treated as prompts to inspect why that bound was hit.

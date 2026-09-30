@@ -1560,6 +1560,35 @@
           ]
         }
       ]
+    },
+    {
+      "name": "swift_ast_signatures",
+      "root": "tests/fixtures/baseline/swift_signatures",
+      "file": "Greeter.swift",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "greet",
+          "parameters": [
+            "_ name: String",
+            "times count: Int",
+            "_ extras: String..."
+          ],
+          "returns": [
+            "[String] (async throws)"
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "schedule",
+          "parameters": [
+            "perform action: @escaping @Sendable (String) -> Void"
+          ],
+          "returns": [
+            "none"
+          ]
+        }
+      ]
     }
   ]
 }
