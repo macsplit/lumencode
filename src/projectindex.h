@@ -44,6 +44,7 @@ struct Definition
     QString key; // kind|name|line, as in analysis payloads
     int line = 0;
     bool declaration = false; // C/C++ prototype (the body is elsewhere)
+    QString scope; // C/C++ namespace (e.g. "fmt::detail"), empty at global scope
 };
 
 struct Import

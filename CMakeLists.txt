@@ -9,17 +9,29 @@ set(CMAKE_C_EXTENSIONS ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-find_package(ECM 5.80 REQUIRED NO_MODULE)
-set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
+# Headless build: only lumencode-cli (the analysis engine, project index and
+# agent-facing queries). Needs Qt 5.15 base (Core, Concurrent, Widgets) and a
+# C/C++ compiler - no KDE Frameworks, QML or Kirigami.
+#   cmake -S . -B build-cli -DLUMENCODE_CLI_ONLY=ON && cmake --build build-cli
+option(LUMENCODE_CLI_ONLY "Build only the headless lumencode-cli (no KF5 / QML)" OFF)
 
-include(KDEInstallDirs)
-include(KDECMakeSettings)
-include(KDECompilerSettings NO_POLICY_SCOPE)
+if(NOT LUMENCODE_CLI_ONLY)
+    find_package(ECM 5.80 REQUIRED NO_MODULE)
+    set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
 
-find_package(Qt5 5.15 REQUIRED COMPONENTS Core Concurrent Quick QuickControls2 Widgets)
-find_package(KF5 REQUIRED COMPONENTS Kirigami2 CoreAddons)
+    include(KDEInstallDirs)
+    include(KDECMakeSettings)
+    include(KDECompilerSettings NO_POLICY_SCOPE)
 
-configure_file(app.lumencode.LumenCode.desktop.in app.lumencode.LumenCode.desktop @ONLY)
+    find_package(Qt5 5.15 REQUIRED COMPONENTS Core Concurrent Quick QuickControls2 Widgets)
+    find_package(KF5 REQUIRED COMPONENTS Kirigami2 CoreAddons)
+
+    configure_file(app.lumencode.LumenCode.desktop.in app.lumencode.LumenCode.desktop @ONLY)
+else()
+    include(GNUInstallDirs)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+    find_package(Qt5 5.15 REQUIRED COMPONENTS Core Concurrent Widgets)
+endif()
 
 add_library(vendor-tree-sitter STATIC
     third_party/tree-sitter/lib/src/lib.c
@@ -173,6 +185,7 @@ target_include_directories(vendor-tree-sitter-cpp
         third_party/tree-sitter-cpp/src
 )
 
+if(NOT LUMENCODE_CLI_ONLY)
 add_executable(lumencode
     src/main.cpp
     src/filesystemmodel.cpp
@@ -213,9 +226,12 @@ target_link_libraries(lumencode
     vendor-tree-sitter-go
     vendor-tree-sitter-cpp
 )
+endif()
 
 add_executable(lumencode-cli
     src/lumencode-cli.cpp
+    src/agentqueries.cpp
+    src/agentqueries.h
     src/filesystemmodel.cpp
     src/filesystemmodel.h
     src/projectcontroller.cpp
@@ -234,7 +250,6 @@ target_link_libraries(lumencode-cli
     Qt5::Core
     Qt5::Concurrent
     Qt5::Widgets
-    KF5::CoreAddons
     vendor-tree-sitter
     vendor-tree-sitter-javascript
     vendor-tree-sitter-typescript
@@ -251,6 +266,7 @@ target_link_libraries(lumencode-cli
     vendor-tree-sitter-cpp
 )
 
+if(NOT LUMENCODE_CLI_ONLY)
 # Headless GUI smoke test (not built by default):
 #   cmake --build build --target lumencode-gui-smoke
 #   QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software ./build/bin/lumencode-gui-smoke tests/fixtures/baseline
@@ -294,7 +310,12 @@ target_link_libraries(lumencode-gui-smoke
     vendor-tree-sitter-go
     vendor-tree-sitter-cpp
 )
+endif()
 
-install(TARGETS lumencode lumencode-cli ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/app.lumencode.LumenCode.desktop DESTINATION ${KDE_INSTALL_APPDIR})
-install(FILES src/icons/lumencode.svg DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps RENAME app.lumencode.LumenCode.svg)
+if(NOT LUMENCODE_CLI_ONLY)
+    install(TARGETS lumencode lumencode-cli ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/app.lumencode.LumenCode.desktop DESTINATION ${KDE_INSTALL_APPDIR})
+    install(FILES src/icons/lumencode.svg DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps RENAME app.lumencode.LumenCode.svg)
+else()
+    install(TARGETS lumencode-cli RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()

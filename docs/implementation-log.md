@@ -1,5 +1,23 @@
 # Implementation Log
 
+## 2026-09-30 (continued): phase G
+
+- **`--outline <file>`** (`src/agentqueries.{h,cpp}`):
+    - Content: names, kinds, line ranges, signatures (with defaults and return types), details, Calls / Called By names (`name @ path:line` across files), imports, routes with their clients, HTTP calls with their routes, and damaged lines. No snippets.
+    - Formats: JSON, or `--format text`, an indented form for agents.
+    - Size: `src/projectindex.cpp` (1,300 lines) is 13 KB of outline JSON against 111 KB for `--dump-file`.
+    - With `--index-project <root>` the outline includes cross-file relations.
+- **Project queries** on the index:
+    - `--find <name|Owner.name>` lists definitions.
+    - `--callers` / `--callees <name>` give the definition file's full relation lists (same-file and cross-file, with confidence and `calledByTotal`).
+    - `--routes` lists every route with mount prefixes and the client calls that reach it.
+- **Found on the way** (by querying LumenCode's own source):
+    - `ProjectIndex::augmentAnalysis(...)` had no callers. A `::`-qualified call was treated as a method call on an unknown receiver; scope qualifiers now reach free functions.
+    - C++ prototypes inside a namespace lost their `declaration` marker, so they were never paired with their bodies.
+- **`tools/agent/SKILL.md`:** when to use which command, and how to read modes, damaged lines and confidence levels.
+- **`tools/agent/lumencode_mcp.py`:** an MCP stdio server with no third-party packages, exposing `outline_file`, `find_definition`, `find_callers`, `find_callees`, `list_routes` and `index_stats`. Output is capped at 60k characters.
+- **`-DLUMENCODE_CLI_ONLY=ON`:** builds only `lumencode-cli` against Qt 5 Core/Concurrent/Widgets, without ECM, KF5, QML or Kirigami, into `build*/bin`. The CLI no longer links `KF5::CoreAddons`, which it never used.
+
 ## 2026-09-30 (continued): phase E
 
 - **Kotlin** (structural, `parseKotlin`):

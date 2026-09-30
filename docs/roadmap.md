@@ -179,3 +179,12 @@ Progress is recorded per phase in [`implementation-log.md`](implementation-log.m
   symbols, damage probe 96.5%) and Ruby (164 files, 90%, 98.8%) as
   structural parsers; SCSS/LESS; JSON outlines and composer / tsconfig /
   appsettings summaries; PHP configuration arrays.
+- **Phase G — done (2026-09-30).** `--outline` (about an eighth of a full
+  dump; JSON or text), project queries on the index (`--find`,
+  `--callers`, `--callees`, `--routes`), `tools/agent/SKILL.md`, an MCP
+  server (`tools/agent/lumencode_mcp.py`, stdio, no dependencies) and a
+  headless `-DLUMENCODE_CLI_ONLY=ON` build that needs only Qt 5 base.
+  Packaging the CLI (distribution packages, a container image) is left
+  for when there is demand.
+- **Phase F** (search UI, visual treatment of the new data) remains: it
+  needs the desktop.

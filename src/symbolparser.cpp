@@ -5041,6 +5041,9 @@ CallSiteInfo callSiteFor(TSNode node, const QByteArray &source, const char *type
             info.name = nodeText(fieldNode(function, "name"), source).section(QStringLiteral("::"), -1);
             TSNode scope = fieldNode(function, "path");
             info.qualifier = qualifierOf(ts_node_is_null(scope) ? fieldNode(function, "scope") : scope);
+            if (!info.qualifier.isEmpty()) {
+                info.qualifier += QStringLiteral("::"); // a scope (namespace / type), not a receiver object
+            }
         } else if (functionType == QStringLiteral("navigation_expression")) {
             info.name = lastSegment(nodeText(fieldNode(function, "suffix"), source));
             info.qualifier = qualifierOf(fieldNode(function, "target"));
@@ -7320,7 +7323,7 @@ QVariantMap SymbolParser::parseCppTreeSitter(const QString &path, const QString 
             if (existing.value(QStringLiteral("name")).toString() == symbol.value(QStringLiteral("name")).toString()
                 && isCallableSymbolKind(existing.value(QStringLiteral("kind")).toString())
                 && isCallableSymbolKind(symbol.value(QStringLiteral("kind")).toString())) {
-                if (definition && existing.value(QStringLiteral("detail")).toString() == QStringLiteral("declaration")) {
+                if (definition && existing.value(QStringLiteral("detail")).toString().startsWith(QStringLiteral("declaration"))) {
                     symbols[index] = symbol;
                 }
                 return;
@@ -7544,8 +7547,11 @@ QVariantMap SymbolParser::parseCppTreeSitter(const QString &path, const QString 
                 for (const TSNode &declarator : fieldNodes(node, "declarator")) {
                     const CppDeclaratorInfo info = cppUnwrapDeclarator(declarator, source);
                     if (!ts_node_is_null(info.function)) {
+                        // Prototypes stay marked as declarations inside namespaces
+                        // too (the project index pairs them with their bodies).
                         QVariantMap symbol = makeFunction(node, typeNode, info, QStringLiteral("function"),
-                                                          scopeDetail.isEmpty() ? QStringLiteral("declaration") : scopeDetail, false);
+                                                          scopeDetail.isEmpty() ? QStringLiteral("declaration")
+                                                                                : QStringLiteral("declaration · ") + scopeDetail, false);
                         if (scopeDetail.isEmpty()) {
                             symbol.insert(QStringLiteral("detail"), QStringLiteral("declaration"));
                         }

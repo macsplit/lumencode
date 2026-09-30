@@ -147,7 +147,7 @@ bool isGenericName(const QString &name)
         QStringLiteral("each_key"), QStringLiteral("each_value"), QStringLiteral("each_pair"), QStringLiteral("each_with_index"),
         QStringLiteral("each_with_object"), QStringLiteral("to_hash"), QStringLiteral("to_h"), QStringLiteral("to_s"),
         QStringLiteral("to_a"), QStringLiteral("to_i"), QStringLiteral("to_f"), QStringLiteral("to_sym"), QStringLiteral("to_str"),
-        QStringLiteral("to_proc"), QStringLiteral("to_json"), QStringLiteral("respond_to?"), QStringLiteral("merge!"),
+        QStringLiteral("to_proc"), QStringLiteral("to_json"), QStringLiteral("setdefault"), QStringLiteral("respond_to?"), QStringLiteral("merge!"),
         QStringLiteral("fetch"), QStringLiteral("key?"), QStringLiteral("include?"), QStringLiteral("empty?"),
         QStringLiteral("nil?"), QStringLiteral("is_a?"), QStringLiteral("kind_of?"), QStringLiteral("freeze"),
         QStringLiteral("inspect"), QStringLiteral("instance_eval"), QStringLiteral("class_eval"), QStringLiteral("define_method"),
@@ -197,6 +197,9 @@ bool isDistinctiveName(const QString &name)
 QString lastQualifierSegment(QString qualifier)
 {
     qualifier = qualifier.trimmed();
+    if (qualifier.endsWith(QStringLiteral("::"))) {
+        qualifier.chop(2); // scoped call marker (ns::f, Type::new)
+    }
     static const QRegularExpression newExpression(QStringLiteral(R"(^\(?\s*new\s+([A-Za-z_\\][\w\\]*))"));
     const auto newMatch = newExpression.match(qualifier);
     if (newMatch.hasMatch()) {
@@ -280,6 +283,8 @@ FileFacts factsFromAnalysis(const QVariantMap &analysis, qint64 size, qint64 mod
                 definition.name = name;
                 definition.kind = kind;
                 definition.owner = owner;
+                static const QRegularExpression namespaceDetail(QStringLiteral(R"(in namespace ([\w:]+))"));
+                definition.scope = namespaceDetail.match(symbol.value(QStringLiteral("detail")).toString()).captured(1);
                 definition.declaration = (facts.language == QStringLiteral("cpp") || facts.language == QStringLiteral("c"))
                     && symbol.value(QStringLiteral("detail")).toString().contains(QStringLiteral("declaration"))
                     && !symbol.value(QStringLiteral("detail")).toString().contains(QStringLiteral("declared elsewhere"));
@@ -392,6 +397,9 @@ QVariantMap factsToVariant(const FileFacts &facts)
         if (definition.declaration) {
             item.insert(QStringLiteral("d"), 1);
         }
+        if (!definition.scope.isEmpty()) {
+            item.insert(QStringLiteral("s"), definition.scope);
+        }
         if (!definition.owner.isEmpty()) {
             item.insert(QStringLiteral("o"), definition.owner);
         }
@@ -447,6 +455,7 @@ FileFacts factsFromVariant(const QVariantMap &map)
         definition.line = item.value(QStringLiteral("l")).toInt();
         definition.owner = item.value(QStringLiteral("o")).toString();
         definition.declaration = item.value(QStringLiteral("d")).toInt() == 1;
+        definition.scope = item.value(QStringLiteral("s")).toString();
         definition.key = QStringLiteral("%1|%2|%3").arg(definition.kind, definition.name).arg(definition.line);
         facts.definitions.append(definition);
     }
@@ -540,6 +549,20 @@ int findDefinitionFor(const Snapshot &snapshot, const Definition &declaration)
         return sameBase.first();
     }
     return candidates.size() == 1 ? candidates.first() : -1;
+}
+
+// C/C++ `a::b::f()` reaches a free function only in a matching namespace
+// (`std::string(...)` is not the project's `string`).
+bool scopeMatches(const QString &qualifier, const Definition &definition)
+{
+    QString scope = qualifier.trimmed();
+    if (scope.endsWith(QStringLiteral("::"))) {
+        scope.chop(2);
+    }
+    if (scope.isEmpty() || definition.scope.isEmpty()) {
+        return scope.isEmpty() && definition.scope.isEmpty();
+    }
+    return scope.section(QStringLiteral("::"), -1) == definition.scope.section(QStringLiteral("::"), -1);
 }
 
 // Resolution with the calling file's facts given explicitly (the live file
@@ -643,6 +666,11 @@ bool resolveWith(const Snapshot &snapshot, const FileFacts &from, const CallSite
         if (!owner.isEmpty() && definition.owner == owner) {
             return true; // Mailer::send, Guard.NotNull
         }
+        // `ns::f()` / `Module::f`: a scope qualifier, not a runtime receiver,
+        // can reach free functions (namespace members carry no owner).
+        if (!method && rawQualifier.contains(QStringLiteral("::"))) {
+            return !isCFamily || scopeMatches(rawQualifier, definition);
+        }
         // Type-like receiver that is not the owner (Arrays.asList): not ours.
         if (startsUpper(owner) && !definition.owner.isEmpty()) {
             return false;
@@ -723,8 +751,28 @@ bool resolveWith(const Snapshot &snapshot, const FileFacts &from, const CallSite
     auto reexported = [&](const QString &modulePath, const QString &name) { return followReexport(modulePath, name, 1); };
 
     // 1. Imports: the name (or the receiver) is bound to a project file, or the
-    //    file is included / star-imported and the call's shape fits.
-    for (const Import &import : from.imports) {
+    //    file is included / star-imported and the call's shape fits. C/C++
+    //    includes count transitively (x.cpp -> x.h -> index.h).
+    QVector<Import> imports = from.imports;
+    if (isCFamily) {
+        QSet<QString> seen;
+        for (const Import &import : std::as_const(imports)) {
+            seen.insert(import.path);
+        }
+        for (int index = 0; index < imports.size() && imports.size() < 200; ++index) {
+            const auto fileIt = snapshot.files.constFind(imports.at(index).path);
+            if (fileIt == snapshot.files.constEnd()) {
+                continue;
+            }
+            for (const Import &nested : fileIt->imports) {
+                if (!nested.path.isEmpty() && !seen.contains(nested.path)) {
+                    seen.insert(nested.path);
+                    imports.append(nested);
+                }
+            }
+        }
+    }
+    for (const Import &import : std::as_const(imports)) {
         if (import.path.isEmpty()) {
             continue;
         }
@@ -758,6 +806,9 @@ bool resolveWith(const Snapshot &snapshot, const FileFacts &from, const CallSite
                 accept = true; // #include / star import: free functions and types
             } else if (import.bindings.isEmpty() && qualified && !owner.isEmpty() && candidate->owner == owner) {
                 accept = true;
+            } else if (import.bindings.isEmpty() && rawQualifier.contains(QStringLiteral("::")) && !isMethodDefinition(*candidate)
+                       && (!isCFamily || scopeMatches(rawQualifier, *candidate))) {
+                accept = true; // #include "x.h" + ns::f(): a namespace member declared in the header
             }
             if (accept) {
                 return fill(*candidate, QStringLiteral("import"), QStringLiteral("high"));

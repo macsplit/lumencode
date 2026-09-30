@@ -15,6 +15,7 @@
 
 #include "filesystemmodel.h"
 #include "projectcontroller.h"
+#include "agentqueries.h"
 #include "projectindex.h"
 #include "symbolparser.h"
 
@@ -130,6 +131,36 @@ int main(int argc, char *argv[])
                                         QStringLiteral("With --index-project: print every cross-file call edge, one JSON object per line."));
     parser.addOption(indexEdgesOption);
 
+    QCommandLineOption outlineOption(QStringList() << "outline",
+                                     QStringLiteral("Compact outline of one file (names, kinds, lines, signatures, relation names; no snippets). "
+                                                    "With --index-project, cross-file relations are included."),
+                                     QStringLiteral("path"));
+    parser.addOption(outlineOption);
+
+    QCommandLineOption formatOption(QStringList() << "format",
+                                    QStringLiteral("Output format for --outline and the queries: json (default) or text."),
+                                    QStringLiteral("json|text"), QStringLiteral("json"));
+    parser.addOption(formatOption);
+
+    QCommandLineOption findOption(QStringList() << "find",
+                                  QStringLiteral("With --index-project: definitions named <name> (or Owner.name) across the project."),
+                                  QStringLiteral("name"));
+    parser.addOption(findOption);
+
+    QCommandLineOption callersOption(QStringList() << "callers",
+                                     QStringLiteral("With --index-project: everything that calls <name> (same-file and cross-file)."),
+                                     QStringLiteral("name"));
+    parser.addOption(callersOption);
+
+    QCommandLineOption calleesOption(QStringList() << "callees",
+                                     QStringLiteral("With --index-project: everything <name> calls (same-file and cross-file)."),
+                                     QStringLiteral("name"));
+    parser.addOption(calleesOption);
+
+    QCommandLineOption routesOption(QStringList() << "routes",
+                                    QStringLiteral("With --index-project: every backend route and the client calls that reach it."));
+    parser.addOption(routesOption);
+
     QCommandLineOption noIndexOption(QStringList() << "no-index",
                                      QStringLiteral("Do not build the project index (cross-file relations fall back to the per-file JS/TS crawl)."));
     parser.addOption(noIndexOption);
@@ -175,11 +206,102 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+    const bool textFormat = parser.value(formatOption) == QStringLiteral("text");
+    auto printJson = [](const QVariant &value) {
+        const QJsonDocument doc = value.type() == QVariant::List ? QJsonDocument(QJsonArray::fromVariantList(value.toList()))
+                                                                 : QJsonDocument(QJsonObject::fromVariantMap(value.toMap()));
+        std::cout << doc.toJson(QJsonDocument::Indented).toStdString() << std::endl;
+    };
+
+    if (parser.isSet(outlineOption) && !parser.isSet(indexProjectOption)) {
+        const QString targetPath = resolveCliPath(parser.value(outlineOption), QDir::currentPath());
+        SymbolParser symbolParser;
+        const QVariantMap outline = AgentQueries::outline(symbolParser.parseFile(targetPath), QFileInfo(targetPath).absolutePath());
+        if (textFormat) {
+            std::cout << AgentQueries::outlineText(outline).toStdString() << std::endl;
+        } else {
+            printJson(outline);
+        }
+        return 0;
+    }
+
     if (parser.isSet(indexProjectOption)) {
         ProjectIndex::BuildOptions options;
         options.root = resolveCliPath(parser.value(indexProjectOption), QDir::currentPath());
         options.helperPath = QCoreApplication::applicationFilePath();
         const ProjectIndex::SnapshotPtr snapshot = ProjectIndex::build(options);
+        auto analyse = [](const QString &path) {
+            SymbolParser symbolParser;
+            QVariantMap analysis = symbolParser.parseFile(path);
+            analysis.insert(QStringLiteral("path"), QFileInfo(path).absoluteFilePath());
+            return analysis;
+        };
+        if (parser.isSet(outlineOption)) {
+            const QString targetPath = resolveCliPath(parser.value(outlineOption), QDir::currentPath());
+            const QVariantMap outline = AgentQueries::outline(ProjectIndex::augmentAnalysis(analyse(targetPath), snapshot), snapshot->root);
+            if (textFormat) {
+                std::cout << AgentQueries::outlineText(outline).toStdString() << std::endl;
+            } else {
+                printJson(outline);
+            }
+            return 0;
+        }
+        auto printList = [&](const QVariantList &list, const std::function<QString(const QVariantMap &)> &line) {
+            if (!textFormat) {
+                printJson(list);
+                return;
+            }
+            for (const QVariant &entry : list) {
+                std::cout << line(entry.toMap()).toStdString() << std::endl;
+            }
+        };
+        if (parser.isSet(findOption)) {
+            printList(AgentQueries::findDefinitions(snapshot, parser.value(findOption)), [](const QVariantMap &item) {
+                return QStringLiteral("%1 %2 @ %3:%4").arg(item.value(QStringLiteral("kind")).toString(), item.value(QStringLiteral("name")).toString(),
+                                                           item.value(QStringLiteral("path")).toString(), item.value(QStringLiteral("line")).toString());
+            });
+            return 0;
+        }
+        if (parser.isSet(callersOption) || parser.isSet(calleesOption)) {
+            const bool callers = parser.isSet(callersOption);
+            const QString field = callers ? QStringLiteral("calledBy") : QStringLiteral("calls");
+            printList(AgentQueries::relationsOf(snapshot, parser.value(callers ? callersOption : calleesOption), field, analyse),
+                      [&](const QVariantMap &item) {
+                          QStringList lines{item.value(QStringLiteral("definition")).toString()};
+                          for (const QVariant &entry : item.value(field).toList()) {
+                              const QVariantMap relation = entry.toMap();
+                              lines.append(QStringLiteral("  %1 %2 @ %3:%4%5")
+                                               .arg(callers ? QStringLiteral("<-") : QStringLiteral("->"),
+                                                    relation.value(QStringLiteral("name")).toString(),
+                                                    relation.value(QStringLiteral("path")).toString(),
+                                                    relation.value(QStringLiteral("line")).toString(),
+                                                    relation.value(QStringLiteral("confidence")).toString().isEmpty()
+                                                        ? QString()
+                                                        : QStringLiteral(" (%1)").arg(relation.value(QStringLiteral("confidence")).toString())));
+                          }
+                          if (item.contains(QStringLiteral("calledByTotal"))) {
+                              lines.append(QStringLiteral("  (%1 callers in total)").arg(item.value(QStringLiteral("calledByTotal")).toInt()));
+                          }
+                          return lines.join(QLatin1Char('\n'));
+                      });
+            return 0;
+        }
+        if (parser.isSet(routesOption)) {
+            printList(AgentQueries::routes(snapshot), [](const QVariantMap &item) {
+                QString line = QStringLiteral("%1 @ %2:%3").arg(item.value(QStringLiteral("route")).toString(),
+                                                                item.value(QStringLiteral("path")).toString(),
+                                                                item.value(QStringLiteral("line")).toString());
+                if (item.contains(QStringLiteral("mountedUnder"))) {
+                    line += QStringLiteral("  (mounted under ") + item.value(QStringLiteral("mountedUnder")).toStringList().join(QStringLiteral(", "))
+                        + QLatin1Char(')');
+                }
+                if (item.contains(QStringLiteral("calledFrom"))) {
+                    line += QStringLiteral("  <- ") + item.value(QStringLiteral("calledFrom")).toStringList().join(QStringLiteral(", "));
+                }
+                return line;
+            });
+            return 0;
+        }
         if (parser.isSet(indexEdgesOption)) {
             const QDir root(snapshot->root);
             for (const ProjectIndex::Edge &edge : snapshot->edges) {

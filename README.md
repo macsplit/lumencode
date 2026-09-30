@@ -256,6 +256,44 @@ sudo apt install cmake g++ extra-cmake-modules qtbase5-dev qtdeclarative5-dev \
 For backend work only the CLI target is needed:
 `cmake --build build --target lumencode-cli`.
 
+**Headless build (no KDE Frameworks).** The CLI needs only Qt 5 base, so it
+can be built on a server or in a container without ECM, Kirigami or QML:
+
+```bash
+sudo apt install cmake g++ qtbase5-dev        # Qt Core, Gui, Widgets, Concurrent
+cmake -S . -B build-cli -DLUMENCODE_CLI_ONLY=ON
+cmake --build build-cli                       # -> build-cli/bin/lumencode-cli
+```
+
+## LumenCode for coding agents
+
+`lumencode-cli` doubles as a structural code-navigation tool for coding
+agents (Claude Code and others): compact outlines instead of whole-file
+reads, and project-wide "who calls / what calls / where is the endpoint"
+queries on the project index.
+
+```bash
+lumencode-cli --outline src/app.ts --format text                     # symbols, signatures, line ranges, relations
+lumencode-cli --index-project . --outline src/app.ts --format text   # ... with cross-file Calls / Called By
+lumencode-cli --index-project . --find Cart.add --format text        # definitions (name or Owner.name)
+lumencode-cli --index-project . --callers parseBody --format text    # same-file and cross-file callers, with confidence
+lumencode-cli --index-project . --callees checkout --format text
+lumencode-cli --index-project . --routes --format text               # backend routes <- the browser calls that reach them
+```
+
+An outline is roughly an eighth of a full `--dump-file` (a 1,300-line C++
+file: 13 KB of JSON instead of 111 KB, less as text). Two ready-made
+integrations live in `tools/agent/`:
+
+- `SKILL.md` — a Claude Code skill: when to use which command and how to
+  read confidence levels and damaged lines. Copy it to
+  `.claude/skills/lumencode/SKILL.md` in a project (or `~/.claude/skills/`).
+- `lumencode_mcp.py` — an MCP server (stdio, no third-party packages) with
+  `outline_file`, `find_definition`, `find_callers`, `find_callees`,
+  `list_routes` and `index_stats`:
+  `claude mcp add lumencode -- python3 /path/to/lumencode/tools/agent/lumencode_mcp.py`
+  (`LUMENCODE_CLI` / `LUMENCODE_ROOT` override the binary and default root).
+
 ## Recent History
 
 - **2026-03 — bootstrap.** Qt/Kirigami explorer, heuristic parsers for the
