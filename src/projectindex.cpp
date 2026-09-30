@@ -36,7 +36,7 @@ const QSet<QString> &indexedSuffixes()
         QStringLiteral("c"), QStringLiteral("cc"), QStringLiteral("cpp"), QStringLiteral("cxx"), QStringLiteral("h"),
         QStringLiteral("hh"), QStringLiteral("hpp"), QStringLiteral("hxx"), QStringLiteral("m"), QStringLiteral("mm"),
         QStringLiteral("vb"), QStringLiteral("sql"), QStringLiteral("sh"), QStringLiteral("bash"), QStringLiteral("qml"),
-        QStringLiteral("html"), QStringLiteral("htm"), QStringLiteral("kt"), QStringLiteral("kts"), QStringLiteral("rb"),
+        QStringLiteral("html"), QStringLiteral("htm"), QStringLiteral("kt"), QStringLiteral("kts"), QStringLiteral("rb"), QStringLiteral("scss"), QStringLiteral("less"),
     };
     return suffixes;
 }
@@ -61,6 +61,7 @@ bool isDefinitionKind(const QString &kind)
         QStringLiteral("trait"), QStringLiteral("enum"), QStringLiteral("type"), QStringLiteral("protocol"),
         QStringLiteral("procedure"), QStringLiteral("operator"), QStringLiteral("destructor"), QStringLiteral("scope"),
         QStringLiteral("module"), QStringLiteral("union"), QStringLiteral("record"), QStringLiteral("object"),
+        QStringLiteral("mixin"), QStringLiteral("placeholder"),
     };
     return kinds.contains(kind);
 }
@@ -79,7 +80,7 @@ bool isCallableKind(const QString &kind)
 {
     static const QSet<QString> kinds = {
         QStringLiteral("function"), QStringLiteral("method"), QStringLiteral("constructor"), QStringLiteral("hook"),
-        QStringLiteral("component"), QStringLiteral("procedure"), QStringLiteral("operator"),
+        QStringLiteral("component"), QStringLiteral("procedure"), QStringLiteral("operator"), QStringLiteral("mixin"),
     };
     return kinds.contains(kind);
 }

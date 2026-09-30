@@ -2385,6 +2385,60 @@
         "dependencies": 2
       },
       "expectations": []
+    },
+    {
+      "name": "scss_nesting_mixins_imports",
+      "root": "tests/fixtures/baseline/scss_basic",
+      "file": "main.scss",
+      "file_expectations": {
+        "dependencies": 1
+      },
+      "expectations": [
+        {
+          "kind": "variable",
+          "name": "$brand"
+        },
+        {
+          "kind": "placeholder",
+          "name": "%card-base",
+          "calledBy": [
+            ".card"
+          ]
+        },
+        {
+          "kind": "rule",
+          "name": ".btn",
+          "calls": [
+            "button-variant"
+          ]
+        },
+        {
+          "kind": "rule",
+          "name": "&-primary"
+        },
+        {
+          "kind": "rule",
+          "name": ".card",
+          "calls": [
+            "%card-base"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "scss_mixin_called_by_across_files",
+      "root": "tests/fixtures/baseline/scss_basic",
+      "file": "_mixins.scss",
+      "expectations": [
+        {
+          "kind": "mixin",
+          "name": "button-variant",
+          "calledBy": [
+            ".btn",
+            "&-primary"
+          ]
+        }
+      ]
     }
   ]
 }

@@ -1,0 +1,29 @@
+@use "sass:math";
+@import "mixins";
+
+$brand: #3366ff;
+$radius: 4px; // "quoted // not a comment"
+
+%card-base {
+  border-radius: $radius;
+}
+
+.btn {
+  padding: math.div(8px, 2);
+  @include button-variant($brand);
+
+  &-primary {
+    @include button-variant(darken($brand, 10%));
+  }
+
+  &:hover { opacity: 0.9; }
+
+  @media (max-width: 600px) {
+    .icon { display: none; }
+  }
+}
+
+.card {
+  @extend %card-base;
+  .title { font-weight: bold; }
+}

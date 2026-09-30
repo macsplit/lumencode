@@ -5489,6 +5489,9 @@ QVariantMap SymbolParser::parseFileAnalysis(const QString &path) const
     if (language == QStringLiteral("shell")) {
         return applyTextCallSites(finalizeResult(parseShell(path, text), QStringLiteral("heuristic")), text, language);
     }
+    if (language == QStringLiteral("scss") || language == QStringLiteral("less")) {
+        return finalizeResult(parseStylesheetDialect(path, text, language), QStringLiteral("heuristic"), QStringLiteral("high"));
+    }
     if (language == QStringLiteral("ruby")) {
         return finalizeResult(parseRuby(path, text), QStringLiteral("heuristic"), QStringLiteral("high"));
     }
@@ -12410,6 +12413,364 @@ QVariantMap SymbolParser::parseRuby(const QString &path, const QString &text) co
     return result;
 }
 
+namespace {
+
+// SCSS / LESS comments and strings blanked (offsets kept); url(...) too.
+QString blankStylesheetNoise(const QString &text)
+{
+    QString out = text;
+    const int size = out.size();
+    auto blank = [&](int from, int to) {
+        for (int i = from; i < to && i < size; ++i) {
+            if (out.at(i) != QLatin1Char('\n')) {
+                out[i] = QLatin1Char(' ');
+            }
+        }
+    };
+    int index = 0;
+    while (index < size) {
+        const QChar ch = out.at(index);
+        const QChar next = index + 1 < size ? out.at(index + 1) : QChar();
+        if (ch == QLatin1Char('/') && next == QLatin1Char('/') && (index == 0 || out.at(index - 1) != QLatin1Char(':'))) {
+            int end = out.indexOf(QLatin1Char('\n'), index);
+            end = end < 0 ? size : end;
+            blank(index, end);
+            index = end;
+        } else if (ch == QLatin1Char('/') && next == QLatin1Char('*')) {
+            int end = out.indexOf(QStringLiteral("*/"), index + 2);
+            end = end < 0 ? size : end + 2;
+            blank(index, end);
+            index = end;
+        } else if (ch == QLatin1Char('"') || ch == QLatin1Char('\'')) {
+            int end = index + 1;
+            while (end < size && out.at(end) != ch && out.at(end) != QLatin1Char('\n')) {
+                end += out.at(end) == QLatin1Char('\\') ? 2 : 1;
+            }
+            blank(index + 1, qMin(end, size));
+            index = end + 1;
+        } else {
+            ++index;
+        }
+    }
+    return out;
+}
+
+// Combine a nested selector list with its parent list (`&` is the parent).
+QStringList combineSelectors(const QStringList &parents, const QString &selectorList)
+{
+    QStringList children;
+    int depth = 0;
+    int start = 0;
+    for (int i = 0; i < selectorList.size(); ++i) {
+        const QChar ch = selectorList.at(i);
+        if (ch == QLatin1Char('(') || ch == QLatin1Char('[')) {
+            ++depth;
+        } else if ((ch == QLatin1Char(')') || ch == QLatin1Char(']')) && depth > 0) {
+            --depth;
+        } else if (ch == QLatin1Char(',') && depth == 0) {
+            children.append(selectorList.mid(start, i - start).simplified());
+            start = i + 1;
+        }
+    }
+    children.append(selectorList.mid(start).simplified());
+    QStringList combined;
+    for (const QString &child : std::as_const(children)) {
+        if (child.isEmpty()) {
+            continue;
+        }
+        if (parents.isEmpty()) {
+            combined.append(child);
+            continue;
+        }
+        for (const QString &parent : parents) {
+            if (child.contains(QLatin1Char('&'))) {
+                QString joined = child;
+                combined.append(joined.replace(QLatin1Char('&'), parent));
+            } else {
+                combined.append(parent + QLatin1Char(' ') + child);
+            }
+        }
+    }
+    return combined;
+}
+
+} // namespace
+
+QVariantMap SymbolParser::parseStylesheetDialect(const QString &path, const QString &text, const QString &language) const
+{
+    QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), language);
+    const QString clean = blankStylesheetNoise(text);
+    const bool less = language == QStringLiteral("less");
+    QSet<QString> classes;
+    struct Body { QString key; int open; int close; };
+    QList<Body> bodies;
+
+    static const QRegularExpression classPattern(QStringLiteral(R"(\.(-?[_a-zA-Z][\w-]*))"));
+    static const QRegularExpression mixinHeader(QStringLiteral(R"(^@mixin\s+([\w-]+)\s*(?:\(([^)]*)\))?)"));
+    static const QRegularExpression functionHeader(QStringLiteral(R"(^@function\s+([\w-]+)\s*\(([^)]*)\))"));
+    static const QRegularExpression keyframesHeader(QStringLiteral(R"(^@(?:-\w+-)?keyframes\s+([\w-]+))"));
+    static const QRegularExpression lessMixinHeader(QStringLiteral(R"(^([.#][\w-]+)\s*\(([^)]*)\)\s*(?:when\b.*)?$)"));
+    static const QRegularExpression transparentAt(QStringLiteral(R"(^@(media|supports|if|else|each|for|while|at-root|document|layer|container)\b)"));
+
+    // Parse the declarations directly inside [from, to) - a block body.
+    std::function<QVariantList(int, int, const QStringList &)> parseBlock =
+        [&](int from, int to, const QStringList &parents) -> QVariantList {
+        QVariantList symbols;
+        int statementStart = from;
+        int index = from;
+        while (index < to) {
+            const QChar ch = clean.at(index);
+            if (ch == QLatin1Char(';')) {
+                statementStart = index + 1;
+                ++index;
+                continue;
+            }
+            if (ch == QLatin1Char('}')) {
+                statementStart = index + 1;
+                ++index;
+                continue;
+            }
+            if (ch != QLatin1Char('{')) {
+                ++index;
+                continue;
+            }
+            // `#{...}` interpolation is not a block.
+            if (index > 0 && clean.at(index - 1) == QLatin1Char('#')) {
+                int depth = 0;
+                for (; index < to; ++index) {
+                    if (clean.at(index) == QLatin1Char('{')) {
+                        ++depth;
+                    } else if (clean.at(index) == QLatin1Char('}') && --depth == 0) {
+                        break;
+                    }
+                }
+                ++index;
+                continue;
+            }
+            const int open = index;
+            int close = -1;
+            int depth = 0;
+            for (int i = open; i < to; ++i) {
+                if (clean.at(i) == QLatin1Char('{')) {
+                    ++depth;
+                } else if (clean.at(i) == QLatin1Char('}') && --depth == 0) {
+                    close = i;
+                    break;
+                }
+            }
+            if (close < 0) {
+                close = to; // unbalanced: the block runs to the end of its parent
+            }
+            const QString header = clean.mid(statementStart, open - statementStart).simplified();
+            const int headerOffset = [&]() {
+                int i = statementStart;
+                while (i < open && clean.at(i).isSpace()) {
+                    ++i;
+                }
+                return i;
+            }();
+            const int line = lineNumberAtOffset(text, headerOffset);
+            const int endLine = lineNumberAtOffset(text, qMin(close, clean.size() - 1));
+            QVariantMap symbol;
+            QVariantList members;
+            if (const auto match = mixinHeader.match(header); match.hasMatch()) {
+                symbol = makeSymbol(QStringLiteral("mixin"), match.captured(1), line, QString(), {}, snippetFromLine(text, line, 2));
+                QVariantList parameters;
+                for (const QString &part : splitTopLevelSignatureParts(match.captured(2).simplified())) {
+                    QVariantMap parameter = makeSignatureParameter(part.section(QLatin1Char(':'), 0, 0).trimmed(), QString());
+                    if (part.contains(QLatin1Char(':'))) {
+                        parameter.insert(QStringLiteral("default"), part.section(QLatin1Char(':'), 1).trimmed().left(60));
+                    }
+                    parameters.append(parameter);
+                }
+                symbol.insert(QStringLiteral("parameters"), parameters);
+                members = parseBlock(open + 1, close, parents);
+            } else if (const auto match = functionHeader.match(header); match.hasMatch()) {
+                symbol = makeSymbol(QStringLiteral("function"), match.captured(1), line, QString(), {}, snippetFromLine(text, line, 2));
+                QVariantList parameters;
+                for (const QString &part : splitTopLevelSignatureParts(match.captured(2).simplified())) {
+                    parameters.append(makeSignatureParameter(part.section(QLatin1Char(':'), 0, 0).trimmed(), QString()));
+                }
+                symbol.insert(QStringLiteral("parameters"), parameters);
+                symbol.insert(QStringLiteral("returns"), QVariantList{QVariantMap{{QStringLiteral("text"), QStringLiteral("@return value")}}});
+            } else if (const auto match = keyframesHeader.match(header); match.hasMatch()) {
+                symbol = makeSymbol(QStringLiteral("keyframes"), match.captured(1), line, QString(), {}, snippetFromLine(text, line, 2));
+            } else if (less && lessMixinHeader.match(header).hasMatch()) {
+                const auto match = lessMixinHeader.match(header);
+                symbol = makeSymbol(QStringLiteral("mixin"), match.captured(1), line, QString(), {}, snippetFromLine(text, line, 2));
+                QVariantList parameters;
+                for (const QString &part : match.captured(2).split(QRegularExpression(QStringLiteral("[;,]")), Qt::SkipEmptyParts)) {
+                    QVariantMap parameter = makeSignatureParameter(part.section(QLatin1Char(':'), 0, 0).trimmed(), QString());
+                    if (part.contains(QLatin1Char(':'))) {
+                        parameter.insert(QStringLiteral("default"), part.section(QLatin1Char(':'), 1).trimmed().left(60));
+                    }
+                    parameters.append(parameter);
+                }
+                symbol.insert(QStringLiteral("parameters"), parameters);
+                members = parseBlock(open + 1, close, parents);
+            } else if (transparentAt.match(header).hasMatch()) {
+                // @media / @if / @each ...: its rules belong to the enclosing scope.
+                symbols += parseBlock(open + 1, close, parents);
+                statementStart = close + 1;
+                index = close + 1;
+                continue;
+            } else if (!header.isEmpty() && !header.startsWith(QLatin1Char('@'))) {
+                const QStringList resolved = combineSelectors(parents, header);
+                for (const QString &selector : resolved) {
+                    auto classIt = classPattern.globalMatch(selector);
+                    while (classIt.hasNext()) {
+                        classes.insert(classIt.next().captured(1));
+                    }
+                }
+                const bool placeholder = header.startsWith(QLatin1Char('%'));
+                symbol = makeSymbol(placeholder ? QStringLiteral("placeholder") : QStringLiteral("rule"), header.left(80), line,
+                                    resolved.join(QStringLiteral(", ")).left(160), {}, snippetFromLine(text, line, 2));
+                members = parseBlock(open + 1, close, resolved);
+            }
+            if (!symbol.isEmpty()) {
+                symbol.insert(QStringLiteral("members"), members);
+                symbol.insert(QStringLiteral("endLine"), endLine);
+                bodies.append({symbolKey(symbol), open, close});
+                symbols.append(symbol);
+            }
+            statementStart = close + 1;
+            index = close + 1;
+        }
+        return symbols;
+    };
+    QVariantList symbols = parseBlock(0, clean.size(), {});
+
+    // Top-level variables ($x: / @x:).
+    static const QRegularExpression variablePattern(less ? QStringLiteral(R"(^@([\w-]+)\s*:)") : QStringLiteral(R"(^\$([\w-]+)\s*:)"),
+                                                    QRegularExpression::MultilineOption);
+    auto variableIt = variablePattern.globalMatch(clean);
+    QVariantList variables;
+    while (variableIt.hasNext()) {
+        const auto match = variableIt.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        variables.append(makeSymbol(QStringLiteral("variable"), (less ? QStringLiteral("@") : QStringLiteral("$")) + match.captured(1),
+                                    line, QString(), {}, snippetFromLine(text, line, 0)));
+    }
+    symbols = variables + symbols;
+
+    // Mixin use: @include / @extend (SCSS), .mixin(); (LESS) -> calls.
+    QHash<QString, QVariantMap> byKey;
+    QHash<QString, QStringList> keysByName;
+    collectSymbolsByKey(symbols, byKey, keysByName);
+    QHash<QString, QVariantList> callsByKey;
+    QHash<QString, QVariantList> calledByByKey;
+    QHash<QString, QVariantList> sitesByKey;
+    static const QRegularExpression scssUse(QStringLiteral(R"(@(include|extend)\s+([%.]?[\w-]+(?:\.[\w-]+)?))"));
+    static const QRegularExpression lessUse(QStringLiteral(R"((?:^|[;{\s])([.#][\w-]+)\s*(?:\((?:[^(){}]|\([^(){}]*\))*\))?\s*(?:!important\s*)?;)"));
+    for (const Body &body : std::as_const(bodies)) {
+        // Only this block's own statements (nested blocks report their own).
+        QString own = clean.mid(body.open + 1, body.close - body.open - 1);
+        int depth = 0;
+        for (int i = 0; i < own.size(); ++i) {
+            if (own.at(i) == QLatin1Char('{')) {
+                ++depth;
+                own[i] = QLatin1Char(' ');
+            } else if (own.at(i) == QLatin1Char('}')) {
+                depth = qMax(0, depth - 1);
+                own[i] = QLatin1Char(' ');
+            } else if (depth > 0 && own.at(i) != QLatin1Char('\n')) {
+                own[i] = QLatin1Char(' ');
+            }
+        }
+        QVariantList sites;
+        auto record = [&](const QString &name, int offset) {
+            const int line = lineNumberAtOffset(text, body.open + 1 + offset);
+            sites.append(QVariantMap{{QStringLiteral("name"), name}, {QStringLiteral("line"), line}});
+            const QStringList candidates = keysByName.value(name);
+            if (candidates.isEmpty()) {
+                return;
+            }
+            const QString targetKey = bestRelationTargetKey(candidates, byKey);
+            if (targetKey.isEmpty() || targetKey == body.key || !byKey.contains(targetKey)) {
+                return;
+            }
+            appendUniqueRelation(callsByKey, body.key, relationFromSymbol(byKey.value(targetKey)), QStringLiteral("calls"));
+            appendUniqueRelation(calledByByKey, targetKey, relationFromSymbol(byKey.value(body.key)), QStringLiteral("called by"));
+        };
+        auto scssIt = scssUse.globalMatch(own);
+        while (!less && scssIt.hasNext()) {
+            const auto match = scssIt.next();
+            record(match.captured(2).section(QLatin1Char('.'), -1).isEmpty() ? match.captured(2) : match.captured(2),
+                   match.capturedStart(2));
+        }
+        auto lessIt = lessUse.globalMatch(own);
+        while (less && lessIt.hasNext()) {
+            const auto match = lessIt.next();
+            record(match.captured(1), match.capturedStart(1));
+        }
+        if (!sites.isEmpty()) {
+            sitesByKey.insert(body.key, sites);
+        }
+    }
+    symbols = applyRelationsToSymbols(symbols, callsByKey, calledByByKey);
+    std::function<QVariantList(QVariantList)> attachSites = [&](QVariantList list) {
+        for (int index = 0; index < list.size(); ++index) {
+            QVariantMap symbol = list.at(index).toMap();
+            const QVariantList sites = sitesByKey.value(symbolKey(symbol));
+            if (!sites.isEmpty()) {
+                symbol.insert(QStringLiteral("callSites"), sites);
+            }
+            symbol.insert(QStringLiteral("members"), attachSites(symbol.value(QStringLiteral("members")).toList()));
+            list[index] = symbol;
+        }
+        return list;
+    };
+    symbols = attachSites(symbols);
+
+    // @import / @use / @forward, resolved to files (incl. _partials).
+    QVariantList dependencies;
+    static const QRegularExpression importPattern(QStringLiteral(R"(@(import|use|forward)\s+(?:\([^)]*\)\s*)?([^;\n]+))"));
+    static const QRegularExpression quoted(QStringLiteral(R"(['"]([^'"]+)['"])"));
+    auto importIt = importPattern.globalMatch(text);
+    const QDir dir = QFileInfo(path).absoluteDir();
+    while (importIt.hasNext()) {
+        const auto match = importIt.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        auto quotedIt = quoted.globalMatch(match.captured(2));
+        while (quotedIt.hasNext()) {
+            const QString target = quotedIt.next().captured(1);
+            if (target.startsWith(QStringLiteral("sass:")) || target.startsWith(QStringLiteral("http"))) {
+                continue;
+            }
+            QString resolved;
+            const QFileInfo targetInfo(dir.filePath(target));
+            const QString base = targetInfo.path() + QLatin1Char('/') + targetInfo.fileName();
+            const QString partial = targetInfo.path() + QStringLiteral("/_") + targetInfo.fileName();
+            for (const QString &candidate : {base, base + QStringLiteral(".") + language, partial, partial + QStringLiteral(".") + language,
+                                             base + QStringLiteral(".css"), base + QStringLiteral("/_index.") + language}) {
+                if (resolved.isEmpty() && QFileInfo(candidate).isFile()) {
+                    resolved = QFileInfo(candidate).absoluteFilePath();
+                }
+            }
+            QVariantMap item = makeSourceContextItem(path, language, line, snippetFromLine(text, line, 0), QStringLiteral("stylesheet import"));
+            item.insert(QStringLiteral("target"), target);
+            item.insert(QStringLiteral("type"), match.captured(1));
+            item.insert(QStringLiteral("label"), target);
+            item.insert(QStringLiteral("path"), resolved);
+            item.insert(QStringLiteral("exists"), resolved.isEmpty() ? true : QFileInfo::exists(resolved));
+            dependencies.append(item);
+        }
+    }
+
+    QStringList classList = classes.values();
+    classList.sort();
+    QVariantList available;
+    for (const QString &name : std::as_const(classList)) {
+        available.append(name);
+    }
+    result.insert(QStringLiteral("symbols"), symbols);
+    result.insert(QStringLiteral("dependencies"), dependencies);
+    result.insert(QStringLiteral("cssSummary"), QVariantMap{{QStringLiteral("availableClasses"), available}});
+    result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
+    result.insert(QStringLiteral("summary"), QStringLiteral("%1 top-level rules, mixins and variables").arg(symbols.size()));
+    return result;
+}
+
 QVariantMap SymbolParser::parsePhp(const QString &path, const QString &text) const
 {
     QVariantList symbols;
@@ -13288,6 +13649,12 @@ QString SymbolParser::detectLanguage(const QString &path)
         || suffix == QStringLiteral("ru") || QFileInfo(path).fileName() == QStringLiteral("Rakefile")
         || QFileInfo(path).fileName() == QStringLiteral("Gemfile")) {
         return QStringLiteral("ruby");
+    }
+    if (suffix == QStringLiteral("scss")) {
+        return QStringLiteral("scss");
+    }
+    if (suffix == QStringLiteral("less")) {
+        return QStringLiteral("less");
     }
     if (suffix == QStringLiteral("kt") || suffix == QStringLiteral("kts")) {
         return QStringLiteral("kotlin");

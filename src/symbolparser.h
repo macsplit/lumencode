@@ -43,6 +43,7 @@ private:
     QVariantMap parseCppTreeSitter(const QString &path, const QString &text) const;
     QVariantMap parseKotlin(const QString &path, const QString &text) const;
     QVariantMap parseRuby(const QString &path, const QString &text) const;
+    QVariantMap parseStylesheetDialect(const QString &path, const QString &text, const QString &language) const;
     QVariantMap parseGoTreeSitter(const QString &path, const QString &text) const;
     QVariantMap parseShell(const QString &path, const QString &text) const;
     QVariantMap parseSql(const QString &path, const QString &text) const;
