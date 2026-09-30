@@ -15,3 +15,4 @@ To render them to `docs/generated/` as SVG and PNG:
 ```bash
 ./tools/generate-doc-diagrams.sh
 ```
+- [Roadmap: closing the known gaps](roadmap.md)
