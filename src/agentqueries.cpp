@@ -2,6 +2,7 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QRegularExpression>
 #include <QStringList>
 
 #include <algorithm>
@@ -249,8 +250,9 @@ QVariantList findDefinitions(const ProjectIndex::SnapshotPtr &snapshot, const QS
     if (!snapshot) {
         return out;
     }
-    const QString owner = name.contains(QLatin1Char('.')) ? name.section(QLatin1Char('.'), 0, -2) : QString();
-    const QString member = name.section(QLatin1Char('.'), -1);
+    const bool exactQualifiedName = snapshot->definitionsByName.contains(name);
+    const QString owner = !exactQualifiedName && name.contains(QLatin1Char('.')) ? name.section(QLatin1Char('.'), 0, -2) : QString();
+    const QString member = exactQualifiedName ? name : name.section(QLatin1Char('.'), -1);
     const auto range = snapshot->definitionsByName.equal_range(member);
     for (auto it = range.first; it != range.second; ++it) {
         const ProjectIndex::Definition &definition = snapshot->allDefinitions.at(it.value());
@@ -262,6 +264,9 @@ QVariantList findDefinitions(const ProjectIndex::SnapshotPtr &snapshot, const QS
                          {QStringLiteral("path"), relative(snapshot->root, definition.path)},
                          {QStringLiteral("line"), definition.line},
                          {QStringLiteral("language"), definition.language}};
+        if (!definition.signature.isEmpty()) {
+            item.insert(QStringLiteral("signature"), definition.signature);
+        }
         if (definition.declaration) {
             item.insert(QStringLiteral("declaration"), true);
         }
@@ -336,8 +341,8 @@ QVariantList searchSymbols(const ProjectIndex::SnapshotPtr &snapshot, const QStr
                            const QString &language, const QString &pathContains, int limit)
 {
     QVariantList out;
-    const QString needle = query.trimmed().toLower();
-    if (!snapshot || needle.isEmpty() || limit <= 0) {
+    const QStringList needles = query.toLower().split(QRegularExpression(QStringLiteral(R"(\s+)")), Qt::SkipEmptyParts);
+    if (!snapshot || needles.isEmpty() || limit <= 0) {
         return out;
     }
     QStringList wantedKinds;
@@ -367,9 +372,13 @@ QVariantList searchSymbols(const ProjectIndex::SnapshotPtr &snapshot, const QStr
         if (!wantedPath.isEmpty() && !shown.toLower().contains(wantedPath)) {
             return;
         }
-        int score = matchScore(needle, name.toLower(), name);
-        if (score <= 0) {
-            return;
+        int score = 0;
+        for (const QString &needle : needles) {
+            const int tokenScore = matchScore(needle, name.toLower(), name);
+            if (tokenScore <= 0) {
+                return;
+            }
+            score += tokenScore;
         }
         // A query with a slash or dot suffix can also match on the path.
         score += bonus;
@@ -408,14 +417,15 @@ QVariantList searchSymbols(const ProjectIndex::SnapshotPtr &snapshot, const QStr
 }
 
 QVariantList relationsOf(const ProjectIndex::SnapshotPtr &snapshot, const QString &name, const QString &field,
-                         const std::function<QVariantMap(const QString &)> &analyse)
+                         const std::function<QVariantMap(const QString &)> &analyse, bool includeLoose)
 {
     QVariantList out;
     if (!snapshot) {
         return out;
     }
-    const QString owner = name.contains(QLatin1Char('.')) ? name.section(QLatin1Char('.'), 0, -2) : QString();
-    const QString member = name.section(QLatin1Char('.'), -1);
+    const bool exactQualifiedName = snapshot->definitionsByName.contains(name);
+    const QString owner = !exactQualifiedName && name.contains(QLatin1Char('.')) ? name.section(QLatin1Char('.'), 0, -2) : QString();
+    const QString member = exactQualifiedName ? name : name.section(QLatin1Char('.'), -1);
     QHash<QString, QVariantMap> analyses;
     const auto range = snapshot->definitionsByName.equal_range(member);
     for (auto it = range.first; it != range.second; ++it) {
@@ -440,14 +450,45 @@ QVariantList relationsOf(const ProjectIndex::SnapshotPtr &snapshot, const QStrin
                                          {QStringLiteral("line"), relation.value(QStringLiteral("line"))},
                                          {QStringLiteral("confidence"), relation.value(QStringLiteral("confidence"))}});
         }
-        QVariantMap item{{QStringLiteral("definition"), QStringLiteral("%1 %2 @ %3:%4")
+        int unlinked = 0;
+        QVariantList looseRelations;
+        if (field == QStringLiteral("calledBy")) {
+            for (auto fileIt = snapshot->files.cbegin(); fileIt != snapshot->files.cend(); ++fileIt) {
+                for (const ProjectIndex::CallSite &site : fileIt->callSites) {
+                    if (site.name != member) {
+                        continue;
+                    }
+                    ProjectIndex::Edge edge;
+                    if (snapshot->resolve(fileIt->path, site, &edge)) {
+                        continue;
+                    }
+                    ++unlinked;
+                    if (includeLoose) {
+                        looseRelations.append(QVariantMap{{QStringLiteral("name"), site.fromName.isEmpty() ? QStringLiteral("(top level)") : site.fromName},
+                                                          {QStringLiteral("kind"), site.fromKind},
+                                                          {QStringLiteral("path"), relative(snapshot->root, fileIt->path)},
+                                                          {QStringLiteral("line"), site.line},
+                                                          {QStringLiteral("confidence"), QStringLiteral("low, unresolved")}});
+                    }
+                }
+            }
+        }
+        const QString qualifiedName = definition.owner.isEmpty() ? definition.name : definition.owner + QLatin1Char('.') + definition.name;
+        const QString signature = signatureOf(symbol);
+        QVariantMap item{{QStringLiteral("definition"), QStringLiteral("%1 %2%3 @ %4:%5")
                                                             .arg(definition.kind,
-                                                                 definition.owner.isEmpty() ? definition.name : definition.owner + QLatin1Char('.') + definition.name,
+                                                                 qualifiedName, signature,
                                                                  relative(snapshot->root, definition.path))
                                                             .arg(definition.line)},
                          {field, relations}};
         if (symbol.contains(QStringLiteral("calledByTotal")) && field == QStringLiteral("calledBy")) {
             item.insert(QStringLiteral("calledByTotal"), symbol.value(QStringLiteral("calledByTotal")));
+        }
+        if (unlinked > 0) {
+            item.insert(QStringLiteral("unlinkedCallSites"), unlinked);
+        }
+        if (!looseRelations.isEmpty()) {
+            item.insert(QStringLiteral("looseCalledBy"), looseRelations);
         }
         out.append(item);
     }

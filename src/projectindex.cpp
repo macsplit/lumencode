@@ -23,7 +23,7 @@ namespace ProjectIndex {
 
 namespace {
 
-constexpr int kCacheVersion = 1;
+constexpr int kCacheVersion = 3;
 constexpr qint64 kMaxIndexedFileBytes = 2 * 1024 * 1024;
 constexpr int kMaxListedCallers = 400;
 
@@ -271,6 +271,23 @@ FileFacts factsFromAnalysis(const QVariantMap &analysis, qint64 size, qint64 mod
     facts.size = size;
     facts.modified = modified;
 
+    auto signatureFor = [](const QVariantMap &symbol) {
+        if (!symbol.contains(QStringLiteral("parameters"))) return QString();
+        QStringList parameters;
+        for (const QVariant &entry : symbol.value(QStringLiteral("parameters")).toList()) {
+            const QVariantMap parameter = entry.toMap();
+            QString text = parameter.value(QStringLiteral("text")).toString();
+            if (text.isEmpty()) {
+                const QString name = parameter.value(QStringLiteral("name")).toString();
+                const QString type = parameter.value(QStringLiteral("type")).toString();
+                text = type.isEmpty() ? name : name.isEmpty() ? type : name + QStringLiteral(": ") + type;
+            }
+            if (parameter.contains(QStringLiteral("default"))) text += QStringLiteral(" = ") + parameter.value(QStringLiteral("default")).toString();
+            parameters.append(text);
+        }
+        return QLatin1Char('(') + parameters.join(QStringLiteral(", ")) + QLatin1Char(')');
+    };
+
     std::function<void(const QVariantList &, const QString &, int)> visit = [&](const QVariantList &symbols,
                                                                                const QString &owner, int depth) {
         for (const QVariant &entry : symbols) {
@@ -292,6 +309,7 @@ FileFacts factsFromAnalysis(const QVariantMap &analysis, qint64 size, qint64 mod
                     && !symbol.value(QStringLiteral("detail")).toString().contains(QStringLiteral("declared elsewhere"));
                 definition.key = key;
                 definition.line = symbol.value(QStringLiteral("line")).toInt();
+                definition.signature = signatureFor(symbol);
                 facts.definitions.append(definition);
             }
             for (const QVariant &siteEntry : symbol.value(QStringLiteral("callSites")).toList()) {
@@ -402,6 +420,9 @@ QVariantMap factsToVariant(const FileFacts &facts)
         if (!definition.scope.isEmpty()) {
             item.insert(QStringLiteral("s"), definition.scope);
         }
+        if (!definition.signature.isEmpty()) {
+            item.insert(QStringLiteral("g"), definition.signature);
+        }
         if (!definition.owner.isEmpty()) {
             item.insert(QStringLiteral("o"), definition.owner);
         }
@@ -458,6 +479,7 @@ FileFacts factsFromVariant(const QVariantMap &map)
         definition.owner = item.value(QStringLiteral("o")).toString();
         definition.declaration = item.value(QStringLiteral("d")).toInt() == 1;
         definition.scope = item.value(QStringLiteral("s")).toString();
+        definition.signature = item.value(QStringLiteral("g")).toString();
         definition.key = QStringLiteral("%1|%2|%3").arg(definition.kind, definition.name).arg(definition.line);
         facts.definitions.append(definition);
     }
@@ -565,6 +587,27 @@ bool scopeMatches(const QString &qualifier, const Definition &definition)
         return scope.isEmpty() && definition.scope.isEmpty();
     }
     return scope.section(QStringLiteral("::"), -1) == definition.scope.section(QStringLiteral("::"), -1);
+}
+
+// The closest project descriptor is a conservative identity for resolving
+// same-named façade classes in a multi-project checkout. Files in a shared
+// folder have no such identity and deliberately remain ambiguous.
+QString nearestProjectRoot(const QString &path, const QString &indexRoot)
+{
+    QDir directory(QFileInfo(path).absolutePath());
+    const QString stop = QFileInfo(indexRoot).absoluteFilePath();
+    while (true) {
+        const QStringList descriptors = directory.entryList({QStringLiteral("*.csproj"), QStringLiteral("*.vbproj"),
+                                                               QStringLiteral("*.fsproj"), QStringLiteral("*.xcodeproj")},
+                                                              QDir::Files | QDir::NoDotAndDotDot);
+        if (!descriptors.isEmpty()) {
+            return directory.absolutePath();
+        }
+        if (directory.absolutePath() == stop || !directory.cdUp()) {
+            break;
+        }
+    }
+    return {};
 }
 
 // Resolution with the calling file's facts given explicitly (the live file
@@ -870,6 +913,18 @@ bool resolveWith(const Snapshot &snapshot, const FileFacts &from, const CallSite
             return fill(*owned.first(), QStringLiteral("qualifier"), QStringLiteral("medium"));
         }
         if (owned.size() > 1) {
+            const QString callerProject = nearestProjectRoot(from.path, snapshot.root);
+            if (!callerProject.isEmpty()) {
+                QVector<const Definition *> local;
+                for (const Definition *candidate : std::as_const(owned)) {
+                    if (nearestProjectRoot(candidate->path, snapshot.root) == callerProject) {
+                        local.append(candidate);
+                    }
+                }
+                if (local.size() == 1) {
+                    return fill(*local.first(), QStringLiteral("qualifier-project"), QStringLiteral("medium"));
+                }
+            }
             return false;
         }
     }
@@ -1061,7 +1116,14 @@ SnapshotPtr build(const BuildOptions &options)
     snapshot->root = QFileInfo(options.root).absoluteFilePath();
     const QString cachePath = options.cachePath.isEmpty() ? defaultCachePath(snapshot->root) : options.cachePath;
 
-    const QStringList paths = candidateFiles(snapshot->root, options.maxFiles);
+    QStringList paths = candidateFiles(snapshot->root, options.maxFiles);
+    for (const QString &extraRoot : options.alsoRoots) {
+        if (paths.size() >= options.maxFiles) {
+            break;
+        }
+        paths += candidateFiles(QFileInfo(extraRoot).absoluteFilePath(), options.maxFiles - paths.size());
+    }
+    paths.removeDuplicates();
     const QString fingerprint = helperFingerprint(options.helperPath);
     const QHash<QString, CacheEntry> cache = loadCache(cachePath, snapshot->root, fingerprint);
     QStringList stale;

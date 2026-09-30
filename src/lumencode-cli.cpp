@@ -122,6 +122,11 @@ int main(int argc, char *argv[])
                                           QStringLiteral("root"));
     parser.addOption(indexProjectOption);
 
+    QCommandLineOption alsoIndexOption(QStringList() << "also-index",
+                                        QStringLiteral("Additional folder to include in --index-project (repeatable; useful for a separate SQL schema)."),
+                                        QStringLiteral("root"));
+    parser.addOption(alsoIndexOption);
+
     QCommandLineOption indexRelationsOption(QStringList() << "index-relations",
                                             QStringLiteral("With --index-project: print the cross-file Calls / Called By of one file's symbols."),
                                             QStringLiteral("path"));
@@ -179,6 +184,10 @@ int main(int argc, char *argv[])
                                      QStringLiteral("With --index-project: everything <name> calls (same-file and cross-file)."),
                                      QStringLiteral("name"));
     parser.addOption(calleesOption);
+
+    QCommandLineOption looseOption(QStringList() << "loose",
+                                    QStringLiteral("With --callers: include unresolved name-only call sites as low-confidence candidates."));
+    parser.addOption(looseOption);
 
     QCommandLineOption routesOption(QStringList() << "routes",
                                     QStringLiteral("With --index-project: every backend route and the client calls that reach it."));
@@ -251,6 +260,9 @@ int main(int argc, char *argv[])
     if (parser.isSet(indexProjectOption)) {
         ProjectIndex::BuildOptions options;
         options.root = resolveCliPath(parser.value(indexProjectOption), QDir::currentPath());
+        for (const QString &extraRoot : parser.values(alsoIndexOption)) {
+            options.alsoRoots.append(resolveCliPath(extraRoot, QDir::currentPath()));
+        }
         options.helperPath = QCoreApplication::applicationFilePath();
         const ProjectIndex::SnapshotPtr snapshot = ProjectIndex::build(options);
         auto analyse = [](const QString &path) {
@@ -280,25 +292,31 @@ int main(int argc, char *argv[])
         };
         if (parser.isSet(findOption)) {
             printList(AgentQueries::findDefinitions(snapshot, parser.value(findOption)), [](const QVariantMap &item) {
-                return QStringLiteral("%1 %2 @ %3:%4").arg(item.value(QStringLiteral("kind")).toString(), item.value(QStringLiteral("name")).toString(),
+                return QStringLiteral("%1 %2%3 @ %4:%5").arg(item.value(QStringLiteral("kind")).toString(), item.value(QStringLiteral("name")).toString(),
+                                                           item.value(QStringLiteral("signature")).toString(),
                                                            item.value(QStringLiteral("path")).toString(), item.value(QStringLiteral("line")).toString());
             });
             return 0;
         }
         if (parser.isSet(searchOption)) {
-            printList(AgentQueries::searchSymbols(snapshot, parser.value(searchOption), QStringList{parser.value(kindOption)},
-                                                  parser.value(languageOption), parser.value(inPathOption),
-                                                  parser.value(limitOption).toInt()),
+            const QVariantList matches = AgentQueries::searchSymbols(snapshot, parser.value(searchOption), QStringList{parser.value(kindOption)},
+                                                                       parser.value(languageOption), parser.value(inPathOption),
+                                                                       parser.value(limitOption).toInt());
+            printList(matches,
                       [](const QVariantMap &item) {
                           return QStringLiteral("%1 %2 @ %3:%4").arg(item.value(QStringLiteral("kind")).toString(), item.value(QStringLiteral("name")).toString(),
                                                                      item.value(QStringLiteral("path")).toString(), item.value(QStringLiteral("line")).toString());
                       });
+            if (matches.isEmpty()) {
+                QTextStream(stderr) << "no matches\n";
+            }
             return 0;
         }
         if (parser.isSet(callersOption) || parser.isSet(calleesOption)) {
             const bool callers = parser.isSet(callersOption);
             const QString field = callers ? QStringLiteral("calledBy") : QStringLiteral("calls");
-            printList(AgentQueries::relationsOf(snapshot, parser.value(callers ? callersOption : calleesOption), field, analyse),
+            printList(AgentQueries::relationsOf(snapshot, parser.value(callers ? callersOption : calleesOption), field, analyse,
+                                                 callers && parser.isSet(looseOption)),
                       [&](const QVariantMap &item) {
                           QStringList lines{item.value(QStringLiteral("definition")).toString()};
                           for (const QVariant &entry : item.value(field).toList()) {
@@ -314,6 +332,16 @@ int main(int argc, char *argv[])
                           }
                           if (item.contains(QStringLiteral("calledByTotal"))) {
                               lines.append(QStringLiteral("  (%1 callers in total)").arg(item.value(QStringLiteral("calledByTotal")).toInt()));
+                          }
+                          if (item.contains(QStringLiteral("unlinkedCallSites"))) {
+                              lines.append(QStringLiteral("  note: %1 unlinked call sites by name; confirm with grep or use --loose")
+                                               .arg(item.value(QStringLiteral("unlinkedCallSites")).toInt()));
+                          }
+                          for (const QVariant &entry : item.value(QStringLiteral("looseCalledBy")).toList()) {
+                              const QVariantMap relation = entry.toMap();
+                              lines.append(QStringLiteral("  ? %1 @ %2:%3 (low, unresolved)")
+                                               .arg(relation.value(QStringLiteral("name")).toString(), relation.value(QStringLiteral("path")).toString(),
+                                                    relation.value(QStringLiteral("line")).toString()));
                           }
                           return lines.join(QLatin1Char('\n'));
                       });

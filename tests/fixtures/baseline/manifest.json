@@ -2544,6 +2544,37 @@
           ]
         }
       ]
+    },
+    {
+      "name": "vbnet_multiline_string_does_not_create_phantom_methods",
+      "root": "tests/fixtures/baseline/vbnet_multiline_string",
+      "file": "ReportBuilder.vb",
+      "expectations": [
+        {
+          "kind": "method",
+          "name": "BuildHtml"
+        },
+        {
+          "kind": "method",
+          "name": "AfterString"
+        }
+      ]
+    },
+    {
+      "name": "sql_tsql_signature_keeps_string_default",
+      "root": "tests/fixtures/baseline/sql_tsql",
+      "file": "defaults.sql",
+      "expectations": [
+        {
+          "kind": "procedure",
+          "name": "dbo.usp_SortedOrders",
+          "parameters": [
+            "@SortName: VARCHAR(30)",
+            "@Descending: BIT"
+          ],
+          "parameter_defaults": ["'InvoiceDate'", "0"]
+        }
+      ]
     }
   ]
 }

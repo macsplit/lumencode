@@ -15,6 +15,11 @@ Locate the binary once: `command -v lumencode-cli` or the project's
 `build/bin/lumencode-cli` (a headless build needs only Qt 5 base:
 `cmake -S . -B build-cli -DLUMENCODE_CLI_ONLY=ON && cmake --build build-cli`).
 
+Install this skill with `tools/agent/install.sh` from a LumenCode checkout.
+It symlinks `tools/agent/` into `~/.claude/skills/lumencode/`, so later
+checkout updates are immediately available; pass `--copy` for an independent
+copy and rerun it after updates.
+
 ## When to use which command
 
 | Question | Command |
@@ -23,7 +28,7 @@ Locate the binary once: `command -v lumencode-cli` or the project's
 | ...with cross-file callers / callees | `lumencode-cli --index-project <root> --outline <file> --format text` |
 | I half-remember the name (partial, camelCase initials, file name) | `lumencode-cli --index-project <root> --search <text> [--kind function,class] [--in dir] --format text` |
 | Where is `name` defined? | `lumencode-cli --index-project <root> --find <name> --format text` (`Owner.name` narrows) |
-| What breaks if I change `name`? Who uses it? | `lumencode-cli --index-project <root> --callers <name> --format text` |
+| What breaks if I change `name`? Who uses it? | `lumencode-cli --index-project <root> --callers <name> --loose --format text` |
 | What does `name` depend on? | `lumencode-cli --index-project <root> --callees <name> --format text` |
 | Where is the endpoint for `/api/...`? Which frontend code calls it? | `lumencode-cli --index-project <root> --routes --format text` |
 | Orientation on an unfamiliar project (file types, entry point, package scripts) | MCP `project_summary` |
@@ -50,7 +55,8 @@ it and only re-read changed files.
   distinctive name). Treat `low` as a strong hint and confirm by reading the
   call site. Calls on receivers of unknown type are often left out rather
   than guessed, so an empty `called by` is not proof that nothing calls it -
-  fall back to grep for public API.
+  use `--callers name --loose` to include clearly marked unresolved
+  name-only sites, then fall back to grep for public API.
 - `calledByTotal` means the list was truncated (widely used symbol).
 
 ## Tips

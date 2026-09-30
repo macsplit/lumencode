@@ -413,6 +413,10 @@ def validate_symbol_expectation(file_path: Path, case_name: str, expectation: di
         actual = signature_parameter_texts(symbol)
         if actual != expectation["parameters"]:
             add_issue(issues, "fixture_wrong_symbol_parameters", file_path, case=case_name, context=context, name=expectation["name"], expected=expectation["parameters"], actual=actual)
+    if "parameter_defaults" in expectation:
+        actual = [parameter.get("default", "") for parameter in (symbol.get("parameters", []) or []) if isinstance(parameter, dict)]
+        if actual != expectation["parameter_defaults"]:
+            add_issue(issues, "fixture_wrong_symbol_parameter_defaults", file_path, case=case_name, context=context, name=expectation["name"], expected=expectation["parameter_defaults"], actual=actual)
     if "returns" in expectation:
         actual = signature_return_texts(symbol)
         if actual != expectation["returns"]:
@@ -420,7 +424,7 @@ def validate_symbol_expectation(file_path: Path, case_name: str, expectation: di
 
 
 def expectation_needs_selection_roundtrip(expectation: dict) -> bool:
-    return any(key in expectation for key in ("sourceMode", "confidence", "parameters", "returns"))
+    return any(key in expectation for key in ("sourceMode", "confidence", "parameters", "parameter_defaults", "returns"))
 
 
 def find_symbol(symbols: list[dict], name: str, kind: str | None = None) -> dict | None:

@@ -288,8 +288,12 @@ file: 13 KB of JSON instead of 111 KB, less as text). Two ready-made
 integrations live in `tools/agent/`:
 
 - `SKILL.md` — a Claude Code skill: when to use which command and how to
-  read confidence levels and damaged lines. Copy it to
-  `.claude/skills/lumencode/SKILL.md` in a project (or `~/.claude/skills/`).
+  read confidence levels and damaged lines. Install it for the current user
+  with `tools/agent/install.sh`; this creates a symlink at
+  `~/.claude/skills/lumencode/` that follows checkout updates. Use
+  `tools/agent/install.sh --copy` when a self-contained copy is wanted (and
+  rerun it after updating this checkout). The command prints the hook-settings
+  template path for registration.
 - `lumencode_mcp.py` — an MCP server (stdio, no third-party packages) with
   `outline_file`, `find_definition`, `find_callers`, `find_callees`,
   `search_symbols`, `list_routes`, `project_summary`, `web_links` and `index_stats`:

@@ -45,6 +45,7 @@ struct Definition
     int line = 0;
     bool declaration = false; // C/C++ prototype (the body is elsewhere)
     QString scope; // C/C++ namespace (e.g. "fmt::detail"), empty at global scope
+    QString signature; // compact parameter list for agent query disambiguation
 };
 
 struct Import
@@ -121,6 +122,7 @@ using SnapshotPtr = std::shared_ptr<const Snapshot>;
 struct BuildOptions
 {
     QString root;
+    QStringList alsoRoots; // additional source/schema roots, indexed with root
     QString helperPath; // lumencode-cli
     QString cachePath; // empty: default under the user cache dir
     int maxFiles = 20000;

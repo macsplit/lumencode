@@ -24,7 +24,7 @@ QVariantList findDefinitions(const ProjectIndex::SnapshotPtr &snapshot, const QS
 // Calls or callers (field "calls" / "calledBy") of each definition named
 // `name`, same-file and cross-file, read from the analysed definition file.
 QVariantList relationsOf(const ProjectIndex::SnapshotPtr &snapshot, const QString &name, const QString &field,
-                         const std::function<QVariantMap(const QString &)> &analyse);
+                         const std::function<QVariantMap(const QString &)> &analyse, bool includeLoose = false);
 
 // Ranked search over definition names (Owner.name) and file paths. `query` is
 // matched case-insensitively: exact name, prefix, word/camelCase-initial,

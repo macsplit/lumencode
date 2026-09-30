@@ -5385,6 +5385,57 @@ SymbolParser::SymbolParser(QObject *parent)
 {
 }
 
+// Record explicit stored-procedure names as call sites. They resolve through
+// the ordinary project index, including an --also-index schema root.
+static QVariantMap enrichSqlProcedureSites(QVariantMap analysis, const QString &text)
+{
+    const QStringList lines = text.split(QLatin1Char('\n'));
+    static const QRegularExpression commandText(QStringLiteral(R"sql(\bCommandText\s*=\s*"([A-Za-z_][\w$]*(?:\s*\.\s*[A-Za-z_][\w$]*)*)")sql"),
+                                                QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression sqlCommand(QStringLiteral(R"sql(\b(?:SqlCommand|DbCommand)\s*\(\s*"([A-Za-z_][\w$]*(?:\s*\.\s*[A-Za-z_][\w$]*)*)")sql"),
+                                               QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression dapper(QStringLiteral(R"sql(\b(?:Query|Execute|QuerySingle|QueryFirst)(?:Async)?\s*(?:<[^>]+>)?\s*\(\s*"([A-Za-z_][\w$]*(?:\s*\.\s*[A-Za-z_][\w$]*)*)"[^\n]*\bcommandType\s*:\s*CommandType\.StoredProcedure)sql"),
+                                           QRegularExpression::CaseInsensitiveOption);
+    std::function<QVariantList(QVariantList)> visit = [&](QVariantList symbols) {
+        for (int index = 0; index < symbols.size(); ++index) {
+            QVariantMap symbol = symbols.at(index).toMap();
+            const int first = symbol.value(QStringLiteral("line")).toInt();
+            const int last = symbol.value(QStringLiteral("endLine")).toInt();
+            if (isCallableSymbolKind(symbol.value(QStringLiteral("kind")).toString()) && last >= first) {
+                QString body;
+                for (int line = first; line <= last && line <= lines.size(); ++line) body += lines.at(line - 1) + QLatin1Char('\n');
+                const bool storedProcedure = body.contains(QStringLiteral("CommandType.StoredProcedure"), Qt::CaseInsensitive);
+                QVariantList sites = symbol.value(QStringLiteral("callSites")).toList();
+                auto append = [&](const QRegularExpression &pattern) {
+                    auto it = pattern.globalMatch(body);
+                    while (it.hasNext()) {
+                        const QRegularExpressionMatch match = it.next();
+                        const QString name = match.captured(1).remove(QRegularExpression(QStringLiteral(R"(\s+)")));
+                        const int line = first + body.left(match.capturedStart(1)).count(QLatin1Char('\n'));
+                        bool exists = false;
+                        for (const QVariant &entry : sites) {
+                            const QVariantMap site = entry.toMap();
+                            exists = exists || (site.value(QStringLiteral("name")).toString() == name && site.value(QStringLiteral("line")).toInt() == line);
+                        }
+                        if (!exists) sites.append(QVariantMap{{QStringLiteral("name"), name}, {QStringLiteral("line"), line}});
+                    }
+                };
+                if (storedProcedure) {
+                    append(commandText);
+                    append(sqlCommand);
+                }
+                append(dapper);
+                symbol.insert(QStringLiteral("callSites"), sites);
+            }
+            symbol.insert(QStringLiteral("members"), visit(symbol.value(QStringLiteral("members")).toList()));
+            symbols[index] = symbol;
+        }
+        return symbols;
+    };
+    analysis.insert(QStringLiteral("symbols"), visit(analysis.value(QStringLiteral("symbols")).toList()));
+    return analysis;
+}
+
 QVariantMap SymbolParser::parseFile(const QString &path) const
 {
     QVariantMap analysis = parseFileAnalysis(path);
@@ -5703,10 +5754,10 @@ QVariantMap SymbolParser::parseFileAnalysis(const QString &path) const
                                               analysis.value(QStringLiteral("analysisConfidence")).toString());
     }
     if (language == QStringLiteral("csharp")) {
-        return analyseWithAst(language,
-                              [&] { return parseCSharpTreeSitter(path, text); },
-                              [&] { return parseCSharp(path, text); },
-                              false);
+        return enrichSqlProcedureSites(analyseWithAst(language,
+                                                       [&] { return parseCSharpTreeSitter(path, text); },
+                                                       [&] { return parseCSharp(path, text); },
+                                                       false), text);
     }
     if (language == QStringLiteral("rust")) {
         return analyseWithAst(language,
@@ -5739,7 +5790,7 @@ QVariantMap SymbolParser::parseFileAnalysis(const QString &path) const
         return finalizeResult(parseKotlin(path, text), QStringLiteral("heuristic"), QStringLiteral("high"));
     }
     if (language == QStringLiteral("vbnet")) {
-        return applyTextCallSites(finalizeResult(parseVbNet(path, text), QStringLiteral("heuristic"), QStringLiteral("high")), text, language);
+        return enrichSqlProcedureSites(applyTextCallSites(finalizeResult(parseVbNet(path, text), QStringLiteral("heuristic"), QStringLiteral("high")), text, language), text);
     }
     return finalizeResult(result, QStringLiteral("heuristic"), QStringLiteral("low"));
 }
@@ -5855,8 +5906,34 @@ QList<VbLogicalLine> vbLogicalLines(const QString &text)
     QList<VbLogicalLine> lines;
     const QStringList physical = text.split(QLatin1Char('\n'));
     VbLogicalLine current;
+    bool inString = false;
     for (int index = 0; index < physical.size(); ++index) {
-        QString line = stripVbComment(physical.at(index));
+        // Declarations are structural, not string content. VB 14+ permits a
+        // literal to cross a physical line, so blank it before joining logical
+        // lines; otherwise an `End Function` or `Function` in embedded script
+        // can close/open a phantom member.
+        const bool startedInString = inString;
+        QString code = physical.at(index);
+        for (int column = 0; column < code.size(); ++column) {
+            if (code.at(column) != QLatin1Char('"')) {
+                if (inString) code[column] = QLatin1Char(' ');
+                continue;
+            }
+            if (inString && column + 1 < code.size() && code.at(column + 1) == QLatin1Char('"')) {
+                code[column] = QLatin1Char(' ');
+                code[++column] = QLatin1Char(' ');
+                continue;
+            }
+            inString = !inString;
+            code[column] = QLatin1Char(' ');
+        }
+        // A normal one-line literal is meaningful in declarations (routes,
+        // defaults and attributes). Only discard a line participating in a
+        // multi-line literal.
+        if (!startedInString && !inString) {
+            code = physical.at(index);
+        }
+        QString line = stripVbComment(code);
         line.remove(QLatin1Char('\r'));
         if (index == 0 && line.startsWith(QChar(0xFEFF))) {
             line.remove(0, 1);
@@ -6562,6 +6639,7 @@ QVariantMap SymbolParser::parseSql(const QString &path, const QString &text) con
         }
         const QString name = sqlUnquote(match.captured(2));
         const QString body = clean.mid(start, end - start);
+        const QString sourceBody = text.mid(start, end - start);
         const int startLine = lineNumberAtOffset(clean, start);
         int endLine = lineNumberAtOffset(clean, qMax(start, end - 1));
         // Trim trailing blank lines from the extent.
@@ -6651,7 +6729,7 @@ QVariantMap SymbolParser::parseSql(const QString &path, const QString &text) con
                 for (int i = cursor; i < body.size(); ++i) {
                     if (body.at(i) == QLatin1Char('(')) ++depth;
                     else if (body.at(i) == QLatin1Char(')') && --depth == 0) {
-                        parameterText = body.mid(cursor + 1, i - cursor - 1);
+                        parameterText = sourceBody.mid(cursor + 1, i - cursor - 1);
                         paramsEnd = i + 1;
                         break;
                     }
@@ -6660,7 +6738,7 @@ QVariantMap SymbolParser::parseSql(const QString &path, const QString &text) con
                 static const QRegularExpression tsqlEnd(QStringLiteral(R"(\b(AS|RETURNS|WITH)\b)"), QRegularExpression::CaseInsensitiveOption);
                 const auto endMatch = tsqlEnd.match(body, cursor);
                 if (endMatch.hasMatch()) {
-                    parameterText = body.mid(cursor, endMatch.capturedStart(0) - cursor);
+                    parameterText = sourceBody.mid(cursor, endMatch.capturedStart(0) - cursor);
                     paramsEnd = endMatch.capturedStart(0);
                 }
             }
@@ -13706,6 +13784,13 @@ QVariantMap SymbolParser::parseHtml(const QString &path, const QString &text) co
     // `Handles ButtonSave.Click`. Surface those on the markup side too, even
     // when no OnClick attribute is present in the ASPX/ASCX file.
     if (webForms) {
+        auto controlLine = [&](const QString &id) {
+            const QRegularExpression controlId(QStringLiteral(R"wf(<[^>]*\bID\s*=\s*(?:"%1"|'%1')[^>]*>)wf")
+                                                   .arg(QRegularExpression::escape(id)),
+                                                QRegularExpression::CaseInsensitiveOption);
+            const QRegularExpressionMatch match = controlId.match(text);
+            return match.hasMatch() ? lineNumberAtOffset(text, match.capturedStart(0)) : 0;
+        };
         std::function<void(const QVariantList &, const QString &, const QString &)> appendHandledEvents;
         appendHandledEvents = [&](const QVariantList &entries, const QString &codeBehindPath, const QString &language) {
             for (const QVariant &entry : entries) {
@@ -13727,7 +13812,7 @@ QVariantMap SymbolParser::parseHtml(const QString &path, const QString &text) co
                             const QString source = event.captured(1);
                             const QString eventName = event.captured(2);
                             QVariantMap markupEvent = makeSymbol(QStringLiteral("event"), source + QLatin1Char('.') + eventName,
-                                                                  method.value(QStringLiteral("line")).toInt(),
+                                                                  controlLine(source) > 0 ? controlLine(source) : 1,
                                                                   QStringLiteral("handled by %1").arg(methodName), {},
                                                                   method.value(QStringLiteral("snippet")).toString());
                             markupEvent.insert(QStringLiteral("calls"),
@@ -15709,8 +15794,9 @@ QString blankVbNoise(const QString &text)
     for (int index = 0; index < size; ++index) {
         const QChar ch = out.at(index);
         if (ch == QLatin1Char('\n')) {
-            inString = false;
-            atLineStart = true;
+            // VB 14+ permits literals across physical lines. Keeping the
+            // state here prevents embedded HTML/JavaScript becoming VB code.
+            atLineStart = !inString;
             continue;
         }
         if (inString) {
