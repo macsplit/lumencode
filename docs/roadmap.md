@@ -30,8 +30,10 @@ Issues) against measurements on the pinned public corpus (`tools/corpus.json`,
 ## Phases
 
 Phases A–F were planned from the README's gaps; Phase G was added on
-2026-09-30 from a review of LumenCode as an agent tool, and Phase H the
-same day from a user report (WebForms pages missing from the tree).
+2026-09-30 from a review of LumenCode as an agent tool, Phase H the
+same day from a user report (WebForms pages missing from the tree), and
+Phase I the same day from using the agent skill on a real VB.NET / WebForms
+task.
 
 Each phase is gated by: fixtures (`tools/regression_sweep.py
 --fixtures-only`), `tools/corpus_scan.py --compare`, `tools/damage_probe.py`,
@@ -190,9 +192,151 @@ the code-behind's markup half is invisible.
 Out of scope for now: Razor (`.cshtml` / `.vbhtml`), MVC view resolution and
 `Web.config` beyond what the JSON/config outlines already do.
 
+### Phase I — agent-use findings from a real VB.NET / WebForms task (added 2026-09-30)
+
+Source: the `lumencode` skill (`tools/agent/SKILL.md`, `lumencode-cli` from
+this checkout) was used to plan a feature in a private multi-project VB.NET /
+ASP.NET WebForms code base (two WebForms apps sharing `Shared/` code through
+same-named shim classes, a VB class library, and a separate SQL Server schema
+folder with one file per stored procedure). The task was to trace an
+"end of year" report form down to its stored procedure and list every call
+site that a parameter change would touch. The outline, `--find` and `--search`
+commands saved several whole-file reads. The call-graph commands were not
+reliable enough to replace grep for the impact check, which is the use the
+skill recommends them for. Each item below was reproduced on that project;
+file names are given so the cases can be rebuilt as fixtures (the project
+itself is not public).
+
+**Wrong output (fix first)**
+1. **Multi-line VB string literals end the enclosing method early and leak
+   their contents as symbols.** A `Function` whose body appends a
+   multi-line string containing JavaScript (`html.Append("` ... `")`) is
+   reported as spanning only up to the line where the string starts
+   (`BuildHtml L18-30`; the real extent is L18–161). The JavaScript
+   functions inside the string (`updateHiddenInvoices`,
+   `getUncheckedInvoices`, `restoreUncheckedState`, ...) are listed as
+   VB.NET methods with invented `calls` / `called by` edges. Expected:
+   string contents are blanked by the VB noise pass, the method runs to its
+   `End Function`, and nothing inside the literal becomes a symbol. Likely
+   in `parseVbNet` noise blanking (VB strings escape only with `""`, and
+   since VB 14 may span lines). Fixture: `vbnet_multiline_string`
+   (function with a multi-line string literal containing braces, quotes,
+   `function` and `End Function` text, followed by a second method).
+   Add the same shape to the VB.NET cases of `tools/damage_probe.py`.
+2. **Qualified calls to a class that exists in more than one project are
+   dropped.** `AccountingHost.GetInvoices(...)` and
+   `AccountingHost.GetGarageConfiguration(...)` are called from the shared
+   report builder and both apps' pages, yet `--callers` and `--callees` list
+   none of them. `AccountingHost` is defined once per app (same name and
+   members, different project), so the owner is ambiguous. A qualified call
+   to a unique class in the same index (`BatchJob.AllocatePort`) resolves as
+   `medium`, which suggests ambiguity suppresses the edge instead of
+   producing candidates. (Cause not confirmed; check in
+   `src/projectindex.cpp` before relying on it.) Expected: link to every
+   candidate owner with a lower confidence, or prefer the candidate in the
+   caller's own project (nearest `.vbproj` / `.csproj` / `.sln` ancestor;
+   files under `Shared/` that belong to neither match all candidates).
+   Same-named facades or shims are a common way to share code between a
+   legacy and a new app, so this is not specific to one code base. Fixture:
+   two projects each with a `Facade` class of the same name and a shared
+   file calling `Facade.Run()`.
+3. **A silent empty result reads as "no callers".** `--callers` /
+   `--callees` for a name whose calls were dropped (items 1 and 2, or
+   unknown receiver types) print only the definition lines. The skill
+   documents the caveat, but the tool output gives no sign of it, and an
+   agent checking "what breaks if I change this signature" is told nothing
+   uses it. Expected: when the name has call sites that were not linked,
+   say so in the output (for example `note: 4 unlinked call sites by name;
+   confirm with grep`), and offer the name-only list (item 4).
+
+**Missing capability (agent-facing)**
+4. **Name-only fallback for callers.** Index textual call sites of a name
+   without resolving the receiver, and expose them as a separate,
+   clearly low-confidence tier (`--callers <name> --loose`, or appended
+   under `unresolved:` in the normal output). Calls are matched by name by
+   design; today a call whose receiver cannot be resolved is left out, so
+   the agent has to fall back to grep. Whether the per-file call-site facts
+   (Phase B) already keep the unbound ones needs checking; if they do, the
+   change is to surface them. This is the single change that would have
+   made `--callers` usable for the impact check.
+5. **VB.NET / C# → SQL stored-procedure links.** All data access in the
+   project above goes through `CommandType.StoredProcedure` with the
+   procedure name in a string (`objCommand.CommandText =
+   "dbo.Invoice_GetByGarageWithDates"`). `--find` locates the procedure
+   when the schema folder is indexed, but nothing connects the calling
+   method to it, so "who calls this procedure?" and "which procedure does
+   this method use?" need grep. Expected: record string literals assigned
+   to `CommandText` / `SqlCommand` constructors (and `EXEC`, Dapper-style
+   calls) in the facts, and link them to `procedure` symbols by name
+   (schema prefix optional), as HTTP calls are linked to routes. Also
+   allow more than one project root, because here the schema lives in a
+   sibling folder outside the indexed code root (`--index-project` takes one
+   root; an `--also-index <dir>` option or a roots file would do). Fixture:
+   a VB file plus a `.sql` procedure file.
+6. **Overloads are not distinguished.** `--find GetInvoices` returns 15
+   definitions across five layers with no signature, and `--callers` merges
+   all overloads of the name. Show the signature (or parameter count) on
+   `--find` / `--callers` text lines, and narrow edges by argument count
+   where the call site's count is known. This matters most in layered VB
+   code, where a wrapper has the same name and one extra parameter at each
+   layer.
+
+**Smaller defects**
+7. **`--search` does not handle multi-word queries.** `--search "end of
+   year"` returns nothing although `EndOfYear` exists; `--search EndOfYear`
+   finds it. Split on whitespace and match each token against the words of
+   camelCase names and path segments, ranking by tokens matched. Print
+   `no matches` (stderr) on an empty result so it is distinguishable from an
+   index that did not load; it currently prints nothing and exits 0.
+8. **SQL signature display loses string defaults.** The procedure parameter
+   `@SortName VARCHAR(30) = 'InvoiceDate'` is shown as
+   `@SortName: VARCHAR(30) = ' '` (the blanked form of the literal leaks
+   into the signature). Use the original text for display.
+9. **Markup event links point at line 1.** For `Handles ButtonSubmitEOY.Click`
+   and `Me.Load` (Phase H), the markup side of the relation reads
+   `ButtonSubmitEOY.Click @ EndOfYear.aspx:1`. Use the control's line in the
+   markup (or the `Handles` line for `Me.Load`).
+
+**Agent tooling**
+10. **Exercise the edit-check hook on a VB.NET signature change.** The
+    hook's caller list comes from `--callers`, so items 2 and 4 limit what
+    it can report on this kind of code base. This was not tried in the
+    field session (no edits were made). Add a scripted case (change a
+    wrapper's signature in a fixture project, run `pre` and `post` with a
+    JSON event on stdin, assert the caller is reported) to the automated
+    hook tests still listed as open under Phase G.
+11. **Installation as a user skill.** The skill only appears to an agent
+    once `tools/agent/` is copied or linked into `~/.claude/skills/lumencode/`;
+    the README describes the CLI build but not this step, and
+    `hooks/settings.example.json` contains `/path/to/lumencode` placeholders.
+    Document the copy (or add `tools/agent/install.sh` that copies or
+    symlinks the skill and prints the hook settings with the real path), and
+    note that a copy does not follow later updates to the checkout.
+
+**Verification.** Fixtures for items 1, 2, 5 and 9 in
+`tests/fixtures/baseline/` with manifest assertions; `tools/regression_sweep.py
+--fixtures-only`, `tools/corpus_scan.py --compare` and `tools/damage_probe.py`
+as in the other phases; re-run the original task (trace a form to its stored
+procedure and list the call sites of a layered method) as the acceptance
+check, comparing `--callers` against grep.
+
 ## Progress
 
 Progress is recorded per phase in [`implementation-log.md`](implementation-log.md).
+
+- **Phase I — in progress (2026-09-30).** Completed: item 1 (multi-line VB
+  strings); item 3 (unlinked-site warning); item 4 (`--callers --loose`);
+  item 7 (multi-word search and empty-result message); item 8 (SQL string
+  defaults); and item 11 (skill installer/docs). Item 2 now prefers a
+  same-project qualified target and exposes shared-folder ambiguity through
+  `--loose`, but does not yet emit edges to every viable project candidate.
+  Item 5 supports CommandText/SqlCommand and common Dapper stored-procedure
+  calls across `--also-index` roots; broaden it to further data-access forms
+  as they arise. Item 6 displays signatures but still needs argument-count
+  disambiguation. Item 9 resolves server controls to their markup line, while
+  `Me.Load` still needs a code-behind Handles-line representation. Items 10
+  (automated hook test) and the remaining verification/corpus acceptance
+  checks are open.
 
 - **Phase H — in progress (2026-09-30).** The initial visibility slice is
   complete: `.aspx`, `.ascx`, `.master`, `.ashx`, `.asmx` and `.asax` are

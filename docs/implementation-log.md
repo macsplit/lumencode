@@ -1,5 +1,55 @@
 # Implementation Log
 
+## 2026-09-30 (continued): Phase I agent-navigation slice
+
+- **VB correctness:** multi-line VB string literals are now excluded from the
+  structural line parser until their closing quote, preventing embedded
+  JavaScript/HTML from becoming phantom methods or prematurely ending the
+  enclosing method. Ordinary one-line literals, including route attributes,
+  remain available to declaration parsing. Added `vbnet_multiline_string`.
+- **Trustworthy caller queries:** `--callers` now says when matching call
+  sites could not be linked; `--loose` appends those name-only candidates as
+  explicitly `low, unresolved`. Same-named qualified members prefer a target
+  under the caller's nearest `.csproj` / `.vbproj`; shared files deliberately
+  remain unresolved and are visible through `--loose`. Added a two-project
+  façade fixture.
+- **SQL navigation:** quoted SQL parameter defaults are retained in parser
+  output. `--also-index <dir>` includes a separate schema root; VB/C# stored
+  procedure patterns (`CommandType.StoredProcedure` plus `CommandText` or
+  `SqlCommand`, and common Dapper calls) become index call sites, linking to
+  SQL procedures in either direction. Added the split app/schema fixture.
+- **Agent ergonomics:** multi-word search matches camel-case/path words and
+  writes `no matches` on stderr for an empty result. `--find` and relation
+  headings display signatures. The skill installer (`tools/agent/install.sh`)
+  creates an update-following user symlink by default, with `--copy` for an
+  independent copy; its documentation now covers both choices.
+- Build passed, the fixture sweep reports 101 cases and 0 issues, and the
+  installed CLI was checked against the split app/schema fixture.
+
+## 2026-09-30 (continued): field evaluation of the agent skill — Phase I planned
+
+- **No code changed.** The `lumencode` skill was installed as a user skill
+  (`tools/agent/` copied to `~/.claude/skills/lumencode/`, edit hooks
+  registered from the checkout) and used by a coding agent to plan a feature
+  in a private VB.NET / WebForms code base: trace a report form through four
+  wrapper layers to a stored procedure and list the call sites a parameter
+  change would touch. The findings are recorded as Phase I in `roadmap.md`.
+- **Worked:** `--search <identifier>` found all files and symbols of the
+  feature (both apps and the shared builder) in about half a second;
+  `--outline` of a code-behind gave the whole handler chain, including the
+  `.aspx` to handler links from Phase H, without reading the file; `--find`
+  showed the layered overloads; `--outline` of the entity class gave its
+  shape; an index over the SQL schema folder found the procedure.
+- **Did not work:** a multi-line VB string literal containing JavaScript
+  ended its method early and produced phantom VB methods with invented edges;
+  `--callers` missed every call through a class that exists in two projects
+  (`AccountingHost`) and printed nothing to say so; no link from the VB
+  `CommandText = "dbo.Proc"` string to the SQL procedure; overloads merged;
+  `--search "two words"` returned nothing. The impact check had to be
+  confirmed with grep.
+- **Not exercised:** the edit hooks (the session made no edits) and the MCP
+  server (CLI used directly).
+
 ## 2026-09-30 (continued): Phase H started — WebForms visibility
 
 - Added `.aspx`, `.ascx`, `.master`, `.ashx`, `.asmx` and `.asax` to the
