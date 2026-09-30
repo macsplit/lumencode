@@ -175,3 +175,7 @@ Progress is recorded per phase in [`implementation-log.md`](implementation-log.m
   for garbage lines, unclosed calls and strings except TSX unclosed calls
   (88%); the new lost-brace mutation is 76–98% outside Swift (65%). The
   Swift grammar is already at the latest release (0.7.1).
+- **Phase E — done (2026-09-30).** Kotlin (327 corpus files, 98% with
+  symbols, damage probe 96.5%) and Ruby (164 files, 90%, 98.8%) as
+  structural parsers; SCSS/LESS; JSON outlines and composer / tsconfig /
+  appsettings summaries; PHP configuration arrays.

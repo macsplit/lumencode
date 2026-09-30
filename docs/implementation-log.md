@@ -1,5 +1,31 @@
 # Implementation Log
 
+## 2026-09-30 (continued): phase E
+
+- **Kotlin** (structural, `parseKotlin`):
+    - Parsing: noise blanking handles nested block comments, raw strings and `${}` templates with nested quotes. Declarations are found at depth 0 of each body.
+    - Coverage: classes, interfaces, objects (incl. companion), enums with entries, functions (type parameters, extension receivers, expression bodies), properties (incl. constructor `val`/`var`), secondary constructors and typealiases, with signatures from the declarations.
+    - Links: call sites for the index (companion members are owned by the enclosing class, so `Cart.empty()` resolves by qualifier); imports through the package's source root; Spring and Ktor routes.
+    - Resilience: a member's body or statement cannot run past the next sibling declaration.
+    - Corpus: 327 files, 97.9% with symbols; damage probe 96.5% (lost brace 55 → 98% once members were bounded). okio: 1,084 cross-file edges after Kotlin standard-library names joined the generic list.
+- **Ruby** (structural, `parseRuby`):
+    - Parsing: an `end` stack over noise-blanked lines. Quoted strings end at the line end, so an unterminated quote no longer swallows the file (unclosed-string retention 65 → 100%).
+    - Coverage: modules, classes, methods (incl. `self.`, `class << self`, endless and one-line), parameters with defaults, `attr_*`, constants, and RSpec/Minitest blocks as test suites, tests and hooks (files with symbols 71 → 90%).
+    - Resilience: a missing `end` is settled by indentation; spec blocks count as declarations there (lost-end retention 58 → 95%). The damage probe now deletes `end` lines for Ruby.
+    - Links: `require`/`require_relative` resolve; Sinatra routes.
+    - Index: Ruby core method names join the generic list, and a nested type is constructed bare only inside its owner (sinatra `::Logger.new` had matched a nested `Logger`).
+- **SCSS / LESS** (`parseStylesheetDialect`):
+    - Coverage: nested rules with resolved selectors (`&`, BEM suffixes, parent lists), mixins/functions/placeholders/keyframes/variables, and `@media`-style blocks transparent to their rules.
+    - Links: `@include`/`@extend` and LESS mixin calls (`;`-separated arguments) are relations and index call sites, so SCSS mixins in partials link by import and Bootstrap's LESS mixins link across files. `@import`/`@use`/`@forward` resolve `_partials`.
+- **Config files:**
+    - JSON objects outlined two levels deep, with JSONC accepted.
+    - `composer.json`: dependencies, PSR-4 roots and scripts.
+    - `tsconfig`/`jsconfig`: `extends` and project references resolved.
+    - `appsettings*.json`: sections, with secret-looking values hidden.
+    - PHP configuration arrays and CodeIgniter `$config[...]` assignments as settings.
+    - Corpus files with symbols: JSON 17.9 → 83.8%, PHP 73.2 → 91.2%.
+- **Fixtures:** 88 → 96 (Kotlin model + Ktor routes + companion qualifier, Ruby structure + Sinatra, SCSS nesting + cross-file mixin, PHP config array). GUI smoke green with every new kind.
+
 ## 2026-09-30 (continued): phases C and D
 
 - **Phase C — cross-language links on the index:**

@@ -72,7 +72,10 @@ search**. See [Recent History](#recent-history) for how it got here and
 | VB.NET | structural line parser (block-aware) | unterminated blocks closed at the next declaration, reported | namespaces, classes, modules, structures, interfaces, enums, members, fields, events | yes (incl. `RaiseEvent`) | `Imports` (incl. aliases) | ASP.NET attributes (`<Route>`, `<HttpGet>`, ...) | **exact** from declarations (`ByVal x As T`, `Optional ... = v`, `As T`) |
 | SQL (MySQL / MariaDB, SQL Server T-SQL) | statement-aware parser | objects end at the next `CREATE`/`ALTER`, `GO` or `DELIMITER`; strings cannot cross batches | tables (columns, keys), views, procedures, functions, triggers, indexes | table → table *references* (FKs); views/routines/triggers *read* / *write* tables; routines *execute* / *call* routines; triggers *fire on* tables | `USE`, `source` / `\.` / `:r` scripts | — | from declarations (`IN`/`OUT`/`@p ... OUTPUT`, defaults, `RETURNS`) |
 | Shell (bash / sh / zsh) | structural parser | unbalanced bodies stop at the next function header; quoting (incl. nested `"$(… "…")"`), comments and here-docs handled | functions (all three forms), exported / readonly variables | yes (command position, incl. inside `$( … )`) | `source` / `.` (directory-prefix idioms resolved) | — | named from `local x="$1"`, else positional; `$@`; exit status / stdout |
-| JSON | — | — | `package.json` scripts, entry, dependencies | — | — | — | — |
+| Kotlin | structural parser (comment/string-blanked, brace-matched) | a member's body cannot run past the next sibling declaration, a top-level one past the next column-0 declaration | classes, interfaces, objects (incl. companion), enums with entries, functions (type parameters, extension receivers, expression bodies), properties (incl. constructor `val`/`var`), typealiases | yes; cross-file via the index | `import` (resolved through the package's source root) | Spring mapping annotations, Ktor `routing { route { get { } } }` | from declarations (`name: Type = default`, `vararg`, return type) |
+| Ruby | structural parser (`end`-matched lines) | a missing `end` is settled by indentation | modules, classes, methods (instance, `self.`, `class << self`, endless), `attr_*`, constants, RSpec / Minitest blocks | yes; cross-file via the index | `require` / `require_relative` (resolved) | Sinatra-style `get '/x' do` | parameter names, defaults, keyword and splat parameters |
+| SCSS / LESS | structural parser | an unbalanced block ends with its parent | nested rules with resolved selectors, mixins, functions, placeholders, keyframes, variables | `@include` / `@extend` / LESS mixin calls, across files via the index | `@import` / `@use` / `@forward` (partials resolved) | — | mixin parameters and defaults |
+| JSON | `QJsonDocument` (comments and trailing commas accepted) | — | keys two levels deep; `package.json`, `composer.json`, `tsconfig.json`, `appsettings.json` summarised | — | npm / composer packages, tsconfig `extends` / `references` | OpenAPI operations | — |
 
 "repair → heuristic" is the parser authority model:
 
@@ -193,7 +196,7 @@ cmake -S . -B build && cmake --build build --target lumencode-cli
 ./build/bin/lumencode-cli --index-project root --index-edges            # every cross-file call edge (JSON lines)
 ./build/bin/lumencode-cli --index-project root --index-relations file   # one file's cross-file Calls / Called By
 
-python3 tools/regression_sweep.py --fixtures-only       # first gate: 84 fixture cases, relation round-trips
+python3 tools/regression_sweep.py --fixtures-only       # first gate: 96 fixture cases, relation round-trips
 python3 tools/fetch_corpus.py                           # pinned public corpus (27 repos, ~6.4k files)
 python3 tools/corpus_scan.py --save before.json         # whole-corpus coverage / timing / contract scan
 python3 tools/corpus_scan.py --compare before.json      # ... then diff after a change
@@ -300,6 +303,12 @@ For backend work only the CLI target is needed:
   - C# classes inside block-scoped `namespace X { }` were dropped entirely
     (found by the new cross-file fixtures; C# files with symbols 91.7% →
     97.5% on the corpus)
+- **2026-09-30 — roadmap phase E:** Kotlin and Ruby (structural parsers
+  with routes, imports and index call sites), SCSS/LESS (nested rules,
+  mixins across files), and config files (JSON outlines; composer,
+  tsconfig and appsettings summaries; PHP configuration arrays). Corpus
+  files with symbols: JSON 18% → 84%, PHP 73% → 91%, Kotlin and Ruby
+  from none to 98% and 90%.
 - **2026-09-30 — roadmap phase D:** repair from textually suspect lines,
   lost-brace repair (write the closers back or dissolve the block),
   re-nesting of clean Swift parses, and a C/C++ macro pre-pass (clean AST
@@ -352,7 +361,7 @@ Phase 2. Better source inspection
 
 Phase 2b. Language breadth and link parity
 
-- Add new languages seen in the corpus: Kotlin and Ruby. (Go, AST-backed C/C++ and shell done 2026-09.) Their Tree-sitter grammars are large (≈23 MB and 15 MB of generated source), so a structural parser like the VB.NET / SQL / shell ones may be the better trade-off. (VB.NET and SQL done 2026-09 with structural parsers.)
+- ~~Add new languages seen in the corpus: Kotlin and Ruby~~ **Done (2026-09-30)** with structural parsers (their Tree-sitter grammars are ≈23 MB and 15 MB of generated source), plus SCSS/LESS and config files. (Go, AST-backed C/C++, shell, VB.NET and SQL done earlier in 2026-09.)
 - ~~Close per-language link gaps: Swift imports, Java routes, Objective-C call relations, QML relations~~ (done 2026-09).
 - Use `tools/corpus_scan.py --compare` and `tools/damage_probe.py` as the acceptance gates for each language.
 
@@ -373,7 +382,7 @@ Phase 4. Broader project understanding
 ## Known Issues
 
 - Some extracted structure is still shallow or misleading on real projects.
-- QML still uses a heuristic parser; VB.NET, SQL, shell and Objective-C use purpose-built structural parsers. All other supported languages (now including plain JS/JSX, C/C++ and Go) are Tree-sitter-backed with a fallback.
+- QML still uses a heuristic parser; VB.NET, SQL, shell, Objective-C, Kotlin, Ruby and SCSS/LESS use purpose-built structural parsers. All other supported languages (now including plain JS/JSX, C/C++ and Go) are Tree-sitter-backed with a fallback.
 - C/C++: the macro pre-pass handles export/attribute/Qt macros, but macros that expand to statements or types (`FMT_TYPE_CONSTANT(...)`, `TEST(...)`) still trip the grammar; about half of corpus C/C++ files are analysed as AST + heuristic merge.
 - Recovery is AST-first for every Tree-sitter language (including Swift and CSS) via branch-scoped repair. Repairs keep the file length, so a lost brace after the last member of a type (nowhere to write it back) still falls back to the AST+heuristic merge. Repair is bounded (80 trial parses, plus 12 suspect-line and 12 insertion trials), so very large files with grammar gaps (e.g. some valid Swift) may stop repairing early.
 - About 19% of valid Swift files in the corpus trip grammar gaps and go through repair. That costs time (Swift p95 is the highest of the languages) but not declarations: a repair is rejected if it would lose any.
