@@ -40,6 +40,9 @@ MUTATIONS = {
     "garbage_line": "@@@ ### $$$ ;;; ~~~",
     "unclosed_call": "broken(1, ",
     "unclosed_string": "x = \"unterminated",
+    # Not an insertion: the last line holding only a closing brace inside the
+    # target is deleted (brace languages only; skipped where there is none).
+    "missing_close": None,
 }
 
 # Languages where "garbage" differs a lot per grammar get the same mutations; the
@@ -113,7 +116,7 @@ def pick_target(units: list[dict], line_count: int, rng: random.Random) -> tuple
     # Prefer a unit in the first half so there is plenty of file after the damage.
     first_half = [c for c in candidates if c[1] <= line_count / 2] or candidates
     symbol, start, end = rng.choice(first_half)
-    return symbol, rng.randint(start + 1, max(start + 1, end - 1))
+    return symbol, rng.randint(start + 1, max(start + 1, end - 1)), start, end
 
 
 def probe_file(path: Path, rng_seed: int) -> list[dict]:
@@ -134,7 +137,7 @@ def probe_file(path: Path, rng_seed: int) -> list[dict]:
     picked = pick_target(units, len(lines), rng)
     if not picked:
         return []
-    target, line_no = picked
+    target, line_no, target_start, target_end = picked
     target_id = (target.get("kind", ""), target.get("name", ""))
     others = unit_ids(level, symbols) - {target_id}
     if not others:
@@ -145,8 +148,15 @@ def probe_file(path: Path, rng_seed: int) -> list[dict]:
     try:
         for mutation, payload in MUTATIONS.items():
             mutated = list(lines)
-            indent = mutated[line_no - 1][: len(mutated[line_no - 1]) - len(mutated[line_no - 1].lstrip())]
-            mutated.insert(line_no - 1, indent + payload)
+            if payload is None:
+                closers = [index for index in range(target_start, min(target_end, len(lines)))
+                           if lines[index].strip() in ("}", "};", "},", "})", "});")]
+                if not closers:
+                    continue
+                del mutated[closers[-1]]
+            else:
+                indent = mutated[line_no - 1][: len(mutated[line_no - 1]) - len(mutated[line_no - 1].lstrip())]
+                mutated.insert(line_no - 1, indent + payload)
             copy = workdir / path.name
             copy.write_text("\n".join(mutated))
             damaged = dump(copy)

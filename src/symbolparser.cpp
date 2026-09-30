@@ -700,6 +700,98 @@ static QByteArray blankCppMacros(const QByteArray &source)
     return out;
 }
 
+// A block whose closer was deleted shows up as an indentation drop: a line,
+// not itself starting with a closer, indented no deeper than the line that
+// opened a still-open block. The closers that block needs (the reverse of
+// its unmatched openers, e.g. `})` for `it('x', () => {`) are written over
+// the end of that line's indentation - same length, so offsets hold.
+struct AstInsertion
+{
+    int row = 0; // the row that receives the closers
+    int offset = -1; // byte where they are written; -1 when they do not fit
+    QByteArray closers;
+    int openRow = 0; // the row that opened the unclosed block
+};
+
+static QList<AstInsertion> closerInsertionCandidates(const QByteArray &source, const QVector<int> &starts)
+{
+    struct Open { int row; int indent; QByteArray openers; };
+    QList<AstInsertion> candidates;
+    QVector<Open> stack;
+    auto closerFor = [](char opener) { return opener == '(' ? ')' : opener == '[' ? ']' : '}'; };
+    for (int row = 0; row < starts.size() && candidates.size() < 16; ++row) {
+        const int begin = starts.at(row);
+        const int end = row + 1 < starts.size() ? starts.at(row + 1) - 1 : source.size();
+        bool blank = false;
+        const int indent = rowIndentWidth(source, starts, row, &blank);
+        if (blank) {
+            continue;
+        }
+        int first = begin;
+        while (first < end && (source.at(first) == ' ' || source.at(first) == '\t')) {
+            ++first;
+        }
+        const char lead = source.at(first);
+        if (lead == '#') {
+            continue; // preprocessor
+        }
+        const bool startsWithCloser = lead == '}' || lead == ')' || lead == ']';
+        // Indentation drop past a still-open block: that block lost its closer.
+        if (!startsWithCloser && !stack.isEmpty() && indent <= stack.constLast().indent
+            && stack.constLast().row < row) {
+            QByteArray closers;
+            for (int index = stack.constLast().openers.size() - 1; index >= 0; --index) {
+                closers.append(closerFor(stack.constLast().openers.at(index)));
+            }
+            // Closers ending in `)` / `]` close an expression, which needs a
+            // separator before the next statement on the same line.
+            if (closers.endsWith(')') || closers.endsWith(']')) {
+                closers.append(';');
+            }
+            const int room = first - begin; // indentation bytes available
+            const bool fits = !closers.isEmpty() && room >= closers.size() && !source.mid(begin, room).contains('\t');
+            candidates.append({row, fits ? first - closers.size() : -1, closers, stack.constLast().row});
+            stack.removeLast(); // assume it closed here, keep scanning
+        }
+        // Track this line's brackets (strings and // comments skipped).
+        QByteArray lineOpeners;
+        char quote = 0;
+        for (int index = first; index < end; ++index) {
+            const char ch = source.at(index);
+            if (quote) {
+                if (ch == '\\') {
+                    ++index;
+                } else if (ch == quote) {
+                    quote = 0;
+                }
+                continue;
+            }
+            if (ch == '/' && index + 1 < end && (source.at(index + 1) == '/' || source.at(index + 1) == '*')) {
+                break;
+            }
+            if (ch == '"' || ch == '\'' || ch == '`') {
+                quote = ch;
+            } else if (ch == '(' || ch == '[' || ch == '{') {
+                lineOpeners.append(ch);
+            } else if (ch == ')' || ch == ']' || ch == '}') {
+                if (!lineOpeners.isEmpty()) {
+                    lineOpeners.chop(1);
+                } else if (!stack.isEmpty()) {
+                    // Closes (part of) an earlier line's openers.
+                    stack.last().openers.chop(1);
+                    if (stack.constLast().openers.isEmpty()) {
+                        stack.removeLast();
+                    }
+                }
+            }
+        }
+        if (!lineOpeners.isEmpty()) {
+            stack.append({row, indent, lineOpeners});
+        }
+    }
+    return candidates;
+}
+
 struct AstRepairResult
 {
     QByteArray source;
@@ -737,6 +829,10 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
     timer.start();
     const QVector<int> starts = lineStartOffsets(original);
     const QSet<int> suspectRows = textuallySuspectRows(original, starts);
+    const QList<AstInsertion> insertions = closerInsertionCandidates(original, starts);
+    constexpr int kMaxInsertionTrials = 10;
+    int insertionTrialsUsed = 0;
+    QSet<int> insertedRows;
     constexpr int kMaxSuspectTrials = 12;
     int suspectTrialsUsed = 0;
     AstRepairCandidates candidates;
@@ -807,6 +903,60 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
             }
         };
 
+        // A lost closer (indentation drop past an open block): writing the
+        // closers back counts only if the file then parses cleanly.
+        for (const AstInsertion &insertion : insertions) {
+            if (insertionTrialsUsed >= kMaxInsertionTrials || !bestRows.isEmpty()) {
+                break;
+            }
+            if (insertedRows.contains(insertion.row) || blanked.contains(insertion.row)) {
+                continue;
+            }
+            // Either write the closers back, or - when they do not fit -
+            // dissolve the unclosed block by blanking the line that opened it
+            // (its body then belongs to the enclosing block; only the damaged
+            // block itself is lost).
+            QList<QPair<QByteArray, int>> trials; // source, row reported as damaged
+            if (insertion.offset >= 0) {
+                QByteArray trial = result.source;
+                bool room = true;
+                for (int index = 0; index < insertion.closers.size(); ++index) {
+                    room = room && trial.at(insertion.offset + index) == ' ';
+                    trial[insertion.offset + index] = insertion.closers.at(index);
+                }
+                if (room) {
+                    trials.append({trial, insertion.row});
+                }
+            }
+            if (!blanked.contains(insertion.openRow)) {
+                // Indentation-scoped languages lose the header's whole block, or
+                // its body would be re-homed under the previous declaration.
+                QByteArray trial = result.source;
+                const QList<int> rows = indentationBlocks ? indentedBlockRows(result.source, starts, insertion.openRow)
+                                                          : QList<int>{insertion.openRow};
+                for (int row : rows) {
+                    trial = blankSourceRow(trial, starts, row);
+                }
+                trials.append({trial, insertion.openRow});
+            }
+            for (const auto &trial : std::as_const(trials)) {
+                if (insertionTrialsUsed >= kMaxInsertionTrials) {
+                    break;
+                }
+                ++insertionTrialsUsed;
+                ++trialParses;
+                AstRepairCandidates trialCandidates;
+                const AstErrorScore trialScore = scoreAstSource(parser, trial.first, &trialCandidates);
+                if (trialScore.isClean()) {
+                    bestScore = trialScore;
+                    bestRows = {trial.second};
+                    bestCandidates = trialCandidates;
+                    bestSource = trial.first;
+                    insertedRows.insert(insertion.row);
+                    break;
+                }
+            }
+        }
         // Textual suspects first, but only one that makes the file parse
         // cleanly counts (tree-sitter often blames an intact enclosing header
         // for an unclosed call or string further down); otherwise the parser's
@@ -832,7 +982,7 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
                 return leftDistance != rightDistance ? leftDistance < rightDistance : left < right;
             });
             const int suspectTrials = qMin(6, kMaxSuspectTrials - suspectTrialsUsed);
-            if (suspectTrials > 0 && !suspectsInErrors.isEmpty()) {
+            if (bestRows.isEmpty() && suspectTrials > 0 && !suspectsInErrors.isEmpty()) {
                 const QList<int> tier = suspectsInErrors.mid(0, suspectTrials);
                 suspectTrialsUsed += tier.size();
                 tryTier(tier, true);

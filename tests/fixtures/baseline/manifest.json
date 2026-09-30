@@ -106,13 +106,13 @@
         "analysis_source_mode": "recovered",
         "analysis_partial": true,
         "analysis_notices": 1,
-        "analysis_confidence": "medium",
+        "analysis_confidence": "high",
         "analysis_has_ast_errors": true,
         "symbol_source_modes": {
-          "ast": 2
+          "ast": 3
         },
         "symbol_confidences": {
-          "medium": 2
+          "high": 3
         }
       },
       "expectations": [
@@ -120,7 +120,7 @@
           "kind": "function",
           "name": "helperBroken",
           "sourceMode": "ast",
-          "confidence": "medium",
+          "confidence": "high",
           "parameters": [
             "value: number"
           ]
@@ -132,7 +132,7 @@
             "helperBroken"
           ],
           "sourceMode": "ast",
-          "confidence": "medium",
+          "confidence": "high",
           "parameters": [
             "value: number"
           ]
@@ -662,21 +662,21 @@
         "analysis_source_mode": "recovered",
         "analysis_partial": true,
         "analysis_notices": 1,
-        "analysis_confidence": "medium",
+        "analysis_confidence": "high",
         "analysis_has_ast_errors": true,
         "symbol_source_modes": {
-          "heuristic": 4
+          "ast": 4
         },
         "symbol_confidences": {
-          "medium": 4
+          "high": 4
         }
       },
       "expectations": [
         {
           "kind": "class",
           "name": "Broken",
-          "sourceMode": "heuristic",
-          "confidence": "medium"
+          "sourceMode": "ast",
+          "confidence": "high"
         },
         {
           "kind": "method",
@@ -684,8 +684,8 @@
           "calls": [
             "HelperBrokenCs"
           ],
-          "sourceMode": "heuristic",
-          "confidence": "medium",
+          "sourceMode": "ast",
+          "confidence": "high",
           "parameters": [],
           "returns": [
             "string"
