@@ -43,6 +43,7 @@ struct Definition
     QString owner; // enclosing type / scope name, if any
     QString key; // kind|name|line, as in analysis payloads
     int line = 0;
+    bool declaration = false; // C/C++ prototype (the body is elsewhere)
 };
 
 struct Import
@@ -98,7 +99,9 @@ public:
     QVector<Definition> allDefinitions;
     QVector<Edge> edges;
     QHash<QString, QVector<int>> outgoingByFromKey; // path|key -> edge indexes
-    QHash<QString, QVector<int>> incomingByToKey; // path|key -> edge indexes
+    QHash<QString, QVector<int>> incomingByToKey; // path|kind|name -> edge indexes
+    QHash<QString, int> definitionForDeclaration; // path|kind|name of a prototype -> allDefinitions index
+    QHash<QString, QVector<int>> declarationsForDefinition; // path|kind|name of a body -> prototypes
     QVariantMap stats;
 
     bool contains(const QString &path) const { return files.contains(path); }

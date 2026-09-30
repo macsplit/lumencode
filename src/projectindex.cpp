@@ -257,6 +257,9 @@ FileFacts factsFromAnalysis(const QVariantMap &analysis, qint64 size, qint64 mod
                 definition.name = name;
                 definition.kind = kind;
                 definition.owner = owner;
+                definition.declaration = (facts.language == QStringLiteral("cpp") || facts.language == QStringLiteral("c"))
+                    && symbol.value(QStringLiteral("detail")).toString().contains(QStringLiteral("declaration"))
+                    && !symbol.value(QStringLiteral("detail")).toString().contains(QStringLiteral("declared elsewhere"));
                 definition.key = key;
                 definition.line = symbol.value(QStringLiteral("line")).toInt();
                 facts.definitions.append(definition);
@@ -342,6 +345,9 @@ QVariantMap factsToVariant(const FileFacts &facts)
     for (const Definition &definition : facts.definitions) {
         QVariantMap item{{QStringLiteral("n"), definition.name}, {QStringLiteral("k"), definition.kind},
                          {QStringLiteral("l"), definition.line}};
+        if (definition.declaration) {
+            item.insert(QStringLiteral("d"), 1);
+        }
         if (!definition.owner.isEmpty()) {
             item.insert(QStringLiteral("o"), definition.owner);
         }
@@ -393,6 +399,7 @@ FileFacts factsFromVariant(const QVariantMap &map)
         definition.kind = item.value(QStringLiteral("k")).toString();
         definition.line = item.value(QStringLiteral("l")).toInt();
         definition.owner = item.value(QStringLiteral("o")).toString();
+        definition.declaration = item.value(QStringLiteral("d")).toInt() == 1;
         definition.key = QStringLiteral("%1|%2|%3").arg(definition.kind, definition.name).arg(definition.line);
         facts.definitions.append(definition);
     }
@@ -455,6 +462,38 @@ bool startsUpper(const QString &text)
     return !text.isEmpty() && text.at(0).isUpper();
 }
 
+QString definitionKey(const Definition &definition)
+{
+    return definition.path + QLatin1Char('|') + definition.kind + QLatin1Char('|') + definition.name;
+}
+
+// The body of a C/C++ prototype: same name and owning type, not itself a
+// prototype, preferring the source file named like the header
+// (geometry.h -> geometry.cpp), else the only candidate in the project.
+int findDefinitionFor(const Snapshot &snapshot, const Definition &declaration)
+{
+    QVector<int> candidates;
+    const auto range = snapshot.definitionsByName.equal_range(declaration.name);
+    for (auto it = range.first; it != range.second; ++it) {
+        const Definition &candidate = snapshot.allDefinitions.at(it.value());
+        if (!candidate.declaration && candidate.path != declaration.path && candidate.owner == declaration.owner
+            && isCallableKind(candidate.kind) && (candidate.language == QStringLiteral("cpp") || candidate.language == QStringLiteral("c"))) {
+            candidates.append(it.value());
+        }
+    }
+    const QString base = QFileInfo(declaration.path).completeBaseName();
+    QVector<int> sameBase;
+    for (int index : std::as_const(candidates)) {
+        if (QFileInfo(snapshot.allDefinitions.at(index).path).completeBaseName() == base) {
+            sameBase.append(index);
+        }
+    }
+    if (sameBase.size() == 1) {
+        return sameBase.first();
+    }
+    return candidates.size() == 1 ? candidates.first() : -1;
+}
+
 // Resolution with the calling file's facts given explicitly (the live file
 // may not be in the snapshot, or may have changed since the build).
 bool resolveWith(const Snapshot &snapshot, const FileFacts &from, const CallSite &site, Edge *edge)
@@ -463,6 +502,7 @@ bool resolveWith(const Snapshot &snapshot, const FileFacts &from, const CallSite
         return false;
     }
     const bool constructs = site.qualifier == QStringLiteral("new");
+    const bool isCFamily = from.language == QStringLiteral("cpp") || from.language == QStringLiteral("c");
     const QString rawQualifier = constructs ? QString() : site.qualifier.trimmed();
     const bool qualified = !rawQualifier.isEmpty();
 
@@ -530,7 +570,12 @@ bool resolveWith(const Snapshot &snapshot, const FileFacts &from, const CallSite
                 // A nested type is named bare only inside its owner.
                 return definition.owner.isEmpty() || !isTypeKind(definition.kind) || definition.owner == callerOwner;
             }
-            return (!callerOwner.isEmpty() && definition.owner == callerOwner) || hasImplicitSelf(from.language);
+            if (!callerOwner.isEmpty() && definition.owner == callerOwner) {
+                return true;
+            }
+            // Inherited methods: trusted in managed languages; in C/C++ a bare
+            // call more often reaches a framework base class (Qt, STL).
+            return hasImplicitSelf(from.language) && !isCFamily;
         }
         if (selfCall) {
             return method && (owner.isEmpty() || definition.owner == owner || hasImplicitSelf(from.language)
@@ -545,7 +590,16 @@ bool resolveWith(const Snapshot &snapshot, const FileFacts &from, const CallSite
         }
         return method;
     };
-    auto fill = [&](const Definition &definition, const QString &via, const QString &confidence) {
+    auto fill = [&](const Definition &target, const QString &via, const QString &confidence) {
+        // A call that reaches a C/C++ prototype lands on its body.
+        const Definition *resolved = &target;
+        if (target.declaration) {
+            const auto bodyIt = snapshot.definitionForDeclaration.constFind(definitionKey(target));
+            if (bodyIt != snapshot.definitionForDeclaration.constEnd()) {
+                resolved = &snapshot.allDefinitions.at(bodyIt.value());
+            }
+        }
+        const Definition &definition = *resolved;
         edge->fromPath = from.path;
         edge->fromKey = site.fromKey;
         edge->fromName = site.fromName;
@@ -661,6 +715,20 @@ bool resolveWith(const Snapshot &snapshot, const FileFacts &from, const CallSite
     if (candidates.isEmpty()) {
         return false;
     }
+    {
+        // A C/C++ prototype and its body are one callee.
+        QVector<const Definition *> merged;
+        for (const Definition *candidate : std::as_const(candidates)) {
+            if (candidate->declaration && snapshot.definitionForDeclaration.contains(definitionKey(*candidate))) {
+                const Definition *body = &snapshot.allDefinitions.at(snapshot.definitionForDeclaration.value(definitionKey(*candidate)));
+                if (std::find(candidates.cbegin(), candidates.cend(), body) != candidates.cend()) {
+                    continue;
+                }
+            }
+            merged.append(candidate);
+        }
+        candidates = merged;
+    }
     if (constructs) {
         // new Invoice(...) finds the class and its constructors: keep the types.
         QVector<const Definition *> types;
@@ -687,6 +755,46 @@ bool resolveWith(const Snapshot &snapshot, const FileFacts &from, const CallSite
             return fill(*owned.first(), QStringLiteral("qualifier"), QStringLiteral("medium"));
         }
         if (owned.size() > 1) {
+            return false;
+        }
+    }
+
+    // C/C++: a callee is only reachable through the headers the file
+    // includes (transitively). Without that, a same-named framework method
+    // (Qt, STL) is the likelier target.
+    if (isCFamily) {
+        QSet<QString> reachable{from.path};
+        QStringList queue;
+        for (const Import &import : from.imports) {
+            if (!import.path.isEmpty() && !reachable.contains(import.path)) {
+                reachable.insert(import.path);
+                queue.append(import.path);
+            }
+        }
+        for (int index = 0; index < queue.size() && reachable.size() < 400; ++index) {
+            const auto fileIt = snapshot.files.constFind(queue.at(index));
+            if (fileIt == snapshot.files.constEnd()) {
+                continue;
+            }
+            for (const Import &import : fileIt->imports) {
+                if (!import.path.isEmpty() && !reachable.contains(import.path)) {
+                    reachable.insert(import.path);
+                    queue.append(import.path);
+                }
+            }
+        }
+        QVector<const Definition *> visible;
+        for (const Definition *candidate : std::as_const(candidates)) {
+            bool seen = reachable.contains(candidate->path);
+            for (int declaration : snapshot.declarationsForDefinition.value(definitionKey(*candidate))) {
+                seen = seen || reachable.contains(snapshot.allDefinitions.at(declaration).path);
+            }
+            if (seen) {
+                visible.append(candidate);
+            }
+        }
+        candidates = visible;
+        if (candidates.isEmpty()) {
             return false;
         }
     }
@@ -909,6 +1017,18 @@ SnapshotPtr build(const BuildOptions &options)
             snapshot->allDefinitions.append(definition);
         }
     }
+    for (int index = 0; index < snapshot->allDefinitions.size(); ++index) {
+        const Definition &declaration = snapshot->allDefinitions.at(index);
+        if (!declaration.declaration) {
+            continue;
+        }
+        const int body = findDefinitionFor(*snapshot, declaration);
+        if (body >= 0) {
+            snapshot->definitionForDeclaration.insert(definitionKey(declaration), body);
+            snapshot->declarationsForDefinition[definitionKey(snapshot->allDefinitions.at(body))].append(index);
+        }
+    }
+
     QHash<QString, int> viaCounts;
     QHash<QString, int> crossByLanguage;
     int sites = 0;
@@ -949,6 +1069,7 @@ SnapshotPtr build(const BuildOptions &options)
         {QStringLiteral("unresolvedCallSites"), unresolved},
         {QStringLiteral("edgesByEvidence"), via},
         {QStringLiteral("edgesByLanguage"), perLanguage},
+        {QStringLiteral("declarationsPaired"), snapshot->definitionForDeclaration.size()},
         {QStringLiteral("buildMs"), timer.elapsed()},
         {QStringLiteral("cachePath"), cachePath},
     };
@@ -1035,8 +1156,28 @@ QVariantMap augmentAnalysis(const QVariantMap &analysis, const SnapshotPtr &snap
             for (const QVariant &entry : std::as_const(calledBy)) {
                 existingCallers.insert(callerId(entry.toMap()));
             }
+            // C/C++: a prototype shows its body's callers and where the body is;
+            // a body lists the prototypes that declare it.
+            const QString ownKey = path + QLatin1Char('|') + kind + QLatin1Char('|') + name;
+            QVector<int> incoming = snapshot->incomingByToKey.value(ownKey);
+            const auto bodyIt = snapshot->definitionForDeclaration.constFind(ownKey);
+            if (bodyIt != snapshot->definitionForDeclaration.constEnd()) {
+                const Definition &body = snapshot->allDefinitions.at(bodyIt.value());
+                incoming += snapshot->incomingByToKey.value(definitionKey(body));
+                symbol.insert(QStringLiteral("definition"), relationTo(body, QStringLiteral("defined in %1").arg(QFileInfo(body.path).fileName()),
+                                                                      QStringLiteral("medium")));
+            }
+            QVariantList declaredIn;
+            for (int declarationIndex : snapshot->declarationsForDefinition.value(ownKey)) {
+                const Definition &declaration = snapshot->allDefinitions.at(declarationIndex);
+                declaredIn.append(relationTo(declaration, QStringLiteral("declared in %1").arg(QFileInfo(declaration.path).fileName()),
+                                             QStringLiteral("medium")));
+            }
+            if (!declaredIn.isEmpty()) {
+                symbol.insert(QStringLiteral("declaredIn"), declaredIn);
+            }
             int crossFileCallers = 0;
-            for (int edgeIndex : snapshot->incomingByToKey.value(path + QLatin1Char('|') + kind + QLatin1Char('|') + name)) {
+            for (int edgeIndex : std::as_const(incoming)) {
                 const Edge &edge = snapshot->edges.at(edgeIndex);
                 if (edge.fromPath == path) {
                     continue;

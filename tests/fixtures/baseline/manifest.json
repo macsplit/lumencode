@@ -1815,6 +1815,13 @@
           "calls": [
             "circleArea"
           ]
+        },
+        {
+          "kind": "function",
+          "name": "gridCells",
+          "calls": [
+            "cellCount"
+          ]
         }
       ]
     },
@@ -1974,6 +1981,34 @@
           "calledBy": [
             "checkout",
             "test_checkout"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_cpp_prototype_called_by",
+      "root": "tests/fixtures/baseline/cross_file/cpp",
+      "file": "geometry.h",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "circleArea",
+          "calledBy": [
+            "summarize"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_cpp_definition_called_by",
+      "root": "tests/fixtures/baseline/cross_file/cpp",
+      "file": "geometry.cpp",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "circleArea",
+          "calledBy": [
+            "summarize"
           ]
         }
       ]

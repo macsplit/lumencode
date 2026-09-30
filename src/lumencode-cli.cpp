@@ -222,6 +222,22 @@ int main(int argc, char *argv[])
                         item.insert(field, relations);
                     }
                 }
+                if (symbol.contains(QStringLiteral("definition"))) {
+                    const QVariantMap body = symbol.value(QStringLiteral("definition")).toMap();
+                    item.insert(QStringLiteral("definition"), QStringLiteral("%1:%2").arg(
+                        QDir(options.root).relativeFilePath(body.value(QStringLiteral("path")).toString()),
+                        body.value(QStringLiteral("line")).toString()));
+                }
+                QStringList declarations;
+                for (const QVariant &entry : symbol.value(QStringLiteral("declaredIn")).toList()) {
+                    const QVariantMap declaration = entry.toMap();
+                    declarations.append(QStringLiteral("%1:%2").arg(
+                        QDir(options.root).relativeFilePath(declaration.value(QStringLiteral("path")).toString()),
+                        declaration.value(QStringLiteral("line")).toString()));
+                }
+                if (!declarations.isEmpty()) {
+                    item.insert(QStringLiteral("declaredIn"), declarations);
+                }
                 if (!item.isEmpty()) {
                     item.insert(QStringLiteral("symbol"), name);
                     item.insert(QStringLiteral("line"), symbol.value(QStringLiteral("line")));
