@@ -1,5 +1,64 @@
 # Implementation Log
 
+## 2026-09-30 (continued): phases C and D
+
+- **Phase C — cross-language links on the index:**
+    - Python imports resolved to local modules and packages from comment/string-blanked logical lines (docstring examples no longer count). Relative imports resolve by level; absolute imports resolve from above the enclosing package (never the package's own siblings, as in Python 3) and in `src/` layouts. `from pkg import module` becomes a submodule dependency, and the index follows package re-exports (`__init__.py`, JS barrels) up to three hops. flask 452 → 635 cross-file edges, requests 443 → 720.
+    - C/C++ prototypes are paired with their bodies, and calls that reach a prototype land on the body. Prototypes show `definition`, bodies `declaredIn`.
+    - For C/C++ precision, a callee without import evidence must be reachable through the file's transitive `#include`s, and bare calls only reach the caller's own class. Qt/STL names dominated the misses.
+    - Found by `index_metrics`: calls retargeted from a prototype into the calling file were reported as cross-file edges (kirigami ~145 of 234).
+    - PHP `use` imports carry bindings, including aliases; Slim has 439 import-backed edges. Java imports resolve to files through the package's source root, including sibling source sets and nested classes; gson went from 0 to 1,018 import-backed edges.
+    - HTTP client calls → routes (new `src/httpclients.{h,cpp}`):
+        - Clients: fetch, axios, jQuery, XHR and Angular `http.get<T>` in JS/TS, and HTML/PHP forms, with dynamic URL parts as wildcards.
+        - Matching is segment-wise. It prefers literal agreement, then a route in the calling file, then non-test files, and applies Express mount prefixes (`app.use('/api', router)`). External hosts are skipped.
+        - The calling function gets the route and the decorated view function in Calls. Routes get `calledFrom`, and view functions get Called By.
+        - Route extraction no longer treats axios/`$` client calls as routes, and the Express regex fallback ignores comments. hono's JSDoc examples had given 40+ library files phantom routes.
+    - Corpus index (27 projects, 5,101 files incl. HTML):
+        - 162,408 call sites, 17,933 cross-file edges, 0 failures.
+        - Cold 57 s in total, warm 3.3 s.
+        - Reciprocity 819/819 sampled edges in both the caller's Calls and the callee's Called By.
+- **Phase D — resilience round two:**
+    - **Suspect-line repair.** Tree-sitter often blames an intact enclosing line (`describe('x', () => {`) for an unclosed call or string below it. Each repair round first tries up to six textually suspect lines near the error:
+        - a line that opens more brackets than it closes without the next line indenting deeper, or
+        - a line with an unterminated quote.
+
+      A suspect counts only if the whole file then parses cleanly (12 trials per file). A first version that accepted partial gains doubled Swift p95 and made one Alamofire file's repair worse; the clean-only rule fixed both.
+    - **Lost-brace repair.** Indentation drops past a still-open block are candidates. The repair writes the block's closers (reverse of its unmatched openers, plus `;` where a separator is needed) over the next line's indentation. If they don't fit, it blanks the line that opened the block (in Python, its whole indented block), so the body joins the enclosing block. A candidate is accepted only if the file then parses cleanly.
+    - **Re-nesting clean parses.** Swift nests everything after a lost brace without any error. A clean parse is checked for declarations nested in another but not indented deeper, and closers are written back if the parse stays clean and the misnesting drops. No clean corpus file changed structure.
+    - **C/C++ macro pre-pass.** The source is rewritten at the same length before parsing:
+        - Qt macros, `signals:`/`slots` and `emit` are handled.
+        - Export and attribute macros are blanked, and wrapping export macros are unwrapped.
+        - The rewrite is kept only if it parses at least as well as the original. fmt's `FMT_DEPRECATED operator const string_view&()` cascades into a whole-file error without the macro.
+        - `--cpp-prepass` prints the rewritten source, and `--debug-ast` shows its parse.
+        - Clean-AST C/C++ files 126 → 206 of 437.
+        - The recovered merge had listed every include twice; it's now de-duplicated.
+    - **`damage_probe.py`** gains a `missing_close` mutation (the last brace-only line in the target deleted). Retention, same sample:
+
+        | Language | Unclosed call / string (before → after) | Lost brace (before → after) |
+        |---|---|---|
+        | TS | 95.7 → 98.9% overall | 73 → 98% |
+        | TSX | 91.8 → 92.3% | 63 → 82% |
+        | JS | — | 69 → 92% |
+        | Java | 94.7 → 96.0% | 80 → 94% |
+        | C# | 93.1 → 97.1% on the original mutations | 32 → 76% |
+        | Rust | — | 80 → 92% |
+        | Go | — | 72 → 82% |
+        | Swift | unclosed strings 65 → 93% | 44 → 65% |
+        | C++ | — | 85 → 89% |
+
+      What still fails is mostly a lost brace after a type's last member (nowhere to write it back at the same length), and TSX unclosed calls (88%).
+    - **Grammar:** tree-sitter-swift 0.7.1 is already the latest release.
+- **Fixtures:** 72 → 88. New cases cover:
+    - a Python package with re-exports
+    - Java source sets and composer PHP with an alias
+    - Express with a mounted router and fetch/axios/jQuery/form clients, and a Flask API
+    - C/C++ prototypes, a C++ macro header
+    - TS test-block recovery (unclosed call, lost closer)
+    - Swift re-nesting
+
+  The TS and C# recovery fixtures now expect full AST recovery. `regression_sweep` round-trips route relations through `calledFrom` and gained `max_routes`.
+- **ASan:** clean over all 374 corpus C/C++ files, 1,036 web/Python/Java files, and in-process index builds of hono, express, flask and the fixtures.
+
 ## 2026-09-30
 
 Roadmap phases A and B ([`roadmap.md`](roadmap.md)), CLI-first in the cloud

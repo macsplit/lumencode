@@ -164,3 +164,14 @@ Progress is recorded per phase in [`implementation-log.md`](implementation-log.m
   `Called By` for 14 languages, cached, built in the background; corpus
   numbers in the implementation log. HTTP-client calls and DOM references
   in the facts moved to Phase C, where they are consumed.
+- **Phase C — done (2026-09-30).** HTTP client calls → routes (fetch, axios,
+  jQuery, XHR, forms; Express mounted routers, Flask views); PHP `use` and
+  Java imports bound to classes; C/C++ prototypes paired with bodies;
+  Python imports resolved to modules with re-exports followed. DOM
+  references were already served by the web link model.
+- **Phase D — done (2026-09-30).** Suspect-line repair, lost-brace repair
+  (write back / dissolve), re-nesting of clean parses, C/C++ macro
+  pre-pass. Target (≥95% retention for every language and mutation) met
+  for garbage lines, unclosed calls and strings except TSX unclosed calls
+  (88%); the new lost-brace mutation is 76–98% outside Swift (65%). The
+  Swift grammar is already at the latest release (0.7.1).

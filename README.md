@@ -58,7 +58,7 @@ search**. See [Recent History](#recent-history) for how it got here and
 | PHP | Tree-sitter | repair → heuristic | classes, functions, members | same-file, callbacks | `use` (resolved via composer PSR-4), `require`/`include` | Slim / Lumen, Laravel, CodeIgniter | **from the syntax tree** (types, defaults, variadics, promoted properties; declared or inferred returns) |
 | JavaScript / JSX | Tree-sitter (heuristic fallback) | repair → heuristic | declarations, IIFE/UMD/AMD bodies, `X.prototype.m`, closure modules, `X.extend({...})` classes | same-file and cross-file (imports, `require` bindings) | `import`, `require` | Express (anywhere in the tree) | **from the syntax tree** (defaults, rest/destructuring; return paths inferred, `Promise<…>` for async) |
 | TypeScript / TSX | Tree-sitter | repair → heuristic | as JS, plus interfaces and types | as JS | as JS | as JS | **from the syntax tree** (annotations, optional `?`, defaults, accessibility; declared return types) |
-| Python | Tree-sitter | repair (indented blocks) → heuristic | classes, functions, methods, properties | AST walk | imports | Flask / FastAPI | **from the syntax tree**: parameters with types/defaults, annotated or inferred returns per return path |
+| Python | Tree-sitter | repair (indented blocks) → heuristic | classes, functions, methods, properties | AST walk; cross-file via resolved imports | imports resolved to local modules and packages (with bindings) | Flask / FastAPI | **from the syntax tree**: parameters with types/defaults, annotated or inferred returns per return path |
 | Java | Tree-sitter | repair → heuristic | types, members | yes | imports | Spring (`@RequestMapping`, `@GetMapping`, ...), JAX-RS (`@Path` + verbs) | **from the syntax tree** |
 | C# | Tree-sitter | repair → heuristic | types, members, top-level programs | yes | `using` | ASP.NET attributes / minimal APIs | **from the syntax tree** (`ref`/`out`/`params`/`this`, defaults, generics) |
 | Rust | Tree-sitter | repair → heuristic | items, impls, modules | yes | `use` | — | **from the syntax tree** (patterns, types, return types; `self` receiver omitted) |
@@ -80,7 +80,16 @@ search**. See [Recent History](#recent-history) for how it got here and
 2. If the tree has errors, a **branch-scoped repair** pass finds the lines the
    parser flags, blanks them (offsets and line numbers unchanged) and
    re-parses, keeping the damage local to those lines instead of losing the
-   rest of the class or file.
+   rest of the class or file. Because tree-sitter often blames an intact
+   enclosing line, it also tries *textually suspect* lines (an unclosed
+   call or string) and, for a **lost closing brace**, either writes the
+   closers back into the next line's indentation or dissolves the unclosed
+   block — each accepted only if the whole file then parses cleanly. A
+   clean parse is also checked for declarations a lost brace swallowed
+   (nested but not indented), which Swift's grammar accepts silently.
+   C/C++ is parsed after a **macro pre-pass** (export, attribute and Qt
+   macros blanked, `CJSON_PUBLIC(type)` unwrapped), kept only where it
+   parses at least as well as the original.
 3. Declarations that start on a blanked line (e.g. a half-typed `def` header)
    are recovered by the heuristic parser.
 4. Only if the tree is still broken does the heuristic parser supplement it,
@@ -117,6 +126,30 @@ so `Calls` and `Called By` agree across files by construction. The open
 file's own calls are resolved live against the index, so edits show up
 before a re-index. Symbols with more than 400 cross-file callers list the
 first 400 and report the total (`calledByTotal`).
+
+Imports feed the first rule directly: JS/TS `import` / `require`, Python
+imports resolved to local modules (relative, absolute from above the
+enclosing package, `src/` layouts; package `__init__.py` re-exports are
+followed), PHP `use` through composer PSR-4 (aliases included), Java imports
+through the package's source root (test source sets reach `src/main`), Rust
+`use`, C/C++ `#include`. In C/C++ a call that reaches a header prototype
+lands on its body (paired by name and owning type, preferring the matching
+source file); the prototype shows the body's callers and a `definition`
+link, the body a `declaredIn` list, and a callee must be reachable through
+the file's includes.
+
+**HTTP calls → routes.** Browser-side calls — `fetch`, axios, jQuery
+(`$.ajax`, `$.get`, `$.post`, `$.getJSON`), `XMLHttpRequest.open`,
+Angular-style `http.get<T>()` and HTML / PHP `<form action method>` — are
+matched to backend routes (Express incl. routers mounted with
+`app.use('/prefix', router)`, Flask/FastAPI, Spring/JAX-RS, ASP.NET, PHP
+frameworks, Go routers). Dynamic URL parts (`'/users/' + id`,
+`` `/items/${id}` ``) and route parameters (`:id`, `<int:id>`, `{id}`) match
+any segment; the most literal agreement wins, then a route in the calling
+file, then non-test files. The calling function gets the route (and a
+decorated view function, e.g. Flask's) in `Calls`; the route gets
+`calledFrom`, and the view function `Called By`. Calls to other hosts are
+treated as external APIs.
 
 Call sites come from the syntax tree for TS/JS, Python, Java, C#, PHP, Rust,
 Swift, Go and C/C++, and from the structural parsers for Objective-C
@@ -160,7 +193,7 @@ cmake -S . -B build && cmake --build build --target lumencode-cli
 ./build/bin/lumencode-cli --index-project root --index-edges            # every cross-file call edge (JSON lines)
 ./build/bin/lumencode-cli --index-project root --index-relations file   # one file's cross-file Calls / Called By
 
-python3 tools/regression_sweep.py --fixtures-only       # first gate: 72 fixture cases, relation round-trips
+python3 tools/regression_sweep.py --fixtures-only       # first gate: 84 fixture cases, relation round-trips
 python3 tools/fetch_corpus.py                           # pinned public corpus (27 repos, ~6.4k files)
 python3 tools/corpus_scan.py --save before.json         # whole-corpus coverage / timing / contract scan
 python3 tools/corpus_scan.py --compare before.json      # ... then diff after a change
@@ -178,7 +211,8 @@ QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software ./build/bin/lumencode-gui-sm
   cluster. They include broken-code recovery cases, Python return paths, a
   web app (HTML at the root, `css/` and `js/` below) and a composer/Slim PHP
   app, and `cross_file/` mini-projects in 11 languages for index-backed
-  `Calls` / `Called By`. `manifest.json` asserts symbols, relations,
+  `Calls` / `Called By` (plus Python packages, Java source sets, composer
+  PHP, and Express / Flask full-stack apps for HTTP → route links). `manifest.json` asserts symbols, relations,
   signatures, provenance, quick-link labels and CSS usage. The CLI builds the
   index before analysing (`--no-index` or `LUMENCODE_NO_INDEX=1` turns it
   off), so the fixture run covers it.
@@ -188,9 +222,13 @@ QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software ./build/bin/lumencode-gui-sm
   a cloud container. `$LUMENCODE_CORPUS` points the tools at it.
 - **Damage probe:** injects a garbage line, an unclosed call or an unclosed
   string into one function of a clean file, and measures how many *other*
-  declarations survive. It is currently 97.2% overall across 1,041 probes in
-  13 language groups; the weakest cases are unclosed strings in Swift (59%),
-  Java (87%) and Rust (91%).
+  declarations survive; a fourth mutation deletes a closing brace. After
+  Phase D, retention per Tree-sitter language is 92–99.5% (Swift 89%);
+  garbage lines, unclosed calls and unclosed strings are ≥ 90% everywhere
+  except TSX unclosed calls (88%). A lost brace is the hardest case: TS
+  98%, Java 94%, Rust and JS 92%, C++ 89%, Go and TSX 82%, C# 76%, Swift
+  65%. Where it still fails, it is usually the last member of a type
+  (nowhere to write the closer back without changing the file length).
 
 ## Build
 
@@ -262,6 +300,18 @@ For backend work only the CLI target is needed:
   - C# classes inside block-scoped `namespace X { }` were dropped entirely
     (found by the new cross-file fixtures; C# files with symbols 91.7% →
     97.5% on the corpus)
+- **2026-09-30 — roadmap phase D:** repair from textually suspect lines,
+  lost-brace repair (write the closers back or dissolve the block),
+  re-nesting of clean Swift parses, and a C/C++ macro pre-pass (clean AST
+  for 206 of 437 corpus C/C++ files, up from 126; `cJSON.h` 3 → 81
+  symbols). Damage-probe retention: TS 95.7 → 98.9%, Swift 88 → 89% with the
+  new lost-brace mutation included (97% without), C# 93 → 97% on the
+  original mutations.
+- **2026-09-30 — roadmap phase C:** Python imports resolved to local
+  modules (and package re-exports followed), C/C++ prototypes paired with
+  their bodies, PHP `use` and Java imports bound to their classes, and
+  browser HTTP calls (`fetch`, axios, jQuery, XHR, forms) linked to backend
+  routes
 
 ## Roadmap
 Next major milestone: stabilization and trustworthiness of the inspection pipeline, before search.
@@ -324,12 +374,12 @@ Phase 4. Broader project understanding
 
 - Some extracted structure is still shallow or misleading on real projects.
 - QML still uses a heuristic parser; VB.NET, SQL, shell and Objective-C use purpose-built structural parsers. All other supported languages (now including plain JS/JSX, C/C++ and Go) are Tree-sitter-backed with a fallback.
-- C/C++ that relies heavily on unexpanded macros (export/visibility macros, Qt's `Q_OBJECT` etc.) trips the grammar in about two thirds of corpus files; those files are analysed as AST + heuristic merge and can show some macro-shaped noise symbols.
-- Recovery is AST-first for every Tree-sitter language (including Swift and CSS) via branch-scoped repair. A missing closing brace cannot be fixed by blanking lines, so such files still fall back to the AST+heuristic merge. Repair is bounded (80 trial parses), so very large files with grammar gaps (e.g. some valid Swift) may stop repairing early.
+- C/C++: the macro pre-pass handles export/attribute/Qt macros, but macros that expand to statements or types (`FMT_TYPE_CONSTANT(...)`, `TEST(...)`) still trip the grammar; about half of corpus C/C++ files are analysed as AST + heuristic merge.
+- Recovery is AST-first for every Tree-sitter language (including Swift and CSS) via branch-scoped repair. Repairs keep the file length, so a lost brace after the last member of a type (nowhere to write it back) still falls back to the AST+heuristic merge. Repair is bounded (80 trial parses, plus 12 suspect-line and 12 insertion trials), so very large files with grammar gaps (e.g. some valid Swift) may stop repairing early.
 - About 19% of valid Swift files in the corpus trip grammar gaps and go through repair. That costs time (Swift p95 is the highest of the languages) but not declarations: a repair is rejected if it would lose any.
 - Callable signatures come from the syntax tree (or, for VB.NET, SQL and shell, from the declarations) everywhere except QML, which still uses snippet heuristics.
 - QML is now supported as a first-class language in the explorer and CLI, but it currently uses heuristic structural extraction rather than a dedicated AST-backed parser.
-- `Calls` / `Called By` are name-based, not type-resolved. Cross-file edges come from the project index with an evidence level (`confidence`: high / medium / low); a call on a receiver whose type is unknown is linked only by a distinctive name, so some real cross-file calls are deliberately left out. Python imports are not yet resolved to modules (siblings and unique names only), and C/C++ calls resolve to the header declaration rather than the definition (both Phase C).
+- `Calls` / `Called By` are name-based, not type-resolved. Cross-file edges come from the project index with an evidence level (`confidence`: high / medium / low); a call on a receiver whose type is unknown is linked only by a distinctive name, so some real cross-file calls are deliberately left out (most visibly in C/C++, where a callee must also be reachable through the file's includes). C# `using` names namespaces, not files, so C# relies on receiver types and packages. HTTP → route links do not model Flask blueprint `url_prefix`, and relative URLs are taken from the site root.
 - The new overview warnings are part of the intended safety model. They mean the app stayed responsive and returned a bounded result, but they should still be treated as prompts to inspect why that bound was hit.
 - Some script or stylesheet files are now intentionally skipped as probable minified/bundled assets; that is deliberate product behavior, not a parser failure.
 - Some project `mainEntry` guesses are still imperfect on broad mixed-language roots.
