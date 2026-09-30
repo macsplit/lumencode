@@ -211,7 +211,9 @@ Next major milestone: stabilization and trustworthiness of the inspection pipeli
 **Current plan:** [`docs/roadmap.md`](docs/roadmap.md) re-examines the gaps below against corpus
 measurements and orders the next work in phases A–F: quick wins and a headless GUI check, a
 project index for cross-file relations, cross-language links on that index (e.g. `fetch()` →
-backend routes), a second round of syntax-error resilience, Kotlin/Ruby/LESS/SCSS, and GUI work.
+backend routes), a second round of syntax-error resilience, Kotlin/Ruby/LESS/SCSS, GUI work, and
+(Phase G) packaging the engine as a tool for coding agents: a slim outline mode, a skill, an MCP
+server on the project index, and a CLI-only build.
 The longer-standing phase list follows.
 
 Phase 1. Stabilization
