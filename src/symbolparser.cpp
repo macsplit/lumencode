@@ -4197,6 +4197,228 @@ static QVariantList applyAstSignatures(const QVariantList &symbols, const QByteA
     return result;
 }
 
+
+// ---------------------------------------------------------------------------
+// Call sites (for the project index)
+//
+// Every call made inside each callable symbol - callee name, receiver /
+// qualifier text and line - read from the syntax tree, whether or not the
+// callee is defined in this file. Same-file edges are already resolved into
+// calls / calledBy; the call sites are what the project index resolves
+// across files. Calls at file level go to `moduleCallSites`.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+struct CallSiteInfo
+{
+    QString name;
+    QString qualifier;
+};
+
+QString lastSegment(QString text)
+{
+    text = text.simplified();
+    for (const QString &separator : {QStringLiteral("::"), QStringLiteral("->"), QStringLiteral("?."), QStringLiteral(".")}) {
+        const int at = text.lastIndexOf(separator);
+        if (at >= 0) {
+            text = text.mid(at + separator.size());
+        }
+    }
+    text.remove(QRegularExpression(QStringLiteral(R"(<.*$)")));
+    return text.trimmed();
+}
+
+CallSiteInfo callSiteFor(TSNode node, const QByteArray &source, const char *type)
+{
+    CallSiteInfo info;
+    auto qualifierOf = [&](TSNode object) {
+        QString text = nodeText(object, source).simplified();
+        return text.size() > 60 ? QString() : text;
+    };
+    if (std::strcmp(type, "call_expression") == 0 || std::strcmp(type, "call") == 0
+        || std::strcmp(type, "invocation_expression") == 0) {
+        TSNode function = fieldNode(node, "function");
+        if (ts_node_is_null(function) && ts_node_named_child_count(node) > 0) {
+            function = ts_node_named_child(node, 0); // Swift
+        }
+        const QString functionType = tsType(function);
+        if (functionType == QStringLiteral("member_expression")) {
+            info.name = nodeText(fieldNode(function, "property"), source);
+            info.qualifier = qualifierOf(fieldNode(function, "object"));
+        } else if (functionType == QStringLiteral("attribute")) {
+            info.name = nodeText(fieldNode(function, "attribute"), source);
+            info.qualifier = qualifierOf(fieldNode(function, "object"));
+        } else if (functionType == QStringLiteral("selector_expression")) {
+            info.name = nodeText(fieldNode(function, "field"), source);
+            info.qualifier = qualifierOf(fieldNode(function, "operand"));
+        } else if (functionType == QStringLiteral("field_expression")) {
+            info.name = nodeText(fieldNode(function, "field"), source);
+            TSNode value = fieldNode(function, "value");
+            info.qualifier = qualifierOf(ts_node_is_null(value) ? fieldNode(function, "argument") : value);
+        } else if (functionType == QStringLiteral("member_access_expression")) {
+            info.name = lastSegment(nodeText(fieldNode(function, "name"), source));
+            info.qualifier = qualifierOf(fieldNode(function, "expression"));
+        } else if (functionType == QStringLiteral("scoped_identifier") || functionType == QStringLiteral("qualified_identifier")) {
+            info.name = nodeText(fieldNode(function, "name"), source).section(QStringLiteral("::"), -1);
+            TSNode scope = fieldNode(function, "path");
+            info.qualifier = qualifierOf(ts_node_is_null(scope) ? fieldNode(function, "scope") : scope);
+        } else if (functionType == QStringLiteral("navigation_expression")) {
+            info.name = lastSegment(nodeText(fieldNode(function, "suffix"), source));
+            info.qualifier = qualifierOf(fieldNode(function, "target"));
+        } else {
+            info.name = lastSegment(nodeText(function, source));
+        }
+    } else if (std::strcmp(type, "new_expression") == 0) {
+        info.name = lastSegment(nodeText(fieldNode(node, "constructor"), source));
+        info.qualifier = QStringLiteral("new");
+    } else if (std::strcmp(type, "method_invocation") == 0) {
+        info.name = nodeText(fieldNode(node, "name"), source);
+        info.qualifier = qualifierOf(fieldNode(node, "object"));
+    } else if (std::strcmp(type, "object_creation_expression") == 0) {
+        TSNode typeNode = fieldNode(node, "type");
+        if (ts_node_is_null(typeNode)) {
+            for (uint32_t k = 0; k < ts_node_named_child_count(node); ++k) {
+                const QString childType = tsType(ts_node_named_child(node, k));
+                if (childType == QStringLiteral("name") || childType == QStringLiteral("qualified_name")) {
+                    typeNode = ts_node_named_child(node, k);
+                    break;
+                }
+            }
+        }
+        info.name = lastSegment(nodeText(typeNode, source));
+        info.qualifier = QStringLiteral("new");
+    } else if (std::strcmp(type, "function_call_expression") == 0) {
+        info.name = lastSegment(nodeText(fieldNode(node, "function"), source).remove(QLatin1Char('\\')));
+    } else if (std::strcmp(type, "member_call_expression") == 0 || std::strcmp(type, "nullsafe_member_call_expression") == 0) {
+        info.name = nodeText(fieldNode(node, "name"), source);
+        info.qualifier = qualifierOf(fieldNode(node, "object"));
+    } else if (std::strcmp(type, "scoped_call_expression") == 0) {
+        info.name = nodeText(fieldNode(node, "name"), source);
+        info.qualifier = qualifierOf(fieldNode(node, "scope"));
+    }
+    static const QRegularExpression identifier(QStringLiteral(R"(^[A-Za-z_$][\w$]*$)"));
+    if (!identifier.match(info.name).hasMatch()) {
+        info.name.clear();
+    }
+    return info;
+}
+
+bool isCallSiteNode(const char *type)
+{
+    static const QSet<QByteArray> types = {
+        "call_expression", "call", "invocation_expression", "new_expression", "method_invocation",
+        "object_creation_expression", "function_call_expression", "member_call_expression",
+        "nullsafe_member_call_expression", "scoped_call_expression",
+    };
+    return types.contains(QByteArray(type));
+}
+
+} // namespace
+
+namespace {
+// Call sites for the structural (non-AST) languages; defined further down.
+QVariantMap applyTextCallSites(QVariantMap analysis, const QString &text, const QString &language);
+} // namespace
+
+static QVariantMap applyAstCallSites(QVariantMap analysis, const QByteArray &source, const QString &language)
+{
+    QVariantList symbols = analysis.value(QStringLiteral("symbols")).toList();
+    TSLanguage *tsLanguage = languageForName(language);
+    if (!tsLanguage) {
+        return analysis;
+    }
+    TSParser *parser = ts_parser_new();
+    if (!parser || !ts_parser_set_language(parser, tsLanguage)) {
+        if (parser) {
+            ts_parser_delete(parser);
+        }
+        return analysis;
+    }
+    TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
+
+    // Callable symbols by line (a function's declaration line), with names.
+    QMultiHash<int, QPair<QString, QString>> callableByLine; // line -> (name, key)
+    std::function<void(const QVariantList &)> collect = [&](const QVariantList &items) {
+        for (const QVariant &entry : items) {
+            const QVariantMap symbol = entry.toMap();
+            const QString kind = symbol.value(QStringLiteral("kind")).toString();
+            if (isCallableSymbolKind(kind) || kind == QStringLiteral("component") || kind == QStringLiteral("handler")
+                || kind == QStringLiteral("test") || kind == QStringLiteral("test hook")) {
+                callableByLine.insert(symbol.value(QStringLiteral("line")).toInt(),
+                                      {symbol.value(QStringLiteral("name")).toString(), symbolKey(symbol)});
+            }
+            collect(symbol.value(QStringLiteral("members")).toList());
+        }
+    };
+    collect(symbols);
+
+    QHash<QString, QVariantList> sitesByKey;
+    QHash<QString, QSet<QString>> seenByKey;
+    QVariantList moduleSites;
+    QSet<QString> moduleSeen;
+    std::function<void(TSNode, const QString &)> visit = [&](TSNode node, const QString &owner) {
+        QString current = owner;
+        const char *type = ts_node_type(node);
+        if (isAstCallableNode(type) || std::strcmp(type, "method_declaration") == 0
+            || std::strcmp(type, "function_definition") == 0) {
+            const QList<QPair<QString, QString>> candidates = callableByLine.values(nodeLine(node));
+            const QString nodeName = astCallableName(node, source);
+            for (const auto &candidate : candidates) {
+                if (candidates.size() == 1 || candidate.first == nodeName
+                    || candidate.first.section(QLatin1Char('.'), -1) == nodeName) {
+                    current = candidate.second;
+                    break;
+                }
+            }
+        }
+        if (isCallSiteNode(type)) {
+            const CallSiteInfo info = callSiteFor(node, source, type);
+            if (!info.name.isEmpty()) {
+                const QString dedupe = info.qualifier + QLatin1Char('|') + info.name;
+                QVariantMap site{{QStringLiteral("name"), info.name}, {QStringLiteral("line"), nodeLine(node)}};
+                if (!info.qualifier.isEmpty()) {
+                    site.insert(QStringLiteral("qualifier"), info.qualifier);
+                }
+                if (current.isEmpty()) {
+                    if (!moduleSeen.contains(dedupe) && moduleSites.size() < 300) {
+                        moduleSeen.insert(dedupe);
+                        moduleSites.append(site);
+                    }
+                } else if (!seenByKey[current].contains(dedupe) && sitesByKey[current].size() < 200) {
+                    seenByKey[current].insert(dedupe);
+                    sitesByKey[current].append(site);
+                }
+            }
+        }
+        const uint32_t count = ts_node_named_child_count(node);
+        for (uint32_t index = 0; index < count; ++index) {
+            visit(ts_node_named_child(node, index), current);
+        }
+    };
+    visit(ts_tree_root_node(tree), QString());
+    ts_tree_delete(tree);
+    ts_parser_delete(parser);
+
+    std::function<QVariantList(QVariantList)> apply = [&](QVariantList items) {
+        for (int index = 0; index < items.size(); ++index) {
+            QVariantMap symbol = items.at(index).toMap();
+            symbol.insert(QStringLiteral("members"), apply(symbol.value(QStringLiteral("members")).toList()));
+            const auto sites = sitesByKey.constFind(symbolKey(symbol));
+            if (sites != sitesByKey.constEnd()) {
+                symbol.insert(QStringLiteral("callSites"), *sites);
+            }
+            items[index] = symbol;
+        }
+        return items;
+    };
+    analysis.insert(QStringLiteral("symbols"), apply(symbols));
+    if (!moduleSites.isEmpty()) {
+        analysis.insert(QStringLiteral("moduleCallSites"), moduleSites);
+    }
+    return analysis;
+}
+
 QVariantMap SymbolParser::makeSymbol(const QString &kind, const QString &name, int line,
                                      const QString &detail, const QVariantList &members,
                                      const QString &snippet)
@@ -4340,10 +4562,18 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
             QStringLiteral("csharp"), QStringLiteral("java"), QStringLiteral("php"),
             QStringLiteral("rust"), QStringLiteral("swift"),
         };
+        static const QSet<QString> callSiteLanguages = {
+            QStringLiteral("ts"), QStringLiteral("tsx"), QStringLiteral("script"), QStringLiteral("jsx"),
+            QStringLiteral("csharp"), QStringLiteral("java"), QStringLiteral("php"), QStringLiteral("rust"),
+            QStringLiteral("swift"), QStringLiteral("python"), QStringLiteral("go"), QStringLiteral("cpp"),
+        };
         auto withAstSignatures = [&](QVariantMap analysis, const QByteArray &bytes) {
             if (astSignatureLanguages.contains(astLanguage)) {
                 analysis.insert(QStringLiteral("symbols"),
                                 applyAstSignatures(analysis.value(QStringLiteral("symbols")).toList(), bytes, astLanguage));
+            }
+            if (callSiteLanguages.contains(astLanguage)) {
+                analysis = applyAstCallSites(analysis, bytes, astLanguage);
             }
             return analysis;
         };
@@ -4526,7 +4756,7 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
                               false);
     }
     if (language == QStringLiteral("objc")) {
-        return finalizeResult(parseObjectiveC(path, text, language), QStringLiteral("heuristic"));
+        return applyTextCallSites(finalizeResult(parseObjectiveC(path, text, language), QStringLiteral("heuristic")), text, language);
     }
     if (language == QStringLiteral("go")) {
         return analyseWithAst(language,
@@ -4538,10 +4768,10 @@ QVariantMap SymbolParser::parseFile(const QString &path) const
         return finalizeResult(parseSql(path, text), QStringLiteral("heuristic"), QStringLiteral("high"));
     }
     if (language == QStringLiteral("shell")) {
-        return finalizeResult(parseShell(path, text), QStringLiteral("heuristic"));
+        return applyTextCallSites(finalizeResult(parseShell(path, text), QStringLiteral("heuristic")), text, language);
     }
     if (language == QStringLiteral("vbnet")) {
-        return finalizeResult(parseVbNet(path, text), QStringLiteral("heuristic"), QStringLiteral("high"));
+        return applyTextCallSites(finalizeResult(parseVbNet(path, text), QStringLiteral("heuristic"), QStringLiteral("high")), text, language);
     }
     return finalizeResult(result, QStringLiteral("heuristic"), QStringLiteral("low"));
 }
@@ -9370,7 +9600,10 @@ QVariantMap SymbolParser::parseCSharpTreeSitter(const QString &path, const QStri
             if (type == QStringLiteral("using_directive")) {
                 appendDependency(child);
             } else if (type == QStringLiteral("namespace_declaration")
-                       || type == QStringLiteral("file_scoped_namespace_declaration")) {
+                       || type == QStringLiteral("file_scoped_namespace_declaration")
+                       || type == QStringLiteral("declaration_list")) {
+                // Block-scoped namespaces hold their declarations in a
+                // declaration_list body.
                 walkCSharpScope(child);
             } else if (type == QStringLiteral("class_declaration")
                        || type == QStringLiteral("interface_declaration")
@@ -11984,3 +12217,314 @@ QVariantMap SymbolParser::extractPackageSummary(const QString &path, const QStri
 
     return summary;
 }
+
+namespace {
+
+// VB.NET comments (' and REM) and string literals blanked, offsets kept.
+QString blankVbNoise(const QString &text)
+{
+    QString out = text;
+    const int size = out.size();
+    bool inString = false;
+    bool atLineStart = true;
+    for (int index = 0; index < size; ++index) {
+        const QChar ch = out.at(index);
+        if (ch == QLatin1Char('\n')) {
+            inString = false;
+            atLineStart = true;
+            continue;
+        }
+        if (inString) {
+            if (ch == QLatin1Char('"')) {
+                if (index + 1 < size && out.at(index + 1) == QLatin1Char('"')) {
+                    out[index] = QLatin1Char(' ');
+                    out[++index] = QLatin1Char(' ');
+                    continue;
+                }
+                inString = false;
+            } else {
+                out[index] = QLatin1Char(' ');
+            }
+            continue;
+        }
+        const bool remComment = atLineStart && out.mid(index, 3).compare(QStringLiteral("REM"), Qt::CaseInsensitive) == 0
+            && (index + 3 >= size || out.at(index + 3).isSpace());
+        if (ch == QLatin1Char('\'') || remComment) {
+            while (index < size && out.at(index) != QLatin1Char('\n')) {
+                out[index++] = QLatin1Char(' ');
+            }
+            --index;
+            continue;
+        }
+        if (ch == QLatin1Char('"')) {
+            inString = true;
+        }
+        if (!ch.isSpace()) {
+            atLineStart = false;
+        }
+    }
+    return out;
+}
+
+bool isTextCallSiteOwnerKind(const QString &kind)
+{
+    static const QSet<QString> kinds = {
+        QStringLiteral("function"), QStringLiteral("method"), QStringLiteral("constructor"),
+        QStringLiteral("procedure"), QStringLiteral("operator"), QStringLiteral("property"), QStringLiteral("event"),
+    };
+    return kinds.contains(kind);
+}
+
+struct TextCallSite
+{
+    QString name;
+    QString qualifier;
+    int line = 0;
+};
+
+void collectObjcSites(const QString &clean, int from, int to, const QVector<int> &lineStarts, QVector<TextCallSite> &sites)
+{
+    auto lineOf = [&](int offset) {
+        return int(std::upper_bound(lineStarts.cbegin(), lineStarts.cend(), offset) - lineStarts.cbegin());
+    };
+    for (int i = from; i < to; ++i) {
+        if (clean.at(i) != QLatin1Char('[')) {
+            continue;
+        }
+        const int close = matchingClose(clean, i, QLatin1Char('['), QLatin1Char(']'));
+        if (close < 0 || close > to) {
+            continue;
+        }
+        const QString selector = objcMessageSelector(clean, i, close);
+        if (selector.isEmpty()) {
+            continue;
+        }
+        int receiverEnd = i + 1;
+        while (receiverEnd < close && (clean.at(receiverEnd).isLetterOrNumber() || clean.at(receiverEnd) == QLatin1Char('_'))) {
+            ++receiverEnd;
+        }
+        QString receiver = clean.mid(i + 1, receiverEnd - i - 1);
+        if (receiverEnd < close && !clean.at(receiverEnd).isSpace()) {
+            receiver = QStringLiteral("(expression)");
+        }
+        sites.append({selector, receiver.isEmpty() ? QStringLiteral("(expression)") : receiver, lineOf(i)});
+    }
+    static const QRegularExpression cCall(QStringLiteral(R"((?<![\w.>@:])([A-Za-z_]\w*)\s*\()"));
+    static const QSet<QString> keywords = {
+        QStringLiteral("if"), QStringLiteral("for"), QStringLiteral("while"), QStringLiteral("switch"),
+        QStringLiteral("return"), QStringLiteral("sizeof"), QStringLiteral("typeof"), QStringLiteral("catch"),
+        QStringLiteral("selector"), QStringLiteral("encode"), QStringLiteral("protocol"), QStringLiteral("synchronized"),
+        QStringLiteral("autoreleasepool"), QStringLiteral("defined"), QStringLiteral("NSLog"), QStringLiteral("assert"),
+        QStringLiteral("__typeof__"), QStringLiteral("__typeof"), QStringLiteral("dispatch_async"),
+    };
+    auto it = cCall.globalMatch(clean.mid(from, to - from));
+    while (it.hasNext()) {
+        const auto match = it.next();
+        const QString name = match.captured(1);
+        if (!keywords.contains(name)) {
+            sites.append({name, QString(), lineOf(from + match.capturedStart(1))});
+        }
+    }
+}
+
+void collectVbSites(const QStringList &lines, int fromLine, int toLine, QVector<TextCallSite> &sites)
+{
+    static const QRegularExpression call(QStringLiteral(R"((?<![\w.])(?:([A-Za-z_]\w*)\.)?([A-Za-z_]\w*)\s*\()"));
+    static const QRegularExpression construct(QStringLiteral(R"(\bNew\s+([A-Za-z_][\w.]*))"),
+                                              QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression callStatement(QStringLiteral(R"(^\s*Call\s+(?:([A-Za-z_]\w*)\.)?([A-Za-z_]\w*))"),
+                                                  QRegularExpression::CaseInsensitiveOption);
+    static const QSet<QString> keywords = {
+        QStringLiteral("if"), QStringLiteral("elseif"), QStringLiteral("while"), QStringLiteral("for"),
+        QStringLiteral("select"), QStringLiteral("case"), QStringLiteral("ctype"), QStringLiteral("directcast"),
+        QStringLiteral("trycast"), QStringLiteral("cint"), QStringLiteral("cstr"), QStringLiteral("cdbl"),
+        QStringLiteral("cbool"), QStringLiteral("clng"), QStringLiteral("cdate"), QStringLiteral("cobj"),
+        QStringLiteral("cdec"), QStringLiteral("csng"), QStringLiteral("cshort"), QStringLiteral("cbyte"),
+        QStringLiteral("cchar"), QStringLiteral("gettype"), QStringLiteral("nameof"), QStringLiteral("addressof"),
+        QStringLiteral("sub"), QStringLiteral("function"), QStringLiteral("new"), QStringLiteral("not"),
+        QStringLiteral("and"), QStringLiteral("or"), QStringLiteral("andalso"), QStringLiteral("orelse"),
+        QStringLiteral("return"), QStringLiteral("dim"), QStringLiteral("as"), QStringLiteral("of"),
+        QStringLiteral("using"), QStringLiteral("with"), QStringLiteral("catch"), QStringLiteral("when"),
+        QStringLiteral("until"), QStringLiteral("is"), QStringLiteral("isnot"), QStringLiteral("typeof"),
+        QStringLiteral("throw"), QStringLiteral("handles"), QStringLiteral("implements"), QStringLiteral("property"),
+        QStringLiteral("get"), QStringLiteral("set"), QStringLiteral("in"), QStringLiteral("to"), QStringLiteral("step"),
+        QStringLiteral("do"), QStringLiteral("loop"), QStringLiteral("then"), QStringLiteral("else"),
+        QStringLiteral("iif"), QStringLiteral("if"), QStringLiteral("synclock"), QStringLiteral("raiseevent"),
+    };
+    for (int lineNumber = fromLine; lineNumber <= toLine && lineNumber <= lines.size(); ++lineNumber) {
+        const QString &line = lines.at(lineNumber - 1);
+        QSet<int> constructed;
+        auto constructIt = construct.globalMatch(line);
+        while (constructIt.hasNext()) {
+            const auto match = constructIt.next();
+            const QString type = match.captured(1).section(QLatin1Char('.'), -1);
+            sites.append({type, QStringLiteral("new"), lineNumber});
+            constructed.insert(match.capturedStart(1) + match.captured(1).size() - type.size());
+        }
+        const auto statement = callStatement.match(line);
+        if (statement.hasMatch()) {
+            sites.append({statement.captured(2), statement.captured(1), lineNumber});
+        }
+        auto callIt = call.globalMatch(line);
+        while (callIt.hasNext()) {
+            const auto match = callIt.next();
+            const QString name = match.captured(2);
+            if (keywords.contains(name.toLower()) || constructed.contains(match.capturedStart(2))) {
+                continue;
+            }
+            // `RaiseEvent Changed(...)` is not a call of a method.
+            const QString before = line.left(match.capturedStart(0)).trimmed();
+            if (before.endsWith(QStringLiteral("RaiseEvent"), Qt::CaseInsensitive)
+                || before.endsWith(QStringLiteral(" As"), Qt::CaseInsensitive)) {
+                continue;
+            }
+            sites.append({name, match.captured(1), lineNumber});
+        }
+    }
+}
+
+void collectShellSites(const QStringList &lines, int fromLine, int toLine, QVector<TextCallSite> &sites)
+{
+    static const QRegularExpression separators(QStringLiteral(R"(;|&&|\|\||\||\$\(|`|\{|\(|\)|\})"));
+    static const QSet<QString> prefixes = {
+        QStringLiteral("if"), QStringLiteral("then"), QStringLiteral("else"), QStringLiteral("elif"),
+        QStringLiteral("while"), QStringLiteral("until"), QStringLiteral("do"), QStringLiteral("!"),
+        QStringLiteral("time"), QStringLiteral("exec"), QStringLiteral("command"), QStringLiteral("builtin"),
+        QStringLiteral("nohup"), QStringLiteral("eval"),
+    };
+    static const QSet<QString> nonCommands = {
+        QStringLiteral("fi"), QStringLiteral("done"), QStringLiteral("esac"), QStringLiteral("for"),
+        QStringLiteral("case"), QStringLiteral("in"), QStringLiteral("function"), QStringLiteral("select"),
+        QStringLiteral("local"), QStringLiteral("export"), QStringLiteral("declare"), QStringLiteral("readonly"),
+        QStringLiteral("typeset"), QStringLiteral("return"), QStringLiteral("exit"), QStringLiteral("set"),
+        QStringLiteral("unset"), QStringLiteral("shift"), QStringLiteral("source"), QStringLiteral("."),
+        QStringLiteral("test"), QStringLiteral("["), QStringLiteral("[["), QStringLiteral("]]"), QStringLiteral("]"),
+        QStringLiteral("echo"), QStringLiteral("printf"), QStringLiteral("cd"), QStringLiteral("true"),
+        QStringLiteral("false"), QStringLiteral("break"), QStringLiteral("continue"), QStringLiteral("trap"),
+    };
+    static const QRegularExpression word(QStringLiteral(R"(^[A-Za-z_][\w:.-]*$)"));
+    for (int lineNumber = fromLine; lineNumber <= toLine && lineNumber <= lines.size(); ++lineNumber) {
+        const QString line = lines.at(lineNumber - 1);
+        for (const QString &segment : line.split(separators)) {
+            const QStringList words = segment.split(QRegularExpression(QStringLiteral(R"(\s+)")), Qt::SkipEmptyParts);
+            int index = 0;
+            while (index < words.size()
+                   && (prefixes.contains(words.at(index)) || words.at(index).contains(QLatin1Char('=')))) {
+                ++index; // keywords and VAR=value prefixes
+            }
+            if (index >= words.size()) {
+                continue;
+            }
+            const QString command = words.at(index);
+            if (nonCommands.contains(command) || !word.match(command).hasMatch()) {
+                continue;
+            }
+            sites.append({command, QString(), lineNumber});
+        }
+    }
+}
+
+QVariantList siteListFor(const QVector<TextCallSite> &sites, int limit)
+{
+    QVariantList list;
+    QSet<QString> seen;
+    for (const TextCallSite &site : sites) {
+        const QString id = site.qualifier + QLatin1Char('|') + site.name;
+        if (site.name.isEmpty() || seen.contains(id)) {
+            continue;
+        }
+        seen.insert(id);
+        QVariantMap entry{{QStringLiteral("name"), site.name}, {QStringLiteral("line"), site.line}};
+        if (!site.qualifier.isEmpty()) {
+            entry.insert(QStringLiteral("qualifier"), site.qualifier);
+        }
+        list.append(entry);
+        if (list.size() >= limit) {
+            break;
+        }
+    }
+    return list;
+}
+
+QVariantMap applyTextCallSites(QVariantMap analysis, const QString &text, const QString &language)
+{
+    QString clean;
+    if (language == QStringLiteral("objc")) {
+        clean = blankCFamilyNoise(text);
+    } else if (language == QStringLiteral("shell")) {
+        clean = blankShellNoise(text);
+    } else if (language == QStringLiteral("vbnet")) {
+        clean = blankVbNoise(text);
+    } else {
+        return analysis;
+    }
+    const QStringList lines = clean.split(QLatin1Char('\n'));
+    QVector<int> lineStarts;
+    lineStarts.reserve(lines.size());
+    int offset = 0;
+    for (const QString &line : lines) {
+        lineStarts.append(offset);
+        offset += line.size() + 1;
+    }
+
+    auto sitesBetween = [&](int fromLine, int toLine) {
+        QVector<TextCallSite> sites;
+        if (fromLine > toLine) {
+            return sites;
+        }
+        if (language == QStringLiteral("objc")) {
+            const int from = lineStarts.value(fromLine - 1, clean.size());
+            const int to = toLine < lines.size() ? lineStarts.at(toLine) : clean.size();
+            collectObjcSites(clean, from, qMin(to, clean.size()), lineStarts, sites);
+        } else if (language == QStringLiteral("vbnet")) {
+            collectVbSites(lines, fromLine, toLine, sites);
+        } else {
+            collectShellSites(lines, fromLine, toLine, sites);
+        }
+        return sites;
+    };
+
+    QVector<bool> covered(lines.size() + 2, false);
+    std::function<QVariantList(QVariantList, int)> apply = [&](QVariantList symbols, int depth) {
+        for (int index = 0; index < symbols.size(); ++index) {
+            QVariantMap symbol = symbols.at(index).toMap();
+            const int line = symbol.value(QStringLiteral("line")).toInt();
+            const int endLine = symbol.value(QStringLiteral("endLine")).toInt();
+            if (depth < 3) {
+                symbol.insert(QStringLiteral("members"), apply(symbol.value(QStringLiteral("members")).toList(), depth + 1));
+            }
+            covered[qBound(0, line, int(covered.size()) - 1)] = true; // declaration lines are not module code
+            if (isTextCallSiteOwnerKind(symbol.value(QStringLiteral("kind")).toString()) && endLine > line) {
+                for (int covering = line; covering <= endLine && covering < covered.size(); ++covering) {
+                    covered[covering] = true;
+                }
+                const QVariantList sites = siteListFor(sitesBetween(line + 1, endLine), 200);
+                if (!sites.isEmpty()) {
+                    symbol.insert(QStringLiteral("callSites"), sites);
+                }
+            }
+            symbols[index] = symbol;
+        }
+        return symbols;
+    };
+    analysis.insert(QStringLiteral("symbols"), apply(analysis.value(QStringLiteral("symbols")).toList(), 0));
+
+    QVector<TextCallSite> moduleSites;
+    int runStart = 0;
+    for (int line = 1; line <= lines.size() + 1; ++line) {
+        const bool isCovered = line > lines.size() || covered.at(line);
+        if (!isCovered && runStart == 0) {
+            runStart = line;
+        } else if (isCovered && runStart > 0) {
+            moduleSites += sitesBetween(runStart, line - 1);
+            runStart = 0;
+        }
+    }
+    const QVariantList moduleList = siteListFor(moduleSites, 300);
+    if (!moduleList.isEmpty()) {
+        analysis.insert(QStringLiteral("moduleCallSites"), moduleList);
+    }
+    return analysis;
+}
+
+} // namespace
