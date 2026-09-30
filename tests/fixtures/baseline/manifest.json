@@ -2315,6 +2315,76 @@
           ]
         }
       ]
+    },
+    {
+      "name": "ruby_structure_signatures",
+      "root": "tests/fixtures/baseline/ruby_basic",
+      "file": "lib/pricing.rb",
+      "expectations": [
+        {
+          "kind": "module",
+          "name": "Shop"
+        },
+        {
+          "kind": "class",
+          "name": "Pricing"
+        },
+        {
+          "kind": "constant",
+          "name": "TAX_RATE"
+        },
+        {
+          "kind": "property",
+          "name": "currency"
+        },
+        {
+          "kind": "constructor",
+          "name": "initialize",
+          "parameters": [
+            "currency",
+            "rounding:"
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "total",
+          "parameters": [
+            "items",
+            "discount"
+          ],
+          "calls": [
+            "with_tax"
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "with_tax",
+          "parameters": [
+            "amount"
+          ],
+          "calledBy": [
+            "total"
+          ]
+        },
+        {
+          "kind": "method",
+          "name": "for_region"
+        },
+        {
+          "kind": "method",
+          "name": "describe"
+        }
+      ]
+    },
+    {
+      "name": "ruby_sinatra_routes_requires",
+      "root": "tests/fixtures/baseline/ruby_basic",
+      "file": "app.rb",
+      "file_expectations": {
+        "routes": 2,
+        "dependencies": 2
+      },
+      "expectations": []
     }
   ]
 }

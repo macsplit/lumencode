@@ -5489,6 +5489,9 @@ QVariantMap SymbolParser::parseFileAnalysis(const QString &path) const
     if (language == QStringLiteral("shell")) {
         return applyTextCallSites(finalizeResult(parseShell(path, text), QStringLiteral("heuristic")), text, language);
     }
+    if (language == QStringLiteral("ruby")) {
+        return finalizeResult(parseRuby(path, text), QStringLiteral("heuristic"), QStringLiteral("high"));
+    }
     if (language == QStringLiteral("kotlin")) {
         return finalizeResult(parseKotlin(path, text), QStringLiteral("heuristic"), QStringLiteral("high"));
     }
@@ -11802,6 +11805,611 @@ QVariantMap SymbolParser::parseKotlin(const QString &path, const QString &text) 
     return result;
 }
 
+namespace {
+
+// Ruby comments, =begin/=end blocks, strings (with #{...} interpolation),
+// %-literals and heredoc bodies blanked; newlines and offsets kept.
+QString blankRubyNoise(const QString &text)
+{
+    QString out = text;
+    const int size = out.size();
+    auto blank = [&](int from, int to) {
+        for (int i = from; i < to && i < size; ++i) {
+            if (out.at(i) != QLatin1Char('\n')) {
+                out[i] = QLatin1Char(' ');
+            }
+        }
+    };
+    QStringList pendingHeredocs; // terminators waiting for the next line
+    std::function<int(int, QChar, QChar, bool)> skipDelimited = [&](int start, QChar open, QChar close, bool interpolate) -> int {
+        int depth = 1;
+        int i = start;
+        while (i < size) {
+            const QChar ch = out.at(i);
+            if (ch == QLatin1Char('\\')) {
+                i += 2;
+                continue;
+            }
+            if (interpolate && ch == QLatin1Char('#') && i + 1 < size && out.at(i + 1) == QLatin1Char('{')) {
+                i = skipDelimited(i + 2, QLatin1Char('{'), QLatin1Char('}'), true);
+                continue;
+            }
+            if (open != close && ch == open) {
+                ++depth;
+            } else if (ch == close && --depth == 0) {
+                return i + 1;
+            }
+            ++i;
+        }
+        return size;
+    };
+    auto closerFor = [](QChar open) {
+        return open == QLatin1Char('(') ? QLatin1Char(')') : open == QLatin1Char('[') ? QLatin1Char(']')
+            : open == QLatin1Char('{') ? QLatin1Char('}') : open == QLatin1Char('<') ? QLatin1Char('>') : open;
+    };
+    bool lineStart = true;
+    int index = 0;
+    while (index < size) {
+        const QChar ch = out.at(index);
+        if (ch == QLatin1Char('\n')) {
+            lineStart = true;
+            ++index;
+            // Heredoc bodies start on the next line.
+            while (!pendingHeredocs.isEmpty() && index < size) {
+                const QString terminator = pendingHeredocs.takeFirst();
+                int lineBegin = index;
+                while (lineBegin < size) {
+                    int lineEnd = out.indexOf(QLatin1Char('\n'), lineBegin);
+                    lineEnd = lineEnd < 0 ? size : lineEnd;
+                    const bool last = out.mid(lineBegin, lineEnd - lineBegin).trimmed() == terminator;
+                    if (!last) {
+                        blank(lineBegin, lineEnd);
+                    }
+                    lineBegin = lineEnd + 1;
+                    if (last) {
+                        break;
+                    }
+                }
+                index = qMin(size, lineBegin);
+            }
+            continue;
+        }
+        if (lineStart && out.mid(index, 6) == QStringLiteral("=begin")) {
+            int end = out.indexOf(QStringLiteral("\n=end"), index);
+            end = end < 0 ? size : out.indexOf(QLatin1Char('\n'), end + 1);
+            end = end < 0 ? size : end;
+            blank(index, end);
+            index = end;
+            continue;
+        }
+        if (!ch.isSpace()) {
+            lineStart = false;
+        }
+        if (ch == QLatin1Char('#')) {
+            int end = out.indexOf(QLatin1Char('\n'), index);
+            end = end < 0 ? size : end;
+            blank(index, end);
+            index = end;
+        } else if (ch == QLatin1Char('"') || ch == QLatin1Char('`') || ch == QLatin1Char('\'')) {
+            // Quoted strings end at the line end: multi-line text is written
+            // as heredocs in practice, and an unterminated quote must not
+            // swallow the rest of the file.
+            int end = index + 1;
+            while (end < size && out.at(end) != ch && out.at(end) != QLatin1Char('\n')) {
+                if (out.at(end) == QLatin1Char('\\')) {
+                    end += 2;
+                } else if (ch != QLatin1Char('\'') && out.at(end) == QLatin1Char('#') && end + 1 < size
+                           && out.at(end + 1) == QLatin1Char('{')) {
+                    const int close = skipDelimited(end + 2, QLatin1Char('{'), QLatin1Char('}'), true);
+                    const int newline = out.indexOf(QLatin1Char('\n'), end);
+                    end = newline >= 0 && newline < close ? newline : close;
+                } else {
+                    ++end;
+                }
+            }
+            blank(index + 1, qMin(end, size));
+            index = end < size && out.at(end) == ch ? end + 1 : end;
+        } else if (ch == QLatin1Char('%') && index + 2 < size
+                   && (QStringLiteral("qQwWiIrsx").contains(out.at(index + 1)) || QStringLiteral("([{<|!/").contains(out.at(index + 1)))) {
+            int open = index + 1;
+            if (out.at(open).isLetter()) {
+                ++open;
+            }
+            const QChar delimiter = out.at(open);
+            if (delimiter.isLetterOrNumber() || delimiter.isSpace()) {
+                ++index; // modulo operator
+                continue;
+            }
+            const int end = skipDelimited(open + 1, delimiter, closerFor(delimiter), true);
+            blank(open + 1, end - 1);
+            index = end;
+        } else if (ch == QLatin1Char('<') && out.mid(index, 2) == QStringLiteral("<<")) {
+            static const QRegularExpression heredoc(QStringLiteral(R"(^<<([~-]?)(['"]?)([A-Z_][A-Z0-9_]*)\2)"));
+            const auto match = heredoc.match(out.mid(index, 60));
+            if (match.hasMatch()) {
+                pendingHeredocs.append(match.captured(3));
+                index += match.capturedLength();
+            } else {
+                index += 2;
+            }
+        } else if (ch == QLatin1Char('?') && index + 1 < size && index > 0 && out.at(index - 1).isSpace()
+                   && !out.at(index + 1).isSpace() && (index + 2 >= size || !out.at(index + 2).isLetterOrNumber())) {
+            index += 2; // character literal ?x
+        } else {
+            ++index;
+        }
+    }
+    return out;
+}
+
+int rubyIndent(const QString &line)
+{
+    int width = 0;
+    for (const QChar ch : line) {
+        if (ch == QLatin1Char(' ')) {
+            ++width;
+        } else if (ch == QLatin1Char('\t')) {
+            width += 2;
+        } else {
+            break;
+        }
+    }
+    return width;
+}
+
+} // namespace
+
+QVariantMap SymbolParser::parseRuby(const QString &path, const QString &text) const
+{
+    QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("ruby"));
+    const QString clean = blankRubyNoise(text);
+    const QStringList lines = clean.split(QLatin1Char('\n'));
+    const QStringList textLines = text.split(QLatin1Char('\n'));
+
+    struct Frame
+    {
+        QString kind; // module / class / def / block
+        int indent = 0;
+        int line = 0; // 1-based
+        QVariantMap symbol; // for module / class / def
+        QVariantList members;
+        bool classMethods = false; // inside `class << self`
+    };
+    QVector<Frame> stack;
+    QVariantList symbols;
+    struct Body { QString key; int from; int to; };
+    QList<Body> bodies;
+    QHash<QString, int> bodyStart; // symbol key -> first line
+
+    auto snippetFor = [&](int from, int to) {
+        QStringList out;
+        for (int line = from; line <= to && line <= textLines.size() && out.size() < 10; ++line) {
+            out.append(textLines.at(line - 1));
+        }
+        if (to - from + 1 > 10) {
+            out.append(QStringLiteral("..."));
+        }
+        return out.join(QLatin1Char('\n'));
+    };
+    // Close the frame on top, attaching its symbol to its parent.
+    auto closeTop = [&](int endLine) {
+        Frame frame = stack.takeLast();
+        if (frame.kind == QStringLiteral("block") || frame.symbol.isEmpty()) {
+            if (frame.kind == QStringLiteral("singleton") && !stack.isEmpty()) {
+                stack.last().members += frame.members;
+            }
+            return;
+        }
+        QVariantMap symbol = frame.symbol;
+        symbol.insert(QStringLiteral("members"), frame.members);
+        symbol.insert(QStringLiteral("endLine"), endLine);
+        symbol.insert(QStringLiteral("snippet"), snippetFor(frame.line, endLine));
+        if (frame.kind == QStringLiteral("def") || (frame.kind == QStringLiteral("spec") && frame.members.isEmpty())) {
+            bodies.append({symbolKey(symbol), frame.line, endLine});
+        }
+        if (stack.isEmpty()) {
+            symbols.append(symbol);
+        } else {
+            stack.last().members.append(symbol);
+        }
+    };
+    auto addToScope = [&](const QVariantMap &symbol) {
+        if (stack.isEmpty()) {
+            symbols.append(symbol);
+        } else {
+            for (int index = stack.size() - 1; index >= 0; --index) {
+                if (stack.at(index).kind != QStringLiteral("block")) {
+                    stack[index].members.append(symbol);
+                    return;
+                }
+            }
+            symbols.append(symbol);
+        }
+    };
+    auto insideDef = [&]() {
+        for (const Frame &frame : stack) {
+            if (frame.kind == QStringLiteral("def")) {
+                return true;
+            }
+        }
+        return false;
+    };
+    auto owner = [&]() {
+        for (int index = stack.size() - 1; index >= 0; --index) {
+            if (stack.at(index).kind == QStringLiteral("class") || stack.at(index).kind == QStringLiteral("module")) {
+                return stack.at(index).symbol.value(QStringLiteral("name")).toString();
+            }
+        }
+        return QString();
+    };
+
+    static const QRegularExpression classPattern(QStringLiteral(R"(^class\s+([A-Z][\w:]*)(?:\s*<\s*([\w:.]+))?)"));
+    static const QRegularExpression singletonPattern(QStringLiteral(R"(^class\s*<<\s*self\b)"));
+    static const QRegularExpression modulePattern(QStringLiteral(R"(^module\s+([A-Z][\w:]*))"));
+    static const QRegularExpression defPattern(QStringLiteral(
+        R"(^def\s+(?:(self|[A-Z]\w*)\.)?([A-Za-z_]\w*[?!=]?|\[\]=?|<=>|===?|=~|![=~]?|[+\-*/%<>]=?|\*\*|<<|>>|[&|^~]|[+-]@)\s*(\(([^)]*)\)|[^\n=;]*)?\s*(=(?!=))?)"));
+    static const QRegularExpression openerKeyword(QStringLiteral(R"(^(if|unless|while|until|case|begin|for)\b)"));
+    static const QRegularExpression doBlock(QStringLiteral(R"(\bdo\s*(\|[^|]*\|)?\s*$)"));
+    static const QRegularExpression attrPattern(QStringLiteral(R"(^attr_(accessor|reader|writer)\s+(.+)$)"));
+    static const QRegularExpression constantPattern(QStringLiteral(R"(^([A-Z][A-Z0-9_]*)\s*=(?!=))"));
+    static const QRegularExpression endPattern(QStringLiteral(R"(^end\b)"));
+    static const QRegularExpression inlineEnd(QStringLiteral(R"((?:;|\s)end\s*$)"));
+    static const QRegularExpression testBlock(QStringLiteral(
+        R"(^(?:RSpec\.)?(describe|context|feature|scenario|it|specify|test|before|after|around|let!?|subject|shared_examples)\b\s*\(?\s*(:?[\w:]+|['"][^'"]*['"])?.*\bdo\b\s*(\|[^|]*\|)?\s*$)"));
+    static const QRegularExpression modifierPrefix(QStringLiteral(R"(^(?:private|protected|public|module_function)\s+(?=def\b))"));
+
+    for (int index = 0; index < lines.size(); ++index) {
+        const int lineNumber = index + 1;
+        QString line = lines.at(index);
+        const int indent = rubyIndent(line);
+        QString statement = line.trimmed();
+        if (statement.isEmpty()) {
+            continue;
+        }
+        statement.remove(modifierPrefix);
+
+        const bool isDeclaration = statement.startsWith(QStringLiteral("def ")) || statement.startsWith(QStringLiteral("class "))
+            || statement.startsWith(QStringLiteral("class<<")) || statement.startsWith(QStringLiteral("module "))
+            || testBlock.match(textLines.value(index).trimmed()).hasMatch();
+        // A declaration at or left of an open def/class/module's column closes
+        // it (a missing `end` costs only that block).
+        if (isDeclaration) {
+            while (!stack.isEmpty() && indent <= stack.constLast().indent && stack.constLast().kind != QStringLiteral("singleton")) {
+                closeTop(lineNumber - 1);
+            }
+        }
+
+        if (endPattern.match(statement).hasMatch()) {
+            // `end` closes the innermost frame at this indentation (outdented
+            // frames left open by a missing `end` are closed with it).
+            while (stack.size() > 1 && stack.constLast().indent > indent) {
+                closeTop(lineNumber);
+            }
+            if (!stack.isEmpty()) {
+                closeTop(lineNumber);
+            }
+            continue;
+        }
+
+        if (const auto match = singletonPattern.match(statement); match.hasMatch()) {
+            Frame frame;
+            frame.kind = QStringLiteral("singleton");
+            frame.indent = indent;
+            frame.line = lineNumber;
+            frame.classMethods = true;
+            stack.append(frame);
+            continue;
+        }
+        if (const auto match = classPattern.match(statement); match.hasMatch()) {
+            Frame frame;
+            frame.kind = QStringLiteral("class");
+            frame.indent = indent;
+            frame.line = lineNumber;
+            frame.symbol = makeSymbol(QStringLiteral("class"), match.captured(1).section(QStringLiteral("::"), -1), lineNumber,
+                                      match.captured(2).isEmpty() ? QString() : QStringLiteral("< ") + match.captured(2), {},
+                                      snippetFromLine(text, lineNumber, 2));
+            stack.append(frame);
+            if (inlineEnd.match(statement).hasMatch()) {
+                closeTop(lineNumber);
+            }
+            continue;
+        }
+        if (const auto match = modulePattern.match(statement); match.hasMatch()) {
+            Frame frame;
+            frame.kind = QStringLiteral("module");
+            frame.indent = indent;
+            frame.line = lineNumber;
+            frame.symbol = makeSymbol(QStringLiteral("module"), match.captured(1).section(QStringLiteral("::"), -1), lineNumber,
+                                      QString(), {}, snippetFromLine(text, lineNumber, 2));
+            stack.append(frame);
+            if (inlineEnd.match(statement).hasMatch()) {
+                closeTop(lineNumber);
+            }
+            continue;
+        }
+        if (const auto match = defPattern.match(statement); match.hasMatch()) {
+            const bool singleton = !match.captured(1).isEmpty() || (!stack.isEmpty() && stack.constLast().classMethods);
+            const QString scope = owner();
+            QString kind = scope.isEmpty() ? QStringLiteral("function") : QStringLiteral("method");
+            if (match.captured(2) == QStringLiteral("initialize")) {
+                kind = QStringLiteral("constructor");
+            }
+            QVariantMap symbol = makeSymbol(kind, match.captured(2), lineNumber, singleton ? QStringLiteral("class method") : QString(),
+                                            {}, snippetFromLine(text, lineNumber, 2));
+            QVariantList parameters;
+            QString list = match.captured(4);
+            if (list.isEmpty() && !match.captured(3).startsWith(QLatin1Char('('))) {
+                list = match.captured(3); // def foo a, b
+            }
+            // Parameters come from the original text (defaults may hold strings).
+            const QString originalHeader = textLines.value(index);
+            const int open = originalHeader.indexOf(QLatin1Char('('));
+            int close = -1;
+            for (int i = open, depth = 0; open >= 0 && i < originalHeader.size(); ++i) {
+                if (originalHeader.at(i) == QLatin1Char('(')) {
+                    ++depth;
+                } else if (originalHeader.at(i) == QLatin1Char(')') && --depth == 0) {
+                    close = i;
+                    break;
+                }
+            }
+            if (open >= 0 && close > open && match.captured(3).startsWith(QLatin1Char('('))) {
+                list = originalHeader.mid(open + 1, close - open - 1);
+            }
+            for (const QString &raw : splitTopLevelSignatureParts(list.simplified())) {
+                const QString part = raw.trimmed();
+                if (part.isEmpty()) {
+                    continue;
+                }
+                static const QRegularExpression parameter(QStringLiteral(R"(^([*&]{0,2})([A-Za-z_]\w*)?\s*(:)?\s*(?:=\s*(.*))?(?::\s*(.*))?$)"));
+                const auto parameterMatch = parameter.match(part);
+                QString name = parameterMatch.captured(1) + parameterMatch.captured(2);
+                if (!parameterMatch.captured(3).isEmpty()) {
+                    name += QLatin1Char(':'); // keyword argument
+                }
+                if (name.isEmpty()) {
+                    name = part;
+                }
+                QVariantMap item = makeSignatureParameter(name, QString());
+                QString defaultValue = parameterMatch.captured(4).trimmed();
+                if (defaultValue.isEmpty() && part.contains(QLatin1Char(':')) && !part.endsWith(QLatin1Char(':'))) {
+                    defaultValue = part.section(QLatin1Char(':'), 1).trimmed();
+                }
+                if (!defaultValue.isEmpty()) {
+                    item.insert(QStringLiteral("default"), defaultValue.left(60));
+                }
+                parameters.append(item);
+            }
+            symbol.insert(QStringLiteral("parameters"), parameters);
+            symbol.insert(QStringLiteral("returns"), QVariantList{QVariantMap{{QStringLiteral("text"), QStringLiteral("inferred")}}});
+            symbol.insert(QStringLiteral("signatureSource"), QStringLiteral("parser"));
+            const bool endless = !match.captured(5).isEmpty();
+            const bool oneLine = inlineEnd.match(statement).hasMatch();
+            if (endless || oneLine) {
+                symbol.insert(QStringLiteral("endLine"), lineNumber);
+                bodies.append({symbolKey(symbol), lineNumber, lineNumber});
+                addToScope(symbol);
+                continue;
+            }
+            Frame frame;
+            frame.kind = QStringLiteral("def");
+            frame.indent = indent;
+            frame.line = lineNumber;
+            frame.symbol = symbol;
+            stack.append(frame);
+            continue;
+        }
+
+        // Non-declaration statements.
+        if (!insideDef()) {
+            if (const auto match = attrPattern.match(statement); match.hasMatch()) {
+                static const QRegularExpression symbolName(QStringLiteral(R"(:([A-Za-z_]\w*))"));
+                auto it = symbolName.globalMatch(match.captured(2));
+                while (it.hasNext()) {
+                    addToScope(makeSymbol(QStringLiteral("property"), it.next().captured(1), lineNumber,
+                                          QStringLiteral("attr_") + match.captured(1), {}, snippetFromLine(text, lineNumber, 0)));
+                }
+            } else if (const auto match = constantPattern.match(statement); match.hasMatch() && !owner().isEmpty()) {
+                addToScope(makeSymbol(QStringLiteral("constant"), match.captured(1), lineNumber, QString(), {},
+                                      snippetFromLine(text, lineNumber, 0)));
+            }
+        }
+        // RSpec / Minitest spec blocks: describe / context / it ... do.
+        const QString originalStatement = textLines.value(index).trimmed();
+        if (const auto match = testBlock.match(originalStatement); match.hasMatch() && !insideDef()) {
+            const QString verb = match.captured(1);
+            QString name = match.captured(2);
+            if (name.startsWith(QLatin1Char('\'')) || name.startsWith(QLatin1Char('"'))) {
+                name = name.mid(1, name.size() - 2);
+            }
+            QString kind = QStringLiteral("test");
+            if (verb == QStringLiteral("describe") || verb == QStringLiteral("context") || verb == QStringLiteral("feature")
+                || verb == QStringLiteral("shared_examples")) {
+                kind = QStringLiteral("test suite");
+            } else if (verb == QStringLiteral("before") || verb == QStringLiteral("after") || verb == QStringLiteral("around")
+                       || verb.startsWith(QStringLiteral("let")) || verb == QStringLiteral("subject")) {
+                kind = QStringLiteral("test hook");
+                name = name.isEmpty() ? verb : verb + QLatin1Char(' ') + name;
+            }
+            if (name.isEmpty()) {
+                name = verb;
+            }
+            Frame frame;
+            frame.kind = QStringLiteral("spec");
+            frame.indent = indent;
+            frame.line = lineNumber;
+            frame.symbol = makeSymbol(kind, name, lineNumber, verb, {}, snippetFromLine(text, lineNumber, 2));
+            stack.append(frame);
+            continue;
+        }
+        // Blocks that need an `end`: control structures at statement start
+        // (not modifiers), `x = if ...`, and `do` blocks.
+        QString head = statement;
+        static const QRegularExpression assignment(QStringLiteral(R"(^[\w@$.\[\]]+\s*(?:\|\||&&|[+\-*/])?=\s*(?=(?:if|unless|case|begin|while|until)\b))"));
+        head.remove(assignment);
+        const bool opensControl = openerKeyword.match(head).hasMatch() && !inlineEnd.match(statement).hasMatch();
+        const bool opensDo = doBlock.match(statement).hasMatch();
+        if (opensControl || opensDo) {
+            Frame frame;
+            frame.kind = QStringLiteral("block");
+            frame.indent = indent;
+            frame.line = lineNumber;
+            stack.append(frame);
+        }
+    }
+    while (!stack.isEmpty()) {
+        closeTop(lines.size());
+    }
+
+    // Calls within method bodies: same-file relations and index call sites.
+    QHash<QString, QVariantMap> byKey;
+    QHash<QString, QStringList> keysByName;
+    collectSymbolsByKey(symbols, byKey, keysByName);
+    QHash<QString, QVariantList> callsByKey;
+    QHash<QString, QVariantList> calledByByKey;
+    QHash<QString, QVariantList> sitesByKey;
+    static const QRegularExpression call(QStringLiteral(R"((?:([A-Za-z_@][\w:]*|\))\s*(?:&\.|\.)\s*)?\b([a-z_]\w*[?!]?)(?=\s*\(|\s+[\w:@'"\[]|\s*$|\s*\.|\s*\))|(?:\b|::)([A-Z]\w*)\.new\b)"),
+                                            QRegularExpression::MultilineOption);
+    static const QSet<QString> keywords = {
+        QStringLiteral("if"), QStringLiteral("unless"), QStringLiteral("while"), QStringLiteral("until"), QStringLiteral("case"),
+        QStringLiteral("when"), QStringLiteral("then"), QStringLiteral("else"), QStringLiteral("elsif"), QStringLiteral("end"),
+        QStringLiteral("do"), QStringLiteral("return"), QStringLiteral("yield"), QStringLiteral("super"), QStringLiteral("self"),
+        QStringLiteral("nil"), QStringLiteral("true"), QStringLiteral("false"), QStringLiteral("and"), QStringLiteral("or"),
+        QStringLiteral("not"), QStringLiteral("in"), QStringLiteral("def"), QStringLiteral("begin"), QStringLiteral("rescue"),
+        QStringLiteral("ensure"), QStringLiteral("raise"), QStringLiteral("puts"), QStringLiteral("require"), QStringLiteral("new"),
+        QStringLiteral("lambda"), QStringLiteral("proc"), QStringLiteral("loop"), QStringLiteral("next"), QStringLiteral("break"),
+        QStringLiteral("redo"), QStringLiteral("retry"), QStringLiteral("defined?"), QStringLiteral("p"), QStringLiteral("pp"),
+    };
+    for (const Body &body : std::as_const(bodies)) {
+        QSet<QString> seen;
+        QVariantList sites;
+        const int firstLine = body.from == body.to ? body.from : body.from + 1;
+        for (int line = firstLine; line <= body.to && line <= lines.size(); ++line) {
+            QString code = lines.at(line - 1);
+            if (line == body.from) {
+                const int equals = code.indexOf(QLatin1Char('='));
+                code = equals >= 0 ? code.mid(equals + 1) : QString(); // endless / one-line def body
+            }
+            auto it = call.globalMatch(code);
+            while (it.hasNext()) {
+                const auto match = it.next();
+                QString name = match.captured(2);
+                QString qualifier = match.captured(1) == QStringLiteral(")") ? QStringLiteral("(expression)") : match.captured(1);
+                if (!match.captured(3).isEmpty()) {
+                    name = match.captured(3);
+                    qualifier = QStringLiteral("new");
+                }
+                if (name.isEmpty() || keywords.contains(name)) {
+                    continue;
+                }
+                const QString id = qualifier + QLatin1Char('|') + name;
+                if (!seen.contains(id) && sites.size() < 200) {
+                    seen.insert(id);
+                    QVariantMap site{{QStringLiteral("name"), name}, {QStringLiteral("line"), line}};
+                    if (!qualifier.isEmpty()) {
+                        site.insert(QStringLiteral("qualifier"), qualifier);
+                    }
+                    sites.append(site);
+                }
+                if (qualifier.isEmpty() || qualifier == QStringLiteral("self")) {
+                    const QStringList candidates = keysByName.value(name);
+                    if (candidates.isEmpty()) {
+                        continue;
+                    }
+                    const QString targetKey = bestRelationTargetKey(candidates, byKey);
+                    if (targetKey.isEmpty() || targetKey == body.key || !byKey.contains(targetKey)
+                        || !isCallableSymbolKind(byKey.value(targetKey).value(QStringLiteral("kind")).toString())) {
+                        continue;
+                    }
+                    appendUniqueRelation(callsByKey, body.key, relationFromSymbol(byKey.value(targetKey)), QStringLiteral("calls"));
+                    appendUniqueRelation(calledByByKey, targetKey, relationFromSymbol(byKey.value(body.key)), QStringLiteral("called by"));
+                }
+            }
+        }
+        sitesByKey.insert(body.key, sites);
+    }
+    symbols = applyRelationsToSymbols(symbols, callsByKey, calledByByKey);
+    std::function<QVariantList(QVariantList)> attachSites = [&](QVariantList list) {
+        for (int index = 0; index < list.size(); ++index) {
+            QVariantMap symbol = list.at(index).toMap();
+            const QVariantList sites = sitesByKey.value(symbolKey(symbol));
+            if (!sites.isEmpty()) {
+                symbol.insert(QStringLiteral("callSites"), sites);
+            }
+            symbol.insert(QStringLiteral("members"), attachSites(symbol.value(QStringLiteral("members")).toList()));
+            list[index] = symbol;
+        }
+        return list;
+    };
+    symbols = attachSites(symbols);
+
+    // require / require_relative, resolved to files; Sinatra-style routes.
+    QVariantList dependencies;
+    QVariantList routes;
+    static const QRegularExpression requirePattern(QStringLiteral(R"(^[ \t]*(require|require_relative|load)\s*\(?\s*['"]([^'"]+)['"])"),
+                                                   QRegularExpression::MultilineOption);
+    auto requireIt = requirePattern.globalMatch(text);
+    const QDir fileDir = QFileInfo(path).absoluteDir();
+    while (requireIt.hasNext()) {
+        const auto match = requireIt.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        if (lines.value(line - 1).trimmed().isEmpty()) {
+            continue; // inside a heredoc or =begin block
+        }
+        const QString target = match.captured(2);
+        QString resolved;
+        auto tryPath = [&](const QString &candidate) {
+            const QString withSuffix = candidate.endsWith(QStringLiteral(".rb")) ? candidate : candidate + QStringLiteral(".rb");
+            if (resolved.isEmpty() && QFileInfo(withSuffix).isFile()) {
+                resolved = QFileInfo(withSuffix).absoluteFilePath();
+            }
+        };
+        if (match.captured(1) == QStringLiteral("require_relative")) {
+            tryPath(fileDir.filePath(target));
+        } else {
+            // require 'foo/bar' from a lib/ directory above the file.
+            QDir dir = fileDir;
+            for (int depth = 0; depth < 8 && resolved.isEmpty(); ++depth) {
+                tryPath(dir.filePath(QStringLiteral("lib/") + target));
+                if (dir.dirName() == QStringLiteral("lib")) {
+                    tryPath(dir.filePath(target));
+                }
+                if (!dir.cdUp()) {
+                    break;
+                }
+            }
+        }
+        QVariantMap item = makeSourceContextItem(path, QStringLiteral("ruby"), line, snippetFromLine(text, line, 0),
+                                                 QStringLiteral("%1 dependency").arg(match.captured(1)));
+        item.insert(QStringLiteral("target"), target);
+        item.insert(QStringLiteral("type"), match.captured(1));
+        item.insert(QStringLiteral("label"), target);
+        item.insert(QStringLiteral("path"), resolved);
+        item.insert(QStringLiteral("exists"), true);
+        dependencies.append(item);
+    }
+    static const QRegularExpression routePattern(QStringLiteral(R"re(^[ \t]*(get|post|put|patch|delete|options|head)\s*\(?\s*['"](/[^'"]*)['"]\s*\)?\s*(?:,[^\n]*)?(?:do\b|\{))re"),
+                                                 QRegularExpression::MultilineOption);
+    auto routeIt = routePattern.globalMatch(text);
+    while (routeIt.hasNext()) {
+        const auto match = routeIt.next();
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        const QString method = match.captured(1).toUpper();
+        QVariantMap route = makeSourceContextItem(path, QStringLiteral("ruby"), line, snippetFromLine(text, line, 2), QStringLiteral("route"));
+        route.insert(QStringLiteral("method"), method);
+        route.insert(QStringLiteral("path"), match.captured(2));
+        route.insert(QStringLiteral("label"), method + QLatin1Char(' ') + match.captured(2));
+        routes.append(route);
+    }
+
+    result.insert(QStringLiteral("symbols"), symbols);
+    result.insert(QStringLiteral("dependencies"), dependencies);
+    result.insert(QStringLiteral("routes"), routes);
+    result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
+    result.insert(QStringLiteral("summary"), QStringLiteral("%1 top-level symbols").arg(symbols.size()));
+    return result;
+}
+
 QVariantMap SymbolParser::parsePhp(const QString &path, const QString &text) const
 {
     QVariantList symbols;
@@ -12675,6 +13283,11 @@ QString SymbolParser::detectLanguage(const QString &path)
         || suffix == QStringLiteral("h") || suffix == QStringLiteral("hh")
         || suffix == QStringLiteral("hpp") || suffix == QStringLiteral("hxx")) {
         return QStringLiteral("cpp");
+    }
+    if (suffix == QStringLiteral("rb") || suffix == QStringLiteral("rake") || suffix == QStringLiteral("gemspec")
+        || suffix == QStringLiteral("ru") || QFileInfo(path).fileName() == QStringLiteral("Rakefile")
+        || QFileInfo(path).fileName() == QStringLiteral("Gemfile")) {
+        return QStringLiteral("ruby");
     }
     if (suffix == QStringLiteral("kt") || suffix == QStringLiteral("kts")) {
         return QStringLiteral("kotlin");

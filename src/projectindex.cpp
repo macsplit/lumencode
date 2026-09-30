@@ -36,7 +36,7 @@ const QSet<QString> &indexedSuffixes()
         QStringLiteral("c"), QStringLiteral("cc"), QStringLiteral("cpp"), QStringLiteral("cxx"), QStringLiteral("h"),
         QStringLiteral("hh"), QStringLiteral("hpp"), QStringLiteral("hxx"), QStringLiteral("m"), QStringLiteral("mm"),
         QStringLiteral("vb"), QStringLiteral("sql"), QStringLiteral("sh"), QStringLiteral("bash"), QStringLiteral("qml"),
-        QStringLiteral("html"), QStringLiteral("htm"), QStringLiteral("kt"), QStringLiteral("kts"),
+        QStringLiteral("html"), QStringLiteral("htm"), QStringLiteral("kt"), QStringLiteral("kts"), QStringLiteral("rb"),
     };
     return suffixes;
 }
@@ -142,6 +142,15 @@ bool isGenericName(const QString &name)
         QStringLiteral("intValue"), QStringLiteral("longValue"), QStringLiteral("doubleValue"), QStringLiteral("shortValue"),
         QStringLiteral("byteValue"), QStringLiteral("compareTo"), QStringLiteral("iterator"), QStringLiteral("subList"),
         QStringLiteral("entrySet"), QStringLiteral("keySet"), QStringLiteral("putAll"), QStringLiteral("removeAll"),
+        // Ruby core methods that classes override.
+        QStringLiteral("each_key"), QStringLiteral("each_value"), QStringLiteral("each_pair"), QStringLiteral("each_with_index"),
+        QStringLiteral("each_with_object"), QStringLiteral("to_hash"), QStringLiteral("to_h"), QStringLiteral("to_s"),
+        QStringLiteral("to_a"), QStringLiteral("to_i"), QStringLiteral("to_f"), QStringLiteral("to_sym"), QStringLiteral("to_str"),
+        QStringLiteral("to_proc"), QStringLiteral("to_json"), QStringLiteral("respond_to?"), QStringLiteral("merge!"),
+        QStringLiteral("fetch"), QStringLiteral("key?"), QStringLiteral("include?"), QStringLiteral("empty?"),
+        QStringLiteral("nil?"), QStringLiteral("is_a?"), QStringLiteral("kind_of?"), QStringLiteral("freeze"),
+        QStringLiteral("inspect"), QStringLiteral("instance_eval"), QStringLiteral("class_eval"), QStringLiteral("define_method"),
+        QStringLiteral("method_missing"), QStringLiteral("respond_to_missing?"), QStringLiteral("initialize_copy"),
         // Kotlin standard library.
         QStringLiteral("toLong"), QStringLiteral("toInt"), QStringLiteral("toShort"), QStringLiteral("toByte"),
         QStringLiteral("toChar"), QStringLiteral("toDouble"), QStringLiteral("toFloat"), QStringLiteral("toList"),
@@ -607,7 +616,9 @@ bool resolveWith(const Snapshot &snapshot, const FileFacts &from, const CallSite
     // Can a call of this shape reach the definition at all?
     auto shapeFits = [&](const Definition &definition) {
         if (constructs) {
-            return true;
+            // A nested type is constructed bare only inside its owner
+            // (`::Logger.new` is not Middleware::Logger).
+            return definition.owner.isEmpty() || definition.owner == callerOwner;
         }
         const bool method = isMethodDefinition(definition);
         if (!qualified) {

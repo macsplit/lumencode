@@ -49,7 +49,7 @@ MUTATIONS = {
 # point is to see real parser behaviour, not to be clever per language.
 # Languages without a Tree-sitter grammar but with a structural (block-aware)
 # parser, which should be just as damage-tolerant.
-STRUCTURAL_HEURISTIC_LANGUAGES = {"vbnet", "sql", "shell", "objc", "kotlin"}
+STRUCTURAL_HEURISTIC_LANGUAGES = {"vbnet", "sql", "shell", "objc", "kotlin", "ruby"}
 
 SKIP_LANGUAGES = {"json", "html", "css", "unknown"}
 
@@ -150,7 +150,8 @@ def probe_file(path: Path, rng_seed: int) -> list[dict]:
             mutated = list(lines)
             if payload is None:
                 closers = [index for index in range(target_start, min(target_end, len(lines)))
-                           if lines[index].strip() in ("}", "};", "},", "})", "});")]
+                           if lines[index].strip() in ("}", "};", "},", "})", "});")
+                           or (language == "ruby" and lines[index].strip() == "end")]
                 if not closers:
                     continue
                 del mutated[closers[-1]]
