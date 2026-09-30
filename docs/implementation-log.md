@@ -12,7 +12,7 @@
     - `--callers` / `--callees <name>` give the definition file's full relation lists (same-file and cross-file, with confidence and `calledByTotal`).
     - `--routes` lists every route with mount prefixes and the client calls that reach it.
 - **Found on the way** (by querying LumenCode's own source):
-    - `ProjectIndex::augmentAnalysis(...)` had no callers. A `::`-qualified call was treated as a method call on an unknown receiver; scope qualifiers now reach free functions.
+    - `ProjectIndex::augmentAnalysis(...)` had no callers. Scoped calls (`ns::f`, `Type::new`) recorded only the scope, like an object receiver, so they were treated as method calls on an unknown receiver. Scoped calls are now marked and reach free functions. For C/C++, `#include`s count transitively and the scope must match the callee's namespace; `std::string(...)` had linked to gtest's `string`. All four callers now resolve with high confidence, and fmt went from 1,575 to 796 edges, all sampled correct.
     - C++ prototypes inside a namespace lost their `declaration` marker, so they were never paired with their bodies.
 - **`tools/agent/SKILL.md`:** when to use which command, and how to read modes, damaged lines and confidence levels.
 - **`tools/agent/lumencode_mcp.py`:** an MCP stdio server with no third-party packages, exposing `outline_file`, `find_definition`, `find_callers`, `find_callees`, `list_routes` and `index_stats`. Output is capped at 60k characters.
