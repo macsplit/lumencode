@@ -1,5 +1,39 @@
 # Implementation Log
 
+## 2026-09-30
+
+Roadmap phases A and B ([`roadmap.md`](roadmap.md)), CLI-first in the cloud
+container, gated by fixtures, `corpus_scan.py --compare`, the damage probe,
+ASan and the new headless GUI smoke test.
+
+- **Phase A:**
+    - `lumencode-gui-smoke` (not built by default): loads the real `Main.qml` offscreen, opens every file below the given roots and selects every symbol, member, relation, dependency, route and quick link it offers (following cross-file links and coming back). It fails on any QML warning, and a deliberately broken binding checks the detector itself. Green on all fixtures and a 141-file corpus sample.
+    - TS/JS: `describe`/`it`/`test` blocks and hooks, re-exports (`export * from`, `module.exports = require(...)`), top-level event listeners as handlers, `export default {}` and AMD return values. Files with symbols: TS 63% → 93%, JS 65% → 87%, TSX 59% → 94%.
+    - Rust and Swift signatures from the syntax tree.
+    - Objective-C rewritten on comment/string-blanked text: full multi-part selectors, categories, message sends matched by full selector. Files with relations 0% → 67%.
+- **Phase B — project index** (`src/projectindex.{h,cpp}`):
+    - `applyAstCallSites` records raw call sites (name, receiver, line) per callable, plus `moduleCallSites` for file-level code, for TS/JS, Python, Java, C#, PHP, Rust, Swift, Go and C/C++. `applyTextCallSites` does the same for Objective-C, VB.NET and shell on noise-blanked text.
+    - `lumencode-cli --index-facts` turns paths on stdin into one compact JSON line of facts per file. `ProjectIndex::build` runs it in parallel batches of 150 (a crash is retried file by file, so it costs only that file). The cache sits under `~/.cache/lumencode/index/`, keyed by file size + mtime and by the helper binary, so a rebuilt parser re-indexes.
+    - Resolution order: import binding (high) → receiver names the owner (medium) → same directory/package, for bare calls and `new` only (medium) → the only definition of a distinctive, non-generic name (low). Anything ambiguous is left unresolved. Edges are stored both ways.
+    - Precision work, from reading sampled edges against the source (≈93% correct at the first check, most of the rest fixed after):
+        - calls on receivers of unknown type only reach methods, and only by distinctive names
+        - names bound to external packages are never linked
+        - nested types are not linked from outside their owner
+        - `new X()` prefers the type over its constructors
+        - stoplists of standard-library / `NSObject` method names
+        - `self` calls to another type's method must pass the distinctive-name test
+    - The controller builds the index in the background on `setRootPath` and passes the snapshot into each analysis. When the index lands, the open file is re-augmented in place. The CLI builds it synchronously (deterministic), and `--no-index` / `LUMENCODE_NO_INDEX=1` turn it off. The old per-click JS/TS crawl still runs first, and index edges are merged in without duplicates. More than 400 cross-file callers: the first 400 are listed and `calledByTotal` is reported.
+    - New CLI: `--index-project <root>` (stats), `--index-edges` (every edge, JSON lines), `--index-relations <file>` (one file's cross-file Calls / Called By).
+    - **Bug found on the way:** C# types inside a block-scoped `namespace X { }` were dropped entirely, because the walker did not descend into the namespace's `declaration_list`. Corpus C# files with symbols 91.7% → 97.5%.
+    - **Corpus (`tools/index_metrics.py`, 27 projects, 4,557 files):**
+        - 161,888 call sites and 17,399 cross-file edges; 0 helper failures.
+        - Cold build 48.6 s in total (largest: fmt 11.8 s, C++ repair), warm 2.1 s.
+        - Reciprocity through the live per-file view: 819/819 sampled edges listed in the caller's Calls, 817/819 in the callee's Called By (the 2 are truncated lists of a symbol with more than 400 callers).
+        - Files with a cross-file edge: Java 82%, Obj-C 87%, TSX 88%, Go 76%, Python 73%, Swift 72%, C# 70%, TS 66%, Rust 63%, PHP 57%, C/C++ 46%, VB.NET 29%, JS 25% (mostly library calls), shell 17%.
+    - **Fixtures:** 51 → 72. `cross_file/` has mini-projects in Go, Python, Java, C#, PHP, Rust, C++, Swift, VB.NET, shell and Objective-C, each asserting `Calls` in the caller and `Called By` in the callee. All 20 new index cases fail with the index off. The GUI smoke test now waits for the index, so cross-file navigation is driven too.
+    - **ASan:** `--index-facts` over 2,267 corpus files (all Obj-C, VB.NET, shell and C#, a quarter of the rest) and in-process index builds of hono, SDWebImage and dotnet-samples were clean.
+    - **Left for Phase C:** Python imports resolved to modules (they resolve by sibling or unique name today), C/C++ calls landing on the header declaration rather than the definition, PHP `use`-resolved receivers, and HTTP-client calls → routes.
+
 ## 2026-09-29
 
 Worked entirely through the CLI in a cloud container (Ubuntu 24.04, Qt 5.15 /

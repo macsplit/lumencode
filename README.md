@@ -19,7 +19,7 @@ LumenCode is intentionally:
 
 ## Current State
 
-_Last updated: 2026-09-29._
+_Last updated: 2026-09-30._
 
 LumenCode is a working desktop explorer (Qt 5.15 / KF5 Kirigami) with a
 backend that is now developed and regression-tested almost entirely through
@@ -46,6 +46,10 @@ search**. See [Recent History](#recent-history) for how it got here and
   the helper. Directory crawls, file sizes and cross-file relationship scans
   are bounded, and hitting a bound shows a visible notice instead of hanging.
   Minified or bundled assets are skipped deliberately.
+- A **project index** built in the background when a folder is opened (see
+  [Project index](#project-index-cross-file-relations)): cross-file `Calls` /
+  `Called By` in every language with call sites, cached on disk so reopening
+  a project is near-instant.
 
 ### The analysis engine, per language
 
@@ -86,6 +90,40 @@ Every payload says which of these happened (`analysisSourceMode`:
 `ast` / `recovered` / `heuristic`, `analysisConfidence`,
 `analysisDamagedLines`, per-symbol `sourceMode` / `confidence`).
 
+### Project index (cross-file relations)
+
+Opening a folder builds a project index in the background
+(`src/projectindex.{h,cpp}`): per-file *facts* — definitions with their
+owning type, resolved imports with their bindings, and call sites with their
+receiver — are produced by the crash-isolated helper
+(`lumencode-cli --index-facts`, in parallel batches; a crash costs only the
+file it happened on) and cached on disk keyed by file size and mtime *and*
+the helper build, so a parser upgrade re-indexes. Every call site is then
+resolved once, most specific evidence first, and ambiguous names are left
+unresolved rather than guessed:
+
+| Evidence | Example | Confidence |
+|---|---|---|
+| import / include binding | `import { parseBody }`, `use parser::{Tokenizer}` + `Tokenizer::new`, `utils.normalizeType()` with `utils = require(...)`, `#include "geometry.h"` | high |
+| receiver names the owning type | `Guard.NotNull`, `Mailer::deliver`, `[PriceFormatter stringForCents:…]`, `TaxRules.VatFor` | medium |
+| same directory / package (bare calls and `new` only) | Go same-package calls, Python/Swift siblings, `new Invoice(...)` | medium |
+| the only definition of a distinctive, non-generic name | `res.sendFile` → `response.js` | low |
+
+A call on a receiver of unknown type can only reach a method, and only by a
+distinctive name; names bound to external packages, standard-library method
+names (`unwrap`, `containsKey`, `class`, …) and nested types named from
+outside their owner are never linked. Edges are stored in both directions,
+so `Calls` and `Called By` agree across files by construction. The open
+file's own calls are resolved live against the index, so edits show up
+before a re-index. Symbols with more than 400 cross-file callers list the
+first 400 and report the total (`calledByTotal`).
+
+Call sites come from the syntax tree for TS/JS, Python, Java, C#, PHP, Rust,
+Swift, Go and C/C++, and from the structural parsers for Objective-C
+(message sends by full selector), VB.NET and shell (commands, including
+top-level script code). QML, SQL, CSS and HTML are indexed for definitions
+only (their links are the web and SQL models above/below).
+
 ### Cross-language links (web)
 
 HTML, CSS and JavaScript are analysed as one linked model rather than three
@@ -118,12 +156,16 @@ cmake -S . -B build && cmake --build build --target lumencode-cli
 ./build/bin/lumencode-cli --dump-file path/to/file      # one file's analysis JSON (what the GUI shows)
 ./build/bin/lumencode-cli --debug-ast path/to/file      # Tree-sitter error nodes + repair outcome
 ./build/bin/lumencode-cli -i                            # scripted selection session (JSON commands on stdin)
+./build/bin/lumencode-cli --index-project path/to/root  # build/refresh the project index, print its statistics
+./build/bin/lumencode-cli --index-project root --index-edges            # every cross-file call edge (JSON lines)
+./build/bin/lumencode-cli --index-project root --index-relations file   # one file's cross-file Calls / Called By
 
-python3 tools/regression_sweep.py --fixtures-only       # first gate: 45 fixture cases, relation round-trips
+python3 tools/regression_sweep.py --fixtures-only       # first gate: 72 fixture cases, relation round-trips
 python3 tools/fetch_corpus.py                           # pinned public corpus (27 repos, ~6.4k files)
 python3 tools/corpus_scan.py --save before.json         # whole-corpus coverage / timing / contract scan
 python3 tools/corpus_scan.py --compare before.json      # ... then diff after a change
 python3 tools/damage_probe.py                           # how far an injected syntax error spreads
+python3 tools/index_metrics.py                          # project index: coverage, build time, reciprocity
 python3 tools/regression_sweep.py --corpus-root ~/.cache/lumencode-corpus --max-files 300
 
 # The real GUI, headless: loads Main.qml offscreen and drives every symbol, relation,
@@ -135,8 +177,11 @@ QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software ./build/bin/lumencode-gui-sm
 - **Fixtures:** `tests/fixtures/baseline/` holds small projects per language
   cluster. They include broken-code recovery cases, Python return paths, a
   web app (HTML at the root, `css/` and `js/` below) and a composer/Slim PHP
-  app. `manifest.json` asserts symbols, relations, signatures, provenance,
-  quick-link labels and CSS usage.
+  app, and `cross_file/` mini-projects in 11 languages for index-backed
+  `Calls` / `Called By`. `manifest.json` asserts symbols, relations,
+  signatures, provenance, quick-link labels and CSS usage. The CLI builds the
+  index before analysing (`--no-index` or `LUMENCODE_NO_INDEX=1` turns it
+  off), so the fixture run covers it.
 - **Corpus:** `tools/corpus.json` pins 27 public repositories by commit
   (web, JS/TS, Python, PHP, Java, C#, VB.NET, Rust, Swift, Go, C/C++, Ruby,
   Kotlin, Bash, SQL, QML, Objective-C), so sweeps work on any machine or in
@@ -205,6 +250,19 @@ For backend work only the CLI target is needed:
   - signatures from the syntax tree for TS/JS, C#, Java, PHP, Go and C/C++;
     Swift imports, Java Spring/JAX-RS routes and QML call relations
 
+- **2026-09-30 — roadmap phases A and B:**
+  - `lumencode-gui-smoke`: the real `Main.qml` driven headless through every
+    fixture (and a corpus sample), failing on any QML warning
+  - TS/JS structure for test files (`describe`/`it` blocks and hooks),
+    barrel/re-export modules and page scripts (event-listener handlers)
+  - Rust and Swift signatures from the syntax tree; Objective-C full
+    selectors and call relations
+  - the project index: cross-file `Calls` / `Called By` for 14 languages
+    (previously JS/TS only, by re-parsing neighbours on each click)
+  - C# classes inside block-scoped `namespace X { }` were dropped entirely
+    (found by the new cross-file fixtures; C# files with symbols 91.7% →
+    97.5% on the corpus)
+
 ## Roadmap
 Next major milestone: stabilization and trustworthiness of the inspection pipeline, before search.
 
@@ -271,7 +329,7 @@ Phase 4. Broader project understanding
 - About 19% of valid Swift files in the corpus trip grammar gaps and go through repair. That costs time (Swift p95 is the highest of the languages) but not declarations: a repair is rejected if it would lose any.
 - Callable signatures come from the syntax tree (or, for VB.NET, SQL and shell, from the declarations) everywhere except QML, which still uses snippet heuristics.
 - QML is now supported as a first-class language in the explorer and CLI, but it currently uses heuristic structural extraction rather than a dedicated AST-backed parser.
-- `Calls` / `Called By` support has improved and relation clicks now rehydrate into full destination symbols, but the overall graph is still incomplete and not yet uniformly reciprocal across all languages and project shapes.
+- `Calls` / `Called By` are name-based, not type-resolved. Cross-file edges come from the project index with an evidence level (`confidence`: high / medium / low); a call on a receiver whose type is unknown is linked only by a distinctive name, so some real cross-file calls are deliberately left out. Python imports are not yet resolved to modules (siblings and unique names only), and C/C++ calls resolve to the header declaration rather than the definition (both Phase C).
 - The new overview warnings are part of the intended safety model. They mean the app stayed responsive and returned a bounded result, but they should still be treated as prompts to inspect why that bound was hit.
 - Some script or stylesheet files are now intentionally skipped as probable minified/bundled assets; that is deliberate product behavior, not a parser failure.
 - Some project `mainEntry` guesses are still imperfect on broad mixed-language roots.

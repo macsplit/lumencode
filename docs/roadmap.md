@@ -155,3 +155,12 @@ CLI-only build option alongside.
 ## Progress
 
 Progress is recorded per phase in [`implementation-log.md`](implementation-log.md).
+
+- **Phase A — done (2026-09-30).** GUI smoke test green (fixtures and a
+  141-file corpus sample, no QML warnings); TS/JS files with symbols
+  63% → 93%, JS 65% → 87%, TSX 59% → 94%; Rust and Swift signatures from the
+  syntax tree; Objective-C relations 0% → 67% of files.
+- **Phase B — done (2026-09-30).** Project index with cross-file `Calls` /
+  `Called By` for 14 languages, cached, built in the background; corpus
+  numbers in the implementation log. HTTP-client calls and DOM references
+  in the facts moved to Phase C, where they are consumed.
