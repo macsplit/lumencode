@@ -4049,8 +4049,140 @@ static void resolveJavaImports(QVariantMap &analysis, const QString &path, const
     analysis.insert(QStringLiteral("dependencies"), dependencies);
 }
 
+// PHP configuration files have no declarations; their settings are the
+// structure: `return ['key' => ...]` arrays (Laravel and friends) and
+// `$config['key'] = ...` assignments (CodeIgniter). Top-level keys become
+// `setting` symbols, nested arrays members.
+static QVariantList phpConfigSymbols(const QString &text)
+{
+    // Strings kept (keys live in them); comments blanked.
+    QString clean = text;
+    {
+        const int size = clean.size();
+        QChar quote;
+        for (int i = 0; i < size; ++i) {
+            const QChar ch = clean.at(i);
+            if (!quote.isNull()) {
+                if (ch == QLatin1Char('\\')) {
+                    ++i;
+                } else if (ch == quote) {
+                    quote = QChar();
+                }
+                continue;
+            }
+            if (ch == QLatin1Char('\'') || ch == QLatin1Char('"')) {
+                quote = ch;
+            } else if ((ch == QLatin1Char('/') && i + 1 < size && clean.at(i + 1) == QLatin1Char('/')) || ch == QLatin1Char('#')) {
+                while (i < size && clean.at(i) != QLatin1Char('\n')) {
+                    clean[i++] = QLatin1Char(' ');
+                }
+            } else if (ch == QLatin1Char('/') && i + 1 < size && clean.at(i + 1) == QLatin1Char('*')) {
+                while (i < size && !(clean.at(i) == QLatin1Char('*') && i + 1 < size && clean.at(i + 1) == QLatin1Char('/'))) {
+                    if (clean.at(i) != QLatin1Char('\n')) {
+                        clean[i] = QLatin1Char(' ');
+                    }
+                    ++i;
+                }
+                if (i + 1 < size) {
+                    clean[i] = clean[i + 1] = QLatin1Char(' ');
+                }
+            }
+        }
+    }
+    static const QRegularExpression keyPattern(QStringLiteral(R"(^\s*(['"])([^'"]+)\1\s*=>\s*)"));
+    // Elements of the array whose opening bracket is at `open`.
+    std::function<QVariantList(int, int)> arrayKeys = [&](int open, int depth) -> QVariantList {
+        QVariantList symbols;
+        const QChar closer = clean.at(open) == QLatin1Char('[') ? QLatin1Char(']') : QLatin1Char(')');
+        int level = 0;
+        int elementStart = open + 1;
+        QChar quote;
+        for (int i = open; i < clean.size(); ++i) {
+            const QChar ch = clean.at(i);
+            if (!quote.isNull()) {
+                if (ch == QLatin1Char('\\')) {
+                    ++i;
+                } else if (ch == quote) {
+                    quote = QChar();
+                }
+                continue;
+            }
+            if (ch == QLatin1Char('\'') || ch == QLatin1Char('"')) {
+                quote = ch;
+                continue;
+            }
+            if (ch == QLatin1Char('[') || ch == QLatin1Char('(')) {
+                ++level;
+            } else if (ch == QLatin1Char(']') || ch == QLatin1Char(')')) {
+                --level;
+            }
+            const bool elementEnd = (level == 1 && ch == QLatin1Char(',')) || (level == 0 && ch == closer);
+            if (!elementEnd) {
+                continue;
+            }
+            const QString element = clean.mid(elementStart, i - elementStart);
+            const auto match = keyPattern.match(element);
+            if (match.hasMatch() && symbols.size() < 120) {
+                const int keyOffset = elementStart + match.capturedStart(2);
+                const int line = lineNumberAtOffset(text, keyOffset);
+                const QString value = element.mid(match.capturedEnd(0)).trimmed();
+                QVariantList members;
+                QString detail = value.simplified().left(60);
+                static const QRegularExpression nestedArray(QStringLiteral(R"(^(?:array\s*\(|\[))"));
+                if (nestedArray.match(value).hasMatch()) {
+                    const int nestedOpen = elementStart + match.capturedEnd(0) + element.mid(match.capturedEnd(0)).indexOf(QRegularExpression(QStringLiteral(R"([\[(])")));
+                    if (depth < 2) {
+                        members = arrayKeys(nestedOpen, depth + 1);
+                    }
+                    detail = QStringLiteral("array");
+                }
+                symbols.append(SymbolParser::makeSymbolPublic(QStringLiteral("setting"), match.captured(2), line, detail, members,
+                                                              snippetFromLine(text, line, 0)));
+            }
+            elementStart = i + 1;
+            if (level == 0) {
+                break;
+            }
+        }
+        return symbols;
+    };
+
+    static const QRegularExpression returnArray(QStringLiteral(R"(^\s*return\s+(?:array\s*(\()|(\[)))"), QRegularExpression::MultilineOption);
+    const auto returnMatch = returnArray.match(clean);
+    if (returnMatch.hasMatch()) {
+        const int open = returnMatch.capturedStart(1) >= 0 ? returnMatch.capturedStart(1) : returnMatch.capturedStart(2);
+        return arrayKeys(open, 0);
+    }
+    // $config['key'] = ...; (top-level assignments, grouped by variable)
+    static const QRegularExpression assignment(QStringLiteral(R"(^\$(\w+)((?:\[\s*['"][^'"]+['"]\s*\])+)\s*=)"), QRegularExpression::MultilineOption);
+    static const QRegularExpression subscript(QStringLiteral(R"(\[\s*['"]([^'"]+)['"]\s*\])"));
+    QVariantList symbols;
+    QSet<QString> seen;
+    auto it = assignment.globalMatch(clean);
+    while (it.hasNext() && symbols.size() < 200) {
+        const auto match = it.next();
+        const QString key = subscript.match(match.captured(2)).captured(1);
+        const QString id = match.captured(1) + QLatin1Char('|') + key;
+        if (key.isEmpty() || seen.contains(id)) {
+            continue;
+        }
+        seen.insert(id);
+        const int line = lineNumberAtOffset(text, match.capturedStart(0));
+        symbols.append(SymbolParser::makeSymbolPublic(QStringLiteral("setting"), key, line, QStringLiteral("$") + match.captured(1),
+                                                      {}, snippetFromLine(text, line, 0)));
+    }
+    return symbols;
+}
+
 static void enrichPhpAnalysis(QVariantMap &result, const QString &path, const QString &text)
 {
+    if (result.value(QStringLiteral("symbols")).toList().isEmpty()) {
+        const QVariantList settings = phpConfigSymbols(text);
+        if (!settings.isEmpty()) {
+            result.insert(QStringLiteral("symbols"), settings);
+            result.insert(QStringLiteral("summary"), QStringLiteral("configuration: %1 settings").arg(settings.size()));
+        }
+    }
     QVariantList dependencies = result.value(QStringLiteral("dependencies")).toList();
     QSet<QString> seen;
     for (const QVariant &entry : std::as_const(dependencies)) {
@@ -13541,6 +13673,106 @@ QVariantMap SymbolParser::parseCss(const QString &path, const QString &text) con
     return result;
 }
 
+namespace {
+
+// JSON with comments and trailing commas (tsconfig, VS Code settings) made
+// strict, offsets kept.
+QByteArray strictJsonBytes(const QString &text)
+{
+    QString out = text;
+    const int size = out.size();
+    bool inString = false;
+    for (int i = 0; i < size; ++i) {
+        const QChar ch = out.at(i);
+        if (inString) {
+            if (ch == QLatin1Char('\\')) {
+                ++i;
+            } else if (ch == QLatin1Char('"')) {
+                inString = false;
+            }
+            continue;
+        }
+        if (ch == QLatin1Char('"')) {
+            inString = true;
+        } else if (ch == QLatin1Char('/') && i + 1 < size && out.at(i + 1) == QLatin1Char('/')) {
+            while (i < size && out.at(i) != QLatin1Char('\n')) {
+                out[i++] = QLatin1Char(' ');
+            }
+        } else if (ch == QLatin1Char('/') && i + 1 < size && out.at(i + 1) == QLatin1Char('*')) {
+            while (i < size && !(out.at(i) == QLatin1Char('*') && i + 1 < size && out.at(i + 1) == QLatin1Char('/'))) {
+                if (out.at(i) != QLatin1Char('\n')) {
+                    out[i] = QLatin1Char(' ');
+                }
+                ++i;
+            }
+            if (i + 1 < size) {
+                out[i] = QLatin1Char(' ');
+                out[i + 1] = QLatin1Char(' ');
+                ++i;
+            }
+        } else if (ch == QLatin1Char(',')) {
+            int next = i + 1;
+            while (next < size && out.at(next).isSpace()) {
+                ++next;
+            }
+            if (next < size && (out.at(next) == QLatin1Char('}') || out.at(next) == QLatin1Char(']'))) {
+                out[i] = QLatin1Char(' '); // trailing comma
+            }
+        }
+    }
+    return out.toUtf8();
+}
+
+QString jsonValueShape(const QJsonValue &value)
+{
+    switch (value.type()) {
+    case QJsonValue::Object:
+        return QStringLiteral("object (%1 keys)").arg(value.toObject().size());
+    case QJsonValue::Array:
+        return QStringLiteral("array (%1)").arg(value.toArray().size());
+    case QJsonValue::String: {
+        const QString text = value.toString();
+        return text.size() > 40 ? QStringLiteral("\"%1…\"").arg(text.left(40)) : QStringLiteral("\"%1\"").arg(text);
+    }
+    case QJsonValue::Double:
+        return QString::number(value.toDouble());
+    case QJsonValue::Bool:
+        return value.toBool() ? QStringLiteral("true") : QStringLiteral("false");
+    case QJsonValue::Null:
+        return QStringLiteral("null");
+    default:
+        return QString();
+    }
+}
+
+} // namespace
+
+// Keys of a JSON object as symbols (members two levels deep), located in the
+// text in order.
+static QVariantList jsonKeySymbols(const QJsonObject &object, const QString &text, int from, int depth,
+                                   const std::function<QString(const QString &, const QJsonValue &)> &describe)
+{
+    QVariantList symbols;
+    int cursor = from;
+    int count = 0;
+    for (auto it = object.constBegin(); it != object.constEnd() && count < 80; ++it, ++count) {
+        const QRegularExpression keyPattern(QStringLiteral("\"%1\"\\s*:").arg(QRegularExpression::escape(it.key())));
+        const auto match = keyPattern.match(text, cursor);
+        const int offset = match.hasMatch() ? match.capturedStart() : cursor;
+        const int line = lineNumberAtOffset(text, offset);
+        QVariantList members;
+        if (depth < 2 && it.value().isObject()) {
+            members = jsonKeySymbols(it.value().toObject(), text, offset, depth + 1, describe);
+        }
+        const QString detail = describe ? describe(it.key(), it.value()) : jsonValueShape(it.value());
+        symbols.append(SymbolParser::makeSymbolPublic(QStringLiteral("key"), it.key(), line, detail, members, snippetFromLine(text, line, 1)));
+    }
+    std::stable_sort(symbols.begin(), symbols.end(), [](const QVariant &left, const QVariant &right) {
+        return left.toMap().value(QStringLiteral("line")).toInt() < right.toMap().value(QStringLiteral("line")).toInt();
+    });
+    return symbols;
+}
+
 QVariantMap SymbolParser::parseJson(const QString &path, const QString &text) const
 {
     QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("json"));
@@ -13564,6 +13796,118 @@ QVariantMap SymbolParser::parseJson(const QString &path, const QString &text) co
         return result;
     }
 
+    const QJsonDocument document = QJsonDocument::fromJson(strictJsonBytes(text));
+    const QString lowerName = fileName.toLower();
+    auto dependencyItem = [&](const QString &target, const QString &type, int line, const QString &resolved) {
+        QVariantMap item = makeSourceContextItem(path, QStringLiteral("json"), line, snippetFromLine(text, line, 0),
+                                                 QStringLiteral("%1 dependency").arg(type));
+        item.insert(QStringLiteral("target"), target);
+        item.insert(QStringLiteral("type"), type);
+        item.insert(QStringLiteral("label"), target);
+        item.insert(QStringLiteral("path"), resolved);
+        item.insert(QStringLiteral("exists"), resolved.isEmpty() ? true : QFileInfo::exists(resolved));
+        return item;
+    };
+    auto lineOfKey = [&](const QString &key, int from = 0) {
+        const QRegularExpression keyPattern(QStringLiteral("\"%1\"\\s*:").arg(QRegularExpression::escape(key)));
+        const auto match = keyPattern.match(text, from);
+        return match.hasMatch() ? lineNumberAtOffset(text, match.capturedStart()) : 1;
+    };
+
+    if (fileName == QStringLiteral("composer.json") && document.isObject()) {
+        // PHP packages: dependencies, PSR-4 roots, scripts.
+        const QJsonObject root = document.object();
+        QVariantList dependencies;
+        for (const QString &section : {QStringLiteral("require"), QStringLiteral("require-dev")}) {
+            const QJsonObject packages = root.value(section).toObject();
+            for (auto it = packages.constBegin(); it != packages.constEnd(); ++it) {
+                QVariantMap item = dependencyItem(it.key(), section, lineOfKey(it.key()), QString());
+                item.insert(QStringLiteral("detail"), it.value().toString());
+                dependencies.append(item);
+            }
+        }
+        QVariantList symbols = jsonKeySymbols(root, text, 0, 0, [](const QString &key, const QJsonValue &value) {
+            if (key == QStringLiteral("autoload") || key == QStringLiteral("autoload-dev")) {
+                QStringList roots;
+                const QJsonObject psr4 = value.toObject().value(QStringLiteral("psr-4")).toObject();
+                for (auto it = psr4.constBegin(); it != psr4.constEnd(); ++it) {
+                    roots.append(it.key() + QStringLiteral(" → ") + (it.value().isArray() ? QStringLiteral("…") : it.value().toString()));
+                }
+                return roots.isEmpty() ? jsonValueShape(value) : QStringLiteral("PSR-4: ") + roots.join(QStringLiteral(", "));
+            }
+            return jsonValueShape(value);
+        });
+        const QJsonObject scripts = root.value(QStringLiteral("scripts")).toObject();
+        for (auto it = scripts.constBegin(); it != scripts.constEnd(); ++it) {
+            symbols.append(makeSymbol(QStringLiteral("script"), it.key(), lineOfKey(it.key()),
+                                      it.value().isArray() ? QStringLiteral("%1 commands").arg(it.value().toArray().size()) : it.value().toString()));
+        }
+        result.insert(QStringLiteral("symbols"), symbols);
+        result.insert(QStringLiteral("dependencies"), dependencies);
+        result.insert(QStringLiteral("summary"), QStringLiteral("composer package %1: %2 dependencies, %3 scripts")
+                                                     .arg(root.value(QStringLiteral("name")).toString())
+                                                     .arg(dependencies.size()).arg(scripts.size()));
+        return result;
+    }
+
+    if ((lowerName.startsWith(QStringLiteral("tsconfig")) || lowerName.startsWith(QStringLiteral("jsconfig"))) && document.isObject()) {
+        // TypeScript projects: extends / references resolved, options and path aliases.
+        const QJsonObject root = document.object();
+        QVariantList dependencies;
+        const QDir dir = QFileInfo(path).absoluteDir();
+        auto resolveConfig = [&](const QString &target) {
+            for (const QString &candidate : {dir.filePath(target), dir.filePath(target + QStringLiteral(".json")),
+                                             dir.filePath(target + QStringLiteral("/tsconfig.json"))}) {
+                if (QFileInfo(candidate).isFile()) {
+                    return QFileInfo(candidate).absoluteFilePath();
+                }
+            }
+            return QString();
+        };
+        const QJsonValue extends = root.value(QStringLiteral("extends"));
+        for (const QJsonValue &entry : extends.isArray() ? extends.toArray() : QJsonArray{extends}) {
+            if (entry.isString()) {
+                dependencies.append(dependencyItem(entry.toString(), QStringLiteral("extends"), lineOfKey(QStringLiteral("extends")),
+                                                   resolveConfig(entry.toString())));
+            }
+        }
+        for (const QJsonValue &reference : root.value(QStringLiteral("references")).toArray()) {
+            const QString target = reference.toObject().value(QStringLiteral("path")).toString();
+            if (!target.isEmpty()) {
+                dependencies.append(dependencyItem(target, QStringLiteral("reference"), lineOfKey(QStringLiteral("references")),
+                                                   resolveConfig(target)));
+            }
+        }
+        const QVariantList symbols = jsonKeySymbols(root, text, 0, 0, {});
+        const QJsonObject options = root.value(QStringLiteral("compilerOptions")).toObject();
+        result.insert(QStringLiteral("symbols"), symbols);
+        result.insert(QStringLiteral("dependencies"), dependencies);
+        result.insert(QStringLiteral("summary"), QStringLiteral("TypeScript config: target %1, module %2%3, %4 path aliases")
+                                                     .arg(options.value(QStringLiteral("target")).toString(QStringLiteral("default")),
+                                                          options.value(QStringLiteral("module")).toString(QStringLiteral("default")),
+                                                          options.value(QStringLiteral("strict")).toBool() ? QStringLiteral(", strict") : QString())
+                                                     .arg(options.value(QStringLiteral("paths")).toObject().size()));
+        return result;
+    }
+
+    if (lowerName.startsWith(QStringLiteral("appsettings")) && document.isObject()) {
+        // ASP.NET settings: sections; connection strings by name only.
+        const QJsonObject root = document.object();
+        const QVariantList symbols = jsonKeySymbols(root, text, 0, 0, [](const QString &key, const QJsonValue &value) {
+            if (key.contains(QStringLiteral("Password"), Qt::CaseInsensitive) || key.contains(QStringLiteral("Secret"), Qt::CaseInsensitive)
+                || key.contains(QStringLiteral("Key"), Qt::CaseSensitive) || key.contains(QStringLiteral("Token"), Qt::CaseInsensitive)) {
+                return QStringLiteral("(value hidden)");
+            }
+            if (value.isString() && value.toString().contains(QLatin1Char(';')) && value.toString().contains(QLatin1Char('='))) {
+                return QStringLiteral("connection string");
+            }
+            return jsonValueShape(value);
+        });
+        result.insert(QStringLiteral("symbols"), symbols);
+        result.insert(QStringLiteral("summary"), QStringLiteral("app settings: %1 sections").arg(root.size()));
+        return result;
+    }
+
     if (fileName.contains(QStringLiteral("openapi"), Qt::CaseInsensitive)) {
         const auto doc = QJsonDocument::fromJson(text.toUtf8());
         if (doc.isObject()) {
@@ -13581,9 +13925,18 @@ QVariantMap SymbolParser::parseJson(const QString &path, const QString &text) co
             result.insert(QStringLiteral("symbols"), symbols);
             result.insert(QStringLiteral("summary"),
                           QStringLiteral("%1 documented API operations").arg(symbols.size()));
+            return result;
         }
     }
 
+    // Any other JSON: its keys, two levels deep.
+    if (document.isObject()) {
+        const QVariantList symbols = jsonKeySymbols(document.object(), text, 0, 0, {});
+        result.insert(QStringLiteral("symbols"), symbols);
+        result.insert(QStringLiteral("summary"), QStringLiteral("JSON object: %1 keys").arg(document.object().size()));
+    } else if (document.isArray()) {
+        result.insert(QStringLiteral("summary"), QStringLiteral("JSON array: %1 items").arg(document.array().size()));
+    }
     return result;
 }
 
