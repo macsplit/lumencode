@@ -2149,6 +2149,40 @@
           "name": "third"
         }
       ]
+    },
+    {
+      "name": "cpp_macro_prepass",
+      "root": "tests/fixtures/baseline/cpp_macros",
+      "file": "widget.h",
+      "file_expectations": {
+        "analysis_source_mode": "ast"
+      },
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "shop_version"
+        },
+        {
+          "kind": "function",
+          "name": "shop_name"
+        },
+        {
+          "kind": "class",
+          "name": "Widget"
+        },
+        {
+          "kind": "method",
+          "name": "size"
+        },
+        {
+          "kind": "method",
+          "name": "grow"
+        },
+        {
+          "kind": "method",
+          "name": "sizeChanged"
+        }
+      ]
     }
   ]
 }

@@ -18,6 +18,7 @@
 #include <QVector>
 
 #include <cctype>
+#include <optional>
 #include <climits>
 #include <cstring>
 #include <algorithm>
@@ -536,6 +537,167 @@ static QSet<int> textuallySuspectRows(const QByteArray &source, const QVector<in
         }
     }
     return suspects;
+}
+
+// C/C++ macro pre-pass (same length, so offsets and line numbers hold): the
+// grammar cannot expand macros, and export / attribute / Qt macros are what
+// trips it on most real files. Rewritten before parsing:
+//  - Qt: Q_OBJECT, Q_PROPERTY(...), QML_ELEMENT, Q_INVOKABLE, ... (blanked,
+//    with their argument list); `signals:` / `Q_SIGNALS:` -> `public`, bare
+//    `slots` / `Q_SLOTS` blanked; `emit` / `Q_EMIT` blanked; value macros
+//    (Q_NULLPTR, Q_FUNC_INFO) -> `0`;
+//  - export / attribute macros (FOO_EXPORT, FMT_API, FMT_CONSTEXPR20,
+//    FOO_DEPRECATED(...), ...) blanked;
+//  - wrapping export macros (CJSON_PUBLIC(type) name(...)) unwrapped;
+//  - *_BEGIN_NAMESPACE / *_END_NAMESPACE lines blanked.
+static QByteArray blankCppMacros(const QByteArray &source)
+{
+    QByteArray out = source;
+    const int size = out.size();
+    auto isIdentChar = [](char ch) { return std::isalnum(static_cast<unsigned char>(ch)) || ch == '_'; };
+    auto blank = [&](int from, int to) {
+        for (int index = from; index < to && index < size; ++index) {
+            if (out.at(index) != '\n') {
+                out[index] = ' ';
+            }
+        }
+    };
+    auto put = [&](int at, const char *text) {
+        for (int index = 0; text[index] && at + index < size; ++index) {
+            out[at + index] = text[index];
+        }
+    };
+    auto matchingParen = [&](int open) {
+        int depth = 0;
+        for (int index = open; index < size && index < open + 4000; ++index) {
+            if (out.at(index) == '(') {
+                ++depth;
+            } else if (out.at(index) == ')' && --depth == 0) {
+                return index;
+            }
+        }
+        return -1;
+    };
+    static const QRegularExpression attributeSuffix(QStringLiteral(
+        R"(^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*_(?:EXPORT|NO_EXPORT|API|DECL|INLINE|FORCE_INLINE|ALWAYS_INLINE|NOINLINE|CONSTEXPR\d*|CONSTEVAL|NOEXCEPT|NODISCARD|DEPRECATED|DEPRECATED_EXPORT|NORETURN|VISIBILITY|HIDDEN|LOCAL|CDECL|STDCALL|UNUSED|MAYBE_UNUSED|FALLTHROUGH|NO_UNIQUE_ADDRESS)$)"));
+    static const QRegularExpression wrapperSuffix(QStringLiteral(R"(^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*_(?:PUBLIC|API|EXPORT|EXTERN|DECLSPEC)$)"));
+    static const QRegularExpression qtMacro(QStringLiteral(R"(^(?:Q|QML|K)_[A-Z0-9_]+$)"));
+    static const QRegularExpression namespaceMacro(QStringLiteral(R"(^[A-Z0-9_]*_(?:BEGIN|END)_NAMESPACE[A-Z0-9_]*$|^QT_(?:BEGIN|END)_[A-Z_]+$)"));
+    static const QSet<QByteArray> valueMacros = {"Q_NULLPTR", "Q_FUNC_INFO", "Q_INT64_C", "Q_UINT64_C", "QT_VERSION_CHECK"};
+
+    bool lineStart = true;
+    int index = 0;
+    while (index < size) {
+        const char ch = out.at(index);
+        // Preprocessor lines, comments and literals are left alone.
+        if (lineStart && (ch == ' ' || ch == '\t')) {
+            ++index;
+            continue;
+        }
+        if (lineStart && ch == '#') {
+            while (index < size && out.at(index) != '\n') {
+                if (out.at(index) == '\\' && index + 1 < size && out.at(index + 1) == '\n') {
+                    ++index;
+                }
+                ++index;
+            }
+            continue;
+        }
+        lineStart = ch == '\n';
+        if (ch == '/' && index + 1 < size && out.at(index + 1) == '/') {
+            while (index < size && out.at(index) != '\n') {
+                ++index;
+            }
+            continue;
+        }
+        if (ch == '/' && index + 1 < size && out.at(index + 1) == '*') {
+            const int end = out.indexOf("*/", index + 2);
+            index = end < 0 ? size : end + 2;
+            continue;
+        }
+        if (ch == '"' || ch == '\'') {
+            ++index;
+            while (index < size && out.at(index) != ch && out.at(index) != '\n') {
+                index += out.at(index) == '\\' ? 2 : 1;
+            }
+            ++index;
+            continue;
+        }
+        if (!isIdentChar(ch) || (index > 0 && isIdentChar(out.at(index - 1)))) {
+            ++index;
+            continue;
+        }
+        int end = index;
+        while (end < size && isIdentChar(out.at(end))) {
+            ++end;
+        }
+        const QByteArray word = out.mid(index, end - index);
+        const QString name = QString::fromLatin1(word);
+        int after = end;
+        while (after < size && (out.at(after) == ' ' || out.at(after) == '\t')) {
+            ++after;
+        }
+        const bool hasArgs = after < size && out.at(after) == '(';
+
+        if (valueMacros.contains(word)) {
+            const int close = hasArgs ? matchingParen(after) : end - 1;
+            if (close >= 0) {
+                blank(index, close + 1);
+                put(index, "0");
+                index = close + 1;
+                continue;
+            }
+        }
+        if (word == "signals" || word == "Q_SIGNALS") {
+            if (after < size && out.at(after) == ':') {
+                blank(index, end);
+                put(index, "public");
+            } else {
+                blank(index, end); // `public Q_SIGNALS:`
+            }
+            index = end;
+            continue;
+        }
+        if (word == "slots" || word == "Q_SLOTS" || word == "emit" || word == "Q_EMIT") {
+            // `public slots:` / `emit changed();` - only in those positions.
+            const bool accessLabel = after < size && out.at(after) == ':';
+            const bool emitStatement = (word == "emit" || word == "Q_EMIT") && after < size && isIdentChar(out.at(after));
+            if (accessLabel || emitStatement) {
+                blank(index, end);
+            }
+            index = end;
+            continue;
+        }
+        if (namespaceMacro.match(name).hasMatch()) {
+            const int close = hasArgs ? matchingParen(after) : end - 1;
+            blank(index, (close >= 0 ? close : end - 1) + 1);
+            index = end;
+            continue;
+        }
+        if (qtMacro.match(name).hasMatch() || attributeSuffix.match(name).hasMatch()) {
+            const int close = hasArgs ? matchingParen(after) : -1;
+            blank(index, close >= 0 ? close + 1 : end);
+            index = close >= 0 ? close + 1 : end;
+            continue;
+        }
+        if (hasArgs && wrapperSuffix.match(name).hasMatch()) {
+            // CJSON_PUBLIC(cJSON *) cJSON_Parse(...) -> cJSON * cJSON_Parse(...)
+            const int close = matchingParen(after);
+            int next = close + 1;
+            while (next < size && (out.at(next) == ' ' || out.at(next) == '\t')) {
+                ++next;
+            }
+            if (close > after && next < size && (isIdentChar(out.at(next)) || out.at(next) == '*' || out.at(next) == '&')
+                && !out.mid(after, close - after).contains(';')) {
+                blank(index, after + 1);
+                out[close] = ' ';
+                index = after + 1;
+                continue;
+            }
+        }
+        index = end;
+    }
+    return out;
 }
 
 struct AstRepairResult
@@ -1275,9 +1437,25 @@ static QVariantMap mergeRecoveredAnalysis(QVariantMap primary,
     primary.insert(QStringLiteral("symbols"),
                    normalizeSymbolTree(primary.value(QStringLiteral("symbols")).toList(),
                                        canonicalSymbols));
-    primary.insert(QStringLiteral("dependencies"),
-                   mergeUniqueFlatEntries(primary.value(QStringLiteral("dependencies")).toList(),
-                                          recovery.value(QStringLiteral("dependencies")).toList()));
+    {
+        // The AST and heuristic parsers describe the same #include / import
+        // with different labels and types: one dependency per target and line.
+        QVariantList dependencies = primary.value(QStringLiteral("dependencies")).toList();
+        QSet<QString> seen;
+        for (const QVariant &entry : std::as_const(dependencies)) {
+            const QVariantMap item = entry.toMap();
+            seen.insert(item.value(QStringLiteral("target")).toString() + QLatin1Char('|') + item.value(QStringLiteral("line")).toString());
+        }
+        for (const QVariant &entry : recovery.value(QStringLiteral("dependencies")).toList()) {
+            const QVariantMap item = entry.toMap();
+            const QString key = item.value(QStringLiteral("target")).toString() + QLatin1Char('|') + item.value(QStringLiteral("line")).toString();
+            if (!seen.contains(key)) {
+                seen.insert(key);
+                dependencies.append(entry);
+            }
+        }
+        primary.insert(QStringLiteral("dependencies"), dependencies);
+    }
     primary.insert(QStringLiteral("routes"),
                    mergeUniqueFlatEntries(primary.value(QStringLiteral("routes")).toList(),
                                           recovery.value(QStringLiteral("routes")).toList()));
@@ -4800,7 +4978,36 @@ QVariantMap SymbolParser::parseFileAnalysis(const QString &path) const
             }
             return analysis;
         };
-        QVariantMap astResult = withAstSignatures(astParse(), text.toUtf8());
+        // C/C++: the grammar sees the macro-blanked bytes (same length, so
+        // offsets, lines and snippets from the original text still hold).
+        const QByteArray originalBytes = text.toUtf8();
+        QByteArray astBytes = originalBytes;
+        if (astLanguage == QStringLiteral("cpp")) {
+            // Keep the pre-pass only where it helps: a rewrite can also walk
+            // into a grammar gap the macro happened to steer around (fmt's
+            // `FMT_DEPRECATED operator const string_view&()` cascades into a
+            // whole-file ERROR without the macro).
+            const QByteArray prepassed = blankCppMacros(originalBytes);
+            if (prepassed != originalBytes) {
+                TSParser *scoreParser = ts_parser_new();
+                if (scoreParser && ts_parser_set_language(scoreParser, languageForName(astLanguage))) {
+                    const AstErrorScore before = scoreAstSource(scoreParser, originalBytes, nullptr);
+                    const AstErrorScore after = scoreAstSource(scoreParser, prepassed, nullptr);
+                    if (after.errorBytes < before.errorBytes
+                        || (after.errorBytes == before.errorBytes && after.declarations >= before.declarations)) {
+                        astBytes = prepassed;
+                    }
+                }
+                if (scoreParser) {
+                    ts_parser_delete(scoreParser);
+                }
+            }
+        }
+        std::optional<ScopedAstSourceOverride> macroGuard;
+        if (astBytes != originalBytes) {
+            macroGuard.emplace(astBytes);
+        }
+        QVariantMap astResult = withAstSignatures(astParse(), astBytes);
         if (!astResult.value(QStringLiteral("analysisHasAstErrors")).toBool()) {
             if (hasContent(astResult)) {
                 return finalizeResult(astResult, QStringLiteral("ast"));
@@ -4811,7 +5018,7 @@ QVariantMap SymbolParser::parseFileAnalysis(const QString &path) const
             return finalizeResult(astResult, QStringLiteral("ast"));
         }
 
-        const AstRepairResult repair = repairSourceForAst(text.toUtf8(), languageForName(astLanguage),
+        const AstRepairResult repair = repairSourceForAst(astBytes, languageForName(astLanguage),
                                                           astLanguage == QStringLiteral("python"));
         bool repairAccepted = false;
         if (!repair.blankedLines.isEmpty()) {
@@ -5000,6 +5207,11 @@ QVariantMap SymbolParser::parseFileAnalysis(const QString &path) const
     return finalizeResult(result, QStringLiteral("heuristic"), QStringLiteral("low"));
 }
 
+QByteArray SymbolParser::cppPrepassed(const QByteArray &source)
+{
+    return blankCppMacros(source);
+}
+
 QVariantMap SymbolParser::debugAst(const QString &path)
 {
     QVariantMap report;
@@ -5011,11 +5223,14 @@ QVariantMap SymbolParser::debugAst(const QString &path)
         report.insert(QStringLiteral("error"), QStringLiteral("unreadable file or no Tree-sitter grammar"));
         return report;
     }
-    const QByteArray source = file.readAll();
+    const QByteArray raw = file.readAll();
+    // What the analysis parses: C/C++ after the macro pre-pass.
+    const QByteArray source = language == QStringLiteral("cpp") ? blankCppMacros(raw) : raw;
     TSParser *parser = ts_parser_new();
     ts_parser_set_language(parser, tsLanguage);
     TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
     QVariantList errors;
+    const QList<QByteArray> sourceLines = source.split('\n');
     std::function<void(TSNode, int)> visit = [&](TSNode node, int depth) {
         if (!ts_node_has_error(node) || errors.size() >= 40) {
             return;
@@ -5027,6 +5242,7 @@ QVariantMap SymbolParser::debugAst(const QString &path)
             entry.insert(QStringLiteral("depth"), depth);
             entry.insert(QStringLiteral("startLine"), static_cast<int>(ts_node_start_point(node).row) + 1);
             entry.insert(QStringLiteral("endLine"), static_cast<int>(ts_node_end_point(node).row) + 1);
+            entry.insert(QStringLiteral("text"), QString::fromUtf8(sourceLines.value(static_cast<int>(ts_node_start_point(node).row))).trimmed());
             TSNode parent = ts_node_parent(node);
             entry.insert(QStringLiteral("parent"), tsType(parent));
             QStringList children;

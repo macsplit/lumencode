@@ -17,6 +17,8 @@ public:
     // Parser development aid: Tree-sitter error/missing nodes and the result of
     // the branch-scoped repair pass for one file (see lumencode-cli --debug-ast).
     static QVariantMap debugAst(const QString &path);
+    // The C/C++ source as the grammar sees it (after the macro pre-pass).
+    static QByteArray cppPrepassed(const QByteArray &source);
     static QVariantList findRelatedFilesPublic(const QString &path);
     static QVariantMap makeSymbolPublic(const QString &kind, const QString &name, int line, const QString &detail,
                                         const QVariantList &members, const QString &snippet);

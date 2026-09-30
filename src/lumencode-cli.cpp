@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QElapsedTimer>
 #include <QEventLoop>
+#include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -133,7 +134,21 @@ int main(int argc, char *argv[])
                                      QStringLiteral("Do not build the project index (cross-file relations fall back to the per-file JS/TS crawl)."));
     parser.addOption(noIndexOption);
 
+    QCommandLineOption cppPrepassOption(QStringList() << "cpp-prepass",
+                                        QStringLiteral("Print a C/C++ file as the grammar sees it, after the macro pre-pass (parser development aid)."),
+                                        QStringLiteral("path"));
+    parser.addOption(cppPrepassOption);
+
     parser.process(app);
+
+    if (parser.isSet(cppPrepassOption)) {
+        QFile file(resolveCliPath(parser.value(cppPrepassOption), QDir::currentPath()));
+        if (!file.open(QIODevice::ReadOnly)) {
+            return 1;
+        }
+        std::cout << SymbolParser::cppPrepassed(file.readAll()).toStdString();
+        return 0;
+    }
 
     if (parser.isSet(indexFactsOption)) {
         QTextStream qin(stdin);
