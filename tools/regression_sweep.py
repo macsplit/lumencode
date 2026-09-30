@@ -236,7 +236,7 @@ def validate_selected_snippet(file_path: Path, state: dict, issues: list[dict], 
             add_issue(issues, "snippet_starts_with_access_label", file_path, context=context, kind=kind, snippet=snippet_text[:200])
 
 
-def select_relation_state(file_path: Path, parsed: dict, relation: dict) -> dict:
+def select_relation_state(file_path: Path, parsed: dict, relation: dict, root: Path | None = None) -> dict:
     payload = {
         "kind": relation.get("kind", "symbol"),
         "name": relation.get("name", ""),
@@ -250,8 +250,10 @@ def select_relation_state(file_path: Path, parsed: dict, relation: dict) -> dict
         "diagnosticsMode": relation.get("diagnosticsMode", ""),
         "detail": relation.get("detail", ""),
     }
+    # The project root matters for cross-file relations (the project index
+    # covers the root), so fixture cases pass theirs.
     return run_cli_commands([
-        {"command": "setRootPath", "params": {"path": str(file_root_for(file_path))}},
+        {"command": "setRootPath", "params": {"path": str(root or file_root_for(file_path))}},
         {"command": "selectPath", "params": {"path": str(file_path)}},
         {"command": "selectSymbolByData", "params": payload},
     ])
@@ -431,7 +433,8 @@ def find_symbol(symbols: list[dict], name: str, kind: str | None = None) -> dict
     return None
 
 
-def validate_relation_roundtrip(file_path: Path, parsed: dict, owner: dict, issues: list[dict], context: str) -> None:
+def validate_relation_roundtrip(file_path: Path, parsed: dict, owner: dict, issues: list[dict], context: str,
+                                root: Path | None = None) -> None:
     owner_name = owner.get("name", "")
     if not owner_name:
         return
@@ -440,7 +443,7 @@ def validate_relation_roundtrip(file_path: Path, parsed: dict, owner: dict, issu
         relations = owner.get(field, []) or []
         for relation in relations[:2]:
             try:
-                state = select_relation_state(file_path, parsed, relation)
+                state = select_relation_state(file_path, parsed, relation, root)
             except Exception as exc:
                 add_issue(issues, "relation_selection_failure", file_path, context=context, relation_type=field, name=relation.get("name", ""), message=str(exc))
                 continue
@@ -732,7 +735,8 @@ def inspect_fixture_case(case: dict, issues: list[dict]) -> None:
                     missing=missing,
                 )
 
-        validate_relation_roundtrip(file_path, parsed, symbol, issues, context=f"fixture:{case_name}:{expectation['name']}")
+        validate_relation_roundtrip(file_path, parsed, symbol, issues, context=f"fixture:{case_name}:{expectation['name']}",
+                                    root=root)
 
         if expectation_needs_selection_roundtrip(expectation):
             try:

@@ -8531,7 +8531,7 @@ QVariantMap SymbolParser::parsePython(const QString &path, const QString &text) 
     symbols = applySnippetCallRelations(symbols);
 
     result.insert(QStringLiteral("symbols"), symbols);
-    result.insert(QStringLiteral("dependencies"), extractPythonDependencies(text));
+    result.insert(QStringLiteral("dependencies"), extractPythonDependencies(path, text));
     result.insert(QStringLiteral("routes"), extractPythonRoutes(path, text));
     result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
     result.insert(QStringLiteral("summary"), QStringLiteral("%1 top-level symbols").arg(symbols.size()));
@@ -9033,7 +9033,7 @@ QVariantMap SymbolParser::parsePythonTreeSitter(const QString &path, const QStri
     QVariantMap result = makeResultSkeleton(path, QFileInfo(path).fileName(), QStringLiteral("python"));
     result.insert(QStringLiteral("analysisHasAstErrors"), hasAstErrors);
     result.insert(QStringLiteral("symbols"), symbols);
-    result.insert(QStringLiteral("dependencies"), extractPythonDependencies(text));
+    result.insert(QStringLiteral("dependencies"), extractPythonDependencies(path, text));
     result.insert(QStringLiteral("routes"), extractPythonRoutes(path, text));
     result.insert(QStringLiteral("relatedFiles"), findRelatedFiles(path));
     result.insert(QStringLiteral("summary"), QStringLiteral("%1 top-level symbols").arg(symbols.size()));
@@ -11771,56 +11771,235 @@ QVariantList SymbolParser::extractDependencyLinks(const QString &path, const QSt
     return links;
 }
 
-QVariantList SymbolParser::extractPythonDependencies(const QString &text)
-{
-    QVariantList links;
-    QSet<QString> seen;
+namespace {
 
-    QRegularExpression importPattern(QStringLiteral(R"(^\s*import\s+([A-Za-z0-9_., ]+))"),
-                                     QRegularExpression::MultilineOption);
-    auto importIt = importPattern.globalMatch(text);
-    while (importIt.hasNext()) {
-        const auto match = importIt.next();
-        const int line = lineNumberAtOffset(text, match.capturedStart(0));
-        const QStringList names = match.captured(1).split(QLatin1Char(','), Qt::SkipEmptyParts);
-        for (const QString &name : names) {
-            const QString target = name.trimmed().section(QLatin1String(" as "), 0, 0);
-            if (target.isEmpty() || seen.contains(target)) {
-                continue;
+// Python strings (incl. triple-quoted, any prefix) and comments blanked,
+// newlines kept, so import statements can be found without docstring noise.
+QString blankPythonNoise(const QString &text)
+{
+    QString out = text;
+    const int size = out.size();
+    auto blank = [&](int from, int to) {
+        for (int i = from; i < to && i < size; ++i) {
+            if (out.at(i) != QLatin1Char('\n')) {
+                out[i] = QLatin1Char(' ');
             }
-            seen.insert(target);
-            QVariantMap item = makeSourceContextItem(QString(), QStringLiteral("python"), line,
-                                                     snippetFromLine(text, line, 0), QStringLiteral("import"));
-            item.insert(QStringLiteral("target"), target);
-            item.insert(QStringLiteral("type"), QStringLiteral("import"));
-            item.insert(QStringLiteral("label"), target);
-            item.insert(QStringLiteral("path"), QString());
-            item.insert(QStringLiteral("exists"), true);
-            links.append(item);
+        }
+    };
+    int index = 0;
+    while (index < size) {
+        const QChar ch = out.at(index);
+        if (ch == QLatin1Char('#')) {
+            int end = out.indexOf(QLatin1Char('\n'), index);
+            end = end < 0 ? size : end;
+            blank(index, end);
+            index = end;
+        } else if (ch == QLatin1Char('"') || ch == QLatin1Char('\'')) {
+            const QString triple(3, ch);
+            if (out.mid(index, 3) == triple) {
+                int end = index + 3;
+                while (end < size && out.mid(end, 3) != triple) {
+                    end += out.at(end) == QLatin1Char('\\') ? 2 : 1;
+                }
+                end = qMin(size, end + 3);
+                blank(index, end);
+                index = end;
+            } else {
+                int end = index + 1;
+                while (end < size && out.at(end) != ch && out.at(end) != QLatin1Char('\n')) {
+                    end += out.at(end) == QLatin1Char('\\') ? 2 : 1;
+                }
+                end = qMin(size, end + 1);
+                blank(index, end);
+                index = end;
+            }
+        } else {
+            ++index;
         }
     }
+    return out;
+}
 
-    QRegularExpression fromPattern(QStringLiteral(R"(^\s*from\s+([A-Za-z0-9_.]+)\s+import\s+)"),
-                                   QRegularExpression::MultilineOption);
-    auto fromIt = fromPattern.globalMatch(text);
-    while (fromIt.hasNext()) {
-        const auto match = fromIt.next();
-        const QString target = match.captured(1);
-        if (target.isEmpty() || seen.contains(target)) {
-            continue;
+// A module (a.b.c, with `level` leading dots for relative imports) as a
+// local file: <root>/a/b/c.py or <root>/a/b/c/__init__.py. Absolute imports
+// are looked up from the file's folder upwards (and in `src/` layouts).
+QString resolvePythonModule(const QString &filePath, const QString &module, int level)
+{
+    const QStringList parts = module.split(QLatin1Char('.'), Qt::SkipEmptyParts);
+    auto probe = [&](const QDir &root) -> QString {
+        if (parts.isEmpty()) {
+            const QString init = root.filePath(QStringLiteral("__init__.py"));
+            return QFileInfo::exists(init) ? QFileInfo(init).absoluteFilePath() : QString();
         }
-        seen.insert(target);
-        const int line = lineNumberAtOffset(text, match.capturedStart(0));
-        QVariantMap item = makeSourceContextItem(QString(), QStringLiteral("python"), line,
+        const QString base = root.filePath(parts.join(QLatin1Char('/')));
+        if (QFileInfo(base + QStringLiteral(".py")).isFile()) {
+            return QFileInfo(base + QStringLiteral(".py")).absoluteFilePath();
+        }
+        if (QFileInfo(base + QStringLiteral("/__init__.py")).isFile()) {
+            return QFileInfo(base + QStringLiteral("/__init__.py")).absoluteFilePath();
+        }
+        return QString();
+    };
+    QDir dir = QFileInfo(filePath).absoluteDir();
+    if (level > 0) {
+        for (int up = 1; up < level; ++up) {
+            if (!dir.cdUp()) {
+                return QString();
+            }
+        }
+        return probe(dir);
+    }
+    // Absolute imports never resolve inside the importing file's own package
+    // (Python 3): start above the outermost enclosing package.
+    for (int guard = 0; guard < 16 && QFileInfo::exists(dir.filePath(QStringLiteral("__init__.py"))); ++guard) {
+        if (!dir.cdUp()) {
+            break;
+        }
+    }
+    for (int depth = 0; depth < 8; ++depth) {
+        QString found = probe(dir);
+        if (found.isEmpty() && QFileInfo(dir.filePath(QStringLiteral("src"))).isDir()) {
+            found = probe(QDir(dir.filePath(QStringLiteral("src"))));
+        }
+        if (!found.isEmpty()) {
+            return found;
+        }
+        if (!dir.cdUp()) {
+            break;
+        }
+    }
+    return QString();
+}
+
+} // namespace
+
+QVariantList SymbolParser::extractPythonDependencies(const QString &path, const QString &text)
+{
+    QVariantList links;
+    const QString clean = blankPythonNoise(text);
+    const QStringList physical = clean.split(QLatin1Char('\n'));
+
+    // Logical lines: bracket and backslash continuations joined.
+    struct Logical { QString text; int line; };
+    QVector<Logical> logical;
+    QString pending;
+    int pendingLine = 0;
+    int depth = 0;
+    for (int index = 0; index < physical.size(); ++index) {
+        QString line = physical.at(index);
+        if (pending.isEmpty()) {
+            pendingLine = index + 1;
+        }
+        for (const QChar ch : std::as_const(line)) {
+            if (ch == QLatin1Char('(') || ch == QLatin1Char('[') || ch == QLatin1Char('{')) {
+                ++depth;
+            } else if ((ch == QLatin1Char(')') || ch == QLatin1Char(']') || ch == QLatin1Char('}')) && depth > 0) {
+                --depth;
+            }
+        }
+        const bool backslash = line.trimmed().endsWith(QLatin1Char('\\'));
+        if (backslash) {
+            line = line.trimmed();
+            line.chop(1);
+        }
+        pending += line + QLatin1Char(' ');
+        if (depth == 0 && !backslash) {
+            logical.append({pending, pendingLine});
+            pending.clear();
+        }
+    }
+    if (!pending.trimmed().isEmpty()) {
+        logical.append({pending, pendingLine});
+    }
+
+    static const QRegularExpression importStatement(QStringLiteral(R"(^\s*import\s+(.+)$)"));
+    static const QRegularExpression fromStatement(QStringLiteral(R"(^\s*from\s+(\.*)([A-Za-z_][\w.]*)?\s+import\s+(.+)$)"));
+    static const QRegularExpression dottedName(QStringLiteral(R"(^[A-Za-z_][\w.]*$)"));
+    QSet<QString> seen;
+    auto append = [&](const QString &target, const QString &resolved, const QVariantList &bindings, int line) {
+        const QString id = target + QLatin1Char('|') + resolved;
+        if (seen.contains(id)) {
+            // Merge bindings of repeated imports of the same module.
+            for (int index = 0; index < links.size(); ++index) {
+                QVariantMap item = links.at(index).toMap();
+                if (item.value(QStringLiteral("target")).toString() == target
+                    && item.value(QStringLiteral("path")).toString() == resolved) {
+                    QVariantList merged = item.value(QStringLiteral("bindings")).toList();
+                    merged += bindings;
+                    item.insert(QStringLiteral("bindings"), merged);
+                    links[index] = item;
+                    break;
+                }
+            }
+            return;
+        }
+        seen.insert(id);
+        QVariantMap item = makeSourceContextItem(path, QStringLiteral("python"), line,
                                                  snippetFromLine(text, line, 0), QStringLiteral("import"));
         item.insert(QStringLiteral("target"), target);
         item.insert(QStringLiteral("type"), QStringLiteral("import"));
-        item.insert(QStringLiteral("label"), target);
-        item.insert(QStringLiteral("path"), QString());
+        item.insert(QStringLiteral("label"), resolved.isEmpty() ? target
+                                                                : QDir(QFileInfo(path).absolutePath()).relativeFilePath(resolved));
+        item.insert(QStringLiteral("path"), resolved);
         item.insert(QStringLiteral("exists"), true);
+        if (!bindings.isEmpty()) {
+            item.insert(QStringLiteral("bindings"), bindings);
+        }
         links.append(item);
-    }
+    };
+    auto binding = [](const QString &local, const QString &imported) {
+        return QVariantMap{{QStringLiteral("local"), local}, {QStringLiteral("imported"), imported}};
+    };
 
+    for (const Logical &statement : std::as_const(logical)) {
+        const QString simplified = statement.text.simplified();
+        const auto fromMatch = fromStatement.match(simplified);
+        if (fromMatch.hasMatch()) {
+            const int level = fromMatch.captured(1).size();
+            const QString module = fromMatch.captured(2);
+            const QString target = fromMatch.captured(1) + module;
+            QString names = fromMatch.captured(3);
+            names.remove(QLatin1Char('(')).remove(QLatin1Char(')'));
+            const QString modulePath = resolvePythonModule(path, module, level);
+            QVariantList moduleBindings;
+            for (const QString &entry : names.split(QLatin1Char(','), Qt::SkipEmptyParts)) {
+                const QString name = entry.section(QStringLiteral(" as "), 0, 0).trimmed();
+                const QString local = entry.contains(QStringLiteral(" as "))
+                    ? entry.section(QStringLiteral(" as "), 1, 1).trimmed() : name;
+                if (name == QStringLiteral("*")) {
+                    continue; // star import: no bindings, like an include
+                }
+                if (!dottedName.match(name).hasMatch() || !dottedName.match(local).hasMatch()) {
+                    continue;
+                }
+                // `from pkg import module` names a submodule, not a symbol.
+                const QString submodule = resolvePythonModule(path, module.isEmpty() ? name : module + QLatin1Char('.') + name, level);
+                if (!submodule.isEmpty() && submodule != modulePath) {
+                    append(target + (module.isEmpty() ? QString() : QStringLiteral(".")) + name, submodule,
+                           {binding(local, QStringLiteral("*"))}, statement.line);
+                } else {
+                    moduleBindings.append(binding(local, name));
+                }
+            }
+            if (!moduleBindings.isEmpty() || names.trimmed() == QStringLiteral("*")) {
+                append(target.isEmpty() ? QStringLiteral(".") : target, modulePath, moduleBindings, statement.line);
+            }
+            continue;
+        }
+        const auto importMatch = importStatement.match(simplified);
+        if (!importMatch.hasMatch()) {
+            continue;
+        }
+        for (const QString &entry : importMatch.captured(1).split(QLatin1Char(','), Qt::SkipEmptyParts)) {
+            const QString module = entry.section(QStringLiteral(" as "), 0, 0).trimmed();
+            if (!dottedName.match(module).hasMatch()) {
+                continue;
+            }
+            const QString local = entry.contains(QStringLiteral(" as "))
+                ? entry.section(QStringLiteral(" as "), 1, 1).trimmed() : module;
+            append(module, resolvePythonModule(path, module, 0), {binding(local, QStringLiteral("*"))}, statement.line);
+        }
+    }
     return links;
 }
 

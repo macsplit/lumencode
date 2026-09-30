@@ -1930,6 +1930,53 @@
           ]
         }
       ]
+    },
+    {
+      "name": "index_python_package_imports",
+      "root": "tests/fixtures/baseline/cross_file/python_pkg",
+      "file": "tests/test_cart.py",
+      "file_expectations": {
+        "dependencies": 2
+      },
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "test_checkout",
+          "calls": [
+            "Cart",
+            "charge_card"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_python_relative_module_import",
+      "root": "tests/fixtures/baseline/cross_file/python_pkg",
+      "file": "shop/cart.py",
+      "expectations": [
+        {
+          "kind": "method",
+          "name": "checkout",
+          "calls": [
+            "charge_card"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_python_reexport_called_by",
+      "root": "tests/fixtures/baseline/cross_file/python_pkg",
+      "file": "shop/payments/gateway.py",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "charge_card",
+          "calledBy": [
+            "checkout",
+            "test_checkout"
+          ]
+        }
+      ]
     }
   ]
 }

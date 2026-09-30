@@ -571,6 +571,41 @@ bool resolveWith(const Snapshot &snapshot, const FileFacts &from, const CallSite
         return found;
     };
 
+    // A name a module only re-exports (`from .app import Flask` in a package
+    // __init__.py, `export { x } from './x'` in a barrel): follow it.
+    std::function<QVector<const Definition *>(const QString &, const QString &, int)> followReexport =
+        [&](const QString &modulePath, const QString &name, int hops) {
+            QVector<const Definition *> found;
+            const auto fileIt = snapshot.files.constFind(modulePath);
+            if (hops > 3 || fileIt == snapshot.files.constEnd()) {
+                return found;
+            }
+            for (const Import &reexport : fileIt->imports) {
+                if (reexport.path.isEmpty() || reexport.path == modulePath) {
+                    continue;
+                }
+                QString imported = name;
+                if (!reexport.bindings.isEmpty()) {
+                    if (!reexport.bindings.contains(name)) {
+                        continue;
+                    }
+                    imported = reexport.bindings.value(name);
+                    if (imported == QStringLiteral("*") || imported == QStringLiteral("default")) {
+                        continue;
+                    }
+                }
+                found = definitionsIn(reexport.path, imported);
+                if (found.isEmpty() && !reexport.bindings.isEmpty()) {
+                    found = followReexport(reexport.path, imported, hops + 1);
+                }
+                if (!found.isEmpty()) {
+                    return found;
+                }
+            }
+            return found;
+        };
+    auto reexported = [&](const QString &modulePath, const QString &name) { return followReexport(modulePath, name, 1); };
+
     // 1. Imports: the name (or the receiver) is bound to a project file, or the
     //    file is included / star-imported and the call's shape fits.
     for (const Import &import : from.imports) {
@@ -586,10 +621,16 @@ bool resolveWith(const Snapshot &snapshot, const FileFacts &from, const CallSite
             }
             bound = true;
         }
-        const bool moduleReceiver = qualified && !selfCall && import.bindings.contains(head)
-            && rawQualifier == head; // utils.normalizeType(), helpers.wrapper()
+        const QString receiverBinding = import.bindings.value(rawQualifier);
+        const bool moduleReceiver = qualified && !selfCall
+            && ((import.bindings.contains(head) && rawQualifier == head) // utils.normalizeType(), helpers.wrapper()
+                || receiverBinding == QStringLiteral("*")); // import a.b -> a.b.func()
         const bool typeReceiver = qualified && !selfCall && import.bindings.contains(head); // HTTPException.x, RegexMatcher::new
-        for (const Definition *candidate : definitionsIn(import.path, wanted)) {
+        QVector<const Definition *> found = definitionsIn(import.path, wanted);
+        if (found.isEmpty() && (bound || moduleReceiver)) {
+            found = reexported(import.path, wanted);
+        }
+        for (const Definition *candidate : std::as_const(found)) {
             bool accept = false;
             if (bound || constructs) {
                 accept = !isMethodDefinition(*candidate) || constructs;

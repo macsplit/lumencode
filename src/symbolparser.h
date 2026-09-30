@@ -63,7 +63,7 @@ private:
     static QVariantList findHtmlConsumersForAsset(const QString &path, const QString &assetType);
     static void enrichCssAnalysisWithHtmlUsage(QVariantMap &result, const QString &path, const QString &text);
     static QVariantList extractDependencyLinks(const QString &path, const QString &text);
-    static QVariantList extractPythonDependencies(const QString &text);
+    static QVariantList extractPythonDependencies(const QString &path, const QString &text);
     static QVariantList extractCppDependencies(const QString &path, const QString &text);
     static QVariantList extractJavaDependencies(const QString &text);
     static QVariantList extractCSharpDependencies(const QString &text);
