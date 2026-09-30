@@ -125,6 +125,11 @@ python3 tools/corpus_scan.py --save before.json         # whole-corpus coverage 
 python3 tools/corpus_scan.py --compare before.json      # ... then diff after a change
 python3 tools/damage_probe.py                           # how far an injected syntax error spreads
 python3 tools/regression_sweep.py --corpus-root ~/.cache/lumencode-corpus --max-files 300
+
+# The real GUI, headless: loads Main.qml offscreen and drives every symbol, relation,
+# dependency, route and quick link of each file; fails on any QML warning.
+cmake --build build --target lumencode-gui-smoke
+QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software ./build/bin/lumencode-gui-smoke tests/fixtures/baseline
 ```
 
 - **Fixtures:** `tests/fixtures/baseline/` holds small projects per language
@@ -211,7 +216,7 @@ The longer-standing phase list follows.
 
 Phase 1. Stabilization
 
-- Remove remaining QML/runtime edge-case binding failures.
+- Remove remaining QML/runtime edge-case binding failures. (2026-09-30: `lumencode-gui-smoke` drives the real GUI headless through all fixtures and a 141-file corpus sample — 3,200+ selections — with no QML warnings; keep it as the gate for QML changes.)
 - Harden all selection payloads so every detail section is safe to bind.
 - Reduce misleading or noisy structural output on real projects.
 - Continue broad CLI-driven regression sweeps: the pinned public corpus (`tools/corpus.json`) plus local projects under `/home/user/Code`.

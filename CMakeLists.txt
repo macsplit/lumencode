@@ -243,6 +243,46 @@ target_link_libraries(lumencode-cli
     vendor-tree-sitter-cpp
 )
 
+# Headless GUI smoke test (not built by default):
+#   cmake --build build --target lumencode-gui-smoke
+#   QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software ./build/bin/lumencode-gui-smoke tests/fixtures/baseline
+add_executable(lumencode-gui-smoke EXCLUDE_FROM_ALL
+    tests/gui_smoke.cpp
+    src/filesystemmodel.cpp
+    src/filesystemmodel.h
+    src/projectcontroller.cpp
+    src/projectcontroller.h
+    src/symbolparser.cpp
+    src/symbolparser.h
+    src/weblinks.cpp
+    src/weblinks.h
+    src/resources.qrc
+)
+target_include_directories(lumencode-gui-smoke PRIVATE src)
+target_link_libraries(lumencode-gui-smoke
+    Qt5::Core
+    Qt5::Concurrent
+    Qt5::Quick
+    Qt5::QuickControls2
+    Qt5::Widgets
+    KF5::Kirigami2
+    KF5::CoreAddons
+    vendor-tree-sitter
+    vendor-tree-sitter-javascript
+    vendor-tree-sitter-typescript
+    vendor-tree-sitter-tsx
+    vendor-tree-sitter-php
+    vendor-tree-sitter-css
+    vendor-tree-sitter-rust
+    vendor-tree-sitter-python
+    vendor-tree-sitter-swift
+    vendor-tree-sitter-java
+    vendor-tree-sitter-c-sharp
+    vendor-tree-sitter-html
+    vendor-tree-sitter-go
+    vendor-tree-sitter-cpp
+)
+
 install(TARGETS lumencode lumencode-cli ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/app.lumencode.LumenCode.desktop DESTINATION ${KDE_INSTALL_APPDIR})
 install(FILES src/icons/lumencode.svg DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps RENAME app.lumencode.LumenCode.svg)

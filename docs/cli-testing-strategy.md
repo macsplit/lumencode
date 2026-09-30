@@ -162,3 +162,15 @@ python3 tools/regression_sweep.py --max-files 80 --limit-per-project 4
 - Recovered-analysis regressions should now also watch for duplicate merged symbols or stale relation targets, not just the presence of a `recovered` file-level state.
 - Controller-side relationship warnings should now also be checked against file value: low-surface script files should not trigger expensive incoming relationship scans just because they are script-like.
 - Remaining native parser rehabilitation should proceed through the CLI first: collect a crashing file, minimize the repro, verify whether the fault is in LumenCode integration or an upstream grammar/runtime, and only then reduce the fallback/isolation layers for that language.
+
+## Headless GUI Smoke Test
+
+`tests/gui_smoke.cpp` builds `lumencode-gui-smoke` (not part of the default build). It loads the real `Main.qml` with the offscreen platform and software scene graph, finds the live `ProjectController`, and for every given file selects each symbol, member, relation, dependency, route, quick link and CSS class entry — following cross-file entries and coming back. Every QML warning (TypeError, ReferenceError, "Unable to assign", binding loops) is collected and fails the run; a self-check at start-up confirms a deliberately broken binding is reported.
+
+```bash
+cmake --build build --target lumencode-gui-smoke
+QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software ./build/bin/lumencode-gui-smoke tests/fixtures/baseline
+QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software ./build/bin/lumencode-gui-smoke path/to/file1 path/to/file2 ...
+```
+
+In a container, install the QML runtime modules first (`qml-module-org-kde-kirigami2`, `qml-module-qtquick-controls2`, `qml-module-qtquick-layouts`, `qml-module-qtquick-window2`, `qml-module-qtquick2`, `qml-module-qtquick-dialogs`, `qml-module-qtqml-models2`).
