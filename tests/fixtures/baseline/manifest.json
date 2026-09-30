@@ -2466,6 +2466,84 @@
           "name": "address"
         }
       ]
+    },
+    {
+      "name": "webforms_markup_is_indexed_as_html",
+      "root": "tests/fixtures/baseline/webforms_basic",
+      "file": "Default.aspx",
+      "file_expectations": {
+        "analysis_source_mode": "ast",
+        "analysis_confidence": "high"
+      },
+      "expectations": [
+        {
+          "kind": "directive",
+          "name": "Page directive"
+        },
+        {
+          "kind": "directive",
+          "name": "Register directive"
+        },
+        {
+          "kind": "directive",
+          "name": "Import directive"
+        },
+        {
+          "kind": "element",
+          "name": "#mainForm"
+        },
+        {
+          "kind": "region",
+          "name": "#BodyContent"
+        },
+        {
+          "kind": "control",
+          "name": "#SaveButton"
+        },
+        {
+          "kind": "server block",
+          "name": "<script runat=server>"
+        },
+        {
+          "kind": "expression",
+          "name": "Title"
+        },
+        {
+          "kind": "handler",
+          "name": "<asp:button onclick>",
+          "calls": [
+            "SaveButton_Click"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "webforms_codebehind_reverse_link",
+      "root": "tests/fixtures/baseline/webforms_basic",
+      "file": "Default.aspx.cs",
+      "expectations": [
+        {
+          "kind": "method",
+          "name": "SaveButton_Click",
+          "calledBy": [
+            "<asp:button onclick>"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "webforms_vb_handles_event_without_markup_attribute",
+      "root": "tests/fixtures/baseline/webforms_basic",
+      "file": "Legacy.ascx",
+      "expectations": [
+        {
+          "kind": "event",
+          "name": "SaveButton.Click",
+          "calls": [
+            "SaveButton_Click"
+          ]
+        }
+      ]
     }
   ]
 }

@@ -36,7 +36,9 @@ const QSet<QString> &indexedSuffixes()
         QStringLiteral("c"), QStringLiteral("cc"), QStringLiteral("cpp"), QStringLiteral("cxx"), QStringLiteral("h"),
         QStringLiteral("hh"), QStringLiteral("hpp"), QStringLiteral("hxx"), QStringLiteral("m"), QStringLiteral("mm"),
         QStringLiteral("vb"), QStringLiteral("sql"), QStringLiteral("sh"), QStringLiteral("bash"), QStringLiteral("qml"),
-        QStringLiteral("html"), QStringLiteral("htm"), QStringLiteral("kt"), QStringLiteral("kts"), QStringLiteral("rb"), QStringLiteral("scss"), QStringLiteral("less"),
+        QStringLiteral("html"), QStringLiteral("htm"),
+        QStringLiteral("aspx"), QStringLiteral("ascx"), QStringLiteral("master"), QStringLiteral("ashx"), QStringLiteral("asmx"), QStringLiteral("asax"),
+        QStringLiteral("kt"), QStringLiteral("kts"), QStringLiteral("rb"), QStringLiteral("scss"), QStringLiteral("less"),
     };
     return suffixes;
 }

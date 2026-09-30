@@ -194,6 +194,17 @@ Out of scope for now: Razor (`.cshtml` / `.vbhtml`), MVC view resolution and
 
 Progress is recorded per phase in [`implementation-log.md`](implementation-log.md).
 
+- **Phase H — in progress (2026-09-30).** The initial visibility slice is
+  complete: `.aspx`, `.ascx`, `.master`, `.ashx`, `.asmx` and `.asax` are
+  included in the explorer, project index, CLI/regression candidates and GUI
+  smoke coverage. They currently use the existing HTML-compatible markup
+  analysis, plus WebForms directives, server controls, content regions,
+  server-side blocks and inline expressions. Markup now links to conventional
+  code-behind/designer files, and server-control events bind to matching local
+  C# or VB methods in both directions. VB.NET `Handles Control.Event` clauses
+  are surfaced on the markup side even when no `On*` attribute is present.
+  Missing handler and control/designer diagnostics remain the next work.
+
 - **Phase A — done (2026-09-30).** GUI smoke test green (fixtures and a
   141-file corpus sample, no QML warnings); TS/JS files with symbols
   63% → 93%, JS 65% → 87%, TSX 59% → 94%; Rust and Swift signatures from the

@@ -1,5 +1,22 @@
 # Implementation Log
 
+## 2026-09-30 (continued): Phase H started — WebForms visibility
+
+- Added `.aspx`, `.ascx`, `.master`, `.ashx`, `.asmx` and `.asax` to the
+  explorer, project-index, CLI regression and GUI-smoke suffix lists. The
+  HTML-compatible parser now adds a WebForms structural layer for directives,
+  server controls, content regions, server-side blocks and inline expressions.
+- Conventional markup ↔ `.aspx.cs` / `.aspx.vb` / designer links now work in
+  both directions. `On*="Handler"` attributes on server controls bind to a
+  matching local C# or VB code-behind callable; opening that method also shows
+  the control as a `Called By` entry.
+- VB.NET `Handles Control.Event` clauses now also create markup-side event
+  symbols and links. This covers the common WebForms pattern where all event
+  wiring lives in the code-behind and the markup has no `On*` attribute.
+- Added a `webforms_basic/Default.aspx` fixture covering a page directive, a
+  server form, an `asp:Button` id and its `OnClick` handler. The fixture sweep
+  and an offscreen GUI-smoke run pass.
+
 ## 2026-09-30 (continued): agent tooling additions
 
 - **MCP `project_summary` and `web_links`:** wrapper-only. `project_summary` reads `getProjectSummary` from `-i` plus the root `package.json`; `web_links` condenses `--dump-file` of an HTML / CSS / JS file into broken references, links out, handlers, ids, DOM use and class usage.

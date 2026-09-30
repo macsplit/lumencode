@@ -3729,6 +3729,110 @@ static QString handlerSymbolName(const WebLinks::HtmlHandler &handler)
     return QStringLiteral("<%1 %2>").arg(handler.tag, handler.attribute);
 }
 
+// Add the reverse half of a WebForms event link when the code-behind is
+// opened directly. This is sibling-only, avoiding a noisy project-wide name
+// search for conventional event-handler names.
+static QVariantMap addWebFormsHandlerBacklinks(QVariantMap analysis, const QString &path)
+{
+    const QFileInfo info(path);
+    const QString fileName = info.fileName();
+    const QString lowerName = fileName.toLower();
+    QString markupName;
+    if (lowerName.endsWith(QStringLiteral(".designer.cs")) || lowerName.endsWith(QStringLiteral(".designer.vb"))) {
+        markupName = fileName.left(fileName.lastIndexOf(QStringLiteral(".designer."), -1, Qt::CaseInsensitive));
+    } else if (lowerName.endsWith(QStringLiteral(".cs")) || lowerName.endsWith(QStringLiteral(".vb"))) {
+        markupName = fileName.left(fileName.lastIndexOf(QLatin1Char('.')));
+    }
+    const QString lowerMarkup = markupName.toLower();
+    if (!(lowerMarkup.endsWith(QStringLiteral(".aspx")) || lowerMarkup.endsWith(QStringLiteral(".ascx"))
+          || lowerMarkup.endsWith(QStringLiteral(".master")) || lowerMarkup.endsWith(QStringLiteral(".ashx"))
+          || lowerMarkup.endsWith(QStringLiteral(".asmx")) || lowerMarkup.endsWith(QStringLiteral(".asax")))) {
+        return analysis;
+    }
+    const QString markupPath = info.dir().filePath(markupName);
+    QFile markupFile(markupPath);
+    if (!markupFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return analysis;
+    }
+    const QString markup = QString::fromUtf8(markupFile.readAll());
+    struct Event { QString name; QString label; int line; QString snippet; };
+    QList<Event> events;
+    const QRegularExpression controlPattern(
+        QStringLiteral(R"wf(<\s*([A-Za-z][A-Za-z0-9_.-]*:[A-Za-z][A-Za-z0-9_.-]*)\b([^>]*)>)wf"),
+        QRegularExpression::CaseInsensitiveOption);
+    auto controls = controlPattern.globalMatch(markup);
+    while (controls.hasNext()) {
+        const QRegularExpressionMatch control = controls.next();
+        const QString tag = control.captured(1).toLower();
+        const QString attributes = control.captured(2);
+        const QRegularExpression eventPattern(
+            QStringLiteral(R"wf(\b(on[A-Za-z][A-Za-z0-9_]*)\s*=\s*(?:"([A-Za-z_]\w*)"|'([A-Za-z_]\w*)'))wf"),
+            QRegularExpression::CaseInsensitiveOption);
+        auto attributesIt = eventPattern.globalMatch(attributes);
+        while (attributesIt.hasNext()) {
+            const QRegularExpressionMatch event = attributesIt.next();
+            const QString name = !event.captured(2).isEmpty() ? event.captured(2) : event.captured(3);
+            const int line = lineNumberAtOffset(markup, control.capturedStart(0));
+            events.append({name, QStringLiteral("<%1 %2>").arg(tag, event.captured(1).toLower()), line,
+                           snippetFromLine(markup, line, 0)});
+        }
+    }
+    std::function<QVariantList(QVariantList)> attach = [&](QVariantList symbols) {
+        for (int index = 0; index < symbols.size(); ++index) {
+            QVariantMap symbol = symbols.at(index).toMap();
+            if (isCallableSymbolKind(symbol.value(QStringLiteral("kind")).toString())) {
+                QList<Event> eventsForMethod = events;
+                // In VB, Handles is the authoritative event binding even if
+                // the corresponding server control has no On* attribute.
+                static const QRegularExpression handlesPattern(
+                    QStringLiteral(R"(\bhandles\s+(.+)$)"), QRegularExpression::CaseInsensitiveOption);
+                const QRegularExpressionMatch handles = handlesPattern.match(symbol.value(QStringLiteral("detail")).toString());
+                const bool hasExplicitMarkupEvent = std::any_of(events.cbegin(), events.cend(), [&](const Event &event) {
+                    return event.name == symbol.value(QStringLiteral("name")).toString();
+                });
+                if (handles.hasMatch() && !hasExplicitMarkupEvent) {
+                    static const QRegularExpression handlesEventPattern(
+                        QStringLiteral(R"((?:^|,)\s*([A-Za-z_]\w*)\.([A-Za-z_]\w*))"),
+                        QRegularExpression::CaseInsensitiveOption);
+                    auto handlesEvents = handlesEventPattern.globalMatch(handles.captured(1));
+                    while (handlesEvents.hasNext()) {
+                        const QRegularExpressionMatch event = handlesEvents.next();
+                        const QString label = event.captured(1) + QLatin1Char('.') + event.captured(2);
+                        eventsForMethod.append({symbol.value(QStringLiteral("name")).toString(), label, 1,
+                                                QStringLiteral("Code-behind event: %1").arg(label)});
+                    }
+                }
+                QVariantList calledBy = symbol.value(QStringLiteral("calledBy")).toList();
+                for (const Event &event : std::as_const(eventsForMethod)) {
+                    if (event.name != symbol.value(QStringLiteral("name")).toString()) {
+                        continue;
+                    }
+                    bool alreadyLinked = false;
+                    for (const QVariant &existing : std::as_const(calledBy)) {
+                        const QVariantMap item = existing.toMap();
+                        if (item.value(QStringLiteral("name")).toString() == event.label
+                            && item.value(QStringLiteral("path")).toString() == markupPath) {
+                            alreadyLinked = true;
+                            break;
+                        }
+                    }
+                    if (!alreadyLinked) {
+                        calledBy.append(makeCrossFileRelation(QStringLiteral("handler"), event.label, markupPath,
+                                                              QStringLiteral("html"), event.line, event.snippet,
+                                                              QStringLiteral("WebForms server-control event")));
+                    }
+                }
+                symbol.insert(QStringLiteral("calledBy"), calledBy);
+            }
+            symbol.insert(QStringLiteral("members"), attach(symbol.value(QStringLiteral("members")).toList()));
+            symbols[index] = symbol;
+        }
+        return symbols;
+    };
+    analysis.insert(QStringLiteral("symbols"), attach(analysis.value(QStringLiteral("symbols")).toList()));
+    return analysis;
+}
+
 // JS/TS file: consumer pages, DOM references resolved to HTML elements and
 // CSS rules, and `calledBy` edges from inline HTML event handlers.
 static void enrichScriptWithWebLinks(QVariantMap &result, const QString &path, const QString &text)
@@ -5284,6 +5388,7 @@ SymbolParser::SymbolParser(QObject *parent)
 QVariantMap SymbolParser::parseFile(const QString &path) const
 {
     QVariantMap analysis = parseFileAnalysis(path);
+    analysis = addWebFormsHandlerBacklinks(analysis, path);
     // Browser-side HTTP calls (fetch, axios, jQuery, XHR, forms), matched to
     // backend routes by the project index.
     static const QSet<QString> httpClientLanguages = {
@@ -13268,6 +13373,14 @@ QVariantMap SymbolParser::parseHtml(const QString &path, const QString &text) co
     QVariantList links;
     QVariantList symbols;
     QVariantList dependencies;
+    QSet<QString> webFormsControlElementKeys;
+    QSet<QString> webFormsEventKeys;
+    QSet<QString> explicitWebFormsHandlerNames;
+    QStringList webFormsCodeBehindPaths;
+    const QString suffix = QFileInfo(path).suffix().toLower();
+    const bool webForms = suffix == QStringLiteral("aspx") || suffix == QStringLiteral("ascx")
+        || suffix == QStringLiteral("master") || suffix == QStringLiteral("ashx")
+        || suffix == QStringLiteral("asmx") || suffix == QStringLiteral("asax");
 
     // Linked assets (scripts, stylesheets, pages, form targets, frames).
     for (const WebLinks::HtmlAsset &asset : page.assets) {
@@ -13281,6 +13394,179 @@ QVariantMap SymbolParser::parseHtml(const QString &path, const QString &text) co
         item.insert(QStringLiteral("targetPath"), asset.resolvedPath);
         item.insert(QStringLiteral("exists"), asset.exists);
         links.append(item);
+    }
+
+    // Tree-sitter's HTML grammar deliberately treats ASP.NET directives and
+    // server controls as opaque/error-tolerant markup.  Give WebForms its own
+    // small structural layer here instead of making those pages look empty.
+    // Attribute values are deliberately read case-insensitively: WebForms
+    // commonly uses ID/OnClick/CodeBehind, while HTML is case-insensitive too.
+    if (webForms) {
+        auto attribute = [](const QString &attributes, const QString &name) {
+            const QRegularExpression pattern(
+                QStringLiteral(R"attr(\b%1\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))attr")
+                    .arg(QRegularExpression::escape(name)),
+                QRegularExpression::CaseInsensitiveOption);
+            const QRegularExpressionMatch match = pattern.match(attributes);
+            if (!match.hasMatch()) {
+                return QString();
+            }
+            return !match.captured(1).isEmpty() ? match.captured(1)
+                 : !match.captured(2).isEmpty() ? match.captured(2)
+                 : match.captured(3);
+        };
+        QSet<QString> webFormsSymbolKeys;
+        auto appendWebFormsSymbol = [&](const QString &kind, const QString &name, int line,
+                                        const QString &detail, const QString &snippet) {
+            const QString key = kind + QLatin1Char('|') + name + QLatin1Char('|') + QString::number(line);
+            if (name.isEmpty() || webFormsSymbolKeys.contains(key)) {
+                return;
+            }
+            webFormsSymbolKeys.insert(key);
+            symbols.append(makeSymbol(kind, name, line, detail, {}, snippet));
+        };
+
+        const QRegularExpression directivePattern(
+            QStringLiteral(R"(<%@\s*([A-Za-z]+)\b([^%]*)%>)"),
+            QRegularExpression::CaseInsensitiveOption);
+        auto directives = directivePattern.globalMatch(text);
+        while (directives.hasNext()) {
+            const QRegularExpressionMatch match = directives.next();
+            const QString directive = match.captured(1);
+            const QString attributes = match.captured(2);
+            const int line = lineNumberAtOffset(text, match.capturedStart(0));
+            const QString directiveKind = directive.toLower();
+            QString detail;
+            if (directiveKind == QStringLiteral("page") || directiveKind == QStringLiteral("control")
+                || directiveKind == QStringLiteral("master") || directiveKind == QStringLiteral("application")
+                || directiveKind == QStringLiteral("webservice") || directiveKind == QStringLiteral("webhandler")) {
+                const QString inherits = attribute(attributes, QStringLiteral("Inherits"));
+                const QString codeBehind = attribute(attributes, QStringLiteral("CodeBehind"));
+                const QString codeFile = attribute(attributes, QStringLiteral("CodeFile"));
+                detail = inherits.isEmpty() ? QStringLiteral("WebForms %1 directive").arg(directive.toLower())
+                                            : QStringLiteral("inherits %1").arg(inherits);
+                const QString codeFileName = !codeBehind.isEmpty() ? codeBehind : codeFile;
+                if (!codeFileName.isEmpty()) {
+                    detail += QStringLiteral(", code-behind %1").arg(codeFileName);
+                    QString candidate = codeFileName;
+                    if (candidate.startsWith(QStringLiteral("~/"))) {
+                        candidate.remove(0, 2);
+                    }
+                    const QString resolved = QDir::cleanPath(dir.filePath(candidate));
+                    if (QFileInfo::exists(resolved) && !webFormsCodeBehindPaths.contains(resolved)) {
+                        webFormsCodeBehindPaths.append(resolved);
+                    }
+                }
+            } else if (directiveKind == QStringLiteral("register")) {
+                const QString prefix = attribute(attributes, QStringLiteral("TagPrefix"));
+                const QString tagName = attribute(attributes, QStringLiteral("TagName"));
+                detail = QStringLiteral("register %1%2").arg(prefix, tagName.isEmpty() ? QString() : QStringLiteral(":") + tagName);
+            } else if (directiveKind == QStringLiteral("import")) {
+                detail = QStringLiteral("namespace %1").arg(attribute(attributes, QStringLiteral("Namespace")));
+            } else {
+                detail = QStringLiteral("WebForms directive");
+            }
+            appendWebFormsSymbol(QStringLiteral("directive"), directive + QStringLiteral(" directive"), line,
+                                 detail, snippetFromLine(text, line, 0));
+        }
+
+        const QRegularExpression serverControlPattern(
+            QStringLiteral(R"(<\s*([A-Za-z][A-Za-z0-9_.-]*:[A-Za-z][A-Za-z0-9_.-]*)\b([^>]*)>)"),
+            QRegularExpression::CaseInsensitiveOption);
+        auto controls = serverControlPattern.globalMatch(text);
+        while (controls.hasNext()) {
+            const QRegularExpressionMatch match = controls.next();
+            const QString tag = match.captured(1);
+            const QString attributes = match.captured(2);
+            if (attribute(attributes, QStringLiteral("runat")).compare(QStringLiteral("server"), Qt::CaseInsensitive) != 0) {
+                continue;
+            }
+            const int line = lineNumberAtOffset(text, match.capturedStart(0));
+            const QString id = attribute(attributes, QStringLiteral("id"));
+            const QString lowerTag = tag.toLower();
+            const bool region = lowerTag == QStringLiteral("asp:content")
+                || lowerTag == QStringLiteral("asp:contentplaceholder");
+            const QString name = id.isEmpty() ? QStringLiteral("<%1>").arg(tag) : QStringLiteral("#") + id;
+            if (!id.isEmpty()) {
+                webFormsControlElementKeys.insert(QString::number(line) + QLatin1Char('|') + id);
+            }
+            appendWebFormsSymbol(region ? QStringLiteral("region") : QStringLiteral("control"), name, line,
+                                 QStringLiteral("%1 server control").arg(tag), snippetFromLine(text, line, 0));
+
+            // tree-sitter-html does not consistently surface attributes on
+            // namespaced tags such as <asp:GridView>. Extract server events
+            // from the control text itself so OnSorting/OnClick work with the
+            // PascalCase convention used by WebForms projects.
+            const QRegularExpression eventPattern(
+                QStringLiteral(R"wf(\b(on[A-Za-z][A-Za-z0-9_]*)\s*=\s*(?:"([A-Za-z_]\w*)"|'([A-Za-z_]\w*)'))wf"),
+                QRegularExpression::CaseInsensitiveOption);
+            auto events = eventPattern.globalMatch(attributes);
+            while (events.hasNext()) {
+                const QRegularExpressionMatch event = events.next();
+                const QString attributeName = event.captured(1).toLower();
+                const QString handlerName = !event.captured(2).isEmpty() ? event.captured(2) : event.captured(3);
+                webFormsEventKeys.insert(QString::number(line) + QLatin1Char('|') + attributeName);
+                explicitWebFormsHandlerNames.insert(handlerName);
+                QVariantMap handler = makeSymbol(QStringLiteral("handler"),
+                                                  QStringLiteral("<%1 %2>").arg(tag.toLower(), attributeName), line,
+                                                  handlerName, {}, snippetFromLine(text, line, 0));
+                QVariantList calls;
+                for (const QString &codeBehindPath : std::as_const(webFormsCodeBehindPaths)) {
+                    const QVariantMap codeBehind = parseFileAnalysis(codeBehindPath);
+                    std::function<QVariantMap(const QVariantList &)> findHandler = [&](const QVariantList &entries) -> QVariantMap {
+                        for (const QVariant &entry : entries) {
+                            const QVariantMap candidate = entry.toMap();
+                            if (candidate.value(QStringLiteral("name")).toString() == handlerName
+                                && isCallableSymbolKind(candidate.value(QStringLiteral("kind")).toString())) {
+                                return candidate;
+                            }
+                            const QVariantMap nested = findHandler(candidate.value(QStringLiteral("members")).toList());
+                            if (!nested.isEmpty()) {
+                                return nested;
+                            }
+                        }
+                        return {};
+                    };
+                    const QVariantMap target = findHandler(codeBehind.value(QStringLiteral("symbols")).toList());
+                    if (!target.isEmpty()) {
+                        calls.append(makeCrossFileRelation(target.value(QStringLiteral("kind")).toString(), handlerName,
+                                                           codeBehindPath, codeBehind.value(QStringLiteral("language")).toString(),
+                                                           target.value(QStringLiteral("line")).toInt(),
+                                                           target.value(QStringLiteral("snippet")).toString(),
+                                                           QStringLiteral("WebForms code-behind handler")));
+                        break;
+                    }
+                }
+                handler.insert(QStringLiteral("calls"), calls);
+                symbols.append(handler);
+            }
+        }
+
+        const QRegularExpression serverScriptPattern(
+            QStringLiteral(R"(<script\b([^>]*)\brunat\s*=\s*(["'])server\2[^>]*>)"),
+            QRegularExpression::CaseInsensitiveOption);
+        auto serverScripts = serverScriptPattern.globalMatch(text);
+        while (serverScripts.hasNext()) {
+            const QRegularExpressionMatch match = serverScripts.next();
+            const int line = lineNumberAtOffset(text, match.capturedStart(0));
+            const QString language = attribute(match.captured(1), QStringLiteral("language"));
+            appendWebFormsSymbol(QStringLiteral("server block"), QStringLiteral("<script runat=server>"), line,
+                                 language.isEmpty() ? QStringLiteral("server-side script") : language,
+                                 snippetFromLine(text, line, 1));
+        }
+
+        const QRegularExpression expressionPattern(QStringLiteral(R"(<%(?:=|#)?\s*([^%@][\s\S]*?)%>)"));
+        auto expressions = expressionPattern.globalMatch(text);
+        while (expressions.hasNext()) {
+            const QRegularExpressionMatch match = expressions.next();
+            const int line = lineNumberAtOffset(text, match.capturedStart(0));
+            QString expression = match.captured(1).simplified();
+            if (expression.size() > 80) {
+                expression = expression.left(77) + QStringLiteral("...");
+            }
+            appendWebFormsSymbol(QStringLiteral("expression"), expression.isEmpty() ? QStringLiteral("inline expression") : expression,
+                                 line, QStringLiteral("WebForms inline expression"), snippetFromLine(text, line, 0));
+        }
     }
 
     // Inline <script> and <style> blocks, parsed with the real JS / CSS parsers
@@ -13329,10 +13615,26 @@ QVariantMap SymbolParser::parseHtml(const QString &path, const QString &text) co
     }
 
     for (const WebLinks::HtmlHandler &handler : page.handlers) {
+        if (webForms && webFormsEventKeys.contains(QString::number(handler.line) + QLatin1Char('|') + handler.attribute.toLower())) {
+            continue;
+        }
         QVariantMap symbol = makeSymbol(QStringLiteral("handler"), handlerSymbolName(handler), handler.line,
                                         handler.code, {}, handler.snippet);
+        QStringList handlerNames = handler.calledNames;
+        if (webForms) {
+            static const QRegularExpression webFormsHandlerName(QStringLiteral(R"(^\s*([A-Za-z_]\w*)\s*$)"));
+            const QRegularExpressionMatch nameMatch = webFormsHandlerName.match(handler.code);
+            if (nameMatch.hasMatch() && !handlerNames.contains(nameMatch.captured(1))) {
+                handlerNames.append(nameMatch.captured(1));
+            }
+        }
+        if (webForms) {
+            for (const QString &name : std::as_const(handlerNames)) {
+                explicitWebFormsHandlerNames.insert(name);
+            }
+        }
         QVariantList calls;
-        for (const QString &name : handler.calledNames) {
+        for (const QString &name : std::as_const(handlerNames)) {
             if (inlineFunctions.contains(name)) {
                 calls.append(relationFromSymbol(inlineFunctions.value(name)));
                 continue;
@@ -13347,11 +13649,43 @@ QVariantMap SymbolParser::parseHtml(const QString &path, const QString &text) co
                     break;
                 }
             }
+            // WebForms events name a code-behind method rather than browser
+            // JavaScript. Resolve the exact handler name in the page's declared
+            // C# or VB code-behind, if it is available locally.
+            if (!webForms && !calls.isEmpty()) {
+                continue;
+            }
+            for (const QString &codeBehindPath : std::as_const(webFormsCodeBehindPaths)) {
+                const QVariantMap codeBehind = parseFileAnalysis(codeBehindPath);
+                std::function<QVariantMap(const QVariantList &)> findHandler = [&](const QVariantList &entries) -> QVariantMap {
+                    for (const QVariant &entry : entries) {
+                        const QVariantMap candidate = entry.toMap();
+                        if (candidate.value(QStringLiteral("name")).toString() == name
+                            && isCallableSymbolKind(candidate.value(QStringLiteral("kind")).toString())) {
+                            return candidate;
+                        }
+                        const QVariantMap nested = findHandler(candidate.value(QStringLiteral("members")).toList());
+                        if (!nested.isEmpty()) {
+                            return nested;
+                        }
+                    }
+                    return {};
+                };
+                const QVariantMap target = findHandler(codeBehind.value(QStringLiteral("symbols")).toList());
+                if (!target.isEmpty()) {
+                    calls.append(makeCrossFileRelation(target.value(QStringLiteral("kind")).toString(), name,
+                                                       codeBehindPath, codeBehind.value(QStringLiteral("language")).toString(),
+                                                       target.value(QStringLiteral("line")).toInt(),
+                                                       target.value(QStringLiteral("snippet")).toString(),
+                                                       QStringLiteral("WebForms code-behind handler")));
+                    break;
+                }
+            }
         }
         symbol.insert(QStringLiteral("calls"), calls);
         symbols.append(symbol);
         // Reverse edge on inline functions of this file.
-        for (const QString &name : handler.calledNames) {
+        for (const QString &name : std::as_const(handlerNames)) {
             if (!inlineFunctions.contains(name)) {
                 continue;
             }
@@ -13368,9 +13702,59 @@ QVariantMap SymbolParser::parseHtml(const QString &path, const QString &text) co
         }
     }
 
+    // VB.NET often declares server events solely in code-behind:
+    // `Handles ButtonSave.Click`. Surface those on the markup side too, even
+    // when no OnClick attribute is present in the ASPX/ASCX file.
+    if (webForms) {
+        std::function<void(const QVariantList &, const QString &, const QString &)> appendHandledEvents;
+        appendHandledEvents = [&](const QVariantList &entries, const QString &codeBehindPath, const QString &language) {
+            for (const QVariant &entry : entries) {
+                const QVariantMap method = entry.toMap();
+                const QString kind = method.value(QStringLiteral("kind")).toString();
+                const QString methodName = method.value(QStringLiteral("name")).toString();
+                const QString detail = method.value(QStringLiteral("detail")).toString();
+                if (isCallableSymbolKind(kind) && !explicitWebFormsHandlerNames.contains(methodName)) {
+                    static const QRegularExpression handlesPattern(
+                        QStringLiteral(R"(\bhandles\s+(.+)$)"), QRegularExpression::CaseInsensitiveOption);
+                    const QRegularExpressionMatch handles = handlesPattern.match(detail);
+                    if (handles.hasMatch()) {
+                        static const QRegularExpression eventPattern(
+                            QStringLiteral(R"((?:^|,)\s*([A-Za-z_]\w*)\.([A-Za-z_]\w*))"),
+                            QRegularExpression::CaseInsensitiveOption);
+                        auto events = eventPattern.globalMatch(handles.captured(1));
+                        while (events.hasNext()) {
+                            const QRegularExpressionMatch event = events.next();
+                            const QString source = event.captured(1);
+                            const QString eventName = event.captured(2);
+                            QVariantMap markupEvent = makeSymbol(QStringLiteral("event"), source + QLatin1Char('.') + eventName,
+                                                                  method.value(QStringLiteral("line")).toInt(),
+                                                                  QStringLiteral("handled by %1").arg(methodName), {},
+                                                                  method.value(QStringLiteral("snippet")).toString());
+                            markupEvent.insert(QStringLiteral("calls"),
+                                                QVariantList{makeCrossFileRelation(kind, methodName, codeBehindPath, language,
+                                                                                   method.value(QStringLiteral("line")).toInt(),
+                                                                                   method.value(QStringLiteral("snippet")).toString(),
+                                                                                   QStringLiteral("WebForms Handles clause"))});
+                            symbols.append(markupEvent);
+                        }
+                    }
+                }
+                appendHandledEvents(method.value(QStringLiteral("members")).toList(), codeBehindPath, language);
+            }
+        };
+        for (const QString &codeBehindPath : std::as_const(webFormsCodeBehindPaths)) {
+            const QVariantMap codeBehind = parseFileAnalysis(codeBehindPath);
+            appendHandledEvents(codeBehind.value(QStringLiteral("symbols")).toList(), codeBehindPath,
+                                codeBehind.value(QStringLiteral("language")).toString());
+        }
+    }
+
     // Elements with ids, forms and custom elements.
     for (const WebLinks::HtmlElement &element : page.elements) {
         if (element.id.isEmpty()) {
+            continue;
+        }
+        if (webForms && webFormsControlElementKeys.contains(QString::number(element.line) + QLatin1Char('|') + element.id)) {
             continue;
         }
         QString detail = QStringLiteral("<%1>").arg(element.tag);
@@ -13955,7 +14339,10 @@ QString SymbolParser::detectLanguage(const QString &path)
     if (suffix == QStringLiteral("php")) {
         return QStringLiteral("php");
     }
-    if (suffix == QStringLiteral("html") || suffix == QStringLiteral("htm")) {
+    if (suffix == QStringLiteral("html") || suffix == QStringLiteral("htm")
+        || suffix == QStringLiteral("aspx") || suffix == QStringLiteral("ascx")
+        || suffix == QStringLiteral("master") || suffix == QStringLiteral("ashx")
+        || suffix == QStringLiteral("asmx") || suffix == QStringLiteral("asax")) {
         return QStringLiteral("html");
     }
     if (suffix == QStringLiteral("js") || suffix == QStringLiteral("mjs") || suffix == QStringLiteral("cjs")) {
@@ -15219,6 +15606,37 @@ QVariantList SymbolParser::findRelatedFiles(const QString &path)
 
     if (fileName.endsWith(QStringLiteral(".cs"))) {
         appendRelated(dir.filePath(QStringLiteral("%1.csproj").arg(dir.dirName())), QStringLiteral("project"));
+    }
+
+    // ASP.NET WebForms markup and its code-behind/designer files are one
+    // source unit split across files. Pair them by the conventional filename
+    // as a fallback; a markup directive's CodeBehind/CodeFile takes precedence
+    // when the markup itself is analysed.
+    const QString lowerName = fileName.toLower();
+    const QStringList webFormsSuffixes = {
+        QStringLiteral(".aspx"), QStringLiteral(".ascx"), QStringLiteral(".master"),
+        QStringLiteral(".ashx"), QStringLiteral(".asmx"), QStringLiteral(".asax")
+    };
+    const bool isWebFormsMarkup = std::any_of(webFormsSuffixes.cbegin(), webFormsSuffixes.cend(),
+                                               [&](const QString &suffix) { return lowerName.endsWith(suffix); });
+    if (isWebFormsMarkup) {
+        appendRelated(dir.filePath(fileName + QStringLiteral(".cs")), QStringLiteral("code-behind"));
+        appendRelated(dir.filePath(fileName + QStringLiteral(".vb")), QStringLiteral("code-behind"));
+        appendRelated(dir.filePath(fileName + QStringLiteral(".designer.cs")), QStringLiteral("designer"));
+        appendRelated(dir.filePath(fileName + QStringLiteral(".designer.vb")), QStringLiteral("designer"));
+    } else if (lowerName.endsWith(QStringLiteral(".designer.cs")) || lowerName.endsWith(QStringLiteral(".designer.vb"))) {
+        const int designer = lowerName.lastIndexOf(QStringLiteral(".designer."));
+        appendRelated(dir.filePath(fileName.left(designer)), QStringLiteral("markup"));
+    } else if (lowerName.endsWith(QStringLiteral(".cs")) || lowerName.endsWith(QStringLiteral(".vb"))) {
+        const int sourceSuffix = fileName.lastIndexOf(QLatin1Char('.'));
+        if (sourceSuffix > 0) {
+            const QString markupName = fileName.left(sourceSuffix);
+            const QString lowerMarkupName = markupName.toLower();
+            if (std::any_of(webFormsSuffixes.cbegin(), webFormsSuffixes.cend(),
+                            [&](const QString &suffix) { return lowerMarkupName.endsWith(suffix); })) {
+                appendRelated(dir.filePath(markupName), QStringLiteral("markup"));
+            }
+        }
     }
 
     if (fileName.endsWith(QStringLiteral(".m")) || fileName.endsWith(QStringLiteral(".mm"))) {

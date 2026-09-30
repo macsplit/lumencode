@@ -18,7 +18,7 @@ DEFAULT_FIXTURE_MANIFEST = REPO_ROOT / "tests" / "fixtures" / "baseline" / "mani
 SUPPORTED_EXTENSIONS = {
     ".php", ".js", ".jsx", ".ts", ".tsx", ".py", ".java", ".cs", ".rs",
     ".cpp", ".cc", ".cxx", ".c", ".h", ".hpp", ".hh", ".m", ".mm",
-    ".html", ".qml", ".css", ".json", ".swift",
+    ".html", ".aspx", ".ascx", ".master", ".ashx", ".asmx", ".asax", ".qml", ".css", ".json", ".swift",
 }
 
 EXCLUDED_PARTS = {

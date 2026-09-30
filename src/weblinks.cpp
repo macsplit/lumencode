@@ -400,11 +400,13 @@ HtmlPage parseHtmlPage(const QString &path, const QString &text)
         }
 
         for (const auto &attribute : std::as_const(ordered)) {
-            if (attribute.first.startsWith(QStringLiteral("on")) && attribute.first.size() > 2
+            // HTML attributes are case-insensitive, and ASP.NET WebForms
+            // conventionally spells server events as OnClick/OnSorting.
+            if (attribute.first.startsWith(QStringLiteral("on"), Qt::CaseInsensitive) && attribute.first.size() > 2
                 && !attribute.second.trimmed().isEmpty()) {
                 HtmlHandler handler;
                 handler.tag = tagName;
-                handler.attribute = attribute.first;
+                handler.attribute = attribute.first.toLower();
                 handler.code = attribute.second.trimmed();
                 handler.calledNames = calledNamesInCode(handler.code);
                 handler.line = line;

@@ -627,7 +627,10 @@ QString FileSystemModel::detectFileType(const QString &path, bool isDir)
     if (suffix == QStringLiteral("php")) {
         return QStringLiteral("php");
     }
-    if (suffix == QStringLiteral("html") || suffix == QStringLiteral("htm")) {
+    if (suffix == QStringLiteral("html") || suffix == QStringLiteral("htm")
+        || suffix == QStringLiteral("aspx") || suffix == QStringLiteral("ascx")
+        || suffix == QStringLiteral("master") || suffix == QStringLiteral("ashx")
+        || suffix == QStringLiteral("asmx") || suffix == QStringLiteral("asax")) {
         return QStringLiteral("html");
     }
     if (suffix == QStringLiteral("qml")) {
@@ -714,6 +717,15 @@ bool FileSystemModel::shouldIncludeFile(const QString &suffix)
         QStringLiteral("mts"),
         QStringLiteral("cts"),
         QStringLiteral("htm"),
+        // ASP.NET WebForms markup.  It is HTML-compatible enough for the
+        // explorer and the existing markup view; its WebForms-specific
+        // structure is added separately.
+        QStringLiteral("aspx"),
+        QStringLiteral("ascx"),
+        QStringLiteral("master"),
+        QStringLiteral("ashx"),
+        QStringLiteral("asmx"),
+        QStringLiteral("asax"),
         QStringLiteral("json"),
         QStringLiteral("ts"),
         QStringLiteral("tsx"),
