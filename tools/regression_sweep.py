@@ -448,6 +448,19 @@ def validate_relation_roundtrip(file_path: Path, parsed: dict, owner: dict, issu
                 add_issue(issues, "relation_selection_failure", file_path, context=context, relation_type=field, name=relation.get("name", ""), message=str(exc))
                 continue
 
+            if relation.get("kind") == "route" and field == "calls":
+                # An HTTP call reaching a backend route: the route (not a symbol)
+                # must list the caller in its calledFrom.
+                routes = (state.get("selectedFileData", {}) or {}).get("routes", []) or []
+                callers = {client.get("name", "")
+                           for route in routes if route.get("line") == relation.get("line")
+                           for client in route.get("calledFrom", []) or []}
+                if owner_name not in callers:
+                    add_issue(issues, "relation_roundtrip_missing_reverse", file_path, context=context,
+                              relation_type=field, reverse_type="calledFrom", owner=owner_name,
+                              target=relation.get("name", ""), target_line=relation.get("line", 0))
+                continue
+
             selected_symbol = state.get("selectedSymbol", {}) or {}
             if not selected_symbol:
                 add_issue(issues, "relation_selection_empty", file_path, context=context, relation_type=field, name=relation.get("name", ""))
@@ -636,6 +649,11 @@ def inspect_fixture_case(case: dict, issues: list[dict]) -> None:
         actual = len(parsed.get("routes", []) or [])
         if actual < int(file_expectations["routes"]):
             add_issue(issues, "fixture_missing_routes", file_path, case=case_name, expected=file_expectations["routes"], actual=actual)
+
+    if "max_routes" in file_expectations:
+        actual = len(parsed.get("routes", []) or [])
+        if actual > int(file_expectations["max_routes"]):
+            add_issue(issues, "fixture_unexpected_routes", file_path, case=case_name, expected=file_expectations["max_routes"], actual=actual)
 
     if "css_matched_classes" in file_expectations:
         css_summary = parsed.get("cssSummary", {}) or {}

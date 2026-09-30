@@ -22,6 +22,7 @@ public:
                                         const QVariantList &members, const QString &snippet);
 
 private:
+    QVariantMap parseFileAnalysis(const QString &path) const;
     static QVariantMap makeOversizedFileResult(const QString &path, const QString &language,
                                                qint64 size, qint64 limit);
     QVariantMap parsePhpTreeSitter(const QString &path, const QString &text) const;

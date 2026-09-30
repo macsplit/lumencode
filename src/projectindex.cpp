@@ -1,4 +1,5 @@
 #include "projectindex.h"
+#include "httpclients.h"
 
 #include <QCryptographicHash>
 #include <QDateTime>
@@ -35,6 +36,7 @@ const QSet<QString> &indexedSuffixes()
         QStringLiteral("c"), QStringLiteral("cc"), QStringLiteral("cpp"), QStringLiteral("cxx"), QStringLiteral("h"),
         QStringLiteral("hh"), QStringLiteral("hpp"), QStringLiteral("hxx"), QStringLiteral("m"), QStringLiteral("mm"),
         QStringLiteral("vb"), QStringLiteral("sql"), QStringLiteral("sh"), QStringLiteral("bash"), QStringLiteral("qml"),
+        QStringLiteral("html"), QStringLiteral("htm"),
     };
     return suffixes;
 }
@@ -322,11 +324,30 @@ FileFacts factsFromAnalysis(const QVariantMap &analysis, qint64 size, qint64 mod
             facts.imports.append(import);
         }
     }
+    for (const QVariant &entry : analysis.value(QStringLiteral("httpCalls")).toList()) {
+        QVariantMap call = entry.toMap();
+        if (call.contains(QStringLiteral("fromName"))) {
+            call.insert(QStringLiteral("fromKey"), QStringLiteral("%1|%2|%3")
+                                                       .arg(call.value(QStringLiteral("fromKind")).toString(),
+                                                            call.value(QStringLiteral("fromName")).toString())
+                                                       .arg(call.value(QStringLiteral("fromLine")).toInt()));
+        }
+        facts.httpCalls.append(call);
+    }
     for (const QVariant &entry : analysis.value(QStringLiteral("routes")).toList()) {
         const QVariantMap route = entry.toMap();
-        facts.routes.append(QVariantMap{{QStringLiteral("method"), route.value(QStringLiteral("method"))},
-                                        {QStringLiteral("path"), route.value(QStringLiteral("path"))},
-                                        {QStringLiteral("line"), route.value(QStringLiteral("line"))}});
+        QVariantMap fact{{QStringLiteral("method"), route.value(QStringLiteral("method"))},
+                         {QStringLiteral("path"), route.value(QStringLiteral("path"))},
+                         {QStringLiteral("line"), route.value(QStringLiteral("line"))}};
+        // app.use('/api/orders', ordersRouter): the router a prefix is mounted on.
+        if (route.value(QStringLiteral("method")).toString() == QStringLiteral("USE")) {
+            static const QRegularExpression mounted(QStringLiteral(R"(\buse\s*\(\s*['"][^'"]+['"]\s*,\s*([A-Za-z_$][\w$]*)\s*[,)])"));
+            const QString router = mounted.match(route.value(QStringLiteral("snippet")).toString()).captured(1);
+            if (!router.isEmpty()) {
+                fact.insert(QStringLiteral("mounts"), router);
+            }
+        }
+        facts.routes.append(fact);
     }
     return facts;
 }
@@ -376,6 +397,9 @@ QVariantMap factsToVariant(const FileFacts &facts)
         sites.append(item);
     }
     map.insert(QStringLiteral("sites"), sites);
+    if (!facts.httpCalls.isEmpty()) {
+        map.insert(QStringLiteral("http"), facts.httpCalls);
+    }
     if (!facts.routes.isEmpty()) {
         map.insert(QStringLiteral("routes"), facts.routes);
     }
@@ -436,6 +460,7 @@ FileFacts factsFromVariant(const QVariantMap &map)
         facts.callSites.append(site);
     }
     facts.routes = map.value(QStringLiteral("routes")).toList();
+    facts.httpCalls = map.value(QStringLiteral("http")).toList();
     return facts;
 }
 
@@ -1059,6 +1084,34 @@ SnapshotPtr build(const BuildOptions &options)
         }
     }
 
+    // Router files mounted under a prefix (Express app.use('/api', router)).
+    for (auto it = snapshot->files.cbegin(); it != snapshot->files.cend(); ++it) {
+        for (const QVariant &entry : it->routes) {
+            const QVariantMap route = entry.toMap();
+            const QString router = route.value(QStringLiteral("mounts")).toString();
+            if (router.isEmpty()) {
+                continue;
+            }
+            for (const Import &import : it->imports) {
+                if (!import.path.isEmpty() && import.bindings.contains(router)) {
+                    snapshot->mountPrefixes[import.path].append(route.value(QStringLiteral("path")).toString());
+                }
+            }
+        }
+    }
+
+    int httpCalls = 0;
+    for (auto it = snapshot->files.cbegin(); it != snapshot->files.cend(); ++it) {
+        for (const QVariant &call : it->httpCalls) {
+            ++httpCalls;
+            for (const Edge &edge : resolveHttpCall(*snapshot, it->path, call.toMap())) {
+                snapshot->httpIncomingByRoute[edge.to.path + QLatin1Char('|') + QString::number(edge.to.line)].append(
+                    snapshot->httpEdges.size());
+                snapshot->httpEdges.append(edge);
+            }
+        }
+    }
+
     QVariantMap via;
     for (auto it = viaCounts.cbegin(); it != viaCounts.cend(); ++it) {
         via.insert(it.key(), it.value());
@@ -1079,10 +1132,140 @@ SnapshotPtr build(const BuildOptions &options)
         {QStringLiteral("edgesByEvidence"), via},
         {QStringLiteral("edgesByLanguage"), perLanguage},
         {QStringLiteral("declarationsPaired"), snapshot->definitionForDeclaration.size()},
+        {QStringLiteral("httpCalls"), httpCalls},
+        {QStringLiteral("httpEdges"), snapshot->httpEdges.size()},
         {QStringLiteral("buildMs"), timer.elapsed()},
         {QStringLiteral("cachePath"), cachePath},
     };
     return snapshot;
+}
+
+QVector<Edge> resolveHttpCall(const Snapshot &snapshot, const QString &fromPath, const QVariantMap &call)
+{
+    QVector<Edge> result;
+    const QString url = call.value(QStringLiteral("url")).toString();
+    const QStringList urlParts = HttpClients::urlSegments(url);
+    if (urlParts.isEmpty()) {
+        return result;
+    }
+    const bool openTail = url.endsWith(QLatin1Char('*'));
+    const QString method = call.value(QStringLiteral("method")).toString();
+    struct Candidate { const FileFacts *file; QVariantMap route; int score; int literals; };
+    QVector<Candidate> candidates;
+    int bestScore = 0;
+    for (auto it = snapshot.files.cbegin(); it != snapshot.files.cend(); ++it) {
+        for (const QVariant &entry : it->routes) {
+            const QVariantMap route = entry.toMap();
+            if (route.value(QStringLiteral("method")).toString() == QStringLiteral("USE")
+                || !HttpClients::methodsCompatible(method, route.value(QStringLiteral("method")).toString())) {
+                continue;
+            }
+            const QString routePath = route.value(QStringLiteral("path")).toString();
+            QStringList variants{routePath};
+            for (const QString &prefix : snapshot.mountPrefixes.value(it->path)) {
+                QString mounted = prefix;
+                while (mounted.endsWith(QLatin1Char('/'))) {
+                    mounted.chop(1);
+                }
+                variants.append(mounted + (routePath.startsWith(QLatin1Char('/')) ? routePath : QLatin1Char('/') + routePath));
+            }
+            int score = 0;
+            QStringList routeParts;
+            for (const QString &variant : std::as_const(variants)) {
+                const QStringList parts = HttpClients::routeSegments(variant);
+                const int variantScore = HttpClients::matchRoute(urlParts, parts, openTail);
+                if (variantScore > score) {
+                    score = variantScore;
+                    routeParts = parts;
+                }
+            }
+            if (score == 0 || score < bestScore) {
+                continue;
+            }
+            if (score > bestScore) {
+                candidates.clear();
+                bestScore = score;
+            }
+            // Specificity: segments where URL and route agree on a literal
+            // (/search/x beats /:user/bob, where only wildcards line up).
+            const int offset = score == 2 ? 0 : urlParts.size() - routeParts.size();
+            int literals = 0;
+            for (int index = 0; index < routeParts.size() && offset + index < urlParts.size(); ++index) {
+                const QString &part = routeParts.at(index);
+                literals += (part != QStringLiteral("*") && part == urlParts.at(offset + index)) ? 1 : 0;
+            }
+            const bool root = routeParts.size() == 1 && routeParts.first().isEmpty();
+            if (literals == 0 && !root) {
+                continue;
+            }
+            candidates.append({&it.value(), route, score, literals});
+        }
+    }
+    // The most specific routes win (/users/me over /users/:id); too many
+    // equally good tail matches means the guess is not worth showing.
+    int bestLiterals = 0;
+    for (const Candidate &candidate : std::as_const(candidates)) {
+        bestLiterals = qMax(bestLiterals, candidate.literals);
+    }
+    QVector<Candidate> best;
+    for (const Candidate &candidate : std::as_const(candidates)) {
+        if (candidate.literals == bestLiterals) {
+            best.append(candidate);
+        }
+    }
+    // A route in the calling file itself (a test that defines and calls its
+    // own routes) wins; otherwise routes defined in tests only win when
+    // nothing else matches.
+    QVector<Candidate> sameFile;
+    for (const Candidate &candidate : std::as_const(best)) {
+        if (candidate.file->path == fromPath) {
+            sameFile.append(candidate);
+        }
+    }
+    if (!sameFile.isEmpty()) {
+        best = sameFile;
+    }
+    static const QRegularExpression testPath(QStringLiteral(R"((^|/)(tests?|__tests__|spec|specs)/|\.(test|spec)\.)"));
+    QVector<Candidate> production;
+    for (const Candidate &candidate : std::as_const(best)) {
+        if (!testPath.match(candidate.file->path).hasMatch()) {
+            production.append(candidate);
+        }
+    }
+    if (!production.isEmpty()) {
+        best = production;
+    }
+    if (qEnvironmentVariableIsSet("LUMENCODE_DEBUG_HTTP")) {
+        for (const Candidate &candidate : std::as_const(candidates)) {
+            qWarning("http %s %s -> %s %s (%s) score %d literals %d", qPrintable(method), qPrintable(url),
+                     qPrintable(candidate.route.value(QStringLiteral("method")).toString()),
+                     qPrintable(candidate.route.value(QStringLiteral("path")).toString()), qPrintable(candidate.file->path),
+                     candidate.score, candidate.literals);
+        }
+    }
+    if (best.isEmpty() || best.size() > (bestScore == 2 ? 3 : 2)) {
+        return result;
+    }
+    for (const Candidate &candidate : std::as_const(best)) {
+        Edge edge;
+        edge.fromPath = fromPath;
+        edge.fromKey = call.value(QStringLiteral("fromKey")).toString();
+        edge.fromName = call.value(QStringLiteral("fromName")).toString();
+        edge.fromKind = call.value(QStringLiteral("fromKind")).toString();
+        edge.fromLine = call.value(QStringLiteral("fromLine")).toInt();
+        edge.siteLine = call.value(QStringLiteral("line")).toInt();
+        edge.to.path = candidate.file->path;
+        edge.to.language = candidate.file->language;
+        edge.to.kind = QStringLiteral("route");
+        edge.to.name = QStringLiteral("%1 %2").arg(candidate.route.value(QStringLiteral("method")).toString().toUpper(),
+                                                   candidate.route.value(QStringLiteral("path")).toString());
+        edge.to.line = candidate.route.value(QStringLiteral("line")).toInt();
+        edge.to.key = QStringLiteral("route|%1|%2").arg(edge.to.name).arg(edge.to.line);
+        edge.via = QStringLiteral("http %1 %2").arg(method, url);
+        edge.confidence = bestScore == 2 ? QStringLiteral("medium") : QStringLiteral("low");
+        result.append(edge);
+    }
+    return result;
 }
 
 QVariantMap augmentAnalysis(const QVariantMap &analysis, const SnapshotPtr &snapshot)
@@ -1101,6 +1284,48 @@ QVariantMap augmentAnalysis(const QVariantMap &analysis, const SnapshotPtr &snap
         if (!site.fromKey.isEmpty() && resolveWith(*snapshot, live, site, &edge)) {
             outgoing[site.fromKey].append(edge);
         }
+    }
+
+    // HTTP: this file's client calls -> routes; this file's routes <- clients.
+    QHash<QString, QVector<Edge>> httpOutgoing;
+    QVariantList httpCalls = analysis.value(QStringLiteral("httpCalls")).toList();
+    for (int index = 0; index < live.httpCalls.size() && index < httpCalls.size(); ++index) {
+        const QVector<Edge> edges = resolveHttpCall(*snapshot, path, live.httpCalls.at(index).toMap());
+        QVariantMap call = httpCalls.at(index).toMap();
+        QVariantList routes;
+        for (const Edge &edge : edges) {
+            if (!edge.fromKey.isEmpty()) {
+                httpOutgoing[edge.fromKey].append(edge);
+            }
+            routes.append(QVariantMap{{QStringLiteral("name"), edge.to.name}, {QStringLiteral("path"), edge.to.path},
+                                      {QStringLiteral("line"), edge.to.line}, {QStringLiteral("confidence"), edge.confidence}});
+        }
+        if (!routes.isEmpty()) {
+            call.insert(QStringLiteral("routes"), routes);
+            httpCalls[index] = call;
+        }
+    }
+    QHash<int, QVector<int>> incomingByRouteLine;
+    QVariantList routes = analysis.value(QStringLiteral("routes")).toList();
+    for (int index = 0; index < routes.size(); ++index) {
+        QVariantMap route = routes.at(index).toMap();
+        const int routeLine = route.value(QStringLiteral("line")).toInt();
+        const QVector<int> incoming = snapshot->httpIncomingByRoute.value(path + QLatin1Char('|') + QString::number(routeLine));
+        if (incoming.isEmpty()) {
+            continue;
+        }
+        incomingByRouteLine.insert(routeLine, incoming);
+        QVariantList clients;
+        for (int edgeIndex : incoming) {
+            const Edge &edge = snapshot->httpEdges.at(edgeIndex);
+            clients.append(QVariantMap{
+                {QStringLiteral("name"), edge.fromName.isEmpty() ? QStringLiteral("(top level of %1)").arg(QFileInfo(edge.fromPath).fileName())
+                                                                 : edge.fromName},
+                {QStringLiteral("path"), edge.fromPath}, {QStringLiteral("line"), edge.siteLine},
+                {QStringLiteral("detail"), edge.via}, {QStringLiteral("confidence"), edge.confidence}});
+        }
+        route.insert(QStringLiteral("calledFrom"), clients);
+        routes[index] = route;
     }
 
     auto relationTo = [&](const Definition &definition, const QString &detail, const QString &confidence) {
@@ -1153,6 +1378,29 @@ QVariantMap augmentAnalysis(const QVariantMap &analysis, const SnapshotPtr &snap
                 calls.append(relationTo(edge.to, QStringLiteral("calls into %1 (%2)").arg(QFileInfo(edge.to.path).fileName(), edge.via),
                                         edge.confidence));
             }
+            for (const Edge &edge : httpOutgoing.value(key)) {
+                const QString id = edge.to.name + QLatin1Char('|') + edge.to.path;
+                if (!existingCalls.contains(id)) {
+                    existingCalls.insert(id);
+                    calls.append(relationTo(edge.to, QStringLiteral("%1 -> route in %2").arg(edge.via, QFileInfo(edge.to.path).fileName()),
+                                            edge.confidence));
+                }
+                // The view function declared with the route (decorator / attribute).
+                const auto fileIt = snapshot->files.constFind(edge.to.path);
+                if (fileIt == snapshot->files.constEnd()) {
+                    continue;
+                }
+                for (const Definition &handler : fileIt->definitions) {
+                    if (isCallableKind(handler.kind) && handler.line >= edge.to.line && handler.line <= edge.to.line + 4) {
+                        const QString handlerId = handler.name + QLatin1Char('|') + handler.path;
+                        if (!existingCalls.contains(handlerId)) {
+                            existingCalls.insert(handlerId);
+                            calls.append(relationTo(handler, QStringLiteral("handles %1").arg(edge.to.name), edge.confidence));
+                        }
+                        break;
+                    }
+                }
+            }
             symbol.insert(QStringLiteral("calls"), calls);
 
             QVariantList calledBy = symbol.value(QStringLiteral("calledBy")).toList();
@@ -1185,6 +1433,24 @@ QVariantMap augmentAnalysis(const QVariantMap &analysis, const SnapshotPtr &snap
             if (!declaredIn.isEmpty()) {
                 symbol.insert(QStringLiteral("declaredIn"), declaredIn);
             }
+            // A route handler declared just below its route (Flask/FastAPI
+            // decorators, Spring/ASP.NET attributes) is called by the route's clients.
+            const int symbolLine = symbol.value(QStringLiteral("line")).toInt();
+            if (isCallableKind(kind)) {
+                for (auto routeIt = incomingByRouteLine.cbegin(); routeIt != incomingByRouteLine.cend(); ++routeIt) {
+                    if (symbolLine < routeIt.key() || symbolLine > routeIt.key() + 4) {
+                        continue;
+                    }
+                    for (int edgeIndex : routeIt.value()) {
+                        const QVariantMap relation = relationFrom(snapshot->httpEdges.at(edgeIndex));
+                        const QString id = callerId(relation);
+                        if (!existingCallers.contains(id)) {
+                            existingCallers.insert(id);
+                            calledBy.append(relation);
+                        }
+                    }
+                }
+            }
             int crossFileCallers = 0;
             for (int edgeIndex : std::as_const(incoming)) {
                 const Edge &edge = snapshot->edges.at(edgeIndex);
@@ -1214,6 +1480,12 @@ QVariantMap augmentAnalysis(const QVariantMap &analysis, const SnapshotPtr &snap
 
     QVariantMap augmented = analysis;
     augmented.insert(QStringLiteral("symbols"), apply(analysis.value(QStringLiteral("symbols")).toList()));
+    if (!httpCalls.isEmpty()) {
+        augmented.insert(QStringLiteral("httpCalls"), httpCalls);
+    }
+    if (!incomingByRouteLine.isEmpty()) {
+        augmented.insert(QStringLiteral("routes"), routes);
+    }
     augmented.insert(QStringLiteral("projectIndex"), QVariantMap{{QStringLiteral("files"), snapshot->files.size()},
                                                                  {QStringLiteral("crossFileEdges"), snapshot->edges.size()}});
     return augmented;

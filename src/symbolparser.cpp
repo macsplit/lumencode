@@ -1,4 +1,5 @@
 #include "symbolparser.h"
+#include "httpclients.h"
 #include "weblinks.h"
 
 #include <QDir>
@@ -4589,6 +4590,26 @@ SymbolParser::SymbolParser(QObject *parent)
 
 QVariantMap SymbolParser::parseFile(const QString &path) const
 {
+    QVariantMap analysis = parseFileAnalysis(path);
+    // Browser-side HTTP calls (fetch, axios, jQuery, XHR, forms), matched to
+    // backend routes by the project index.
+    static const QSet<QString> httpClientLanguages = {
+        QStringLiteral("script"), QStringLiteral("ts"), QStringLiteral("tsx"), QStringLiteral("jsx"),
+        QStringLiteral("html"), QStringLiteral("php"),
+    };
+    const QString language = analysis.value(QStringLiteral("language")).toString();
+    if (httpClientLanguages.contains(language)
+        && !analysis.value(QStringLiteral("summary")).toString().startsWith(QStringLiteral("Analysis skipped"))) {
+        QFile file(path);
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            analysis = HttpClients::applyHttpClientCalls(analysis, QString::fromUtf8(file.readAll()), language);
+        }
+    }
+    return analysis;
+}
+
+QVariantMap SymbolParser::parseFileAnalysis(const QString &path) const
+{
     QFile file(path);
     const QFileInfo info(path);
     const QString language = detectLanguage(path);
@@ -8339,7 +8360,15 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
                                 owner = nodeText(fieldNode(inner, "object"), source).trimmed();
                             }
                         }
-                        const bool plausiblePath = routePath.startsWith(QLatin1Char('/')) || routePath == QStringLiteral("*");
+                        // HTTP clients look like route definitions (axios.post('/x')):
+                        // known client receivers and interpolated paths are not routes.
+                        static const QSet<QString> clientReceivers = {
+                            QStringLiteral("axios"), QStringLiteral("$"), QStringLiteral("jQuery"), QStringLiteral("http"),
+                            QStringLiteral("this.http"), QStringLiteral("httpClient"), QStringLiteral("this.httpClient"),
+                            QStringLiteral("$http"), QStringLiteral("superagent"), QStringLiteral("ky"),
+                        };
+                        const bool plausiblePath = (routePath.startsWith(QLatin1Char('/')) || routePath == QStringLiteral("*"))
+                            && !routePath.contains(QStringLiteral("${")) && !clientReceivers.contains(owner);
                         const bool plausibleOwner = !owner.contains(QLatin1Char('(')) && owner.size() <= 40
                             && owner != QStringLiteral("this") && !owner.contains(QStringLiteral("headers"))
                             && !owner.contains(QStringLiteral("map"), Qt::CaseInsensitive)
@@ -12244,8 +12273,47 @@ QVariantList SymbolParser::extractObjectiveCDependencies(const QString &path, co
     return links;
 }
 
-QVariantList SymbolParser::extractExpressRoutes(const QString &text)
+// JS comments blanked (strings kept, offsets unchanged): documentation
+// examples such as `app.get('/about/me', ...)` in JSDoc are not routes.
+static QString blankJsComments(const QString &text)
 {
+    QString out = text;
+    const int size = out.size();
+    QChar quote;
+    for (int index = 0; index < size; ++index) {
+        const QChar ch = out.at(index);
+        if (!quote.isNull()) {
+            if (ch == QLatin1Char('\\')) {
+                ++index;
+            } else if (ch == quote || (ch == QLatin1Char('\n') && quote != QLatin1Char('`'))) {
+                quote = QChar();
+            }
+            continue;
+        }
+        const QChar next = index + 1 < size ? out.at(index + 1) : QChar();
+        if (ch == QLatin1Char('/') && next == QLatin1Char('/')) {
+            while (index < size && out.at(index) != QLatin1Char('\n')) {
+                out[index++] = QLatin1Char(' ');
+            }
+        } else if (ch == QLatin1Char('/') && next == QLatin1Char('*')) {
+            const int end = out.indexOf(QStringLiteral("*/"), index + 2);
+            const int stop = end < 0 ? size : end + 2;
+            for (; index < stop; ++index) {
+                if (out.at(index) != QLatin1Char('\n')) {
+                    out[index] = QLatin1Char(' ');
+                }
+            }
+            --index;
+        } else if (ch == QLatin1Char('\'') || ch == QLatin1Char('"') || ch == QLatin1Char('`')) {
+            quote = ch;
+        }
+    }
+    return out;
+}
+
+QVariantList SymbolParser::extractExpressRoutes(const QString &rawText)
+{
+    const QString text = blankJsComments(rawText);
     QVariantList routes;
     QRegularExpression routePattern(
         QStringLiteral(R"(\b(app|router)\.(get|post|put|patch|delete|options|head|use)\s*\(\s*['"]([^'"]+)['"])"),

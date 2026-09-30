@@ -185,6 +185,8 @@ add_executable(lumencode
     src/weblinks.h
     src/projectindex.cpp
     src/projectindex.h
+    src/httpclients.cpp
+    src/httpclients.h
     src/resources.qrc
 )
 
@@ -224,6 +226,8 @@ add_executable(lumencode-cli
     src/weblinks.h
     src/projectindex.cpp
     src/projectindex.h
+    src/httpclients.cpp
+    src/httpclients.h
 )
 
 target_link_libraries(lumencode-cli
@@ -262,6 +266,8 @@ add_executable(lumencode-gui-smoke EXCLUDE_FROM_ALL
     src/weblinks.h
     src/projectindex.cpp
     src/projectindex.h
+    src/httpclients.cpp
+    src/httpclients.h
     src/resources.qrc
 )
 target_include_directories(lumencode-gui-smoke PRIVATE src)

@@ -250,6 +250,39 @@ int main(int argc, char *argv[])
             }
         };
         collect(analysis.value(QStringLiteral("symbols")).toList(), QString());
+        // Routes this file serves, with the client calls that reach them, and
+        // this file's own HTTP calls with the routes they reach.
+        for (const QVariant &entry : analysis.value(QStringLiteral("routes")).toList()) {
+            const QVariantMap route = entry.toMap();
+            QVariantList clients;
+            for (const QVariant &clientEntry : route.value(QStringLiteral("calledFrom")).toList()) {
+                const QVariantMap client = clientEntry.toMap();
+                clients.append(QVariantMap{{QStringLiteral("name"), client.value(QStringLiteral("name"))},
+                                           {QStringLiteral("path"), QDir(options.root).relativeFilePath(client.value(QStringLiteral("path")).toString())},
+                                           {QStringLiteral("line"), client.value(QStringLiteral("line"))},
+                                           {QStringLiteral("confidence"), client.value(QStringLiteral("confidence"))}});
+            }
+            if (!clients.isEmpty()) {
+                out.append(QVariantMap{{QStringLiteral("route"), route.value(QStringLiteral("label"), route.value(QStringLiteral("path")))},
+                                       {QStringLiteral("line"), route.value(QStringLiteral("line"))},
+                                       {QStringLiteral("calledFrom"), clients}});
+            }
+        }
+        for (const QVariant &entry : analysis.value(QStringLiteral("httpCalls")).toList()) {
+            const QVariantMap call = entry.toMap();
+            QVariantList routes;
+            for (const QVariant &routeEntry : call.value(QStringLiteral("routes")).toList()) {
+                const QVariantMap route = routeEntry.toMap();
+                routes.append(QVariantMap{{QStringLiteral("name"), route.value(QStringLiteral("name"))},
+                                          {QStringLiteral("path"), QDir(options.root).relativeFilePath(route.value(QStringLiteral("path")).toString())},
+                                          {QStringLiteral("line"), route.value(QStringLiteral("line"))},
+                                          {QStringLiteral("confidence"), route.value(QStringLiteral("confidence"))}});
+            }
+            out.append(QVariantMap{{QStringLiteral("httpCall"), QStringLiteral("%1 %2").arg(call.value(QStringLiteral("method")).toString(),
+                                                                                         call.value(QStringLiteral("url")).toString())},
+                                   {QStringLiteral("line"), call.value(QStringLiteral("line"))},
+                                   {QStringLiteral("routes"), routes}});
+        }
         std::cout << QJsonDocument(QJsonArray::fromVariantList(out)).toJson(QJsonDocument::Indented).toStdString() << std::endl;
         return 0;
     }

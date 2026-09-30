@@ -2054,6 +2054,78 @@
           ]
         }
       ]
+    },
+    {
+      "name": "http_fetch_axios_jquery_to_express",
+      "root": "tests/fixtures/baseline/cross_file/fullstack_express",
+      "file": "public/app.js",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "loadUser",
+          "calls": [
+            "GET /api/users/:id"
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "placeOrder",
+          "calls": [
+            "POST /:customer/orders"
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "refreshUser",
+          "calls": [
+            "GET /api/users/:id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "http_fetch_to_flask_views",
+      "root": "tests/fixtures/baseline/cross_file/fullstack_flask",
+      "file": "static/main.js",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "showItem",
+          "calls": [
+            "GET /items/<int:item_id>"
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "saveItem",
+          "calls": [
+            "POST /items"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "http_flask_view_called_by_client",
+      "root": "tests/fixtures/baseline/cross_file/fullstack_flask",
+      "file": "app.py",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "get_item",
+          "calledBy": [
+            "showItem"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "http_no_route_from_axios_client",
+      "root": "tests/fixtures/baseline/cross_file/fullstack_express",
+      "file": "public/app.js",
+      "file_expectations": {
+        "max_routes": 0
+      },
+      "expectations": []
     }
   ]
 }

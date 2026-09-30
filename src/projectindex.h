@@ -75,6 +75,7 @@ struct FileFacts
     QVector<Import> imports;
     QVector<CallSite> callSites;
     QVariantList routes;
+    QVariantList httpCalls; // {method, url, line, via, fromKey?, fromName?}
 };
 
 struct Edge
@@ -102,6 +103,9 @@ public:
     QHash<QString, QVector<int>> incomingByToKey; // path|kind|name -> edge indexes
     QHash<QString, int> definitionForDeclaration; // path|kind|name of a prototype -> allDefinitions index
     QHash<QString, QVector<int>> declarationsForDefinition; // path|kind|name of a body -> prototypes
+    QVector<Edge> httpEdges; // client call -> route (to.kind == "route", to.line = route line)
+    QHash<QString, QVector<int>> httpIncomingByRoute; // path|routeLine -> httpEdges indexes
+    QHash<QString, QStringList> mountPrefixes; // router file -> prefixes it is mounted under
     QVariantMap stats;
 
     bool contains(const QString &path) const { return files.contains(path); }
@@ -140,5 +144,8 @@ FileFacts factsFromVariant(const QVariantMap &map);
 // outgoing edges are resolved live from the analysis' own call sites, incoming
 // edges come from the snapshot.
 QVariantMap augmentAnalysis(const QVariantMap &analysis, const SnapshotPtr &snapshot);
+
+// Routes an HTTP client call can reach (best matches only).
+QVector<Edge> resolveHttpCall(const Snapshot &snapshot, const QString &fromPath, const QVariantMap &call);
 
 } // namespace ProjectIndex
