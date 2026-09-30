@@ -162,6 +162,20 @@ int main(int argc, char *argv[])
         controller->setRootPath(root);
     }
     waitForAnalysis(controller);
+    // Let the background project index finish, so cross-file relations (and
+    // navigation through them) are exercised too.
+    {
+        QElapsedTimer timer;
+        timer.start();
+        while (controller->indexStatus().value(QStringLiteral("state")).toString() == QStringLiteral("building")
+               && timer.elapsed() < 120000) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+    }
+    const QVariantMap indexStatus = controller->indexStatus();
+    std::fprintf(stdout, "index: %s, %d files, %d cross-file edges\n",
+                 qPrintable(indexStatus.value(QStringLiteral("state")).toString()),
+                 indexStatus.value(QStringLiteral("files")).toInt(), indexStatus.value(QStringLiteral("crossFileEdges")).toInt());
     render(engine);
 
     int selections = 0;

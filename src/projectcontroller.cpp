@@ -381,7 +381,8 @@ QVariantMap makeLoadingAnalysisResult(const QString &path)
     return result;
 }
 
-QVariantMap parseFileSafelyForRoot(const QString &path, const QString &rootPath)
+QVariantMap parseFileSafelyForRoot(const QString &path, const QString &rootPath,
+                                   const ProjectIndex::SnapshotPtr &snapshot = nullptr)
 {
     auto parseWithHelper = [](const QString &targetPath, int finishTimeoutMs) -> QVariantMap {
         return parseAnalysisViaHelper(targetPath, finishTimeoutMs);
@@ -391,7 +392,8 @@ QVariantMap parseFileSafelyForRoot(const QString &path, const QString &rootPath)
     const auto relationshipLoader = [&](const QString &targetPath) -> QVariantMap {
         return parseWithHelper(targetPath, kHelperRelationshipTimeoutMs);
     };
-    return augmentAnalysisWithRelationships(result, rootPath, relationshipLoader);
+    const QVariantMap crawled = augmentAnalysisWithRelationships(result, rootPath, relationshipLoader);
+    return snapshot ? ProjectIndex::augmentAnalysis(crawled, snapshot) : crawled;
 }
 
 int relationKindPriority(const QString &kind)
@@ -1417,7 +1419,10 @@ ProjectController::ProjectController(QObject *parent)
     m_preferredEditor = settings.value(QStringLiteral("settings/preferredEditor")).toString().trimmed();
 }
 
-ProjectController::~ProjectController() = default;
+ProjectController::~ProjectController()
+{
+    cancelIndexBuild();
+}
 
 QObject *ProjectController::fileSystemModel() const
 {
@@ -1501,8 +1506,85 @@ void ProjectController::setRootPath(const QString &path)
     m_fileSystemModel->setRootPath(absolute);
     saveLastOpenedPath(absolute);
     emit rootPathChanged();
+    startIndexBuild();
 
     selectPath(absolute);
+}
+
+QVariantMap ProjectController::indexStatus() const
+{
+    return m_indexStatus;
+}
+
+void ProjectController::setIndexMode(IndexMode mode)
+{
+    m_indexMode = mode;
+}
+
+void ProjectController::cancelIndexBuild()
+{
+    ++m_indexRequestId;
+    if (m_indexCancel) {
+        m_indexCancel->store(true);
+    }
+    if (m_indexWatcher) {
+        m_indexWatcher->disconnect(this);
+        m_indexWatcher = nullptr; // deletes itself when the build finishes
+    }
+}
+
+void ProjectController::startIndexBuild()
+{
+    cancelIndexBuild();
+    m_indexSnapshot.reset();
+    const QString helperPath = QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("lumencode-cli"));
+    if (m_indexMode == IndexMode::Off || !qEnvironmentVariableIsEmpty("LUMENCODE_NO_INDEX") || !QFileInfo::exists(helperPath)) {
+        m_indexStatus = {{QStringLiteral("state"), QStringLiteral("off")}};
+        emit indexStatusChanged();
+        return;
+    }
+
+    ProjectIndex::BuildOptions options;
+    options.root = m_rootPath;
+    options.helperPath = helperPath;
+    m_indexCancel = std::make_shared<std::atomic_bool>(false);
+    auto cancel = m_indexCancel;
+    options.cancel = cancel.get();
+
+    if (m_indexMode == IndexMode::Synchronous) {
+        m_indexSnapshot = ProjectIndex::build(options);
+        m_indexStatus = m_indexSnapshot->stats;
+        m_indexStatus.insert(QStringLiteral("state"), QStringLiteral("ready"));
+        emit indexStatusChanged();
+        return;
+    }
+
+    m_indexStatus = {{QStringLiteral("state"), QStringLiteral("building")}};
+    emit indexStatusChanged();
+    const int requestId = ++m_indexRequestId;
+    auto *watcher = new QFutureWatcher<ProjectIndex::SnapshotPtr>();
+    m_indexWatcher = watcher;
+    connect(watcher, &QFutureWatcher<ProjectIndex::SnapshotPtr>::finished, watcher, &QObject::deleteLater);
+    connect(watcher, &QFutureWatcher<ProjectIndex::SnapshotPtr>::finished, this, [this, watcher, requestId]() {
+        if (requestId != m_indexRequestId || m_indexWatcher != watcher) {
+            return;
+        }
+        m_indexWatcher = nullptr;
+        m_indexSnapshot = watcher->result();
+        m_indexStatus = m_indexSnapshot->stats;
+        m_indexStatus.insert(QStringLiteral("state"), QStringLiteral("ready"));
+        emit indexStatusChanged();
+        // Bring the open file's relations up to date without disturbing the selection.
+        if (!m_analysisInProgress && !m_selectedFileData.isEmpty()
+            && QFileInfo(m_selectedFileData.value(QStringLiteral("path")).toString()).isFile()) {
+            m_selectedFileData = ProjectIndex::augmentAnalysis(m_selectedFileData, m_indexSnapshot);
+            emit selectedFileDataChanged();
+            if (!m_selectedSymbol.isEmpty()) {
+                applyResolvedSelection(m_selectedSymbol);
+            }
+        }
+    });
+    watcher->setFuture(QtConcurrent::run([options, cancel]() { return ProjectIndex::build(options); }));
 }
 
 void ProjectController::selectPath(const QString &path)
@@ -1559,7 +1641,7 @@ void ProjectController::selectPath(const QString &path)
 
 QVariantMap ProjectController::parseFileSafely(const QString &path) const
 {
-    return parseFileSafelyForRoot(path, m_rootPath);
+    return parseFileSafelyForRoot(path, m_rootPath, m_indexSnapshot);
 }
 
 void ProjectController::selectSymbol(int index)
@@ -1613,6 +1695,7 @@ void ProjectController::beginAsyncAnalysis(const QString &path, const QVariantMa
     ++m_analysisRequestId;
     const int requestId = m_analysisRequestId;
     const QString rootPath = m_rootPath;
+    const ProjectIndex::SnapshotPtr snapshot = m_indexSnapshot;
 
     if (m_analysisWatcher) {
         m_analysisWatcher->disconnect(this);
@@ -1664,8 +1747,8 @@ void ProjectController::beginAsyncAnalysis(const QString &path, const QVariantMa
         }
     });
 
-    watcher->setFuture(QtConcurrent::run([path, rootPath]() {
-        return parseFileSafelyForRoot(path, rootPath);
+    watcher->setFuture(QtConcurrent::run([path, rootPath, snapshot]() {
+        return parseFileSafelyForRoot(path, rootPath, snapshot);
     }));
 }
 

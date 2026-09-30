@@ -14,6 +14,7 @@
 
 #include "filesystemmodel.h"
 #include "projectcontroller.h"
+#include "projectindex.h"
 #include "symbolparser.h"
 
 static QString resolveCliPath(const QString &rawPath, const QString &basePath)
@@ -110,7 +111,132 @@ int main(int argc, char *argv[])
                                       QStringLiteral("path"));
     parser.addOption(debugAstOption);
 
+    QCommandLineOption indexFactsOption(QStringList() << "index-facts",
+                                        QStringLiteral("Read file paths from stdin and print one line of project-index facts (JSON) per file."));
+    parser.addOption(indexFactsOption);
+
+    QCommandLineOption indexProjectOption(QStringList() << "index-project",
+                                          QStringLiteral("Build (or refresh) the project index for a folder and print its statistics."),
+                                          QStringLiteral("root"));
+    parser.addOption(indexProjectOption);
+
+    QCommandLineOption indexRelationsOption(QStringList() << "index-relations",
+                                            QStringLiteral("With --index-project: print the cross-file Calls / Called By of one file's symbols."),
+                                            QStringLiteral("path"));
+    parser.addOption(indexRelationsOption);
+
+    QCommandLineOption indexEdgesOption(QStringList() << "index-edges",
+                                        QStringLiteral("With --index-project: print every cross-file call edge, one JSON object per line."));
+    parser.addOption(indexEdgesOption);
+
+    QCommandLineOption noIndexOption(QStringList() << "no-index",
+                                     QStringLiteral("Do not build the project index (cross-file relations fall back to the per-file JS/TS crawl)."));
+    parser.addOption(noIndexOption);
+
     parser.process(app);
+
+    if (parser.isSet(indexFactsOption)) {
+        QTextStream qin(stdin);
+        SymbolParser symbolParser;
+        while (true) {
+            const QString line = qin.readLine();
+            if (line.isNull()) {
+                break;
+            }
+            const QString path = line.trimmed();
+            if (path.isEmpty()) {
+                continue;
+            }
+            const QFileInfo info(path);
+            QVariantMap analysis = symbolParser.parseFile(info.absoluteFilePath());
+            analysis.insert(QStringLiteral("path"), info.absoluteFilePath());
+            const ProjectIndex::FileFacts facts = ProjectIndex::factsFromAnalysis(analysis, info.size(),
+                                                                                  info.lastModified().toMSecsSinceEpoch());
+            QVariantMap payload = ProjectIndex::factsToVariant(facts);
+            payload.insert(QStringLiteral("path"), info.absoluteFilePath());
+            std::cout << QJsonDocument(QJsonObject::fromVariantMap(payload)).toJson(QJsonDocument::Compact).toStdString()
+                      << std::endl;
+        }
+        return 0;
+    }
+
+    if (parser.isSet(indexProjectOption)) {
+        ProjectIndex::BuildOptions options;
+        options.root = resolveCliPath(parser.value(indexProjectOption), QDir::currentPath());
+        options.helperPath = QCoreApplication::applicationFilePath();
+        const ProjectIndex::SnapshotPtr snapshot = ProjectIndex::build(options);
+        if (parser.isSet(indexEdgesOption)) {
+            const QDir root(snapshot->root);
+            for (const ProjectIndex::Edge &edge : snapshot->edges) {
+                const QVariantMap item{
+                    {QStringLiteral("from"), root.relativeFilePath(edge.fromPath)},
+                    {QStringLiteral("caller"), edge.fromKey.isEmpty() ? QStringLiteral("(top level)") : edge.fromName},
+                    {QStringLiteral("line"), edge.siteLine},
+                    {QStringLiteral("to"), root.relativeFilePath(edge.to.path)},
+                    {QStringLiteral("callee"), edge.to.owner.isEmpty() ? edge.to.name : edge.to.owner + QLatin1Char('.') + edge.to.name},
+                    {QStringLiteral("calleeKind"), edge.to.kind},
+                    {QStringLiteral("calleeLine"), edge.to.line},
+                    {QStringLiteral("via"), edge.via},
+                    {QStringLiteral("confidence"), edge.confidence},
+                };
+                std::cout << QJsonDocument(QJsonObject::fromVariantMap(item)).toJson(QJsonDocument::Compact).toStdString() << '\n';
+            }
+            std::cout.flush();
+            return 0;
+        }
+        if (!parser.isSet(indexRelationsOption)) {
+            std::cout << QJsonDocument(QJsonObject::fromVariantMap(snapshot->stats)).toJson(QJsonDocument::Indented).toStdString()
+                      << std::endl;
+            return 0;
+        }
+        const QString targetPath = resolveCliPath(parser.value(indexRelationsOption), QDir::currentPath());
+        SymbolParser symbolParser;
+        QVariantMap analysis = symbolParser.parseFile(targetPath);
+        analysis.insert(QStringLiteral("path"), targetPath);
+        analysis = ProjectIndex::augmentAnalysis(analysis, snapshot);
+        // Compact view: symbol -> cross-file relation names.
+        QVariantList out;
+        std::function<void(const QVariantList &, const QString &)> collect = [&](const QVariantList &symbols, const QString &owner) {
+            for (const QVariant &entry : symbols) {
+                const QVariantMap symbol = entry.toMap();
+                const QString name = owner.isEmpty() ? symbol.value(QStringLiteral("name")).toString()
+                                                     : owner + QLatin1Char('.') + symbol.value(QStringLiteral("name")).toString();
+                QVariantMap item;
+                for (const QString &field : {QStringLiteral("calls"), QStringLiteral("calledBy")}) {
+                    QVariantList relations;
+                    for (const QVariant &relationEntry : symbol.value(field).toList()) {
+                        const QVariantMap relation = relationEntry.toMap();
+                        const QString relationPath = relation.value(QStringLiteral("path")).toString();
+                        if (relationPath.isEmpty() || QFileInfo(relationPath).absoluteFilePath() == targetPath) {
+                            continue;
+                        }
+                        relations.append(QVariantMap{
+                            {QStringLiteral("name"), relation.value(QStringLiteral("name"))},
+                            {QStringLiteral("kind"), relation.value(QStringLiteral("kind"))},
+                            {QStringLiteral("path"), QDir(options.root).relativeFilePath(relationPath)},
+                            {QStringLiteral("line"), relation.value(QStringLiteral("line"))},
+                            {QStringLiteral("confidence"), relation.value(QStringLiteral("confidence"))},
+                        });
+                    }
+                    if (!relations.isEmpty()) {
+                        item.insert(field, relations);
+                    }
+                }
+                if (!item.isEmpty()) {
+                    item.insert(QStringLiteral("symbol"), name);
+                    item.insert(QStringLiteral("line"), symbol.value(QStringLiteral("line")));
+                    if (symbol.contains(QStringLiteral("calledByTotal"))) {
+                        item.insert(QStringLiteral("calledByTotal"), symbol.value(QStringLiteral("calledByTotal")));
+                    }
+                    out.append(item);
+                }
+                collect(symbol.value(QStringLiteral("members")).toList(), name);
+            }
+        };
+        collect(analysis.value(QStringLiteral("symbols")).toList(), QString());
+        std::cout << QJsonDocument(QJsonArray::fromVariantList(out)).toJson(QJsonDocument::Indented).toStdString() << std::endl;
+        return 0;
+    }
 
     if (parser.isSet(debugAstOption)) {
         const QString targetPath = resolveCliPath(parser.value(debugAstOption), QDir::currentPath());
@@ -129,6 +255,9 @@ int main(int argc, char *argv[])
     }
 
     ProjectController controller;
+    // Deterministic output: the CLI builds the project index before analysing.
+    controller.setIndexMode(parser.isSet(noIndexOption) ? ProjectController::IndexMode::Off
+                                                        : ProjectController::IndexMode::Synchronous);
 
     const QStringList args = parser.positionalArguments();
     if (!args.isEmpty()) {

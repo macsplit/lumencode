@@ -5,6 +5,11 @@
 #include <QVariantList>
 #include <QVariantMap>
 
+#include <atomic>
+#include <memory>
+
+#include "projectindex.h"
+
 class FileSystemModel;
 class SymbolParser;
 
@@ -22,8 +27,11 @@ class ProjectController : public QObject
     Q_PROPERTY(QVariantMap selectedSnippet READ selectedSnippet NOTIFY selectedSnippetChanged)
     Q_PROPERTY(bool analysisInProgress READ analysisInProgress NOTIFY analysisInProgressChanged)
     Q_PROPERTY(QString preferredEditor READ preferredEditor WRITE setPreferredEditor NOTIFY preferredEditorChanged)
+    Q_PROPERTY(QVariantMap indexStatus READ indexStatus NOTIFY indexStatusChanged)
 
 public:
+    enum class IndexMode { Background, Synchronous, Off };
+
     explicit ProjectController(QObject *parent = nullptr);
     ~ProjectController() override;
 
@@ -39,6 +47,8 @@ public:
     bool analysisInProgress() const;
     QString preferredEditor() const;
     Q_INVOKABLE QString lastOpenedPath() const;
+    QVariantMap indexStatus() const;
+    void setIndexMode(IndexMode mode);
 
     Q_INVOKABLE void setRootPath(const QString &path);
     Q_INVOKABLE void selectPath(const QString &path);
@@ -58,10 +68,13 @@ signals:
     void selectedSnippetChanged();
     void analysisInProgressChanged();
     void preferredEditorChanged();
+    void indexStatusChanged();
 
 private:
     void beginAsyncAnalysis(const QString &path, const QVariantMap &pendingSymbol = QVariantMap{});
     void applyResolvedSelection(const QVariantMap &symbol);
+    void startIndexBuild();
+    void cancelIndexBuild();
     QVariantMap makeFileSnippet() const;
     QVariantMap parseFileSafely(const QString &path) const;
     static QVariantMap makeSymbolSnippet(const QVariantMap &symbol, const QVariantMap &fileData);
@@ -81,4 +94,11 @@ private:
     QFutureWatcher<QVariantMap> *m_analysisWatcher = nullptr;
     int m_analysisRequestId = 0;
     bool m_analysisInProgress = false;
+
+    IndexMode m_indexMode = IndexMode::Background;
+    ProjectIndex::SnapshotPtr m_indexSnapshot;
+    QFutureWatcher<ProjectIndex::SnapshotPtr> *m_indexWatcher = nullptr;
+    std::shared_ptr<std::atomic_bool> m_indexCancel;
+    QVariantMap m_indexStatus;
+    int m_indexRequestId = 0;
 };

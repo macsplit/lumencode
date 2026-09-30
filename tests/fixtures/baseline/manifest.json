@@ -944,11 +944,11 @@
       "file_expectations": {
         "quick_link_labels": [
           "index.html",
-          "#todo-list \u2192 index.html:16",
-          "#new-todo \u2192 index.html:14",
-          ".completed \u2192 style.css:9",
-          ".hidden \u2192 style.css:13",
-          "#footer \u2014 no such element in index.html",
+          "#todo-list → index.html:16",
+          "#new-todo → index.html:14",
+          ".completed → style.css:9",
+          ".hidden → style.css:13",
+          "#footer — no such element in index.html",
           "<todo-counter> (TodoCounter) used in index.html:18"
         ]
       },
@@ -983,7 +983,7 @@
           "app.js",
           "about.html",
           "login.php",
-          "#todo-list \u2190 app.js:1"
+          "#todo-list ← app.js:1"
         ],
         "css_matched_classes": 4,
         "css_missing_classes": 1,
@@ -1033,7 +1033,7 @@
         "quick_link_labels": [
           "index.html",
           "about.html",
-          ".completed \u2190 app.js:13"
+          ".completed ← app.js:13"
         ],
         "css_unused_classes": [
           "never-used"
@@ -1071,8 +1071,8 @@
       "file_expectations": {
         "quick_link_labels": [
           "index.php",
-          "#flash \u2192 index.php:21",
-          ".flash \u2192 site.css:1"
+          "#flash → index.php:21",
+          ".flash → site.css:1"
         ]
       },
       "expectations": []
@@ -1543,20 +1543,20 @@
       "expectations": [
         {
           "kind": "handler",
-          "name": "button \u00b7 click",
+          "name": "button · click",
           "calls": [
             "checkout"
           ]
         },
         {
           "kind": "handler",
-          "name": "window \u00b7 load"
+          "name": "window · load"
         },
         {
           "kind": "function",
           "name": "checkout",
           "calledBy": [
-            "button \u00b7 click"
+            "button · click"
           ]
         }
       ]
@@ -1631,6 +1631,303 @@
         {
           "kind": "property",
           "name": "store"
+        }
+      ]
+    },
+    {
+      "name": "index_go_calls",
+      "root": "tests/fixtures/baseline/cross_file/go",
+      "file": "service.go",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "Warm",
+          "calls": [
+            "NewCache",
+            "Remember"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_go_called_by",
+      "root": "tests/fixtures/baseline/cross_file/go",
+      "file": "store.go",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "NewCache",
+          "calledBy": [
+            "Warm"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_python_calls",
+      "root": "tests/fixtures/baseline/cross_file/python",
+      "file": "checkout.py",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "checkout_total",
+          "calls": [
+            "TaxTable",
+            "apply_discount",
+            "rate_for"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_python_called_by",
+      "root": "tests/fixtures/baseline/cross_file/python",
+      "file": "pricing.py",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "apply_discount",
+          "calledBy": [
+            "checkout_total"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_java_calls",
+      "root": "tests/fixtures/baseline/cross_file/java",
+      "file": "Billing.java",
+      "expectations": [
+        {
+          "kind": "method",
+          "name": "bill",
+          "calls": [
+            "Invoice",
+            "zeroInvoice"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_java_called_by",
+      "root": "tests/fixtures/baseline/cross_file/java",
+      "file": "Invoice.java",
+      "expectations": [
+        {
+          "kind": "class",
+          "name": "Invoice",
+          "calledBy": [
+            "bill"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_csharp_block_namespace",
+      "root": "tests/fixtures/baseline/cross_file/csharp",
+      "file": "Guard.cs",
+      "expectations": [
+        {
+          "kind": "class",
+          "name": "Guard"
+        }
+      ]
+    },
+    {
+      "name": "index_csharp_calls",
+      "root": "tests/fixtures/baseline/cross_file/csharp",
+      "file": "OrderService.cs",
+      "expectations": [
+        {
+          "kind": "method",
+          "name": "Place",
+          "calls": [
+            "NotNull"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_php_calls",
+      "root": "tests/fixtures/baseline/cross_file/php",
+      "file": "Signup.php",
+      "expectations": [
+        {
+          "kind": "method",
+          "name": "register",
+          "calls": [
+            "deliver"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_php_called_by",
+      "root": "tests/fixtures/baseline/cross_file/php",
+      "file": "Mailer.php",
+      "expectations": [
+        {
+          "kind": "method",
+          "name": "deliver",
+          "calledBy": [
+            "register"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_rust_calls",
+      "root": "tests/fixtures/baseline/cross_file/rust",
+      "file": "src/main.rs",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "run",
+          "calls": [
+            "new",
+            "count_tokens"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_rust_called_by",
+      "root": "tests/fixtures/baseline/cross_file/rust",
+      "file": "src/parser.rs",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "count_tokens",
+          "calledBy": [
+            "run"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_cpp_calls",
+      "root": "tests/fixtures/baseline/cross_file/cpp",
+      "file": "report.cpp",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "summarize",
+          "calls": [
+            "circleArea"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_swift_calls",
+      "root": "tests/fixtures/baseline/cross_file/swift",
+      "file": "Receipt.swift",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "printReceipt",
+          "calls": [
+            "formatReceiptLine"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_swift_called_by",
+      "root": "tests/fixtures/baseline/cross_file/swift",
+      "file": "Formatter.swift",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "formatReceiptLine",
+          "calledBy": [
+            "printReceipt"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_vbnet_calls",
+      "root": "tests/fixtures/baseline/cross_file/vbnet",
+      "file": "OrderForm.vb",
+      "expectations": [
+        {
+          "kind": "method",
+          "name": "Checkout",
+          "calls": [
+            "VatFor",
+            "Receipt"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_vbnet_called_by",
+      "root": "tests/fixtures/baseline/cross_file/vbnet",
+      "file": "TaxRules.vb",
+      "expectations": [
+        {
+          "kind": "method",
+          "name": "VatFor",
+          "calledBy": [
+            "Checkout"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_shell_calls",
+      "root": "tests/fixtures/baseline/cross_file/shell",
+      "file": "install.sh",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "install_files",
+          "calls": [
+            "ensure_directory"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_shell_called_by",
+      "root": "tests/fixtures/baseline/cross_file/shell",
+      "file": "lib.sh",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "ensure_directory",
+          "calledBy": [
+            "install_files"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_objc_calls",
+      "root": "tests/fixtures/baseline/cross_file/objc",
+      "file": "Basket.m",
+      "expectations": [
+        {
+          "kind": "method",
+          "name": "totalLabel",
+          "calls": [
+            "stringForCents:currency:"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "index_objc_called_by",
+      "root": "tests/fixtures/baseline/cross_file/objc",
+      "file": "PriceFormatter.m",
+      "expectations": [
+        {
+          "kind": "method",
+          "name": "stringForCents:currency:",
+          "calledBy": [
+            "totalLabel"
+          ]
         }
       ]
     }
