@@ -1486,6 +1486,80 @@
           ]
         }
       ]
+    },
+    {
+      "name": "js_test_blocks",
+      "root": "tests/fixtures/baseline/js_shapes",
+      "file": "cart.test.js",
+      "expectations": [
+        {
+          "kind": "test suite",
+          "name": "cart"
+        },
+        {
+          "kind": "test",
+          "name": "sums prices"
+        },
+        {
+          "kind": "test",
+          "name": "is zero"
+        },
+        {
+          "kind": "test suite",
+          "name": "empty"
+        }
+      ]
+    },
+    {
+      "name": "js_test_calls_code_under_test",
+      "root": "tests/fixtures/baseline/js_shapes",
+      "file": "cart.js",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "total"
+        }
+      ]
+    },
+    {
+      "name": "ts_barrel_reexports",
+      "root": "tests/fixtures/baseline/js_shapes",
+      "file": "index.ts",
+      "expectations": [
+        {
+          "kind": "re-export",
+          "name": "total"
+        },
+        {
+          "kind": "re-export",
+          "name": "* from ./page"
+        }
+      ]
+    },
+    {
+      "name": "js_page_event_handlers",
+      "root": "tests/fixtures/baseline/js_shapes",
+      "file": "page.js",
+      "expectations": [
+        {
+          "kind": "handler",
+          "name": "button \u00b7 click",
+          "calls": [
+            "checkout"
+          ]
+        },
+        {
+          "kind": "handler",
+          "name": "window \u00b7 load"
+        },
+        {
+          "kind": "function",
+          "name": "checkout",
+          "calledBy": [
+            "button \u00b7 click"
+          ]
+        }
+      ]
     }
   ]
 }
