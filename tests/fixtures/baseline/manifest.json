@@ -2183,6 +2183,52 @@
           "name": "sizeChanged"
         }
       ]
+    },
+    {
+      "name": "swift_lost_brace_renested",
+      "root": "tests/fixtures/baseline/swift_recovery_brace",
+      "file": "Cart.swift",
+      "expectations": [
+        {
+          "kind": "struct",
+          "name": "Cart"
+        },
+        {
+          "kind": "function",
+          "name": "clear"
+        },
+        {
+          "kind": "function",
+          "name": "add"
+        },
+        {
+          "kind": "function",
+          "name": "helper"
+        }
+      ]
+    },
+    {
+      "name": "ts_lost_closer_in_test_block",
+      "root": "tests/fixtures/baseline/ts_test_recovery",
+      "file": "missing.test.ts",
+      "expectations": [
+        {
+          "kind": "test suite",
+          "name": "first"
+        },
+        {
+          "kind": "test",
+          "name": "second"
+        },
+        {
+          "kind": "test suite",
+          "name": "other"
+        },
+        {
+          "kind": "test",
+          "name": "third"
+        }
+      ]
     }
   ]
 }

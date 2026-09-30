@@ -713,6 +713,37 @@ struct AstInsertion
     int openRow = 0; // the row that opened the unclosed block
 };
 
+// The ways to write an insertion's closers back: as they are, and followed
+// by `;` where the grammar needs a separator before the next declaration on
+// the same line (Swift, Go). Each variant must fit in the indentation.
+static QList<QByteArray> closerWriteVariants(const QByteArray &source, const AstInsertion &insertion)
+{
+    QList<QByteArray> variants;
+    if (insertion.offset < 0) {
+        return variants;
+    }
+    for (const QByteArray &closers : {insertion.closers, insertion.closers.endsWith(';') ? QByteArray() : insertion.closers + ';'}) {
+        if (closers.isEmpty()) {
+            continue;
+        }
+        const int at = insertion.offset + insertion.closers.size() - closers.size();
+        if (at < 0) {
+            continue;
+        }
+        QByteArray trial = source;
+        bool room = true;
+        for (int index = 0; index < closers.size() && room; ++index) {
+            room = trial.at(at + index) == ' ';
+            trial[at + index] = closers.at(index);
+        }
+        const int lineStart = source.lastIndexOf('\n', insertion.offset) + 1;
+        if (room && at >= lineStart) {
+            variants.append(trial);
+        }
+    }
+    return variants;
+}
+
 static QList<AstInsertion> closerInsertionCandidates(const QByteArray &source, const QVector<int> &starts)
 {
     struct Open { int row; int indent; QByteArray openers; };
@@ -830,7 +861,7 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
     const QVector<int> starts = lineStartOffsets(original);
     const QSet<int> suspectRows = textuallySuspectRows(original, starts);
     const QList<AstInsertion> insertions = closerInsertionCandidates(original, starts);
-    constexpr int kMaxInsertionTrials = 10;
+    constexpr int kMaxInsertionTrials = 12;
     int insertionTrialsUsed = 0;
     QSet<int> insertedRows;
     constexpr int kMaxSuspectTrials = 12;
@@ -917,16 +948,8 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
             // (its body then belongs to the enclosing block; only the damaged
             // block itself is lost).
             QList<QPair<QByteArray, int>> trials; // source, row reported as damaged
-            if (insertion.offset >= 0) {
-                QByteArray trial = result.source;
-                bool room = true;
-                for (int index = 0; index < insertion.closers.size(); ++index) {
-                    room = room && trial.at(insertion.offset + index) == ' ';
-                    trial[insertion.offset + index] = insertion.closers.at(index);
-                }
-                if (room) {
-                    trials.append({trial, insertion.row});
-                }
+            for (const QByteArray &variant : closerWriteVariants(result.source, insertion)) {
+                trials.append({variant, insertion.row});
             }
             if (!blanked.contains(insertion.openRow)) {
                 // Indentation-scoped languages lose the header's whole block, or
@@ -1020,6 +1043,98 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
     result.clean = current.isClean();
     if (!result.clean && result.blankedLines.isEmpty()) {
         result.source = original;
+    }
+    return result;
+}
+
+// A clean parse can still be wrong: grammars that allow nested functions and
+// types (Swift, Go closures, Rust items) quietly nest every following
+// declaration inside a block whose `}` was lost. The tell is indentation: a
+// declaration nested in another declaration but starting at the same (or a
+// shallower) column than it.
+static int countMisnestedDeclarations(TSNode node, const QVector<bool> &table, int ancestorColumn, int ancestorRow)
+{
+    int total = 0;
+    const TSSymbol symbol = ts_node_symbol(node);
+    const bool declaration = symbol < table.size() && table.at(symbol) && ts_node_is_named(node);
+    int column = ancestorColumn;
+    int row = ancestorRow;
+    if (declaration) {
+        const TSPoint start = ts_node_start_point(node);
+        if (ancestorColumn >= 0 && static_cast<int>(start.row) != ancestorRow
+            && static_cast<int>(start.column) <= ancestorColumn) {
+            ++total;
+        }
+        column = static_cast<int>(start.column);
+        row = static_cast<int>(start.row);
+    }
+    const uint32_t count = ts_node_named_child_count(node);
+    for (uint32_t index = 0; index < count; ++index) {
+        total += countMisnestedDeclarations(ts_node_named_child(node, index), table, column, row);
+    }
+    return total;
+}
+
+static int misnestedDeclarations(TSParser *parser, const QByteArray &source, bool *clean)
+{
+    TSTree *tree = ts_parser_parse_string(parser, nullptr, source.constData(), source.size());
+    if (!tree) {
+        *clean = false;
+        return INT_MAX;
+    }
+    const TSNode root = ts_tree_root_node(tree);
+    *clean = !ts_node_has_error(root);
+    const int count = countMisnestedDeclarations(root, declarationSymbolTable(ts_tree_language(tree)), -1, -1);
+    ts_tree_delete(tree);
+    return count;
+}
+
+// For a clean parse with misnested declarations: write back lost closers
+// (see closerInsertionCandidates) and keep the first that still parses
+// cleanly and removes the misnesting.
+static AstRepairResult repairMisnestingForAst(const QByteArray &original, TSLanguage *language)
+{
+    AstRepairResult result;
+    result.source = original;
+    result.clean = true;
+    if (!language) {
+        return result;
+    }
+    const QVector<int> starts = lineStartOffsets(original);
+    const QList<AstInsertion> insertions = closerInsertionCandidates(original, starts);
+    if (insertions.isEmpty()) {
+        return result;
+    }
+    TSParser *parser = ts_parser_new();
+    if (!parser || !ts_parser_set_language(parser, language)) {
+        if (parser) {
+            ts_parser_delete(parser);
+        }
+        return result;
+    }
+    bool clean = false;
+    int current = misnestedDeclarations(parser, original, &clean);
+    int trials = 0;
+    QByteArray source = original;
+    for (const AstInsertion &insertion : insertions) {
+        if (current == 0 || trials >= 6) {
+            break;
+        }
+        for (const QByteArray &trial : closerWriteVariants(source, insertion)) {
+            ++trials;
+            bool trialClean = false;
+            const int misnested = misnestedDeclarations(parser, trial, &trialClean);
+            if (trialClean && misnested < current) {
+                source = trial;
+                current = misnested;
+                result.blankedLines.append(insertion.row + 1);
+                break;
+            }
+        }
+    }
+    ts_parser_delete(parser);
+    if (!result.blankedLines.isEmpty()) {
+        result.source = source;
     }
     return result;
 }
@@ -5159,6 +5274,29 @@ QVariantMap SymbolParser::parseFileAnalysis(const QString &path) const
         }
         QVariantMap astResult = withAstSignatures(astParse(), astBytes);
         if (!astResult.value(QStringLiteral("analysisHasAstErrors")).toBool()) {
+            // Brace languages: a lost `}` can parse cleanly while nesting the
+            // rest of the file; indentation gives it away.
+            static const QSet<QString> misnestLanguages = {
+                QStringLiteral("swift"), QStringLiteral("go"), QStringLiteral("rust"), QStringLiteral("ts"),
+                QStringLiteral("tsx"), QStringLiteral("script"), QStringLiteral("jsx"), QStringLiteral("java"),
+                QStringLiteral("csharp"), QStringLiteral("php"), QStringLiteral("cpp"),
+            };
+            if (misnestLanguages.contains(astLanguage) && hasContent(astResult)) {
+                const AstRepairResult renest = repairMisnestingForAst(astBytes, languageForName(astLanguage));
+                if (!renest.blankedLines.isEmpty()) {
+                    ScopedAstSourceOverride guard(renest.source);
+                    QVariantMap repaired = withAstSignatures(astParse(), renest.source);
+                    if (!repaired.value(QStringLiteral("analysisHasAstErrors")).toBool() && hasContent(repaired)) {
+                        QVariantList damaged;
+                        for (int line : renest.blankedLines) {
+                            damaged.append(line);
+                        }
+                        repaired.insert(QStringLiteral("analysisDamagedLines"), damaged);
+                        repaired.insert(QStringLiteral("analysisHasAstErrors"), true);
+                        return finalizeResult(repaired, QStringLiteral("ast"), QStringLiteral("high"));
+                    }
+                }
+            }
             if (hasContent(astResult)) {
                 return finalizeResult(astResult, QStringLiteral("ast"));
             }
