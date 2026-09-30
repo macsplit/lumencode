@@ -30,7 +30,8 @@ Issues) against measurements on the pinned public corpus (`tools/corpus.json`,
 ## Phases
 
 Phases A–F were planned from the README's gaps; Phase G was added on
-2026-09-30 from a review of LumenCode as an agent tool.
+2026-09-30 from a review of LumenCode as an agent tool, and Phase H the
+same day from a user report (WebForms pages missing from the tree).
 
 Each phase is gated by: fixtures (`tools/regression_sweep.py
 --fixtures-only`), `tools/corpus_scan.py --compare`, `tools/damage_probe.py`,
@@ -151,6 +152,43 @@ enough to see quickly whether agents benefit. If they do, add an MCP server
 on top of the Phase B project index (batch queries: callers, routes,
 symbols), which is what would make it worth more than grep. Include a
 CLI-only build option alongside.
+
+### Phase H — ASP.NET WebForms markup (added 2026-09-30)
+
+Reported from real use: exploring a WebForms project shows the `.aspx.vb`
+code-behind files but not the `.aspx` pages they belong to. Measured on the
+code: `.aspx`, `.ascx`, `.master`, `.ashx`, `.asmx` and `.asax` are not in the
+supported-suffix lists (`src/filesystemmodel.cpp`, `src/projectindex.cpp`,
+`src/symbolparser.cpp`), so they are filtered out of the tree entirely and
+the code-behind's markup half is invisible.
+
+1. **Show them.** Add the WebForms suffixes to the file-type lists so the
+   tree lists them (a first, structure-free step that already fixes the
+   report).
+2. **Markup parser** (a structural parser like the VB.NET and SQL ones):
+   page directives (`<%@ Page|Control|Master ... CodeBehind / CodeFile /
+   Inherits / MasterPageFile %>`, `<%@ Register %>`, `<%@ Import %>`),
+   server controls with `runat="server"` as symbols (tag, `id`, type such as
+   `asp:GridView`), `<asp:Content>` / `ContentPlaceHolder` regions,
+   `<script runat="server">` blocks (VB or C#, handed to the matching
+   parser), inline `<% %>` / `<%= %>` / `<%# %>` expressions, and HTML ids
+   and class usage as the HTML parser already reports them.
+3. **Links to the code-behind.**
+   - Page ↔ `.aspx.vb` / `.aspx.cs` / `.designer.*` as related files, both ways.
+   - Event attributes (`OnClick="Save_Click"`, `OnItemDataBound`, ...) get
+     `Calls` edges to the handler methods, and those methods get
+     `Called By` back to the control, like HTML `on*` handlers today.
+   - Control ids resolve to the designer fields; ids the code-behind uses
+     but the markup lacks (and the reverse) are flagged like broken DOM ids.
+   - `MasterPageFile`, `<%@ Register Src=... %>` user controls and
+     `Inherits` become dependencies and cross-file links on the project index.
+4. **Verification.** A `webforms_basic` fixture (page, master, user control,
+   VB and C# code-behind, one broken handler reference), manifest assertions,
+   a public WebForms repository in `tools/corpus.json`, damage-probe and
+   smoke-test coverage, and README / end-user-guide updates.
+
+Out of scope for now: Razor (`.cshtml` / `.vbhtml`), MVC view resolution and
+`Web.config` beyond what the JSON/config outlines already do.
 
 ## Progress
 
