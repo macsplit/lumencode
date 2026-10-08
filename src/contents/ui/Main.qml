@@ -414,6 +414,7 @@ Kirigami.ApplicationWindow {
                                 Layout.fillWidth: true
                                 font.pointSize: root.compactSmallFontSize
                                 selectByMouse: true
+                                rightPadding: searchCloseButton.width + root.compactSpacing
                                 enabled: project.indexStatus.state === "ready"
                                 placeholderText: {
                                     var state = project.indexStatus.state
@@ -433,6 +434,23 @@ Kirigami.ApplicationWindow {
                                 Shortcut {
                                     sequence: "Ctrl+F"
                                     onActivated: { searchField.forceActiveFocus(); searchField.selectAll() }
+                                }
+
+                                ToolButton {
+                                    id: searchCloseButton
+                                    anchors.right: parent.right
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.rightMargin: root.compactMargin
+                                    icon.name: "window-close"
+                                    display: AbstractButton.IconOnly
+                                    visible: searchField.text.length > 0
+                                    enabled: visible
+                                    ToolTip.visible: hovered
+                                    ToolTip.text: "Close search (Esc)"
+                                    onClicked: {
+                                        searchField.text = ""
+                                        explorerList.forceActiveFocus()
+                                    }
                                 }
                             }
 
