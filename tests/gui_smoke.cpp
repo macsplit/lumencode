@@ -177,6 +177,19 @@ int main(int argc, char *argv[])
     }
     files.sort();
 
+    // A focused run can exercise one file against a wider project root without
+    // walking every supported file below that root. This is deliberately a
+    // test-only control for reproducing interactive-selection reports.
+    const QString projectRootOverride = qEnvironmentVariable("LUMENCODE_SMOKE_PROJECT_ROOT");
+    if (!projectRootOverride.isEmpty()) {
+        const QFileInfo overrideInfo(projectRootOverride);
+        if (!overrideInfo.isDir()) {
+            std::fprintf(stderr, "PROJECT ROOT: not a directory: %s\n", qPrintable(projectRootOverride));
+            return 2;
+        }
+        root = overrideInfo.absoluteFilePath();
+    }
+
     qmlRegisterType<ProjectController>("Lumencode", 1, 0, "ProjectController");
     QQmlApplicationEngine engine;
 
@@ -228,11 +241,44 @@ int main(int argc, char *argv[])
                  indexStatus.value(QStringLiteral("files")).toInt(), indexStatus.value(QStringLiteral("crossFileEdges")).toInt());
     render(app, engine);
 
+    // Reproduce one real result selection while retaining the complete project
+    // snapshot. The three numbers separate synchronous GUI-thread dispatch,
+    // background analysis plus delivery, and the following QML frame.
+    const QString focusedQuery = qEnvironmentVariable("LUMENCODE_SMOKE_FOCUS_QUERY");
+    if (!focusedQuery.isEmpty()) {
+        const QVariantList focusedResults = controller->search(focusedQuery, QString(), 100);
+        if (focusedResults.isEmpty()) {
+            std::fprintf(stderr, "FOCUS: no result for '%s'\n", qPrintable(focusedQuery));
+            return 2;
+        }
+        QElapsedTimer selectionTimer;
+        selectionTimer.start();
+        controller->openSearchResult(focusedResults.first().toMap());
+        const qint64 dispatchMs = selectionTimer.elapsed();
+        const bool completed = waitForAnalysis(controller);
+        const qint64 analysisMs = selectionTimer.elapsed();
+        QElapsedTimer renderTimer;
+        renderTimer.start();
+        render(app, engine, shotPath(QStringLiteral("focused-selection")));
+        const qint64 renderMs = renderTimer.elapsed();
+        std::fprintf(stdout, "focus: '%s', dispatch %lld ms, analysis %lld ms, render %lld ms, completed %s\n",
+                     qPrintable(focusedQuery), static_cast<long long>(dispatchMs), static_cast<long long>(analysisMs),
+                     static_cast<long long>(renderMs), completed ? "yes" : "no");
+        if (!completed) {
+            return 2;
+        }
+        if (analysisMs > 5000) {
+            std::fprintf(stderr, "FOCUS: selection took %lld ms; expected under 5000 ms\n",
+                         static_cast<long long>(analysisMs));
+            return 2;
+        }
+    }
+
     // Search: type into the real search field, check the results list fills,
     // and open results (a symbol and a file) through the controller.
     int searchChecks = 0;
     int searchFailures = 0;
-    if (indexStatus.value(QStringLiteral("state")).toString() == QStringLiteral("ready")) {
+    if (indexStatus.value(QStringLiteral("state")).toString() == QStringLiteral("ready") && focusedQuery.isEmpty()) {
         auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
         QObject *field = window ? findItem(window->contentItem(), QStringLiteral("searchField")) : nullptr;
         QObject *results = window ? findItem(window->contentItem(), QStringLiteral("searchResults")) : nullptr;
