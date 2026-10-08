@@ -331,7 +331,7 @@ Kirigami.ApplicationWindow {
 
                                 ToolButton {
                                     Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
-                                    icon.name: "folder"
+                                    icon.name: "go-home"
                                     display: AbstractButton.IconOnly
                                     font.pointSize: root.compactSmallFontSize
                                     ToolTip.visible: hovered
@@ -341,7 +341,7 @@ Kirigami.ApplicationWindow {
 
                                 ToolButton {
                                     Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
-                                    icon.name: "document-open"
+                                    icon.name: "folder"
                                     display: AbstractButton.IconOnly
                                     font.pointSize: root.compactSmallFontSize
                                     enabled: root.hasSelectionPath
