@@ -331,7 +331,7 @@ Kirigami.ApplicationWindow {
 
                                 ToolButton {
                                     Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
-                                    icon.name: "folder-new"
+                                    icon.name: "folder"
                                     display: AbstractButton.IconOnly
                                     font.pointSize: root.compactSmallFontSize
                                     ToolTip.visible: hovered
@@ -341,7 +341,7 @@ Kirigami.ApplicationWindow {
 
                                 ToolButton {
                                     Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
-                                    icon.name: "system-file-manager"
+                                    icon.name: "document-open"
                                     display: AbstractButton.IconOnly
                                     font.pointSize: root.compactSmallFontSize
                                     enabled: root.hasSelectionPath
