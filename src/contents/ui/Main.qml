@@ -461,6 +461,7 @@ Kirigami.ApplicationWindow {
 
                                 Repeater {
                                     model: [
+                                        { "label": "All", "kinds": "" },
                                         { "label": "Files", "kinds": "file" },
                                         { "label": "Functions", "kinds": "function,method,constructor" },
                                         { "label": "Types", "kinds": "class,struct,interface,enum,type,trait,module,namespace,table,view" }
