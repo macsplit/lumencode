@@ -272,6 +272,22 @@ int main(int argc, char *argv[])
                          static_cast<long long>(analysisMs));
             return 2;
         }
+        if (!controller->canGoBack()) {
+            std::fprintf(stderr, "FOCUS: opening a search result did not create a back-history entry\n");
+            return 2;
+        }
+        controller->goBack();
+        if (!waitForAnalysis(controller) || !controller->canGoForward()) {
+            std::fprintf(stderr, "FOCUS: back navigation did not complete or enable forward navigation\n");
+            return 2;
+        }
+        controller->goForward();
+        if (!waitForAnalysis(controller)
+            || controller->selectedSymbol().value(QStringLiteral("name")).toString()
+                != focusedResults.first().toMap().value(QStringLiteral("name")).toString()) {
+            std::fprintf(stderr, "FOCUS: forward navigation did not restore the selected symbol\n");
+            return 2;
+        }
     }
 
     // Search: type into the real search field, check the results list fills,

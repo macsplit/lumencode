@@ -26,6 +26,8 @@ class ProjectController : public QObject
     Q_PROPERTY(QVariantList selectedSymbolMembers READ selectedSymbolMembers NOTIFY selectedSymbolChanged)
     Q_PROPERTY(QVariantMap selectedSnippet READ selectedSnippet NOTIFY selectedSnippetChanged)
     Q_PROPERTY(bool analysisInProgress READ analysisInProgress NOTIFY analysisInProgressChanged)
+    Q_PROPERTY(bool canGoBack READ canGoBack NOTIFY navigationHistoryChanged)
+    Q_PROPERTY(bool canGoForward READ canGoForward NOTIFY navigationHistoryChanged)
     Q_PROPERTY(QString preferredEditor READ preferredEditor WRITE setPreferredEditor NOTIFY preferredEditorChanged)
     Q_PROPERTY(QVariantMap indexStatus READ indexStatus NOTIFY indexStatusChanged)
 
@@ -45,6 +47,8 @@ public:
     QVariantList selectedSymbolMembers() const;
     QVariantMap selectedSnippet() const;
     bool analysisInProgress() const;
+    bool canGoBack() const;
+    bool canGoForward() const;
     QString preferredEditor() const;
     Q_INVOKABLE QString lastOpenedPath() const;
     QVariantMap indexStatus() const;
@@ -54,6 +58,8 @@ public:
     Q_INVOKABLE void selectPath(const QString &path);
     Q_INVOKABLE void selectSymbol(int index);
     Q_INVOKABLE void selectSymbolByData(const QVariantMap &symbol);
+    Q_INVOKABLE void goBack();
+    Q_INVOKABLE void goForward();
     // Ranked symbol / file search over the project index (empty until the index is ready).
     // `kinds` is a comma-separated filter such as "function,class" or "file".
     Q_INVOKABLE QVariantList search(const QString &query, const QString &kinds = QString(), int limit = 60) const;
@@ -72,12 +78,15 @@ signals:
     void selectedSymbolChanged();
     void selectedSnippetChanged();
     void analysisInProgressChanged();
+    void navigationHistoryChanged();
     void preferredEditorChanged();
     void indexStatusChanged();
 
 private:
     void beginAsyncAnalysis(const QString &path, const QVariantMap &pendingSymbol = QVariantMap{});
     void applyResolvedSelection(const QVariantMap &symbol);
+    void recordSelectionInHistory();
+    void restoreHistoryEntry(const QVariantMap &entry);
     void startIndexBuild();
     void cancelIndexBuild();
     QVariantMap makeFileSnippet() const;
@@ -99,6 +108,9 @@ private:
     QFutureWatcher<QVariantMap> *m_analysisWatcher = nullptr;
     int m_analysisRequestId = 0;
     bool m_analysisInProgress = false;
+    QVector<QVariantMap> m_navigationHistory;
+    int m_navigationHistoryIndex = -1;
+    bool m_restoringHistory = false;
 
     IndexMode m_indexMode = IndexMode::Background;
     ProjectIndex::SnapshotPtr m_indexSnapshot;

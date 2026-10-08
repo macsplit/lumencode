@@ -1486,6 +1486,16 @@ bool ProjectController::analysisInProgress() const
     return m_analysisInProgress;
 }
 
+bool ProjectController::canGoBack() const
+{
+    return m_navigationHistoryIndex > 0;
+}
+
+bool ProjectController::canGoForward() const
+{
+    return m_navigationHistoryIndex >= 0 && m_navigationHistoryIndex + 1 < m_navigationHistory.size();
+}
+
 QString ProjectController::preferredEditor() const
 {
     return m_preferredEditor;
@@ -1505,6 +1515,10 @@ void ProjectController::setRootPath(const QString &path)
     }
 
     m_rootPath = absolute;
+    m_navigationHistory.clear();
+    m_navigationHistoryIndex = -1;
+    m_restoringHistory = false;
+    emit navigationHistoryChanged();
     m_fileSystemModel->setRootPath(absolute);
     saveLastOpenedPath(absolute);
     emit rootPathChanged();
@@ -1613,6 +1627,7 @@ void ProjectController::selectPath(const QString &path)
         emit selectedFileDataChanged();
         emit selectedSymbolChanged();
         emit selectedSnippetChanged();
+        recordSelectionInHistory();
         return;
     }
 
@@ -1635,6 +1650,7 @@ void ProjectController::selectPath(const QString &path)
         emit selectedFileDataChanged();
         emit selectedSymbolChanged();
         emit selectedSnippetChanged();
+        recordSelectionInHistory();
         return;
     }
 
@@ -1658,6 +1674,7 @@ void ProjectController::selectSymbol(int index)
     }
     emit selectedSymbolChanged();
     emit selectedSnippetChanged();
+    recordSelectionInHistory();
 }
 
 void ProjectController::selectSymbolByData(const QVariantMap &symbol)
@@ -1778,6 +1795,7 @@ void ProjectController::beginAsyncAnalysis(const QString &path, const QVariantMa
             m_selectedSnippet = makeFileSnippet();
             emit selectedSymbolChanged();
             emit selectedSnippetChanged();
+            recordSelectionInHistory();
         }
 
         if (m_analysisInProgress) {
@@ -1805,6 +1823,80 @@ void ProjectController::applyResolvedSelection(const QVariantMap &symbol)
         : makeSymbolSnippet(m_selectedSymbol, m_selectedFileData);
     emit selectedSymbolChanged();
     emit selectedSnippetChanged();
+    recordSelectionInHistory();
+}
+
+void ProjectController::recordSelectionInHistory()
+{
+    const QString path = QFileInfo(m_selectedPath).absoluteFilePath();
+    if (path.isEmpty()) {
+        return;
+    }
+
+    if (m_restoringHistory) {
+        m_restoringHistory = false;
+        emit navigationHistoryChanged();
+        return;
+    }
+
+    QVariantMap symbol;
+    for (const QString &key : {QStringLiteral("name"), QStringLiteral("kind"), QStringLiteral("line"),
+                               QStringLiteral("sourcePath")}) {
+        if (m_selectedSymbol.contains(key)) {
+            symbol.insert(key, m_selectedSymbol.value(key));
+        }
+    }
+    if (!symbol.isEmpty() && !symbol.contains(QStringLiteral("sourcePath"))) {
+        symbol.insert(QStringLiteral("sourcePath"), path);
+    }
+
+    const QVariantMap entry{{QStringLiteral("path"), path}, {QStringLiteral("symbol"), symbol}};
+    if (m_navigationHistoryIndex >= 0 && m_navigationHistory.at(m_navigationHistoryIndex) == entry) {
+        return;
+    }
+    while (m_navigationHistory.size() > m_navigationHistoryIndex + 1) {
+        m_navigationHistory.removeLast();
+    }
+    m_navigationHistory.append(entry);
+    m_navigationHistoryIndex = m_navigationHistory.size() - 1;
+    emit navigationHistoryChanged();
+}
+
+void ProjectController::restoreHistoryEntry(const QVariantMap &entry)
+{
+    const QString path = entry.value(QStringLiteral("path")).toString();
+    if (path.isEmpty()) {
+        return;
+    }
+    m_restoringHistory = true;
+    const QVariantMap symbol = entry.value(QStringLiteral("symbol")).toMap();
+    if (symbol.isEmpty()) {
+        selectPath(path);
+        return;
+    }
+    m_selectedPath = path;
+    emit selectedPathChanged();
+    beginAsyncAnalysis(path, symbol);
+}
+
+void ProjectController::goBack()
+{
+    if (!canGoBack()) {
+        return;
+    }
+    --m_navigationHistoryIndex;
+    emit navigationHistoryChanged();
+    restoreHistoryEntry(m_navigationHistory.at(m_navigationHistoryIndex));
+}
+
+void ProjectController::goForward()
+{
+    if (!canGoForward()) {
+        return;
+    }
+    ++m_navigationHistoryIndex;
+    emit navigationHistoryChanged();
+    restoreHistoryEntry(m_navigationHistory.at(m_navigationHistoryIndex));
 }
 
 bool ProjectController::openCurrentInFolder() const

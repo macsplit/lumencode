@@ -339,6 +339,28 @@ Kirigami.ApplicationWindow {
 
                                 ToolButton {
                                     Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
+                                    icon.name: "go-previous"
+                                    display: AbstractButton.IconOnly
+                                    font.pointSize: root.compactSmallFontSize
+                                    enabled: project.canGoBack
+                                    ToolTip.visible: hovered
+                                    ToolTip.text: "Back"
+                                    onClicked: project.goBack()
+                                }
+
+                                ToolButton {
+                                    Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
+                                    icon.name: "go-next"
+                                    display: AbstractButton.IconOnly
+                                    font.pointSize: root.compactSmallFontSize
+                                    enabled: project.canGoForward
+                                    ToolTip.visible: hovered
+                                    ToolTip.text: "Forward"
+                                    onClicked: project.goForward()
+                                }
+
+                                ToolButton {
+                                    Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
                                     icon.name: "document-open-folder"
                                     display: AbstractButton.IconOnly
                                     font.pointSize: root.compactSmallFontSize
