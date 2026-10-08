@@ -51,6 +51,7 @@ constexpr int kHelperRelationshipTimeoutMs = 2500;
 constexpr int kRelationshipBudgetMs = 1500;
 constexpr int kRelationshipImportedFileLimit = 24;
 constexpr int kRelationshipIncomingAnalysisLimit = 48;
+constexpr int kNavigationHistoryLimit = 50;
 const QString kSnippetKindFilePreview = QStringLiteral("file_preview");
 const QString kSnippetKindExactConstruct = QStringLiteral("exact_construct");
 const QString kSnippetKindBlockExcerpt = QStringLiteral("block_excerpt");
@@ -1850,14 +1851,22 @@ void ProjectController::recordSelectionInHistory()
         symbol.insert(QStringLiteral("sourcePath"), path);
     }
 
-    const QVariantMap entry{{QStringLiteral("path"), path}, {QStringLiteral("symbol"), symbol}};
-    if (m_navigationHistoryIndex >= 0 && m_navigationHistory.at(m_navigationHistoryIndex) == entry) {
+    QVariantMap entry{{QStringLiteral("path"), path}, {QStringLiteral("symbol"), symbol}};
+    entry.insert(QStringLiteral("fileData"), m_selectedFileData);
+    entry.insert(QStringLiteral("selectedSymbol"), m_selectedSymbol);
+    entry.insert(QStringLiteral("snippet"), m_selectedSnippet);
+    if (m_navigationHistoryIndex >= 0
+        && m_navigationHistory.at(m_navigationHistoryIndex).value(QStringLiteral("path")).toString() == path
+        && m_navigationHistory.at(m_navigationHistoryIndex).value(QStringLiteral("symbol")).toMap() == symbol) {
         return;
     }
     while (m_navigationHistory.size() > m_navigationHistoryIndex + 1) {
         m_navigationHistory.removeLast();
     }
     m_navigationHistory.append(entry);
+    if (m_navigationHistory.size() > kNavigationHistoryLimit) {
+        m_navigationHistory.removeFirst();
+    }
     m_navigationHistoryIndex = m_navigationHistory.size() - 1;
     emit navigationHistoryChanged();
 }
@@ -1870,6 +1879,31 @@ void ProjectController::restoreHistoryEntry(const QVariantMap &entry)
     }
     m_restoringHistory = true;
     const QVariantMap symbol = entry.value(QStringLiteral("symbol")).toMap();
+    const QVariantMap cachedFileData = entry.value(QStringLiteral("fileData")).toMap();
+    if (!cachedFileData.isEmpty()) {
+        ++m_analysisRequestId;
+        m_pendingSelectedSymbol = {};
+        if (m_analysisWatcher) {
+            m_analysisWatcher->disconnect(this);
+            m_analysisWatcher->deleteLater();
+            m_analysisWatcher = nullptr;
+        }
+        if (m_analysisInProgress) {
+            m_analysisInProgress = false;
+            emit analysisInProgressChanged();
+        }
+        m_selectedPath = path;
+        m_selectedFileData = cachedFileData;
+        m_selectedSymbol = entry.value(QStringLiteral("selectedSymbol")).toMap();
+        m_selectedSnippet = entry.value(QStringLiteral("snippet")).toMap();
+        emit selectedPathChanged();
+        emit selectedFileDataChanged();
+        emit selectedSymbolChanged();
+        emit selectedSnippetChanged();
+        m_restoringHistory = false;
+        emit navigationHistoryChanged();
+        return;
+    }
     if (symbol.isEmpty()) {
         selectPath(path);
         return;

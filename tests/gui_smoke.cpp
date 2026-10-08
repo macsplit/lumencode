@@ -277,12 +277,12 @@ int main(int argc, char *argv[])
             return 2;
         }
         controller->goBack();
-        if (!waitForAnalysis(controller) || !controller->canGoForward()) {
+        if (controller->analysisInProgress() || !waitForAnalysis(controller) || !controller->canGoForward()) {
             std::fprintf(stderr, "FOCUS: back navigation did not complete or enable forward navigation\n");
             return 2;
         }
         controller->goForward();
-        if (!waitForAnalysis(controller)
+        if (controller->analysisInProgress() || !waitForAnalysis(controller)
             || controller->selectedSymbol().value(QStringLiteral("name")).toString()
                 != focusedResults.first().toMap().value(QStringLiteral("name")).toString()) {
             std::fprintf(stderr, "FOCUS: forward navigation did not restore the selected symbol\n");

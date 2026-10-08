@@ -331,32 +331,12 @@ Kirigami.ApplicationWindow {
 
                                 ToolButton {
                                     Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
-                                    icon.name: "go-previous-symbolic"
+                                    icon.name: "folder-open"
                                     display: AbstractButton.IconOnly
                                     font.pointSize: root.compactSmallFontSize
+                                    ToolTip.visible: hovered
+                                    ToolTip.text: "Choose another project"
                                     onClicked: root.goToPicker()
-                                }
-
-                                ToolButton {
-                                    Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
-                                    icon.name: "go-previous"
-                                    display: AbstractButton.IconOnly
-                                    font.pointSize: root.compactSmallFontSize
-                                    enabled: project.canGoBack
-                                    ToolTip.visible: hovered
-                                    ToolTip.text: "Back"
-                                    onClicked: project.goBack()
-                                }
-
-                                ToolButton {
-                                    Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
-                                    icon.name: "go-next"
-                                    display: AbstractButton.IconOnly
-                                    font.pointSize: root.compactSmallFontSize
-                                    enabled: project.canGoForward
-                                    ToolTip.visible: hovered
-                                    ToolTip.text: "Forward"
-                                    onClicked: project.goForward()
                                 }
 
                                 ToolButton {
@@ -365,6 +345,8 @@ Kirigami.ApplicationWindow {
                                     display: AbstractButton.IconOnly
                                     font.pointSize: root.compactSmallFontSize
                                     enabled: root.hasSelectionPath
+                                    ToolTip.visible: hovered
+                                    ToolTip.text: "Reveal current file in file manager"
                                     onClicked: project.openCurrentInFolder()
                                 }
 
@@ -374,6 +356,8 @@ Kirigami.ApplicationWindow {
                                     display: AbstractButton.IconOnly
                                     font.pointSize: root.compactSmallFontSize
                                     enabled: root.hasCurrentFile
+                                    ToolTip.visible: hovered
+                                    ToolTip.text: "Open current file in editor"
                                     onClicked: project.openCurrentInEditor()
                                 }
 
@@ -396,6 +380,31 @@ Kirigami.ApplicationWindow {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             spacing: root.compactRowSpacing
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: root.compactRowSpacing
+
+                                ToolButton {
+                                    icon.name: "go-previous"
+                                    display: AbstractButton.IconOnly
+                                    enabled: project.canGoBack
+                                    ToolTip.visible: hovered
+                                    ToolTip.text: "Back"
+                                    onClicked: project.goBack()
+                                }
+
+                                ToolButton {
+                                    icon.name: "go-next"
+                                    display: AbstractButton.IconOnly
+                                    enabled: project.canGoForward
+                                    ToolTip.visible: hovered
+                                    ToolTip.text: "Forward"
+                                    onClicked: project.goForward()
+                                }
+
+                                Item { Layout.fillWidth: true }
+                            }
 
                             TextField {
                                 id: searchField
