@@ -367,6 +367,8 @@ Kirigami.ApplicationWindow {
                                     display: AbstractButton.IconOnly
                                     font.pointSize: root.compactSmallFontSize
                                     enabled: true
+                                    ToolTip.visible: hovered
+                                    ToolTip.text: "Settings"
                                     onClicked: settingsDialog.open()
                                 }
 
