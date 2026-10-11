@@ -1,6 +1,8 @@
 import AppKit
 import SwiftUI
+#if canImport(LumencodeCore)
 import LumencodeCore
+#endif
 
 @main
 struct LumencodeApp: App {
@@ -58,14 +60,14 @@ final class WorkspaceViewModel: ObservableObject {
     @Published var statusMessage = "Open a project folder to inspect its structure."
     @Published var errorMessage = ""
     @Published var inspectionSelection: InspectionSelection = .file
+    @Published var isScanning = false
+    @Published var isAnalyzingFile = false
     @Published var expandedFolders: Set<String> = []
-    @Published var isLoading = false
-    @Published var loadingProgress: Double = 0.0
 
-    private let scanner = ProjectScanner()
-    private let analyzer = NativeAnalyzer()
-    private var projectIndex: ProjectIndex?
-    private var allAnalyses: [String: FileAnalysis] = [:]
+    private var scanTask: Task<Void, Never>?
+    private var analysisTask: Task<Void, Never>?
+    private var analysisCache: [String: FileAnalysis] = [:]
+    private var pendingSymbolName: String?
 
     var isInspectingSymbolContext: Bool {
         switch inspectionSelection {
@@ -87,6 +89,41 @@ final class WorkspaceViewModel: ObservableObject {
         return entries.first { $0.id == selectedEntryID }
     }
 
+    // Entries are depth-first ordered, so a collapsed folder hides every following deeper entry.
+    var visibleEntries: [FileTreeEntry] {
+        var visible: [FileTreeEntry] = []
+        var hiddenBelowDepth: Int?
+        for entry in entries {
+            if let depth = hiddenBelowDepth {
+                if entry.depth > depth {
+                    continue
+                }
+                hiddenBelowDepth = nil
+            }
+            visible.append(entry)
+            if entry.isDirectory && !expandedFolders.contains(entry.id) {
+                hiddenBelowDepth = entry.depth
+            }
+        }
+        return visible
+    }
+
+    func toggleFolder(_ entry: FileTreeEntry) {
+        if expandedFolders.contains(entry.id) {
+            expandedFolders.remove(entry.id)
+        } else {
+            expandedFolders.insert(entry.id)
+        }
+    }
+
+    private func revealInTree(_ path: String) {
+        var parent = (path as NSString).deletingLastPathComponent
+        while parent.count > rootPath.count, parent.hasPrefix(rootPath) {
+            expandedFolders.insert(parent)
+            parent = (parent as NSString).deletingLastPathComponent
+        }
+    }
+
     func openFolder() {
         let panel = NSOpenPanel()
         panel.title = "Open Project Folder"
@@ -100,63 +137,37 @@ final class WorkspaceViewModel: ObservableObject {
     }
 
     func loadProject(at path: String) {
-        isLoading = true
-        loadingProgress = 0.0
-
         let absolutePath = WorkspaceSupport.resolvePath(path, relativeTo: FileManager.default.currentDirectoryPath)
+        scanTask?.cancel()
+        analysisTask?.cancel()
+        analysisCache = [:]
+        expandedFolders = []
+        selectedEntryID = nil
+        scanResult = ProjectScanResult(entries: [], projectSummary: .empty, selectedPath: "")
         rootPath = absolutePath
         errorMessage = ""
-        statusMessage = "Scanning \(absolutePath)"
+        statusMessage = "Scanning \((absolutePath as NSString).lastPathComponent)…"
+        isScanning = true
 
-        // Run heavy work on background queue to keep UI responsive
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
-
-            let scanResult = self.scanner.scan(rootPath: absolutePath, selectedPath: nil)
-
-            DispatchQueue.main.async {
-                self.scanResult = scanResult
-                self.statusMessage = "Analyzing project…"
-                self.loadingProgress = 0.1
+        scanTask = Task { [weak self] in
+            let result = await Task.detached(priority: .userInitiated) {
+                ProjectScanner().scan(rootPath: absolutePath, selectedPath: nil)
+            }.value
+            guard let self, !Task.isCancelled, self.rootPath == absolutePath else {
+                return
             }
+            self.isScanning = false
+            self.scanResult = result
+            self.statusMessage = "\(result.projectSummary.totalFiles) files, \(result.projectSummary.totalDirectories) folders"
 
-            // Analyze project - this is the heavy lifting
-            let projectURL = URL(fileURLWithPath: absolutePath)
-            let projectAnalyzer = ProjectAnalyzer(projectRoot: projectURL)
-
-            let (analyses, index) = projectAnalyzer.analyzeProject(
-                fileEntries: scanResult.entries,
-                progress: { percent in
-                    DispatchQueue.main.async {
-                        self.loadingProgress = 0.1 + (percent * 0.8)
-                        self.statusMessage = "Analyzing project… \(Int(percent * 100))%"
-                    }
-                }
-            )
-
-            // Update UI on main thread
-            DispatchQueue.main.async {
-                self.projectIndex = index
-                self.allAnalyses = Dictionary(uniqueKeysWithValues: analyses.map { ($0.path, $0) })
-                self.loadingProgress = 0.95
-
-                if let selectedPath = scanResult.selectedPath.isEmpty ? self.entries.first?.id : scanResult.selectedPath {
-                    self.selectedEntryID = selectedPath
-                } else {
-                    self.statusMessage = "No supported files were found in this folder."
-                    self.selectedAnalysis = FileAnalysis.skeleton(path: "", fileName: "", language: "")
-                    self.selectedSnippet = .empty
-                    self.detailTitle = "Inspector"
-                    self.detailSubtitle = "Open a folder with supported source files."
-                    self.detailMembers = []
-                    self.detailCalls = []
-                    self.detailCalledBy = []
-                    self.detailCrossFileCalls = []
-                    self.detailCrossFileCalledBy = []
-                }
-
-                self.loadingProgress = 1.0
-                self.isLoading = false
+            if let selectedPath = result.selectedPath.isEmpty ? result.entries.first(where: { !$0.isDirectory })?.id : result.selectedPath {
+                self.selectedEntryID = selectedPath
+            } else {
+                self.statusMessage = "No supported files were found in this folder."
+                self.selectedAnalysis = FileAnalysis.skeleton(path: "", fileName: "", language: "")
+                self.resetToFileContext()
+                self.detailTitle = "Inspector"
+                self.detailSubtitle = "Open a folder with supported source files."
             }
         }
     }
@@ -271,14 +282,28 @@ final class WorkspaceViewModel: ObservableObject {
     }
 
     func navigateToCallEdge(_ edge: CallEdge) {
-        // Navigate to the target file
-        selectedEntryID = edge.to
+        pendingSymbolName = edge.toName
+        if selectedEntryID == edge.to {
+            applyPendingSymbol()
+        } else {
+            selectedEntryID = edge.to
+        }
+    }
 
-        // After selection updates, find and inspect the target symbol
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            if let targetSymbol = self.selectedAnalysis.symbols.first(where: { $0.name == edge.toName }) {
-                self.inspectSymbol(targetSymbol)
+    private func applyPendingSymbol() {
+        guard let name = pendingSymbolName else {
+            return
+        }
+        pendingSymbolName = nil
+        func find(_ symbols: [SymbolItem]) -> SymbolItem? {
+            for symbol in symbols {
+                if symbol.name == name { return symbol }
+                if let match = find(symbol.members) { return match }
             }
+            return nil
+        }
+        if let symbol = find(selectedAnalysis.symbols) {
+            inspectSymbol(symbol)
         }
     }
 
@@ -323,11 +348,14 @@ final class WorkspaceViewModel: ObservableObject {
     }
 
     private func selectCurrentEntry() {
+        analysisTask?.cancel()
+        isAnalyzingFile = false
         guard let entry = selectedEntry else {
             return
         }
 
         errorMessage = ""
+        revealInTree(entry.path)
 
         if entry.isDirectory {
             let childCount = entries.filter {
@@ -367,27 +395,51 @@ final class WorkspaceViewModel: ObservableObject {
             return
         }
 
-        do {
-            // Use pre-analyzed data from project analyzer if available
-            if let preAnalyzed = allAnalyses[entry.path] {
-                selectedAnalysis = preAnalyzed
-            } else {
-                // Fallback: analyze on-demand if not in project analysis
-                let rawAnalysis = try analyzer.analyzeFile(path: entry.path)
-                selectedAnalysis = rawAnalysis
-            }
-            resetToFileContext()
-            statusMessage = "Analyzed \(entry.name)"
-        } catch {
-            selectedAnalysis = FileAnalysis.skeleton(
-                path: entry.path,
-                fileName: entry.name,
-                language: entry.fileType
-            )
-            selectedAnalysis.summary = "Analysis failed: \(error)"
-            resetToFileContext()
-            errorMessage = "Failed to analyze \(entry.name)."
+        if let cached = analysisCache[entry.path] {
+            showAnalysis(cached, for: entry)
+            return
         }
+
+        statusMessage = "Analyzing \(entry.name)…"
+        isAnalyzingFile = true
+        let path = entry.path
+        let root = rootPath
+        let projectEntries = entries
+        analysisTask = Task { [weak self] in
+            let result = await Task.detached(priority: .userInitiated) { () -> Result<FileAnalysis, any Error> in
+                let analyzer = NativeAnalyzer()
+                return Result {
+                    let raw = try analyzer.analyzeFile(path: path)
+                    return ProjectRelationships.augmentSelectedAnalysis(
+                        raw,
+                        rootPath: root,
+                        entries: projectEntries,
+                        analyzer: analyzer
+                    )
+                }
+            }.value
+            guard let self, !Task.isCancelled, self.selectedEntryID == path else {
+                return
+            }
+            self.isAnalyzingFile = false
+            switch result {
+            case .success(let analysis):
+                self.analysisCache[path] = analysis
+                self.showAnalysis(analysis, for: entry)
+            case .failure(let error):
+                self.selectedAnalysis = FileAnalysis.skeleton(path: path, fileName: entry.name, language: entry.fileType)
+                self.selectedAnalysis.summary = "Analysis failed: \(error)"
+                self.resetToFileContext()
+                self.errorMessage = "Failed to analyze \(entry.name)."
+            }
+        }
+    }
+
+    private func showAnalysis(_ analysis: FileAnalysis, for entry: FileTreeEntry) {
+        selectedAnalysis = analysis
+        resetToFileContext()
+        statusMessage = "Analyzed \(entry.name)"
+        applyPendingSymbol()
     }
 }
 
@@ -420,20 +472,6 @@ struct ContentView: View {
                     .lineLimit(1)
             }
         }
-        .overlay(alignment: .center) {
-            if workspace.isLoading {
-                VStack(spacing: 20) {
-                    ProgressView(value: workspace.loadingProgress)
-                        .frame(width: 200)
-                    Text(workspace.statusMessage)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(30)
-                .background(.regularMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-            }
-        }
         .overlay(alignment: .bottomLeading) {
             if !workspace.errorMessage.isEmpty {
                 Text(workspace.errorMessage)
@@ -450,8 +488,20 @@ struct ContentView: View {
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 12) {
             headerCard(title: "Project", subtitle: workspace.statusMessage)
+                .overlay(alignment: .topTrailing) {
+                    if workspace.isScanning || workspace.isAnalyzingFile {
+                        ProgressView()
+                            .controlSize(.small)
+                            .padding(16)
+                    }
+                }
 
-            if workspace.entries.isEmpty {
+            if workspace.isScanning {
+                Spacer()
+                ProgressView("Scanning folder…")
+                    .frame(maxWidth: .infinity)
+                Spacer()
+            } else if workspace.entries.isEmpty {
                 Spacer()
                 ContentUnavailableView(
                     "No Project Open",
@@ -461,31 +511,31 @@ struct ContentView: View {
                 Spacer()
             } else {
                 List(selection: $workspace.selectedEntryID) {
-                    ForEach(visibleEntries) { entry in
-                        HStack(spacing: 8) {
+                    ForEach(workspace.visibleEntries) { entry in
+                        HStack(spacing: 6) {
                             if entry.isDirectory {
-                                Button(action: {
-                                    if workspace.expandedFolders.contains(entry.id) {
-                                        workspace.expandedFolders.remove(entry.id)
-                                    } else {
-                                        workspace.expandedFolders.insert(entry.id)
-                                    }
-                                }) {
-                                    Image(systemName: workspace.expandedFolders.contains(entry.id) ? "triangle.fill" : "triangle")
-                                        .font(.caption)
-                                        .frame(width: 10)
+                                Button {
+                                    workspace.toggleFolder(entry)
+                                } label: {
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                        .rotationEffect(.degrees(workspace.expandedFolders.contains(entry.id) ? 90 : 0))
+                                        .frame(width: 14, height: 14)
+                                        .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
                                 Image(systemName: "folder.fill")
                                     .foregroundStyle(.blue)
                             } else {
+                                Color.clear.frame(width: 14, height: 14)
                                 Image(systemName: iconName(for: entry.fileType))
                                     .foregroundStyle(.secondary)
                             }
                             Text(entry.name)
                                 .lineLimit(1)
                         }
-                        .padding(.leading, CGFloat(entry.depth) * 12)
+                        .padding(.leading, CGFloat(entry.depth) * 14)
                         .tag(entry.id)
                     }
                 }
@@ -496,25 +546,6 @@ struct ContentView: View {
         }
         .padding(16)
         .background(shellPanel)
-    }
-
-    private var visibleEntries: [FileTreeEntry] {
-        workspace.entries.filter { entry in
-            if entry.depth == 0 {
-                return true
-            }
-            var parent = entry
-            while parent.depth > 0 {
-                guard let parentEntry = workspace.entries.first(where: { $0.path == (parent.path as NSString).deletingLastPathComponent }) else {
-                    return false
-                }
-                if !workspace.expandedFolders.contains(parentEntry.id) {
-                    return false
-                }
-                parent = parentEntry
-            }
-            return true
-        }
     }
 
     private var overviewPane: some View {

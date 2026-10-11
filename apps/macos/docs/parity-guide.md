@@ -209,6 +209,7 @@ Kirigami original is ahead in:
 - lower-pane diagnostics/highlighting
 - quick links and related-file richness
 - package and web-stack detail extraction
+- typed signatures and project-wide call indexing (a Swift port is partially in place; see the status section in the [Development Plan](development-plan.md))
 
 Swift version is ahead or different in:
 

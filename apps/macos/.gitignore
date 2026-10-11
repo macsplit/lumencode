@@ -17,3 +17,6 @@ xcuserdata/
 # Temporary files
 *.log
 tmp/
+
+# Locally assembled app bundles
+LumencodeSwift.app/

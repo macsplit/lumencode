@@ -113,5 +113,9 @@ The Swift app now has:
 - a lower source pane
 - a native analysis bridge
 
+- a collapsible project tree, background folder scanning, and on-demand per-file analysis so the UI stays responsive
+
 It is still behind the Kirigami original in parser depth, detail richness, and some interface behavior.
+
+A port of the Kirigami heuristics (AST recovery, typed signatures, project-wide cross-file call index) is partially implemented and paused. Recovery runs in the bridge; signatures and the cross-file index are scaffolding only and do not yet produce results. See [Development Plan: Kirigami heuristics port status](docs/development-plan.md#kirigami-heuristics-port-status-at-pause-2026-10-11) for what is done, what is blocking, and the resume order.
 

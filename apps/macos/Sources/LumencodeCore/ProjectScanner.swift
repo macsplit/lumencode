@@ -106,18 +106,7 @@ public struct ProjectScanner {
         )
 
         return ProjectScanResult(
-            entries: entries.sorted { lhs, rhs in
-                if lhs.depth != rhs.depth {
-                    return lhs.depth < rhs.depth
-                }
-                if lhs.path.deletingLastPathComponent != rhs.path.deletingLastPathComponent {
-                    return lhs.path < rhs.path
-                }
-                if lhs.isDirectory != rhs.isDirectory {
-                    return lhs.isDirectory && !rhs.isDirectory
-                }
-                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
-            },
+            entries: depthFirstOrder(entries),
             projectSummary: ProjectSummary(
                 fileTypeCounts: fileTypeCounts,
                 totalFiles: totalFiles,
@@ -126,6 +115,35 @@ public struct ProjectScanner {
             ),
             selectedPath: chosenPath
         )
+    }
+
+    // Tree views rely on each folder being immediately followed by its descendants.
+    private func depthFirstOrder(_ entries: [FileTreeEntry]) -> [FileTreeEntry] {
+        let childrenByParent = Dictionary(grouping: entries) { $0.path.deletingLastPathComponent }
+        let topLevelParents = Set(entries.filter { $0.depth == 0 }.map { $0.path.deletingLastPathComponent })
+
+        var ordered: [FileTreeEntry] = []
+        ordered.reserveCapacity(entries.count)
+
+        func append(childrenOf parent: String) {
+            let children = (childrenByParent[parent] ?? []).sorted { lhs, rhs in
+                if lhs.isDirectory != rhs.isDirectory {
+                    return lhs.isDirectory
+                }
+                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
+            for child in children {
+                ordered.append(child)
+                if child.isDirectory {
+                    append(childrenOf: child.path)
+                }
+            }
+        }
+
+        for parent in topLevelParents.sorted() {
+            append(childrenOf: parent)
+        }
+        return ordered
     }
 
     private func resolveSelectedPath(rootPath: String, selectedPath: String?, candidateFiles: [String]) -> String {

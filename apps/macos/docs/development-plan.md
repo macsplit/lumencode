@@ -32,6 +32,94 @@ Missing or incomplete:
 - better package, HTML/CSS, and framework-specific structure output
 - deeper symbol/member detail interactions
 
+## Kirigami heuristics port: status at pause (2026-10-11)
+
+Work to port the advanced heuristics from the Kirigami version was started in four phases and paused part-way. This section records exactly where each phase stands so it can be resumed without re-discovery.
+
+Legend: **Done** = wired end to end and visible in the app. **Partial** = code exists but is incomplete, unused, or not surfaced. **Not started**.
+
+| Phase | Area | State |
+|-------|------|-------|
+| 1 | AST recovery for broken syntax | Partial |
+| 2 | Typed signature extraction | Partial (scaffolding only) |
+| 3 | Project-wide cross-file call index | Partial (does not produce edges) |
+| 3b | GUI for cross-file relationships | Partial (UI exists, always empty) |
+| — | GUI loading, threading, file tree | Done |
+
+### Phase 1: AST recovery
+
+Done:
+
+- `recovery::repairAST` (branch-scoped error repair, ported from Kirigami `Recovery.cpp`) lives inline in `Sources/LumencodeNativeBridge/lumencode_bridge.cpp` and runs before symbol extraction.
+- The payload carries `analysisSourceMode` (`ast` | `recovered` | `heuristic`), `analysisConfidence`, and `analysisDamagedLines`; `FileAnalysis` decodes them.
+
+Remaining:
+
+- Surface recovery state in the GUI (badge on the file header, damaged-line markers in the lower pane).
+- Validate against a broken-file corpus; so far only checked on a few small broken Swift and Python samples.
+
+### Phase 2: Typed signatures
+
+Done:
+
+- `ParameterInfo` and `SignatureInfo` in `Models.swift`; `SymbolItem.signature`.
+- C++ `SignatureInfo` struct and JSON serialisation (`appendSignatureJson`).
+
+Remaining:
+
+- `extractTSSignature` exists but is **never called**, so no symbol currently gets a signature. Wire it into symbol extraction.
+- Per-language extractors for TypeScript, Swift, Java, C#, Rust, Python, PHP.
+- Show signatures in the inspector and snippet header; type-link navigation.
+
+### Phase 3: Cross-file call index
+
+Done:
+
+- Bridge emits `indexFacts` (definitions, imports, call sites) per file.
+- `ProjectIndexBuilder.swift` resolves edges with high/medium/low confidence; `ProjectAnalyzer.swift` runs analysis over a project.
+- `CallEdge`, `IndexFact`, `IndexFacts`, `ProjectIndex` models.
+
+Blocking problems (found by measurement, not yet fixed):
+
+1. **No cross-file call sites reach the index.** Call facts are built from `Symbol::calls`, which only contains calls that resolved to a unique symbol in the *same file* (`lumencode_bridge.cpp`, the `keysByName` check in the call visitor). On `../lumencode` the index found 7,686 definitions, 0 call sites, 0 edges.
+2. Call facts carry no caller name; `ProjectIndexBuilder` sets `CallEdge.fromName` to the callee name.
+3. `resolveEdges` checks `resolvedEdges.contains` inside the loop (quadratic), and low-confidence name matching will be noisy once call sites exist.
+4. `ProjectAnalyzer.isSourceFile` omits the scanner's `code` file type, so JS/TS files are skipped.
+5. Whole-project analysis is slow: about 57s on `../lumencode`, dominated by multi-megabyte generated `third_party/**/parser.c` files.
+
+Because of the above, the app does **not** run `ProjectAnalyzer` at the moment. The code is kept for resumption.
+
+Resume order:
+
+1. Bridge: record every call expression inside a callable as a call fact (unresolved target name, receiver text, caller symbol name as `owner`), separate from the existing same-file `calls` list.
+2. `ProjectIndexBuilder`: use the caller for `fromName`; replace the `contains` scan with a set; restrict low-confidence matches (e.g. skip names defined in many files).
+3. `ProjectAnalyzer`: include `code` files; skip files over a size limit and generated/vendored directories (`third_party`); support cancellation.
+4. Run indexing in the background after the tree is shown, then merge edges into the cached per-file analyses. Do not block the UI on it.
+5. Fix "Called By": incoming edges must be looked up by target file and symbol across the index, not from the current file's outgoing `callEdges`.
+6. Add CLI regression fixtures for multi-file JS/TS and Swift projects with expected edges.
+
+### Phase 3b: GUI for cross-file relationships
+
+Done:
+
+- Inspector "Calls" / "Called By" sections render cross-file edges with confidence badges and a Navigate action (`navigateToCallEdge`, which opens the target file and selects the symbol once analysis completes).
+
+Remaining:
+
+- Nothing to display until Phase 3 produces edges.
+
+### GUI loading, threading, and file tree (done)
+
+- Opening a folder scans on a background task with a spinner; the tree appears as soon as the scan completes.
+- Selecting a file analyses only that file in the background (with the existing import-based `ProjectRelationships` augmentation) and caches the result. The UI stays responsive.
+- `ProjectScanner` now returns entries in depth-first order; the sidebar is a collapsible tree and selecting a file reveals its parent folders.
+- Known cost: `ProjectRelationships` analyses every script file in the project to find incoming callers, so first selection of a JS/TS file in a large repo can take several seconds.
+
+### Housekeeping notes
+
+- The Xcode project compiles the `LumencodeCore` sources directly into the app target. New files under `Sources/LumencodeCore` must also be added to `lumencode-swift.xcodeproj`, and `LumencodeApp.swift` keeps the `#if canImport(LumencodeCore)` import so both build paths work.
+- `third_party` is not in the scanner's ignore list; consider ignoring it.
+
 ## Workstreams
 
 ## 1. Native analysis parity
