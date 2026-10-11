@@ -103,25 +103,24 @@ final class WorkspaceViewModel: ObservableObject {
         isLoading = true
         loadingProgress = 0.0
 
-        Task {
-            let absolutePath = WorkspaceSupport.resolvePath(path, relativeTo: FileManager.default.currentDirectoryPath)
+        let absolutePath = WorkspaceSupport.resolvePath(path, relativeTo: FileManager.default.currentDirectoryPath)
+        rootPath = absolutePath
+        errorMessage = ""
+        statusMessage = "Scanning \(absolutePath)"
 
-            await MainActor.run {
-                self.rootPath = absolutePath
-                self.errorMessage = ""
-                self.statusMessage = "Scanning \(absolutePath)"
-            }
+        // Run heavy work on background queue to keep UI responsive
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
 
-            // Scan on background thread
-            let scanResult = scanner.scan(rootPath: absolutePath, selectedPath: nil)
+            let scanResult = self.scanner.scan(rootPath: absolutePath, selectedPath: nil)
 
-            await MainActor.run {
+            DispatchQueue.main.async {
                 self.scanResult = scanResult
                 self.statusMessage = "Analyzing project…"
                 self.loadingProgress = 0.1
             }
 
-            // Analyze project on background thread
+            // Analyze project - this is the heavy lifting
             let projectURL = URL(fileURLWithPath: absolutePath)
             let projectAnalyzer = ProjectAnalyzer(projectRoot: projectURL)
 
@@ -136,7 +135,7 @@ final class WorkspaceViewModel: ObservableObject {
             )
 
             // Update UI on main thread
-            await MainActor.run {
+            DispatchQueue.main.async {
                 self.projectIndex = index
                 self.allAnalyses = Dictionary(uniqueKeysWithValues: analyses.map { ($0.path, $0) })
                 self.loadingProgress = 0.95
