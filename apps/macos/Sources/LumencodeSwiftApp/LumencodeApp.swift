@@ -59,6 +59,8 @@ final class WorkspaceViewModel: ObservableObject {
     @Published var errorMessage = ""
     @Published var inspectionSelection: InspectionSelection = .file
     @Published var expandedFolders: Set<String> = []
+    @Published var isLoading = false
+    @Published var loadingProgress: Double = 0.0
 
     private let scanner = ProjectScanner()
     private let analyzer = NativeAnalyzer()
@@ -98,42 +100,65 @@ final class WorkspaceViewModel: ObservableObject {
     }
 
     func loadProject(at path: String) {
-        let absolutePath = WorkspaceSupport.resolvePath(path, relativeTo: FileManager.default.currentDirectoryPath)
-        rootPath = absolutePath
-        errorMessage = ""
-        statusMessage = "Scanning \(absolutePath)"
-        scanResult = scanner.scan(rootPath: absolutePath, selectedPath: nil)
+        isLoading = true
+        loadingProgress = 0.0
 
-        // Analyze project and build index
-        statusMessage = "Analyzing project…"
-        let projectURL = URL(fileURLWithPath: absolutePath)
-        let projectAnalyzer = ProjectAnalyzer(projectRoot: projectURL)
+        Task {
+            let absolutePath = WorkspaceSupport.resolvePath(path, relativeTo: FileManager.default.currentDirectoryPath)
 
-        let (analyses, index) = projectAnalyzer.analyzeProject(
-            fileEntries: scanResult.entries,
-            progress: { percent in
-                DispatchQueue.main.async {
-                    self.statusMessage = "Analyzing project… \(Int(percent * 100))%"
-                }
+            await MainActor.run {
+                self.rootPath = absolutePath
+                self.errorMessage = ""
+                self.statusMessage = "Scanning \(absolutePath)"
             }
-        )
 
-        self.projectIndex = index
-        self.allAnalyses = Dictionary(uniqueKeysWithValues: analyses.map { ($0.path, $0) })
+            // Scan on background thread
+            let scanResult = scanner.scan(rootPath: absolutePath, selectedPath: nil)
 
-        if let selectedPath = scanResult.selectedPath.isEmpty ? entries.first?.id : scanResult.selectedPath {
-            selectedEntryID = selectedPath
-        } else {
-            statusMessage = "No supported files were found in this folder."
-            selectedAnalysis = FileAnalysis.skeleton(path: "", fileName: "", language: "")
-            selectedSnippet = .empty
-            detailTitle = "Inspector"
-            detailSubtitle = "Open a folder with supported source files."
-            detailMembers = []
-            detailCalls = []
-            detailCalledBy = []
-            detailCrossFileCalls = []
-            detailCrossFileCalledBy = []
+            await MainActor.run {
+                self.scanResult = scanResult
+                self.statusMessage = "Analyzing project…"
+                self.loadingProgress = 0.1
+            }
+
+            // Analyze project on background thread
+            let projectURL = URL(fileURLWithPath: absolutePath)
+            let projectAnalyzer = ProjectAnalyzer(projectRoot: projectURL)
+
+            let (analyses, index) = projectAnalyzer.analyzeProject(
+                fileEntries: scanResult.entries,
+                progress: { percent in
+                    DispatchQueue.main.async {
+                        self.loadingProgress = 0.1 + (percent * 0.8)
+                        self.statusMessage = "Analyzing project… \(Int(percent * 100))%"
+                    }
+                }
+            )
+
+            // Update UI on main thread
+            await MainActor.run {
+                self.projectIndex = index
+                self.allAnalyses = Dictionary(uniqueKeysWithValues: analyses.map { ($0.path, $0) })
+                self.loadingProgress = 0.95
+
+                if let selectedPath = scanResult.selectedPath.isEmpty ? self.entries.first?.id : scanResult.selectedPath {
+                    self.selectedEntryID = selectedPath
+                } else {
+                    self.statusMessage = "No supported files were found in this folder."
+                    self.selectedAnalysis = FileAnalysis.skeleton(path: "", fileName: "", language: "")
+                    self.selectedSnippet = .empty
+                    self.detailTitle = "Inspector"
+                    self.detailSubtitle = "Open a folder with supported source files."
+                    self.detailMembers = []
+                    self.detailCalls = []
+                    self.detailCalledBy = []
+                    self.detailCrossFileCalls = []
+                    self.detailCrossFileCalledBy = []
+                }
+
+                self.loadingProgress = 1.0
+                self.isLoading = false
+            }
         }
     }
 
@@ -394,6 +419,20 @@ struct ContentView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+            }
+        }
+        .overlay(alignment: .center) {
+            if workspace.isLoading {
+                VStack(spacing: 20) {
+                    ProgressView(value: workspace.loadingProgress)
+                        .frame(width: 200)
+                    Text(workspace.statusMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(30)
+                .background(.regularMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
             }
         }
         .overlay(alignment: .bottomLeading) {
