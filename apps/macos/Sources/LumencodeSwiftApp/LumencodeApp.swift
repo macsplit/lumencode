@@ -1,8 +1,6 @@
 import AppKit
 import SwiftUI
-#if canImport(LumencodeCore)
 import LumencodeCore
-#endif
 
 @main
 struct LumencodeApp: App {
