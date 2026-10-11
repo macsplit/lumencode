@@ -58,6 +58,7 @@ final class WorkspaceViewModel: ObservableObject {
     @Published var statusMessage = "Open a project folder to inspect its structure."
     @Published var errorMessage = ""
     @Published var inspectionSelection: InspectionSelection = .file
+    @Published var expandedFolders: Set<String> = []
 
     private let scanner = ProjectScanner()
     private let analyzer = NativeAnalyzer()
@@ -422,14 +423,31 @@ struct ContentView: View {
                 Spacer()
             } else {
                 List(selection: $workspace.selectedEntryID) {
-                    ForEach(workspace.entries) { entry in
+                    ForEach(visibleEntries) { entry in
                         HStack(spacing: 8) {
-                            Image(systemName: entry.isDirectory ? "folder.fill" : iconName(for: entry.fileType))
-                                .foregroundStyle(entry.isDirectory ? Color.blue : Color.secondary)
+                            if entry.isDirectory {
+                                Button(action: {
+                                    if workspace.expandedFolders.contains(entry.id) {
+                                        workspace.expandedFolders.remove(entry.id)
+                                    } else {
+                                        workspace.expandedFolders.insert(entry.id)
+                                    }
+                                }) {
+                                    Image(systemName: workspace.expandedFolders.contains(entry.id) ? "triangle.fill" : "triangle")
+                                        .font(.caption)
+                                        .frame(width: 10)
+                                }
+                                .buttonStyle(.plain)
+                                Image(systemName: "folder.fill")
+                                    .foregroundStyle(.blue)
+                            } else {
+                                Image(systemName: iconName(for: entry.fileType))
+                                    .foregroundStyle(.secondary)
+                            }
                             Text(entry.name)
                                 .lineLimit(1)
                         }
-                        .padding(.leading, CGFloat(entry.depth) * 14)
+                        .padding(.leading, CGFloat(entry.depth) * 12)
                         .tag(entry.id)
                     }
                 }
@@ -440,6 +458,25 @@ struct ContentView: View {
         }
         .padding(16)
         .background(shellPanel)
+    }
+
+    private var visibleEntries: [FileTreeEntry] {
+        workspace.entries.filter { entry in
+            if entry.depth == 0 {
+                return true
+            }
+            var parent = entry
+            while parent.depth > 0 {
+                guard let parentEntry = workspace.entries.first(where: { $0.path == (parent.path as NSString).deletingLastPathComponent }) else {
+                    return false
+                }
+                if !workspace.expandedFolders.contains(parentEntry.id) {
+                    return false
+                }
+                parent = parentEntry
+            }
+            return true
+        }
     }
 
     private var overviewPane: some View {
