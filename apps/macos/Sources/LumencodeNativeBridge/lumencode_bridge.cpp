@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
@@ -29,6 +30,386 @@ extern "C" const TSLanguage *tree_sitter_python(void);
 extern "C" const TSLanguage *tree_sitter_rust(void);
 extern "C" const TSLanguage *tree_sitter_html(void);
 
+// ============================================================================
+// AST Repair Infrastructure (from Recovery.cpp)
+// ============================================================================
+namespace recovery {
+
+struct RepairResult {
+    std::string source;
+    std::vector<int> blankedLines;  // 1-indexed line numbers
+    bool clean = false;
+};
+
+struct ErrorScore {
+    int errorNodes = 0;
+    int64_t errorBytes = 0;
+    int declarations = 0;
+
+    bool isClean() const { return errorNodes == 0; }
+
+    bool operator<(const ErrorScore &other) const {
+        if (errorBytes != other.errorBytes) {
+            return errorBytes < other.errorBytes;
+        }
+        return errorNodes < other.errorNodes;
+    }
+};
+
+struct RepairCandidates {
+    std::vector<int> primary;
+    std::vector<int> secondary;
+    std::vector<std::pair<int, int>> errorSpans;
+};
+
+static thread_local const std::string *t_astSourceOverride = nullptr;
+
+class ScopedSourceOverride {
+public:
+    explicit ScopedSourceOverride(const std::string &source)
+        : m_previous(t_astSourceOverride) {
+        t_astSourceOverride = &source;
+    }
+    ~ScopedSourceOverride() { t_astSourceOverride = m_previous; }
+    ScopedSourceOverride(const ScopedSourceOverride &) = delete;
+    ScopedSourceOverride &operator=(const ScopedSourceOverride &) = delete;
+
+private:
+    const std::string *m_previous;
+};
+
+static const std::string &effectiveSource(const std::string &original) {
+    if (t_astSourceOverride && t_astSourceOverride->size() == original.size()) {
+        return *t_astSourceOverride;
+    }
+    return original;
+}
+
+static TSLanguage *recoveryLanguageForName(const std::string &language) {
+    if (language == "swift") return const_cast<TSLanguage *>(tree_sitter_swift());
+    if (language == "java") return const_cast<TSLanguage *>(tree_sitter_java());
+    if (language == "cs") return const_cast<TSLanguage *>(tree_sitter_c_sharp());
+    if (language == "script" || language == "jsx") return const_cast<TSLanguage *>(tree_sitter_javascript());
+    if (language == "ts" || language == "tsx") {
+        return language == "tsx" ? const_cast<TSLanguage *>(tree_sitter_tsx())
+                                  : const_cast<TSLanguage *>(tree_sitter_typescript());
+    }
+    if (language == "php") return const_cast<TSLanguage *>(tree_sitter_php());
+    if (language == "css") return const_cast<TSLanguage *>(tree_sitter_css());
+    if (language == "python") return const_cast<TSLanguage *>(tree_sitter_python());
+    if (language == "rust") return const_cast<TSLanguage *>(tree_sitter_rust());
+    return nullptr;
+}
+
+static std::vector<int> lineStartOffsets(const std::string &source) {
+    std::vector<int> starts{0};
+    for (int i = 0; i < static_cast<int>(source.size()); ++i) {
+        if (source[i] == '\n') {
+            starts.push_back(i + 1);
+        }
+    }
+    return starts;
+}
+
+static std::string blankSourceRow(std::string source, const std::vector<int> &starts, int row) {
+    if (row < 0 || row >= static_cast<int>(starts.size())) {
+        return source;
+    }
+    const int begin = starts[row];
+    const int end = row + 1 < static_cast<int>(starts.size()) ? starts[row + 1] - 1 : source.size();
+    for (int i = begin; i < end; ++i) {
+        if (source[i] != '\n' && source[i] != '\r') {
+            source[i] = ' ';
+        }
+    }
+    return source;
+}
+
+static bool isDeclarationLikeType(const char *type) {
+    return std::strstr(type, "declaration") || std::strstr(type, "definition")
+        || std::strstr(type, "_item") || std::strstr(type, "method")
+        || std::strstr(type, "function") || std::strstr(type, "class");
+}
+
+static int countDeclarationNodes(TSNode node) {
+    int total = 0;
+    if (ts_node_is_named(node)) {
+        const char *type = ts_node_type(node);
+        if (type && isDeclarationLikeType(type)) {
+            total = 1;
+        }
+    }
+    const uint32_t count = ts_node_named_child_count(node);
+    for (uint32_t i = 0; i < count; ++i) {
+        total += countDeclarationNodes(ts_node_named_child(node, i));
+    }
+    return total;
+}
+
+static void collectErrors(TSNode node, ErrorScore &score, RepairCandidates &candidates) {
+    if (ts_node_is_null(node) || !ts_node_has_error(node)) {
+        return;
+    }
+
+    if (ts_node_is_missing(node)) {
+        ++score.errorNodes;
+        score.errorBytes += 1;
+        const int row = static_cast<int>(ts_node_start_point(node).row);
+        candidates.primary.push_back(row);
+        if (row > 0) candidates.primary.push_back(row - 1);
+        return;
+    }
+
+    if (ts_node_is_error(node)) {
+        ++score.errorNodes;
+        score.errorBytes += std::max<int64_t>(1, ts_node_end_byte(node) - ts_node_start_byte(node));
+        const int startRow = static_cast<int>(ts_node_start_point(node).row);
+        candidates.secondary.push_back(startRow);
+        candidates.errorSpans.push_back({startRow, static_cast<int>(ts_node_end_point(node).row)});
+
+        const uint32_t childCount = ts_node_child_count(node);
+        for (uint32_t i = 0; i < childCount; ++i) {
+            TSNode child = ts_node_child(node, i);
+            const int row = static_cast<int>(ts_node_start_point(child).row);
+            if (ts_node_is_error(child) || ts_node_is_missing(child) || !ts_node_is_named(child)
+                || ts_node_child_count(child) == 0) {
+                candidates.primary.push_back(row);
+            }
+        }
+    }
+
+    const uint32_t childCount = ts_node_child_count(node);
+    for (uint32_t i = 0; i < childCount; ++i) {
+        collectErrors(ts_node_child(node, i), score, candidates);
+    }
+}
+
+static ErrorScore scoreAST(TSParser *parser, const std::string &source, RepairCandidates *outCandidates) {
+    ErrorScore score;
+    const std::string &effective = effectiveSource(source);
+    TSTree *tree = ts_parser_parse_string(parser, nullptr, effective.c_str(), effective.size());
+
+    if (!tree) {
+        score.errorNodes = 1;
+        score.errorBytes = source.size();
+        return score;
+    }
+
+    RepairCandidates candidates;
+    TSNode root = ts_tree_root_node(tree);
+    collectErrors(root, score, candidates);
+    score.declarations = countDeclarationNodes(root);
+
+    ts_tree_delete(tree);
+
+    if (outCandidates) {
+        *outCandidates = candidates;
+    }
+    return score;
+}
+
+static std::set<int> textuallySuspectRows(const std::string &source, const std::vector<int> &starts) {
+    std::set<int> suspects;
+
+    for (int row = 0; row < static_cast<int>(starts.size()); ++row) {
+        const int begin = starts[row];
+        const int end = row + 1 < static_cast<int>(starts.size()) ? starts[row + 1] - 1 : source.size();
+        const std::string line = source.substr(begin, end - begin);
+
+        int net = 0;
+        char quote = 0;
+
+        for (size_t i = 0; i < line.size(); ++i) {
+            const char ch = line[i];
+
+            if (quote) {
+                if (ch == '\\') {
+                    ++i;
+                } else if (ch == quote) {
+                    quote = 0;
+                }
+                continue;
+            }
+
+            if (ch == '/' && i + 1 < line.size() && (line[i + 1] == '/' || line[i + 1] == '*')) {
+                break;
+            }
+            if (ch == '#' && (i == 0 || line[i - 1] == ' ')) {
+                break;
+            }
+
+            if (ch == '"' || ch == '\'') {
+                const bool apostrophe = ch == '\'' && i > 0 && std::isalnum(static_cast<unsigned char>(line[i - 1]));
+                if (!apostrophe) {
+                    quote = ch;
+                }
+            } else if (ch == '(' || ch == '[' || ch == '{') {
+                ++net;
+            } else if (ch == ')' || ch == ']' || ch == '}') {
+                --net;
+            }
+        }
+
+        if (quote != 0) {
+            suspects.insert(row);
+        }
+    }
+
+    return suspects;
+}
+
+static std::vector<int> normalizeRows(const std::vector<int> &rows, const std::set<int> &blanked) {
+    std::set<int> normalized;
+    for (int row : rows) {
+        if (row >= 0 && !blanked.count(row)) {
+            normalized.insert(row);
+        }
+    }
+    return std::vector<int>(normalized.begin(), normalized.end());
+}
+
+static bool isBetterRepair(const ErrorScore &candidate, const ErrorScore &best, bool bestIsEmpty) {
+    if (bestIsEmpty) {
+        return candidate < best;
+    }
+    if (candidate.declarations != best.declarations) {
+        return candidate.declarations > best.declarations;
+    }
+    return candidate < best;
+}
+
+RepairResult repairAST(const std::string &original, const std::string &language) {
+    RepairResult result;
+    result.source = original;
+
+    constexpr int kMaxBlankedLines = 12;
+    constexpr int kMaxTrialParses = 80;
+    constexpr auto kMaxBudgetMs = std::chrono::milliseconds(1500);
+
+    TSLanguage *tsLanguage = recoveryLanguageForName(language);
+    if (!tsLanguage) {
+        return result;
+    }
+
+    TSParser *parser = ts_parser_new();
+    if (!parser || !ts_parser_set_language(parser, tsLanguage)) {
+        if (parser) ts_parser_delete(parser);
+        return result;
+    }
+
+    auto startTime = std::chrono::steady_clock::now();
+    const std::vector<int> starts = lineStartOffsets(original);
+    const auto suspects = textuallySuspectRows(original, starts);
+
+    RepairCandidates candidates;
+    ErrorScore current = scoreAST(parser, result.source, &candidates);
+    std::set<int> blanked;
+    int trialParses = 0;
+
+    constexpr int kMaxInitialErrorNodes = 25;
+    if (current.errorNodes > kMaxInitialErrorNodes) {
+        ts_parser_delete(parser);
+        return result;
+    }
+
+    while (!current.isClean() && blanked.size() < kMaxBlankedLines
+           && trialParses < kMaxTrialParses) {
+        auto elapsed = std::chrono::steady_clock::now() - startTime;
+        if (elapsed > kMaxBudgetMs) {
+            break;
+        }
+
+        std::vector<int> bestRows;
+        ErrorScore bestScore = current;
+        std::string bestSource;
+
+        auto candidates_to_try = normalizeRows(candidates.primary, blanked);
+        if (candidates_to_try.size() > 10) {
+            candidates_to_try.resize(10);
+        }
+
+        for (int row : candidates_to_try) {
+            std::string trial = result.source;
+            trial = blankSourceRow(trial, starts, row);
+
+            if (trial == result.source) continue;
+            if (++trialParses > kMaxTrialParses) break;
+
+            RepairCandidates trialCandidates;
+            {
+                ScopedSourceOverride guard(trial);
+                const ErrorScore trialScore = scoreAST(parser, result.source, &trialCandidates);
+
+                if (trialScore < current && isBetterRepair(trialScore, bestScore, bestRows.empty())) {
+                    bestScore = trialScore;
+                    bestRows = {row};
+                    bestSource = trial;
+                }
+            }
+        }
+
+        if (bestRows.empty()) {
+            auto secondary_to_try = normalizeRows(candidates.secondary, blanked);
+            if (secondary_to_try.size() > 10) {
+                secondary_to_try.resize(10);
+            }
+
+            for (int row : secondary_to_try) {
+                std::string trial = result.source;
+                trial = blankSourceRow(trial, starts, row);
+
+                if (trial == result.source) continue;
+                if (++trialParses > kMaxTrialParses) break;
+
+                RepairCandidates trialCandidates;
+                {
+                    ScopedSourceOverride guard(trial);
+                    const ErrorScore trialScore = scoreAST(parser, result.source, &trialCandidates);
+
+                    if (trialScore < current && isBetterRepair(trialScore, bestScore, bestRows.empty())) {
+                        bestScore = trialScore;
+                        bestRows = {row};
+                        bestSource = trial;
+                    }
+                }
+            }
+        }
+
+        if (bestRows.empty()) {
+            break;
+        }
+
+        for (int row : bestRows) {
+            blanked.insert(row);
+        }
+
+        result.source = bestSource;
+        current = bestScore;
+        candidates.primary.clear();
+        candidates.secondary.clear();
+
+        ErrorScore newScore = scoreAST(parser, result.source, &candidates);
+        current = newScore;
+    }
+
+    ts_parser_delete(parser);
+
+    for (int row : blanked) {
+        result.blankedLines.push_back(row + 1);
+    }
+    std::sort(result.blankedLines.begin(), result.blankedLines.end());
+
+    result.clean = current.isClean();
+
+    if (!result.clean && result.blankedLines.empty()) {
+        result.source = original;
+    }
+
+    return result;
+}
+
+}  // namespace recovery
+
 namespace {
 
 struct SymbolRelation {
@@ -37,6 +418,22 @@ struct SymbolRelation {
     int line = 0;
     std::string detail;
     std::string snippet;
+};
+
+struct ParameterInfo {
+    std::string name;
+    std::string type;
+    std::string defaultValue;
+    bool isVariadic = false;
+    bool isOptional = false;
+};
+
+struct SignatureInfo {
+    std::vector<ParameterInfo> parameters;
+    std::string returnType;
+    bool isAsync = false;
+    bool isThrows = false;
+    std::vector<std::string> typeParameters;
 };
 
 struct Symbol {
@@ -48,6 +445,7 @@ struct Symbol {
     std::vector<Symbol> members;
     std::vector<SymbolRelation> calls;
     std::vector<SymbolRelation> calledBy;
+    SignatureInfo signature;  // Optional signature information
 };
 
 struct Dependency {
@@ -111,6 +509,22 @@ struct CssSummary {
     std::vector<CssClassItem> missingClasses;
 };
 
+struct IndexFact {
+    std::string kind;        // "definition" | "import" | "call"
+    std::string name;        // Symbol name or import target
+    std::string owner;       // Type/class that owns this definition
+    std::string file;        // File path
+    int line = 0;
+    std::string receiver;    // For calls: receiver object name
+    std::string binding;     // For imports: local binding
+};
+
+struct IndexFacts {
+    std::vector<IndexFact> definitions;
+    std::vector<IndexFact> imports;
+    std::vector<IndexFact> callSites;
+};
+
 struct AnalysisResult {
     std::string path;
     std::string fileName;
@@ -123,6 +537,14 @@ struct AnalysisResult {
     PackageSummary packageSummary;
     CssSummary cssSummary;
     std::string summary;
+
+    // Recovery metadata
+    std::string analysisSourceMode = "ast";  // "ast" | "recovered" | "heuristic"
+    double analysisConfidence = 1.0;          // 0.0-1.0
+    std::vector<int> analysisDamagedLines;   // 1-indexed line numbers
+
+    // Index facts (Phase 3)
+    IndexFacts indexFacts;                   // Per-file facts for project index
 };
 
 std::string symbolKey(const std::string &name, int line)
@@ -2075,6 +2497,84 @@ std::vector<QuickLink> extractHtmlQuickLinksWithTreeSitter(const std::filesystem
     return links;
 }
 
+// ============================================================================
+// Signature Extraction (Phase 2)
+// ============================================================================
+
+// Extract signature info from TypeScript/JavaScript function-like nodes
+static SignatureInfo extractTSSignature(TSNode node, const std::string &text) {
+    SignatureInfo sig;
+    const char *nodeType = ts_node_type(node);
+
+    if (!nodeType || (std::strcmp(nodeType, "function_declaration") != 0 &&
+                      std::strcmp(nodeType, "arrow_function") != 0 &&
+                      std::strcmp(nodeType, "method_definition") != 0)) {
+        return sig;  // Not a function node
+    }
+
+    // Check for async keyword
+    for (uint32_t i = 0; i < ts_node_child_count(node); ++i) {
+        TSNode child = ts_node_child(node, i);
+        const char *childType = ts_node_type(child);
+        if (childType && std::strcmp(childType, "async") == 0) {
+            sig.isAsync = true;
+        }
+    }
+
+    // Extract parameters from formal_parameters
+    for (uint32_t i = 0; i < ts_node_child_count(node); ++i) {
+        TSNode child = ts_node_child(node, i);
+        const char *childType = ts_node_type(child);
+        if (childType && std::strcmp(childType, "formal_parameters") == 0) {
+            for (uint32_t j = 0; j < ts_node_child_count(child); ++j) {
+                TSNode param = ts_node_child(child, j);
+                const char *paramType = ts_node_type(param);
+
+                if (!paramType) continue;
+
+                // Simple parameter extraction (name only for now)
+                if (std::strcmp(paramType, "identifier") == 0) {
+                    ParameterInfo p;
+                    uint32_t start = ts_node_start_byte(param);
+                    uint32_t end = ts_node_end_byte(param);
+                    if (start < end && static_cast<int>(end) <= static_cast<int>(text.size())) {
+                        p.name = text.substr(start, end - start);
+                        sig.parameters.push_back(p);
+                    }
+                } else if (std::strcmp(paramType, "rest_pattern") == 0) {
+                    // Handle ...args
+                    TSNode identifier = ts_node_named_child(param, 0);
+                    if (!ts_node_is_null(identifier)) {
+                        ParameterInfo p;
+                        uint32_t start = ts_node_start_byte(identifier);
+                        uint32_t end = ts_node_end_byte(identifier);
+                        if (start < end && static_cast<int>(end) <= static_cast<int>(text.size())) {
+                            p.name = text.substr(start, end - start);
+                            p.isVariadic = true;
+                            sig.parameters.push_back(p);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Look for return type annotation or Promise type
+    // This is simplified - full implementation would walk the return_type node
+    const uint32_t nodeStart = ts_node_start_byte(node);
+    const uint32_t nodeEnd = ts_node_end_byte(node);
+    const size_t nodeLen = (nodeEnd > nodeStart) ? static_cast<size_t>(nodeEnd - nodeStart) : 0;
+    const size_t maxLen = (nodeLen > 1000) ? 1000 : nodeLen;
+    if (maxLen > 0 && nodeStart < text.size()) {
+        std::string funcText = text.substr(nodeStart, std::min(maxLen, text.size() - nodeStart));
+        if (funcText.find("Promise") != std::string::npos) {
+            sig.returnType = "Promise<unknown>";
+        }
+    }
+
+    return sig;
+}
+
 std::vector<Symbol> extractSymbols(const std::filesystem::path &path, const std::string &text, const std::string &language)
 {
     std::vector<Symbol> symbols;
@@ -2863,22 +3363,115 @@ AnalysisResult analyzeFile(const std::filesystem::path &path, const std::string 
     result.path = path.string();
     result.fileName = path.filename().string();
     result.language = language;
-    result.symbols = extractSymbols(path, source, language);
-    if (language == "script" || language == "jsx" || language == "ts" || language == "tsx") {
-        annotateScriptCallTopology(result.symbols, source, language);
-    } else if (language == "python") {
-        annotatePythonCallTopology(result.symbols, source);
-    } else if (language == "rust") {
-        annotateRustCallTopology(result.symbols, source);
+
+    // Attempt to repair broken AST before analysis
+    std::string analysisSource = source;
+    recovery::RepairResult repairResult = recovery::repairAST(source, language);
+    if (repairResult.clean || !repairResult.blankedLines.empty()) {
+        analysisSource = repairResult.source;
+        result.analysisDamagedLines = repairResult.blankedLines;
+        if (repairResult.clean) {
+            result.analysisSourceMode = "recovered";
+            result.analysisConfidence = 0.9;
+        } else {
+            result.analysisSourceMode = "heuristic";
+            result.analysisConfidence = 0.7;
+        }
+    } else {
+        // Parse succeeded with original source
+        result.analysisSourceMode = "ast";
+        result.analysisConfidence = 1.0;
     }
-    result.quickLinks = extractQuickLinks(path, source, language);
-    result.dependencies = extractDependencies(path, source, language);
-    result.routes = extractRoutes(path, source, language);
+
+    result.symbols = extractSymbols(path, analysisSource, language);
+    if (language == "script" || language == "jsx" || language == "ts" || language == "tsx") {
+        annotateScriptCallTopology(result.symbols, analysisSource, language);
+    } else if (language == "python") {
+        annotatePythonCallTopology(result.symbols, analysisSource);
+    } else if (language == "rust") {
+        annotateRustCallTopology(result.symbols, analysisSource);
+    }
+    result.quickLinks = extractQuickLinks(path, analysisSource, language);
+    result.dependencies = extractDependencies(path, analysisSource, language);
+    result.routes = extractRoutes(path, analysisSource, language);
     result.relatedFiles = extractRelatedFiles(path);
-    result.packageSummary = extractPackageSummary(path, source);
-    result.cssSummary = extractCssSummary(path, source, language);
+    result.packageSummary = extractPackageSummary(path, analysisSource);
+    result.cssSummary = extractCssSummary(path, analysisSource, language);
     result.summary = summarize(result);
+
+    // Extract index facts for project index (Phase 3)
+    // Collect definitions and call sites from symbols
+    std::function<void(const std::vector<Symbol>&, const std::string&)> collectSymbolFacts =
+        [&](const std::vector<Symbol> &symbols, const std::string &owner) {
+            for (const auto &sym : symbols) {
+                if (sym.kind == "function" || sym.kind == "method" ||
+                    sym.kind == "class" || sym.kind == "type" || sym.kind == "interface") {
+                    IndexFact def;
+                    def.kind = "definition";
+                    def.name = sym.name;
+                    def.owner = owner.empty() ? "" : owner;
+                    def.file = result.path;
+                    def.line = sym.line;
+                    result.indexFacts.definitions.push_back(def);
+                }
+
+                // Collect call sites from this symbol
+                for (const auto &call : sym.calls) {
+                    IndexFact callFact;
+                    callFact.kind = "call";
+                    callFact.name = call.name;
+                    callFact.receiver = call.detail;  // receiver type/name if available
+                    callFact.file = result.path;
+                    callFact.line = call.line;
+                    result.indexFacts.callSites.push_back(callFact);
+                }
+
+                // Recurse into members, passing current symbol as owner
+                collectSymbolFacts(sym.members, sym.name);
+            }
+        };
+    collectSymbolFacts(result.symbols, "");
+
+    // Collect imports from dependencies
+    for (const auto &dep : result.dependencies) {
+        if (dep.type == "import") {
+            IndexFact fact;
+            fact.kind = "import";
+            fact.name = dep.target;
+            fact.binding = dep.label;
+            fact.file = result.path;
+            fact.line = dep.line;
+            result.indexFacts.imports.push_back(fact);
+        }
+    }
+
     return result;
+}
+
+static void appendSignatureJson(std::ostringstream &out, const SignatureInfo &sig) {
+    out << "\"signature\":{"
+        << "\"parameters\":[";
+    for (std::size_t i = 0; i < sig.parameters.size(); ++i) {
+        const auto &param = sig.parameters[i];
+        if (i > 0) out << ",";
+        out << "{"
+            << "\"name\":" << quote(param.name) << ","
+            << "\"type\":" << (param.type.empty() ? "null" : quote(param.type)) << ","
+            << "\"defaultValue\":" << (param.defaultValue.empty() ? "null" : quote(param.defaultValue)) << ","
+            << "\"isVariadic\":" << (param.isVariadic ? "true" : "false") << ","
+            << "\"isOptional\":" << (param.isOptional ? "true" : "false")
+            << "}";
+    }
+    out << "],"
+        << "\"returnType\":" << (sig.returnType.empty() ? "null" : quote(sig.returnType)) << ","
+        << "\"isAsync\":" << (sig.isAsync ? "true" : "false") << ","
+        << "\"isThrows\":" << (sig.isThrows ? "true" : "false") << ","
+        << "\"typeParameters\":[";
+    for (std::size_t i = 0; i < sig.typeParameters.size(); ++i) {
+        if (i > 0) out << ",";
+        out << quote(sig.typeParameters[i]);
+    }
+    out << "]}";
 }
 
 void appendSymbolJson(std::ostringstream &out, const Symbol &symbol, const std::string &path, const std::string &language, std::size_t index)
@@ -2938,8 +3531,12 @@ void appendSymbolJson(std::ostringstream &out, const Symbol &symbol, const std::
         << "\"sourceLanguage\":" << quote(language) << ","
         << "\"snippetKind\":\"line_excerpt\","
         << "\"diagnosticsMode\":\"none\","
-        << "\"skipDiagnostics\":true"
-        << "}";
+        << "\"skipDiagnostics\":true,";
+
+    // Add signature if available
+    appendSignatureJson(out, symbol.signature);
+
+    out << "}";
 }
 
 std::string buildJson(const AnalysisResult &result)
@@ -3089,7 +3686,49 @@ std::string buildJson(const AnalysisResult &result)
     }
     out << "]},";
 
-    out << "\"summary\":" << quote(result.summary);
+    out << "\"summary\":" << quote(result.summary) << ",";
+
+    // Add recovery metadata
+    out << "\"analysisSourceMode\":" << quote(result.analysisSourceMode) << ",";
+    out << "\"analysisConfidence\":" << result.analysisConfidence << ",";
+    out << "\"analysisDamagedLines\":[";
+    for (std::size_t index = 0; index < result.analysisDamagedLines.size(); ++index) {
+        if (index > 0) out << ",";
+        out << result.analysisDamagedLines[index];
+    }
+    out << "],";
+
+    // Add index facts (Phase 3)
+    out << "\"indexFacts\":{";
+    out << "\"definitions\":[";
+    for (std::size_t i = 0; i < result.indexFacts.definitions.size(); ++i) {
+        const auto &fact = result.indexFacts.definitions[i];
+        if (i > 0) out << ",";
+        out << "{"
+            << "\"kind\":" << quote(fact.kind) << ","
+            << "\"name\":" << quote(fact.name) << ","
+            << "\"owner\":" << (fact.owner.empty() ? "null" : quote(fact.owner)) << ","
+            << "\"file\":" << quote(fact.file) << ","
+            << "\"line\":" << fact.line
+            << "}";
+    }
+    out << "],";
+    out << "\"imports\":[";
+    for (std::size_t i = 0; i < result.indexFacts.imports.size(); ++i) {
+        const auto &fact = result.indexFacts.imports[i];
+        if (i > 0) out << ",";
+        out << "{"
+            << "\"kind\":" << quote(fact.kind) << ","
+            << "\"name\":" << quote(fact.name) << ","
+            << "\"binding\":" << (fact.binding.empty() ? "null" : quote(fact.binding)) << ","
+            << "\"file\":" << quote(fact.file) << ","
+            << "\"line\":" << fact.line
+            << "}";
+    }
+    out << "],";
+    out << "\"callSites\":[]},"
+        << "\"callEdges\":[]";
+
     out << "}";
     return out.str();
 }

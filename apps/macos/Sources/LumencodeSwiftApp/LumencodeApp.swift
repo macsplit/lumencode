@@ -35,6 +35,7 @@ final class WorkspaceViewModel: ObservableObject {
         case route(UUID)
         case quickLink(UUID)
         case relation(UUID)
+        case crossFileCall(String, String) // (fromName, toName)
     }
 
     @Published var rootPath = ""
@@ -54,12 +55,16 @@ final class WorkspaceViewModel: ObservableObject {
     @Published var detailMembers: [SymbolItem] = []
     @Published var detailCalls: [SymbolRelationItem] = []
     @Published var detailCalledBy: [SymbolRelationItem] = []
+    @Published var detailCrossFileCalls: [CallEdge] = []
+    @Published var detailCrossFileCalledBy: [CallEdge] = []
     @Published var statusMessage = "Open a project folder to inspect its structure."
     @Published var errorMessage = ""
     @Published var inspectionSelection: InspectionSelection = .file
 
     private let scanner = ProjectScanner()
     private let analyzer = NativeAnalyzer()
+    private var projectIndex: ProjectIndex?
+    private var allAnalyses: [String: FileAnalysis] = [:]
 
     var isInspectingSymbolContext: Bool {
         switch inspectionSelection {
@@ -100,6 +105,23 @@ final class WorkspaceViewModel: ObservableObject {
         statusMessage = "Scanning \(absolutePath)"
         scanResult = scanner.scan(rootPath: absolutePath, selectedPath: nil)
 
+        // Analyze project and build index
+        statusMessage = "Analyzing project…"
+        let projectURL = URL(fileURLWithPath: absolutePath)
+        let projectAnalyzer = ProjectAnalyzer(projectRoot: projectURL)
+
+        let (analyses, index) = projectAnalyzer.analyzeProject(
+            fileEntries: scanResult.entries,
+            progress: { percent in
+                DispatchQueue.main.async {
+                    self.statusMessage = "Analyzing project… \(Int(percent * 100))%"
+                }
+            }
+        )
+
+        self.projectIndex = index
+        self.allAnalyses = Dictionary(uniqueKeysWithValues: analyses.map { ($0.path, $0) })
+
         if let selectedPath = scanResult.selectedPath.isEmpty ? entries.first?.id : scanResult.selectedPath {
             selectedEntryID = selectedPath
         } else {
@@ -111,6 +133,8 @@ final class WorkspaceViewModel: ObservableObject {
             detailMembers = []
             detailCalls = []
             detailCalledBy = []
+            detailCrossFileCalls = []
+            detailCrossFileCalledBy = []
         }
     }
 
@@ -121,6 +145,11 @@ final class WorkspaceViewModel: ObservableObject {
         detailMembers = symbol.members
         detailCalls = symbol.calls
         detailCalledBy = symbol.calledBy
+
+        // Get cross-file call edges for this symbol
+        detailCrossFileCalls = selectedAnalysis.callEdges.filter { $0.fromName == symbol.name }
+        detailCrossFileCalledBy = selectedAnalysis.callEdges.filter { $0.toName == symbol.name }
+
         selectedSnippet = WorkspaceSupport.snippetPayload(
             from: symbol,
             fallbackPath: selectedAnalysis.path,
@@ -135,6 +164,11 @@ final class WorkspaceViewModel: ObservableObject {
         detailMembers = symbol.members
         detailCalls = symbol.calls
         detailCalledBy = symbol.calledBy
+
+        // Get cross-file call edges for this symbol
+        detailCrossFileCalls = selectedAnalysis.callEdges.filter { $0.fromName == symbol.name }
+        detailCrossFileCalledBy = selectedAnalysis.callEdges.filter { $0.toName == symbol.name }
+
         selectedSnippet = WorkspaceSupport.snippetPayload(
             from: symbol,
             fallbackPath: selectedAnalysis.path,
@@ -213,6 +247,18 @@ final class WorkspaceViewModel: ObservableObject {
         selectedEntryID = related.path
     }
 
+    func navigateToCallEdge(_ edge: CallEdge) {
+        // Navigate to the target file
+        selectedEntryID = edge.to
+
+        // After selection updates, find and inspect the target symbol
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            if let targetSymbol = self.selectedAnalysis.symbols.first(where: { $0.name == edge.toName }) {
+                self.inspectSymbol(targetSymbol)
+            }
+        }
+    }
+
     func resetToFileContext() {
         inspectionSelection = .file
         detailTitle = selectedAnalysis.fileName.isEmpty ? "Inspector" : selectedAnalysis.fileName
@@ -220,6 +266,8 @@ final class WorkspaceViewModel: ObservableObject {
         detailMembers = []
         detailCalls = []
         detailCalledBy = []
+        detailCrossFileCalls = []
+        detailCrossFileCalledBy = []
         selectedSnippet = WorkspaceSupport.snippetPayload(from: selectedAnalysis)
     }
 
@@ -297,13 +345,14 @@ final class WorkspaceViewModel: ObservableObject {
         }
 
         do {
-            let rawAnalysis = try analyzer.analyzeFile(path: entry.path)
-            selectedAnalysis = ProjectRelationships.augmentSelectedAnalysis(
-                rawAnalysis,
-                rootPath: rootPath,
-                entries: entries,
-                analyzer: analyzer
-            )
+            // Use pre-analyzed data from project analyzer if available
+            if let preAnalyzed = allAnalyses[entry.path] {
+                selectedAnalysis = preAnalyzed
+            } else {
+                // Fallback: analyze on-demand if not in project analysis
+                let rawAnalysis = try analyzer.analyzeFile(path: entry.path)
+                selectedAnalysis = rawAnalysis
+            }
             resetToFileContext()
             statusMessage = "Analyzed \(entry.name)"
         } catch {
@@ -427,8 +476,8 @@ struct ContentView: View {
 
                 if workspace.isInspectingSymbolContext {
                     sectionCard(title: "Calls") {
-                        if workspace.detailCalls.isEmpty {
-                            Text("No strong-confidence outgoing calls found for this symbol yet.")
+                        if workspace.detailCalls.isEmpty && workspace.detailCrossFileCalls.isEmpty {
+                            Text("No outgoing calls found for this symbol.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         } else {
@@ -441,14 +490,37 @@ struct ContentView: View {
                                     workspace.inspectRelation(relation)
                                 }
                             }
+
+                            ForEach(workspace.detailCrossFileCalls) { edge in
+                                HStack(alignment: .top, spacing: 12) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(edge.toName)
+                                            .font(.headline)
+                                        HStack(spacing: 8) {
+                                            Text("in \(WorkspaceSupport.relativePath(edge.to, from: workspace.rootPath))")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                            confidenceBadge(edge.confidence)
+                                        }
+                                    }
+                                    Spacer()
+                                    Button("Navigate", action: {
+                                        workspace.navigateToCallEdge(edge)
+                                    })
+                                    .buttonStyle(.borderedProminent)
+                                    .controlSize(.small)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 2)
+                            }
                         }
                     }
                 }
 
                 if workspace.isInspectingSymbolContext {
                     sectionCard(title: "Called By") {
-                        if workspace.detailCalledBy.isEmpty {
-                            Text("No strong-confidence incoming callers found for this symbol yet.")
+                        if workspace.detailCalledBy.isEmpty && workspace.detailCrossFileCalledBy.isEmpty {
+                            Text("No incoming callers found for this symbol.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         } else {
@@ -460,6 +532,39 @@ struct ContentView: View {
                                 ) {
                                     workspace.inspectRelation(relation)
                                 }
+                            }
+
+                            ForEach(workspace.detailCrossFileCalledBy) { edge in
+                                HStack(alignment: .top, spacing: 12) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(edge.fromName)
+                                            .font(.headline)
+                                        HStack(spacing: 8) {
+                                            Text("in \(WorkspaceSupport.relativePath(edge.from, from: workspace.rootPath))")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                            confidenceBadge(edge.confidence)
+                                        }
+                                    }
+                                    Spacer()
+                                    Button("Navigate", action: {
+                                        workspace.navigateToCallEdge(
+                                            CallEdge(
+                                                from: edge.to,
+                                                to: edge.from,
+                                                fromName: edge.toName,
+                                                toName: edge.fromName,
+                                                confidence: edge.confidence,
+                                                evidence: edge.evidence,
+                                                line: edge.line
+                                            )
+                                        )
+                                    })
+                                    .buttonStyle(.borderedProminent)
+                                    .controlSize(.small)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 2)
                             }
                         }
                     }
@@ -734,6 +839,18 @@ struct ContentView: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(Color.white.opacity(0.10), in: Capsule())
+    }
+
+    private func confidenceBadge(_ confidence: String) -> some View {
+        let (color, label) = confidence == "high" ? (Color.green, "high") :
+                             confidence == "medium" ? (Color.yellow, "medium") :
+                             (Color.gray, "low")
+        return Text(label)
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(color.opacity(0.2), in: Capsule())
+            .foregroundColor(color)
     }
 
     private var shellPanel: some View {
