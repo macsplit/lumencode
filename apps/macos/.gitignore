@@ -13,6 +13,7 @@ xcuserdata/
 # macOS
 # Ignore macOS-specific files that can clutter the repository.
 .DS_Store
+__pycache__/
 
 # Temporary files
 *.log

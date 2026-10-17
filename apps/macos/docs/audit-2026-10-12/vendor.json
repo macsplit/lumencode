@@ -1,0 +1,122 @@
+[
+  {
+    "path": "tree-sitter-c-sharp/src/scanner.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-c-sharp/src/parser.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-runtime/lib/src/lib.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-runtime/lib/src/parser.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-runtime/lib/include/tree_sitter/api.h",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-css/src/scanner.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-css/src/parser.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-javascript/src/scanner.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-javascript/src/parser.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-swift/src/scanner.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-swift/src/parser.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-php/php/src/scanner.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-php/php/src/parser.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-typescript/typescript/src/scanner.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-typescript/typescript/src/parser.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-typescript/tsx/src/scanner.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-typescript/tsx/src/parser.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-rust/src/scanner.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-rust/src/parser.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-java/src/parser.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-html/src/scanner.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-html/src/parser.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-python/src/scanner.c",
+    "original_exists": true,
+    "identical": true
+  },
+  {
+    "path": "tree-sitter-python/src/parser.c",
+    "original_exists": true,
+    "identical": true
+  }
+]

@@ -1,0 +1,4717 @@
+{
+  "method": "Swift project-mode CLI versus original checked-in fixture expectations; no live original binary",
+  "summary": {
+    "cases": 101,
+    "cases_passed": 10,
+    "assertions": 521,
+    "assertions_passed": 143,
+    "unique_invocations": 99,
+    "errors": 0
+  },
+  "results": [
+    {
+      "name": "js_commonjs_same_file",
+      "file": "tests/fixtures/baseline/js_commonjs/helper.js",
+      "elapsed_ms": 22.275625000474975,
+      "checks": [
+        {
+          "label": "function wrapper exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function wrapper calls",
+          "actual": [
+            "helper"
+          ],
+          "expected": [
+            "helper"
+          ],
+          "passed": true
+        },
+        {
+          "label": "function helper exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function helper calledBy",
+          "actual": [
+            "wrapper"
+          ],
+          "expected": [
+            "wrapper"
+          ],
+          "passed": true
+        }
+      ],
+      "passed": true,
+      "language": "script",
+      "scanned": true,
+      "symbols": 2,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "js_commonjs_cross_file",
+      "file": "tests/fixtures/baseline/js_commonjs/main.js",
+      "elapsed_ms": 19.941082999139326,
+      "checks": [
+        {
+          "label": "function run exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function run calls",
+          "actual": [
+            "wrapper"
+          ],
+          "expected": [
+            "wrapper"
+          ],
+          "passed": true
+        }
+      ],
+      "passed": true,
+      "language": "script",
+      "scanned": true,
+      "symbols": 2,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "js_commonjs_alias_cross_file",
+      "file": "tests/fixtures/baseline/js_commonjs/alias.js",
+      "elapsed_ms": 19.474542001262307,
+      "checks": [
+        {
+          "label": "function runAlias exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function runAlias calls",
+          "actual": [],
+          "expected": [
+            "wrapper"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "script",
+      "scanned": true,
+      "symbols": 2,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "ts_module_same_file",
+      "file": "tests/fixtures/baseline/ts_module/helper.ts",
+      "elapsed_ms": 21.632292000504094,
+      "checks": [
+        {
+          "label": "function wrapperTs exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function wrapperTs calls",
+          "actual": [
+            "helperTs"
+          ],
+          "expected": [
+            "helperTs"
+          ],
+          "passed": true
+        },
+        {
+          "label": "function helperTs exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function helperTs calledBy",
+          "actual": [
+            "wrapperTs"
+          ],
+          "expected": [
+            "wrapperTs"
+          ],
+          "passed": true
+        }
+      ],
+      "passed": true,
+      "language": "ts",
+      "scanned": true,
+      "symbols": 2,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "ts_module_cross_file",
+      "file": "tests/fixtures/baseline/ts_module/main.ts",
+      "elapsed_ms": 18.444666999130277,
+      "checks": [
+        {
+          "label": "function runTs exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function runTs calls",
+          "actual": [
+            "wrapperTs"
+          ],
+          "expected": [
+            "wrapperTs"
+          ],
+          "passed": true
+        }
+      ],
+      "passed": true,
+      "language": "ts",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "ts_module_alias_cross_file",
+      "file": "tests/fixtures/baseline/ts_module/alias.ts",
+      "elapsed_ms": 18.662333999600378,
+      "checks": [
+        {
+          "label": "function runAliasTs exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function runAliasTs calls",
+          "actual": [],
+          "expected": [
+            "wrapperTs"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "ts",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "ts_partial_recovery",
+      "file": "tests/fixtures/baseline/ts_recovery/broken.ts",
+      "elapsed_ms": 15.683083000112674,
+      "checks": [
+        {
+          "label": "function helperBroken exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function helperBroken sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "function helperBroken confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "function helperBroken parameters",
+          "actual": [],
+          "expected": [
+            "value: number"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function wrapperBroken exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function wrapperBroken calls",
+          "actual": [
+            "helperBroken"
+          ],
+          "expected": [
+            "helperBroken"
+          ],
+          "passed": true
+        },
+        {
+          "label": "function wrapperBroken sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "function wrapperBroken confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "function wrapperBroken parameters",
+          "actual": [],
+          "expected": [
+            "value: number"
+          ],
+          "passed": false
+        },
+        {
+          "label": "analysis_source_mode",
+          "actual": "ast",
+          "expected": "recovered",
+          "passed": false
+        },
+        {
+          "label": "analysis_partial",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "analysis_notices",
+          "actual": 0,
+          "expected": 1,
+          "passed": false
+        },
+        {
+          "label": "analysis_confidence",
+          "actual": 1,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "analysis_has_ast_errors",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "symbol_source_modes ast",
+          "actual": 0,
+          "expected": 3,
+          "passed": false
+        },
+        {
+          "label": "symbol_confidences high",
+          "actual": 0,
+          "expected": 3,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "ts",
+      "scanned": true,
+      "symbols": 2,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "php_basic_same_file",
+      "file": "tests/fixtures/baseline/php_basic/helper.php",
+      "elapsed_ms": 11.300292000669288,
+      "checks": [
+        {
+          "label": "function helper_wrapper exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function helper_wrapper calls",
+          "actual": [],
+          "expected": [
+            "helper_value"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function helper_wrapper sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "function helper_wrapper confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "function helper_wrapper parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "function helper_wrapper returns",
+          "actual": [],
+          "expected": [
+            "result of helper_value()"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function helper_value exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function helper_value calledBy",
+          "actual": [],
+          "expected": [
+            "helper_wrapper"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function helper_value sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "function helper_value confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "function helper_value parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "function helper_value returns",
+          "actual": [],
+          "expected": [
+            "int"
+          ],
+          "passed": false
+        },
+        {
+          "label": "analysis_source_mode",
+          "actual": "recovered",
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "analysis_confidence",
+          "actual": 0.9,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "symbol_source_modes ast",
+          "actual": 0,
+          "expected": 2,
+          "passed": false
+        },
+        {
+          "label": "symbol_confidences high",
+          "actual": 0,
+          "expected": 2,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "php",
+      "scanned": true,
+      "symbols": 2,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "php_partial_recovery",
+      "file": "tests/fixtures/baseline/php_recovery/Broken.php",
+      "elapsed_ms": 9.840666998570669,
+      "checks": [
+        {
+          "label": "class BrokenWorker exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method helperValue exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method helperValue sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "method helperValue confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "method helperValue parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "method helperValue returns",
+          "actual": [],
+          "expected": [
+            "int"
+          ],
+          "passed": false
+        },
+        {
+          "label": "method runValue exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method runValue sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "method runValue confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "analysis_source_mode",
+          "actual": "recovered",
+          "expected": "recovered",
+          "passed": true
+        },
+        {
+          "label": "analysis_partial",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "analysis_notices",
+          "actual": 0,
+          "expected": 1,
+          "passed": false
+        },
+        {
+          "label": "analysis_confidence",
+          "actual": 0.9,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "analysis_has_ast_errors",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "symbol_source_modes ast",
+          "actual": 0,
+          "expected": 3,
+          "passed": false
+        },
+        {
+          "label": "symbol_confidences high",
+          "actual": 0,
+          "expected": 3,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "php",
+      "scanned": true,
+      "symbols": 3,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "swift_basic_same_file",
+      "file": "tests/fixtures/baseline/swift_basic/App.swift",
+      "elapsed_ms": 9.809332999793696,
+      "checks": [
+        {
+          "label": "function openFolder exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function openFolder calls",
+          "actual": [],
+          "expected": [
+            "loadProject"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function openFolder sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "function openFolder confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "function openFolder parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "function openFolder returns",
+          "actual": [],
+          "expected": [
+            "none"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function loadProject exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function loadProject calledBy",
+          "actual": [],
+          "expected": [
+            "openFolder"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function loadProject sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "function loadProject confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "function loadProject parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "function loadProject returns",
+          "actual": [],
+          "expected": [
+            "none"
+          ],
+          "passed": false
+        },
+        {
+          "label": "analysis_source_mode",
+          "actual": "recovered",
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "analysis_confidence",
+          "actual": 0.9,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "symbol_source_modes ast",
+          "actual": 0,
+          "expected": 2,
+          "passed": false
+        },
+        {
+          "label": "symbol_confidences high",
+          "actual": 0,
+          "expected": 2,
+          "passed": false
+        },
+        {
+          "label": "dependencies",
+          "actual": 1,
+          "expected": 1,
+          "passed": true
+        }
+      ],
+      "passed": false,
+      "language": "swift",
+      "scanned": true,
+      "symbols": 2,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "python_basic_relations",
+      "file": "tests/fixtures/baseline/python_basic/sample.py",
+      "elapsed_ms": 11.095875001046807,
+      "checks": [
+        {
+          "label": "function helper_py exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function helper_py sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "function helper_py confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "function helper_py parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "function helper_py returns",
+          "actual": [],
+          "expected": [
+            "result of os.getcwd()"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function outer_py exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function outer_py calls",
+          "actual": [
+            "helper_py"
+          ],
+          "expected": [
+            "helper_py"
+          ],
+          "passed": true
+        },
+        {
+          "label": "function outer_py sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "function outer_py confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "function outer_py parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "function outer_py returns",
+          "actual": [],
+          "expected": [
+            "result of helper_py()"
+          ],
+          "passed": false
+        },
+        {
+          "label": "class Worker exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method run exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method run calls",
+          "actual": [
+            "helper_py"
+          ],
+          "expected": [
+            "helper_py"
+          ],
+          "passed": true
+        },
+        {
+          "label": "method run sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "method run confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "method run parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "method run returns",
+          "actual": [],
+          "expected": [
+            "result of helper_py()"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function helper_py exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function helper_py calledBy",
+          "actual": [
+            "outer_py",
+            "run"
+          ],
+          "expected": [
+            "outer_py",
+            "run"
+          ],
+          "passed": true
+        },
+        {
+          "label": "analysis_source_mode",
+          "actual": "recovered",
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "analysis_confidence",
+          "actual": 0.9,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "symbol_source_modes ast",
+          "actual": 0,
+          "expected": 4,
+          "passed": false
+        },
+        {
+          "label": "symbol_confidences high",
+          "actual": 0,
+          "expected": 4,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "python",
+      "scanned": true,
+      "symbols": 4,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "python_partial_recovery",
+      "file": "tests/fixtures/baseline/python_recovery/broken.py",
+      "elapsed_ms": 10.94908300001407,
+      "checks": [
+        {
+          "label": "function helper_broken_py exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function helper_broken_py sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "function helper_broken_py confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "function helper_broken_py parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "function helper_broken_py returns",
+          "actual": [],
+          "expected": [
+            "result of os.getcwd()"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function wrapper_broken_py exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "class WorkerBroken exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "class WorkerBroken sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "class WorkerBroken confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "analysis_source_mode",
+          "actual": "recovered",
+          "expected": "recovered",
+          "passed": true
+        },
+        {
+          "label": "analysis_partial",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "analysis_notices",
+          "actual": 0,
+          "expected": 1,
+          "passed": false
+        },
+        {
+          "label": "analysis_confidence",
+          "actual": 0.9,
+          "expected": "medium",
+          "passed": false
+        },
+        {
+          "label": "analysis_has_ast_errors",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "symbol_source_modes ast",
+          "actual": 0,
+          "expected": 3,
+          "passed": false
+        },
+        {
+          "label": "symbol_source_modes heuristic",
+          "actual": 0,
+          "expected": 1,
+          "passed": false
+        },
+        {
+          "label": "symbol_confidences high",
+          "actual": 0,
+          "expected": 3,
+          "passed": false
+        },
+        {
+          "label": "symbol_confidences medium",
+          "actual": 0,
+          "expected": 1,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "python",
+      "scanned": true,
+      "symbols": 3,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "rust_basic_relations",
+      "file": "tests/fixtures/baseline/rust_basic/main.rs",
+      "elapsed_ms": 11.91695899979095,
+      "checks": [
+        {
+          "label": "struct Greeter exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function helper_rs exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function helper_rs sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "function helper_rs confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "function helper_rs parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "function helper_rs returns",
+          "actual": [],
+          "expected": [
+            "&'static str"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function main exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function main sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "function main confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "function main parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "function main returns",
+          "actual": [],
+          "expected": [
+            "none"
+          ],
+          "passed": false
+        },
+        {
+          "label": "method greet exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method greet calls",
+          "actual": [
+            "helper_rs"
+          ],
+          "expected": [
+            "helper_rs"
+          ],
+          "passed": true
+        },
+        {
+          "label": "method greet sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "method greet confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "method greet parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "method greet returns",
+          "actual": [],
+          "expected": [
+            "&'static str"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function helper_rs exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function helper_rs calledBy",
+          "actual": [
+            "greet"
+          ],
+          "expected": [
+            "greet",
+            "main"
+          ],
+          "passed": false
+        },
+        {
+          "label": "analysis_source_mode",
+          "actual": "recovered",
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "analysis_confidence",
+          "actual": 0.9,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "symbol_source_modes ast",
+          "actual": 0,
+          "expected": 5,
+          "passed": false
+        },
+        {
+          "label": "symbol_confidences high",
+          "actual": 0,
+          "expected": 5,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "rust",
+      "scanned": true,
+      "symbols": 5,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "rust_partial_recovery",
+      "file": "tests/fixtures/baseline/rust_recovery/broken.rs",
+      "elapsed_ms": 10.417541998322122,
+      "checks": [
+        {
+          "label": "function helper_broken_rs exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function helper_broken_rs sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "function helper_broken_rs confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "function helper_broken_rs parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "function helper_broken_rs returns",
+          "actual": [],
+          "expected": [
+            "i32"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function wrapper_broken_rs exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function wrapper_broken_rs calls",
+          "actual": [],
+          "expected": [
+            "helper_broken_rs"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function wrapper_broken_rs sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "function wrapper_broken_rs confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "function wrapper_broken_rs parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "function wrapper_broken_rs returns",
+          "actual": [],
+          "expected": [
+            "i32"
+          ],
+          "passed": false
+        },
+        {
+          "label": "struct WorkerBrokenRs exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "struct WorkerBrokenRs sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "struct WorkerBrokenRs confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "analysis_source_mode",
+          "actual": "recovered",
+          "expected": "recovered",
+          "passed": true
+        },
+        {
+          "label": "analysis_partial",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "analysis_notices",
+          "actual": 0,
+          "expected": 1,
+          "passed": false
+        },
+        {
+          "label": "analysis_confidence",
+          "actual": 0.9,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "analysis_has_ast_errors",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "symbol_source_modes ast",
+          "actual": 0,
+          "expected": 3,
+          "passed": false
+        },
+        {
+          "label": "symbol_confidences high",
+          "actual": 0,
+          "expected": 3,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "rust",
+      "scanned": true,
+      "symbols": 3,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "java_basic_relations",
+      "file": "tests/fixtures/baseline/java_basic/Sample.java",
+      "elapsed_ms": 10.714959000324598,
+      "checks": [
+        {
+          "label": "class Sample exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "class Sample sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "class Sample confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "constructor Sample exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "constructor Sample sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "constructor Sample confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "constructor Sample parameters",
+          "actual": [],
+          "expected": [
+            "name: String"
+          ],
+          "passed": false
+        },
+        {
+          "label": "constructor Sample returns",
+          "actual": [],
+          "expected": [
+            "none"
+          ],
+          "passed": false
+        },
+        {
+          "label": "method greet exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method greet calls",
+          "actual": [],
+          "expected": [
+            "helper"
+          ],
+          "passed": false
+        },
+        {
+          "label": "method greet sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "method greet confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "method greet parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "method greet returns",
+          "actual": [],
+          "expected": [
+            "String"
+          ],
+          "passed": false
+        },
+        {
+          "label": "method helper exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method helper calledBy",
+          "actual": [],
+          "expected": [
+            "greet"
+          ],
+          "passed": false
+        },
+        {
+          "label": "method helper sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "method helper confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "method helper parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "method helper returns",
+          "actual": [],
+          "expected": [
+            "String"
+          ],
+          "passed": false
+        },
+        {
+          "label": "analysis_source_mode",
+          "actual": "recovered",
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "analysis_confidence",
+          "actual": 0.9,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "symbol_source_modes ast",
+          "actual": 0,
+          "expected": 5,
+          "passed": false
+        },
+        {
+          "label": "symbol_confidences high",
+          "actual": 0,
+          "expected": 5,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "java",
+      "scanned": true,
+      "symbols": 5,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "java_partial_recovery",
+      "file": "tests/fixtures/baseline/java_recovery/Broken.java",
+      "elapsed_ms": 10.155500000109896,
+      "checks": [
+        {
+          "label": "class Broken exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "class Broken sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "class Broken confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "method greetBrokenJava exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method greetBrokenJava calls",
+          "actual": [],
+          "expected": [
+            "helperBrokenJava"
+          ],
+          "passed": false
+        },
+        {
+          "label": "method greetBrokenJava sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "method greetBrokenJava confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "method greetBrokenJava parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "method greetBrokenJava returns",
+          "actual": [],
+          "expected": [
+            "String"
+          ],
+          "passed": false
+        },
+        {
+          "label": "analysis_source_mode",
+          "actual": "recovered",
+          "expected": "recovered",
+          "passed": true
+        },
+        {
+          "label": "analysis_partial",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "analysis_notices",
+          "actual": 0,
+          "expected": 1,
+          "passed": false
+        },
+        {
+          "label": "analysis_confidence",
+          "actual": 0.9,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "analysis_has_ast_errors",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "symbol_source_modes ast",
+          "actual": 0,
+          "expected": 3,
+          "passed": false
+        },
+        {
+          "label": "symbol_confidences high",
+          "actual": 0,
+          "expected": 3,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "java",
+      "scanned": true,
+      "symbols": 3,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "csharp_basic_relations",
+      "file": "tests/fixtures/baseline/csharp_basic/Sample.cs",
+      "elapsed_ms": 14.548791999914101,
+      "checks": [
+        {
+          "label": "class Sample exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "class Sample sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "class Sample confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "constructor Sample exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "constructor Sample sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "constructor Sample confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "constructor Sample parameters",
+          "actual": [],
+          "expected": [
+            "name: string"
+          ],
+          "passed": false
+        },
+        {
+          "label": "constructor Sample returns",
+          "actual": [],
+          "expected": [
+            "none"
+          ],
+          "passed": false
+        },
+        {
+          "label": "method Greet exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method Greet calls",
+          "actual": [],
+          "expected": [
+            "Helper"
+          ],
+          "passed": false
+        },
+        {
+          "label": "method Greet sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "method Greet confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "method Greet parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "method Greet returns",
+          "actual": [],
+          "expected": [
+            "string"
+          ],
+          "passed": false
+        },
+        {
+          "label": "method Helper exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method Helper calledBy",
+          "actual": [],
+          "expected": [
+            "Greet"
+          ],
+          "passed": false
+        },
+        {
+          "label": "method Helper sourceMode",
+          "actual": null,
+          "expected": "ast",
+          "passed": false
+        },
+        {
+          "label": "method Helper confidence",
+          "actual": null,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "method Helper parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "method Helper returns",
+          "actual": [],
+          "expected": [
+            "string"
+          ],
+          "passed": false
+        },
+        {
+          "label": "analysis_source_mode",
+          "actual": "ast",
+          "expected": "ast",
+          "passed": true
+        },
+        {
+          "label": "analysis_confidence",
+          "actual": 1,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "symbol_source_modes ast",
+          "actual": 0,
+          "expected": 5,
+          "passed": false
+        },
+        {
+          "label": "symbol_confidences high",
+          "actual": 0,
+          "expected": 5,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "csharp",
+      "scanned": true,
+      "symbols": 5,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "csharp_partial_recovery",
+      "file": "tests/fixtures/baseline/csharp_recovery/Broken.cs",
+      "elapsed_ms": 11.132417001135764,
+      "checks": [
+        {
+          "label": "class Broken exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method GreetBrokenCs exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "analysis_source_mode",
+          "actual": "ast",
+          "expected": "recovered",
+          "passed": false
+        },
+        {
+          "label": "analysis_partial",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "analysis_notices",
+          "actual": 0,
+          "expected": 1,
+          "passed": false
+        },
+        {
+          "label": "analysis_confidence",
+          "actual": 1,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "analysis_has_ast_errors",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "symbol_source_modes ast",
+          "actual": 0,
+          "expected": 4,
+          "passed": false
+        },
+        {
+          "label": "symbol_confidences high",
+          "actual": 0,
+          "expected": 4,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "csharp",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "cpp_basic_symbols",
+      "file": "tests/fixtures/baseline/cpp_basic/sample.cpp",
+      "elapsed_ms": 9.384708999277791,
+      "checks": [
+        {
+          "label": "class Sample exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "function helper_cpp exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "analysis_source_mode",
+          "actual": "ast",
+          "expected": "ast",
+          "passed": true
+        },
+        {
+          "label": "analysis_confidence",
+          "actual": 1,
+          "expected": "high",
+          "passed": false
+        },
+        {
+          "label": "symbol_source_modes ast",
+          "actual": 0,
+          "expected": 3,
+          "passed": false
+        },
+        {
+          "label": "symbol_confidences high",
+          "actual": 0,
+          "expected": 3,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "cpp",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "objc_basic_symbols",
+      "file": "tests/fixtures/baseline/objc_basic/Sample.m",
+      "elapsed_ms": 11.970207999183913,
+      "checks": [
+        {
+          "label": "class Sample exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method greet exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "cpp",
+      "scanned": true,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "html_css_links",
+      "file": "tests/fixtures/baseline/html_css/index.html",
+      "elapsed_ms": 13.093749999825377,
+      "checks": [
+        {
+          "label": "quick_links",
+          "actual": 1,
+          "expected": 1,
+          "passed": true
+        },
+        {
+          "label": "css_matched_classes",
+          "actual": 2,
+          "expected": 2,
+          "passed": true
+        },
+        {
+          "label": "css_missing_classes",
+          "actual": 2,
+          "expected": 2,
+          "passed": true
+        }
+      ],
+      "passed": true,
+      "language": "html",
+      "scanned": true,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "css_basic_symbols",
+      "file": "tests/fixtures/baseline/html_css/styles.css",
+      "elapsed_ms": 11.287084000286995,
+      "checks": [
+        {
+          "label": "class hero exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "class title exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "quick_links",
+          "actual": 0,
+          "expected": 1,
+          "passed": false
+        },
+        {
+          "label": "css_matched_classes",
+          "actual": 0,
+          "expected": 2,
+          "passed": false
+        },
+        {
+          "label": "css_missing_classes",
+          "actual": 0,
+          "expected": 2,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "css",
+      "scanned": true,
+      "symbols": 3,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "html_css_pseudo_selectors",
+      "file": "tests/fixtures/baseline/html_css_pseudos/index.html",
+      "elapsed_ms": 13.470459000018309,
+      "checks": [
+        {
+          "label": "quick_links",
+          "actual": 1,
+          "expected": 1,
+          "passed": true
+        },
+        {
+          "label": "css_matched_classes",
+          "actual": 8,
+          "expected": 8,
+          "passed": true
+        },
+        {
+          "label": "css_missing_classes",
+          "actual": 1,
+          "expected": 1,
+          "passed": true
+        }
+      ],
+      "passed": true,
+      "language": "html",
+      "scanned": true,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "html_css_has_selectors",
+      "file": "tests/fixtures/baseline/html_css_has/index.html",
+      "elapsed_ms": 12.38112499959243,
+      "checks": [
+        {
+          "label": "quick_links",
+          "actual": 1,
+          "expected": 1,
+          "passed": true
+        },
+        {
+          "label": "css_matched_classes",
+          "actual": 5,
+          "expected": 5,
+          "passed": true
+        },
+        {
+          "label": "css_missing_classes",
+          "actual": 1,
+          "expected": 1,
+          "passed": true
+        }
+      ],
+      "passed": true,
+      "language": "html",
+      "scanned": true,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "html_script_consumers",
+      "file": "tests/fixtures/baseline/html_script/app.js",
+      "elapsed_ms": 13.895541000238154,
+      "checks": [
+        {
+          "label": "function boot exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "quick_links",
+          "actual": 0,
+          "expected": 1,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "script",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "qml_basic_symbols",
+      "file": "tests/fixtures/baseline/qml_basic/Sample.qml",
+      "elapsed_ms": 8.78654099869891,
+      "checks": [
+        {
+          "label": "component Rectangle exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "function greet exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "property title exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "signal accepted exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method onClicked exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "dependencies",
+          "actual": 0,
+          "expected": 2,
+          "passed": false
+        },
+        {
+          "label": "analysis_source_mode",
+          "actual": "ast",
+          "expected": "heuristic",
+          "passed": false
+        },
+        {
+          "label": "analysis_confidence",
+          "actual": 1,
+          "expected": "medium",
+          "passed": false
+        },
+        {
+          "label": "symbol_source_modes heuristic",
+          "actual": 0,
+          "expected": 7,
+          "passed": false
+        },
+        {
+          "label": "symbol_confidences medium",
+          "actual": 0,
+          "expected": 7,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "json_package_summary",
+      "file": "tests/fixtures/baseline/json_package/package.json",
+      "elapsed_ms": 9.370708001370076,
+      "checks": [
+        {
+          "label": "package_scripts",
+          "actual": 2,
+          "expected": 2,
+          "passed": true
+        }
+      ],
+      "passed": true,
+      "language": "json",
+      "scanned": true,
+      "symbols": 2,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "python_return_paths",
+      "file": "tests/fixtures/baseline/python_returns/returns.py",
+      "elapsed_ms": 13.08166600028926,
+      "checks": [
+        {
+          "label": "method name exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method name parameters",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "label": "method name returns",
+          "actual": [],
+          "expected": [
+            "str"
+          ],
+          "passed": false
+        },
+        {
+          "label": "method describe exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method describe parameters",
+          "actual": [],
+          "expected": [
+            "verbose"
+          ],
+          "passed": false
+        },
+        {
+          "label": "method describe returns",
+          "actual": [],
+          "expected": [
+            "str | None (3 return paths)",
+            "str (lines 14, 17)",
+            "None (line 16)"
+          ],
+          "passed": false
+        },
+        {
+          "label": "method find exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method find parameters",
+          "actual": [],
+          "expected": [
+            "key",
+            "default",
+            "*args",
+            "strict: bool",
+            "**kw"
+          ],
+          "passed": false
+        },
+        {
+          "label": "method find returns",
+          "actual": [],
+          "expected": [
+            "item of self.cache | value of default (2 return paths)",
+            "item of self.cache (line 4)",
+            "value of default (line 7)"
+          ],
+          "passed": false
+        },
+        {
+          "label": "method rows exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method rows returns",
+          "actual": [],
+          "expected": [
+            "Generator (yields)"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function build exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function build returns",
+          "actual": [],
+          "expected": [
+            "Repo | list (2 return paths)",
+            "Repo (line 25)",
+            "list (line 26)"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function check exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function check returns",
+          "actual": [],
+          "expected": [
+            "bool"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function log exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function log returns",
+          "actual": [],
+          "expected": [
+            "None (no return statement)"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "python",
+      "scanned": true,
+      "symbols": 8,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "web_js_dom_links",
+      "file": "tests/fixtures/baseline/web_app/js/app.js",
+      "elapsed_ms": 24.98020799976075,
+      "checks": [
+        {
+          "label": "function handleKey exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function handleKey calls",
+          "actual": [
+            "addTodo"
+          ],
+          "expected": [
+            "addTodo"
+          ],
+          "passed": true
+        },
+        {
+          "label": "function handleKey calledBy",
+          "actual": [],
+          "expected": [
+            "<input onkeydown>"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function clearCompleted exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function clearCompleted calledBy",
+          "actual": [],
+          "expected": [
+            "<button onclick>"
+          ],
+          "passed": false
+        },
+        {
+          "label": "quick_link_labels",
+          "actual": [
+            "#new-todo",
+            "#todo-list",
+            "#footer",
+            ".completed",
+            ".hidden"
+          ],
+          "expected": [
+            "index.html",
+            "#todo-list \u2192 index.html:16",
+            "#new-todo \u2192 index.html:14",
+            ".completed \u2192 style.css:9",
+            ".hidden \u2192 style.css:13",
+            "#footer \u2014 no such element in index.html",
+            "<todo-counter> (TodoCounter) used in index.html:18"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "script",
+      "scanned": true,
+      "symbols": 7,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "web_html_page",
+      "file": "tests/fixtures/baseline/web_app/index.html",
+      "elapsed_ms": 18.365916999755427,
+      "checks": [
+        {
+          "label": "handler <button onclick> exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "handler <form onsubmit> exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "function validateLogin exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "element #todo-list exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "component <todo-counter> exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "style <style> exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "quick_links",
+          "actual": 2,
+          "expected": 4,
+          "passed": false
+        },
+        {
+          "label": "quick_link_labels",
+          "actual": [
+            "js/app.js",
+            "css/style.css"
+          ],
+          "expected": [
+            "style.css",
+            "app.js",
+            "about.html",
+            "login.php",
+            "#todo-list \u2190 app.js:1"
+          ],
+          "passed": false
+        },
+        {
+          "label": "css_matched_classes",
+          "actual": 3,
+          "expected": 4,
+          "passed": false
+        },
+        {
+          "label": "css_missing_classes",
+          "actual": 2,
+          "expected": 1,
+          "passed": true
+        },
+        {
+          "label": "analysis_source_mode",
+          "actual": "ast",
+          "expected": "ast",
+          "passed": true
+        }
+      ],
+      "passed": false,
+      "language": "html",
+      "scanned": true,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "web_css_usage",
+      "file": "tests/fixtures/baseline/web_app/css/style.css",
+      "elapsed_ms": 11.944750000111526,
+      "checks": [
+        {
+          "label": "class completed exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "quick_link_labels",
+          "actual": [],
+          "expected": [
+            "index.html",
+            "about.html",
+            ".completed \u2190 app.js:13"
+          ],
+          "passed": false
+        },
+        {
+          "label": "css_unused_classes",
+          "actual": [],
+          "expected": [
+            "never-used"
+          ],
+          "passed": false
+        },
+        {
+          "label": "css_script_applied_classes",
+          "actual": [],
+          "expected": [
+            "completed",
+            "hidden"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "css",
+      "scanned": true,
+      "symbols": 6,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "php_dependencies_routes_templates",
+      "file": "tests/fixtures/baseline/php_links/public/index.php",
+      "elapsed_ms": 14.742291999937152,
+      "checks": [
+        {
+          "label": "dependencies",
+          "actual": 0,
+          "expected": 4,
+          "passed": false
+        },
+        {
+          "label": "routes",
+          "actual": 0,
+          "expected": 3,
+          "passed": false
+        },
+        {
+          "label": "quick_link_labels",
+          "actual": [],
+          "expected": [
+            "site.css",
+            "site.js"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "php",
+      "scanned": true,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "php_template_as_script_consumer",
+      "file": "tests/fixtures/baseline/php_links/public/js/site.js",
+      "elapsed_ms": 14.330374999190099,
+      "checks": [
+        {
+          "label": "quick_link_labels",
+          "actual": [
+            "#flash",
+            ".flash"
+          ],
+          "expected": [
+            "index.php",
+            "#flash \u2192 index.php:21",
+            ".flash \u2192 site.css:1"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "script",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "java_spring_routes",
+      "file": "tests/fixtures/baseline/java_routes/TodoController.java",
+      "elapsed_ms": 12.87866599886911,
+      "checks": [
+        {
+          "label": "class TodoController exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "routes",
+          "actual": 0,
+          "expected": 4,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "java",
+      "scanned": true,
+      "symbols": 5,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "java_jaxrs_routes",
+      "file": "tests/fixtures/baseline/java_routes/UserResource.java",
+      "elapsed_ms": 12.01129199944262,
+      "checks": [
+        {
+          "label": "class UserResource exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "routes",
+          "actual": 0,
+          "expected": 2,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "java",
+      "scanned": true,
+      "symbols": 3,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "vbnet_structure_signatures",
+      "file": "tests/fixtures/baseline/vbnet_basic/Inventory.vb",
+      "elapsed_ms": 8.235750001404085,
+      "checks": [
+        {
+          "label": "class Inventory exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method Add exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method Notify exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "constructor New exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "property Count exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "event Changed exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "enum Status exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "dependencies",
+          "actual": 0,
+          "expected": 2,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "vbnet_unterminated_member",
+      "file": "tests/fixtures/baseline/vbnet_basic/Broken.vb",
+      "elapsed_ms": 8.472457999232574,
+      "checks": [
+        {
+          "label": "method First exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method Second exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method Helper exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "analysis_has_ast_errors",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "analysis_notices",
+          "actual": 0,
+          "expected": 1,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "vbnet_aspnet_routes",
+      "file": "tests/fixtures/baseline/vbnet_basic/OrdersController.vb",
+      "elapsed_ms": 8.345083000676823,
+      "checks": [
+        {
+          "label": "method Ship exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "routes",
+          "actual": 0,
+          "expected": 2,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "sql_tsql_objects_relations",
+      "file": "tests/fixtures/baseline/sql_tsql/schema.sql",
+      "elapsed_ms": 8.208166000258643,
+      "checks": [
+        {
+          "label": "table dbo.Orders exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "procedure dbo.usp_PlaceOrder exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "function dbo.fn_OrderCount exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "trigger dbo.trg_Orders_Audit exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "index IX_Orders_Customer exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "dependencies",
+          "actual": 0,
+          "expected": 1,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "sql_tsql_damage_stays_in_batch",
+      "file": "tests/fixtures/baseline/sql_tsql/broken.sql",
+      "elapsed_ms": 7.996291999006644,
+      "checks": [
+        {
+          "label": "procedure dbo.usp_AfterBroken exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "table Items exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "go_structure_signatures_routes",
+      "file": "tests/fixtures/baseline/go_basic/server.go",
+      "elapsed_ms": 8.30429200141225,
+      "checks": [
+        {
+          "label": "struct Store exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method Put exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "function NewStore exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "function Register exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "interface Reader exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "dependencies",
+          "actual": 0,
+          "expected": 2,
+          "passed": false
+        },
+        {
+          "label": "routes",
+          "actual": 0,
+          "expected": 2,
+          "passed": false
+        },
+        {
+          "label": "analysis_source_mode",
+          "actual": "ast",
+          "expected": "ast",
+          "passed": true
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "cpp_header_classes",
+      "file": "tests/fixtures/baseline/cpp_classes/shape.h",
+      "elapsed_ms": 13.829583998813177,
+      "checks": [
+        {
+          "label": "class Circle exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method name exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "destructor ~Shape exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "enum Kind exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "function totalArea exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "analysis_source_mode",
+          "actual": "ast",
+          "expected": "ast",
+          "passed": true
+        }
+      ],
+      "passed": false,
+      "language": "cpp",
+      "scanned": true,
+      "symbols": 3,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "cpp_out_of_line_definitions",
+      "file": "tests/fixtures/baseline/cpp_classes/shape.cpp",
+      "elapsed_ms": 14.199625000401284,
+      "checks": [
+        {
+          "label": "method area exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "function square exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "function totalArea exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "dependencies",
+          "actual": 2,
+          "expected": 2,
+          "passed": true
+        }
+      ],
+      "passed": false,
+      "language": "cpp",
+      "scanned": true,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "c_functions_and_structs",
+      "file": "tests/fixtures/baseline/cpp_classes/legacy.c",
+      "elapsed_ms": 12.278416999834008,
+      "checks": [
+        {
+          "label": "function run exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "struct sorter_t exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "cpp",
+      "scanned": true,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "shell_functions_calls",
+      "file": "tests/fixtures/baseline/shell_basic/deploy.sh",
+      "elapsed_ms": 8.387875001062639,
+      "checks": [
+        {
+          "label": "function build_image exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "function deploy exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "function log exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "dependencies",
+          "actual": 0,
+          "expected": 1,
+          "passed": false
+        },
+        {
+          "label": "quick_link_labels",
+          "actual": [],
+          "expected": [],
+          "passed": true
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "js_test_blocks",
+      "file": "tests/fixtures/baseline/js_shapes/cart.test.js",
+      "elapsed_ms": 23.863708000135375,
+      "checks": [
+        {
+          "label": "test suite cart exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "test sums prices exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "test is zero exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "test suite empty exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "script",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "js_test_calls_code_under_test",
+      "file": "tests/fixtures/baseline/js_shapes/cart.js",
+      "elapsed_ms": 24.43183300056262,
+      "checks": [
+        {
+          "label": "function total exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        }
+      ],
+      "passed": true,
+      "language": "script",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "ts_barrel_reexports",
+      "file": "tests/fixtures/baseline/js_shapes/index.ts",
+      "elapsed_ms": 23.209917000713176,
+      "checks": [
+        {
+          "label": "re-export total exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "re-export * from ./page exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "ts",
+      "scanned": true,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "js_page_event_handlers",
+      "file": "tests/fixtures/baseline/js_shapes/page.js",
+      "elapsed_ms": 24.19795800051361,
+      "checks": [
+        {
+          "label": "handler button \u00b7 click exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "handler window \u00b7 load exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "function checkout exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function checkout calledBy",
+          "actual": [],
+          "expected": [
+            "button \u00b7 click"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "script",
+      "scanned": true,
+      "symbols": 2,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "swift_ast_signatures",
+      "file": "tests/fixtures/baseline/swift_signatures/Greeter.swift",
+      "elapsed_ms": 10.218375000476954,
+      "checks": [
+        {
+          "label": "function greet exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function greet parameters",
+          "actual": [],
+          "expected": [
+            "_ name: String",
+            "times count: Int",
+            "_ extras: String..."
+          ],
+          "passed": false
+        },
+        {
+          "label": "function greet returns",
+          "actual": [],
+          "expected": [
+            "[String] (async throws)"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function schedule exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function schedule parameters",
+          "actual": [],
+          "expected": [
+            "perform action: @escaping @Sendable (String) -> Void"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function schedule returns",
+          "actual": [],
+          "expected": [
+            "none"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "swift",
+      "scanned": true,
+      "symbols": 5,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "objc_selectors_relations",
+      "file": "tests/fixtures/baseline/objc_basic/Cache.m",
+      "elapsed_ms": 15.219957998851896,
+      "checks": [
+        {
+          "label": "method setObject:forName:version: exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method initWithCapacity: exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "function CacheKey exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "property store exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "cpp",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_go_calls",
+      "file": "tests/fixtures/baseline/cross_file/go/service.go",
+      "elapsed_ms": 8.500874999299413,
+      "checks": [
+        {
+          "label": "function Warm exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_go_called_by",
+      "file": "tests/fixtures/baseline/cross_file/go/store.go",
+      "elapsed_ms": 8.88449999911245,
+      "checks": [
+        {
+          "label": "function NewCache exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_python_calls",
+      "file": "tests/fixtures/baseline/cross_file/python/checkout.py",
+      "elapsed_ms": 12.338000000454485,
+      "checks": [
+        {
+          "label": "function checkout_total exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function checkout_total calls",
+          "actual": [],
+          "expected": [
+            "TaxTable",
+            "apply_discount",
+            "rate_for"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "python",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_python_called_by",
+      "file": "tests/fixtures/baseline/cross_file/python/pricing.py",
+      "elapsed_ms": 11.829250001028413,
+      "checks": [
+        {
+          "label": "function apply_discount exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function apply_discount calledBy",
+          "actual": [],
+          "expected": [
+            "checkout_total"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "python",
+      "scanned": true,
+      "symbols": 3,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_java_calls",
+      "file": "tests/fixtures/baseline/cross_file/java/Billing.java",
+      "elapsed_ms": 11.512125000081141,
+      "checks": [
+        {
+          "label": "method bill exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method bill calls",
+          "actual": [],
+          "expected": [
+            "Invoice",
+            "zeroInvoice"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "java",
+      "scanned": true,
+      "symbols": 2,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_java_called_by",
+      "file": "tests/fixtures/baseline/cross_file/java/Invoice.java",
+      "elapsed_ms": 11.697208999976283,
+      "checks": [
+        {
+          "label": "class Invoice exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "class Invoice calledBy",
+          "actual": [],
+          "expected": [
+            "bill"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "java",
+      "scanned": true,
+      "symbols": 5,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_csharp_block_namespace",
+      "file": "tests/fixtures/baseline/cross_file/csharp/Guard.cs",
+      "elapsed_ms": 12.088707999282633,
+      "checks": [
+        {
+          "label": "class Guard exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "csharp",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_csharp_calls",
+      "file": "tests/fixtures/baseline/cross_file/csharp/OrderService.cs",
+      "elapsed_ms": 12.181957999928272,
+      "checks": [
+        {
+          "label": "method Place exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "csharp",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_php_calls",
+      "file": "tests/fixtures/baseline/cross_file/php/Signup.php",
+      "elapsed_ms": 11.401666999518056,
+      "checks": [
+        {
+          "label": "method register exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method register calls",
+          "actual": [],
+          "expected": [
+            "deliver"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "php",
+      "scanned": true,
+      "symbols": 2,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_php_called_by",
+      "file": "tests/fixtures/baseline/cross_file/php/Mailer.php",
+      "elapsed_ms": 11.385499999960302,
+      "checks": [
+        {
+          "label": "method deliver exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method deliver calledBy",
+          "actual": [],
+          "expected": [
+            "register"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "php",
+      "scanned": true,
+      "symbols": 2,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_rust_calls",
+      "file": "tests/fixtures/baseline/cross_file/rust/src/main.rs",
+      "elapsed_ms": 12.028042001475114,
+      "checks": [
+        {
+          "label": "function run exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function run calls",
+          "actual": [],
+          "expected": [
+            "new",
+            "count_tokens"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "rust",
+      "scanned": true,
+      "symbols": 3,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_rust_called_by",
+      "file": "tests/fixtures/baseline/cross_file/rust/src/parser.rs",
+      "elapsed_ms": 12.542250000478816,
+      "checks": [
+        {
+          "label": "function count_tokens exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function count_tokens calledBy",
+          "actual": [],
+          "expected": [
+            "run"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "rust",
+      "scanned": true,
+      "symbols": 4,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_cpp_calls",
+      "file": "tests/fixtures/baseline/cross_file/cpp/report.cpp",
+      "elapsed_ms": 11.844000000564847,
+      "checks": [
+        {
+          "label": "function summarize exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "function gridCells exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "cpp",
+      "scanned": true,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_swift_calls",
+      "file": "tests/fixtures/baseline/cross_file/swift/Receipt.swift",
+      "elapsed_ms": 11.760499999581953,
+      "checks": [
+        {
+          "label": "function printReceipt exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function printReceipt calls",
+          "actual": [],
+          "expected": [
+            "formatReceiptLine"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "swift",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_swift_called_by",
+      "file": "tests/fixtures/baseline/cross_file/swift/Formatter.swift",
+      "elapsed_ms": 11.714291000316734,
+      "checks": [
+        {
+          "label": "function formatReceiptLine exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function formatReceiptLine calledBy",
+          "actual": [],
+          "expected": [
+            "printReceipt"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "swift",
+      "scanned": true,
+      "symbols": 3,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_vbnet_calls",
+      "file": "tests/fixtures/baseline/cross_file/vbnet/OrderForm.vb",
+      "elapsed_ms": 8.23633400068502,
+      "checks": [
+        {
+          "label": "method Checkout exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_vbnet_called_by",
+      "file": "tests/fixtures/baseline/cross_file/vbnet/TaxRules.vb",
+      "elapsed_ms": 8.044583999435417,
+      "checks": [
+        {
+          "label": "method VatFor exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_shell_calls",
+      "file": "tests/fixtures/baseline/cross_file/shell/install.sh",
+      "elapsed_ms": 8.163582999259233,
+      "checks": [
+        {
+          "label": "function install_files exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_shell_called_by",
+      "file": "tests/fixtures/baseline/cross_file/shell/lib.sh",
+      "elapsed_ms": 9.111417000895017,
+      "checks": [
+        {
+          "label": "function ensure_directory exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_objc_calls",
+      "file": "tests/fixtures/baseline/cross_file/objc/Basket.m",
+      "elapsed_ms": 12.595833999512251,
+      "checks": [
+        {
+          "label": "method totalLabel exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "cpp",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_objc_called_by",
+      "file": "tests/fixtures/baseline/cross_file/objc/PriceFormatter.m",
+      "elapsed_ms": 12.694750001173816,
+      "checks": [
+        {
+          "label": "method stringForCents:currency: exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "cpp",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_python_package_imports",
+      "file": "tests/fixtures/baseline/cross_file/python_pkg/tests/test_cart.py",
+      "elapsed_ms": 12.93416599946795,
+      "checks": [
+        {
+          "label": "function test_checkout exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function test_checkout calls",
+          "actual": [],
+          "expected": [
+            "Cart",
+            "charge_card"
+          ],
+          "passed": false
+        },
+        {
+          "label": "dependencies",
+          "actual": 2,
+          "expected": 2,
+          "passed": true
+        }
+      ],
+      "passed": false,
+      "language": "python",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_python_relative_module_import",
+      "file": "tests/fixtures/baseline/cross_file/python_pkg/shop/cart.py",
+      "elapsed_ms": 13.438542000585585,
+      "checks": [
+        {
+          "label": "method checkout exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method checkout calls",
+          "actual": [],
+          "expected": [
+            "charge_card"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "python",
+      "scanned": true,
+      "symbols": 3,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_python_reexport_called_by",
+      "file": "tests/fixtures/baseline/cross_file/python_pkg/shop/payments/gateway.py",
+      "elapsed_ms": 12.485625000408618,
+      "checks": [
+        {
+          "label": "function charge_card exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function charge_card calledBy",
+          "actual": [],
+          "expected": [
+            "checkout",
+            "test_checkout"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "python",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_cpp_prototype_called_by",
+      "file": "tests/fixtures/baseline/cross_file/cpp/geometry.h",
+      "elapsed_ms": 11.825583000245388,
+      "checks": [
+        {
+          "label": "function circleArea exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "cpp",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_cpp_definition_called_by",
+      "file": "tests/fixtures/baseline/cross_file/cpp/geometry.cpp",
+      "elapsed_ms": 11.859792000905145,
+      "checks": [
+        {
+          "label": "function circleArea exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "cpp",
+      "scanned": true,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_java_import_across_source_sets",
+      "file": "tests/fixtures/baseline/cross_file/java_pkg/src/test/java/com/shop/MoneyTest.java",
+      "elapsed_ms": 12.552875001347275,
+      "checks": [
+        {
+          "label": "method keepsCents exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method keepsCents calls",
+          "actual": [],
+          "expected": [
+            "ofCents"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "java",
+      "scanned": true,
+      "symbols": 2,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_java_import_called_by",
+      "file": "tests/fixtures/baseline/cross_file/java_pkg/src/main/java/com/shop/util/Money.java",
+      "elapsed_ms": 12.684666999120964,
+      "checks": [
+        {
+          "label": "method ofCents exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method ofCents calledBy",
+          "actual": [],
+          "expected": [
+            "keepsCents"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "java",
+      "scanned": true,
+      "symbols": 5,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_php_use_alias",
+      "file": "tests/fixtures/baseline/cross_file/php_composer/src/Http/CheckoutController.php",
+      "elapsed_ms": 11.644166999758454,
+      "checks": [
+        {
+          "label": "method complete exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "method complete calls",
+          "actual": [],
+          "expected": [
+            "send"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "php",
+      "scanned": true,
+      "symbols": 2,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "http_fetch_axios_jquery_to_express",
+      "file": "tests/fixtures/baseline/cross_file/fullstack_express/public/app.js",
+      "elapsed_ms": 25.76704199964297,
+      "checks": [
+        {
+          "label": "function loadUser exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function loadUser calls",
+          "actual": [],
+          "expected": [
+            "GET /api/users/:id"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function placeOrder exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function placeOrder calls",
+          "actual": [],
+          "expected": [
+            "POST /:customer/orders"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function refreshUser exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function refreshUser calls",
+          "actual": [],
+          "expected": [
+            "GET /api/users/:id"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "script",
+      "scanned": true,
+      "symbols": 3,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "http_fetch_to_flask_views",
+      "file": "tests/fixtures/baseline/cross_file/fullstack_flask/static/main.js",
+      "elapsed_ms": 12.797542000043904,
+      "checks": [
+        {
+          "label": "function showItem exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function showItem calls",
+          "actual": [],
+          "expected": [
+            "GET /items/<int:item_id>"
+          ],
+          "passed": false
+        },
+        {
+          "label": "function saveItem exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function saveItem calls",
+          "actual": [],
+          "expected": [
+            "POST /items"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "script",
+      "scanned": true,
+      "symbols": 2,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "http_flask_view_called_by_client",
+      "file": "tests/fixtures/baseline/cross_file/fullstack_flask/app.py",
+      "elapsed_ms": 10.690667000744725,
+      "checks": [
+        {
+          "label": "function get_item exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function get_item calledBy",
+          "actual": [],
+          "expected": [
+            "showItem"
+          ],
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "python",
+      "scanned": true,
+      "symbols": 2,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "http_no_route_from_axios_client",
+      "file": "tests/fixtures/baseline/cross_file/fullstack_express/public/app.js",
+      "elapsed_ms": 25.76704199964297,
+      "checks": [
+        {
+          "label": "max_routes",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        }
+      ],
+      "passed": true,
+      "language": "script",
+      "scanned": true,
+      "symbols": 3,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "ts_unclosed_call_in_test_block",
+      "file": "tests/fixtures/baseline/ts_test_recovery/suite.test.ts",
+      "elapsed_ms": 25.215000001480803,
+      "checks": [
+        {
+          "label": "test suite first exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "test second exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "test suite other exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "test third exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "ts",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "cpp_macro_prepass",
+      "file": "tests/fixtures/baseline/cpp_macros/widget.h",
+      "elapsed_ms": 11.672833999909926,
+      "checks": [
+        {
+          "label": "function shop_version exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "function shop_name exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "class Widget exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method size exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method grow exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method sizeChanged exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "analysis_source_mode",
+          "actual": "ast",
+          "expected": "ast",
+          "passed": true
+        }
+      ],
+      "passed": false,
+      "language": "cpp",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "swift_lost_brace_renested",
+      "file": "tests/fixtures/baseline/swift_recovery_brace/Cart.swift",
+      "elapsed_ms": 12.014875001113978,
+      "checks": [
+        {
+          "label": "struct Cart exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "label": "function clear exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "function add exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "function helper exists",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        }
+      ],
+      "passed": false,
+      "language": "swift",
+      "scanned": true,
+      "symbols": 4,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "ts_lost_closer_in_test_block",
+      "file": "tests/fixtures/baseline/ts_test_recovery/missing.test.ts",
+      "elapsed_ms": 25.46979100043245,
+      "checks": [
+        {
+          "label": "test suite first exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "test second exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "test suite other exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "test third exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "ts",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "kotlin_structure_signatures",
+      "file": "tests/fixtures/baseline/kotlin_basic/src/main/kotlin/com/shop/Model.kt",
+      "elapsed_ms": 9.664541001257021,
+      "checks": [
+        {
+          "label": "class Line exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "enum Status exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "enum member PAID exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "type Lines exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "class Cart exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method add exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method log exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "object Companion exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "function checkout exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "kotlin_ktor_routes",
+      "file": "tests/fixtures/baseline/kotlin_basic/src/main/kotlin/com/shop/Routes.kt",
+      "elapsed_ms": 9.16966600016167,
+      "checks": [
+        {
+          "label": "function shopRoutes exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "routes",
+          "actual": 0,
+          "expected": 2,
+          "passed": false
+        },
+        {
+          "label": "dependencies",
+          "actual": 0,
+          "expected": 2,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "index_kotlin_companion_qualifier",
+      "file": "tests/fixtures/baseline/kotlin_basic/src/main/kotlin/com/shop/Routes.kt",
+      "elapsed_ms": 9.16966600016167,
+      "checks": [
+        {
+          "label": "function shopRoutes exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "ruby_structure_signatures",
+      "file": "tests/fixtures/baseline/ruby_basic/lib/pricing.rb",
+      "elapsed_ms": 8.448750000752625,
+      "checks": [
+        {
+          "label": "module Shop exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "class Pricing exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "constant TAX_RATE exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "property currency exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "constructor initialize exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method total exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method with_tax exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method for_region exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method describe exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "ruby_sinatra_routes_requires",
+      "file": "tests/fixtures/baseline/ruby_basic/app.rb",
+      "elapsed_ms": 8.18829200034088,
+      "checks": [
+        {
+          "label": "routes",
+          "actual": 0,
+          "expected": 2,
+          "passed": false
+        },
+        {
+          "label": "dependencies",
+          "actual": 0,
+          "expected": 2,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "scss_nesting_mixins_imports",
+      "file": "tests/fixtures/baseline/scss_basic/main.scss",
+      "elapsed_ms": 8.136374999594409,
+      "checks": [
+        {
+          "label": "variable $brand exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "placeholder %card-base exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "rule .btn exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "rule &-primary exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "rule .card exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "dependencies",
+          "actual": 0,
+          "expected": 1,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "scss_mixin_called_by_across_files",
+      "file": "tests/fixtures/baseline/scss_basic/_mixins.scss",
+      "elapsed_ms": 8.005499999853782,
+      "checks": [
+        {
+          "label": "mixin button-variant exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "php_config_array",
+      "file": "tests/fixtures/baseline/php_config/app.php",
+      "elapsed_ms": 9.506542000963236,
+      "checks": [
+        {
+          "label": "setting name exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "setting debug exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "setting mail exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "setting driver exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "setting address exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "php",
+      "scanned": true,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "webforms_markup_is_indexed_as_html",
+      "file": "tests/fixtures/baseline/webforms_basic/Default.aspx",
+      "elapsed_ms": 11.220750000575208,
+      "checks": [
+        {
+          "label": "directive Page directive exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "directive Register directive exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "directive Import directive exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "element #mainForm exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "region #BodyContent exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "control #SaveButton exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "server block <script runat=server> exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "expression Title exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "handler <asp:button onclick> exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "analysis_source_mode",
+          "actual": "ast",
+          "expected": "ast",
+          "passed": true
+        },
+        {
+          "label": "analysis_confidence",
+          "actual": 1,
+          "expected": "high",
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "webforms_codebehind_reverse_link",
+      "file": "tests/fixtures/baseline/webforms_basic/Default.aspx.cs",
+      "elapsed_ms": 12.386624999635387,
+      "checks": [
+        {
+          "label": "method SaveButton_Click exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "csharp",
+      "scanned": true,
+      "symbols": 1,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "webforms_vb_handles_event_without_markup_attribute",
+      "file": "tests/fixtures/baseline/webforms_basic/Legacy.ascx",
+      "elapsed_ms": 10.85958299881895,
+      "checks": [
+        {
+          "label": "event SaveButton.Click exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "vbnet_multiline_string_does_not_create_phantom_methods",
+      "file": "tests/fixtures/baseline/vbnet_multiline_string/ReportBuilder.vb",
+      "elapsed_ms": 8.198874998925021,
+      "checks": [
+        {
+          "label": "method BuildHtml exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        },
+        {
+          "label": "method AfterString exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    },
+    {
+      "name": "sql_tsql_signature_keeps_string_default",
+      "file": "tests/fixtures/baseline/sql_tsql/defaults.sql",
+      "elapsed_ms": 8.229665998442215,
+      "checks": [
+        {
+          "label": "procedure dbo.usp_SortedOrders exists",
+          "actual": false,
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "passed": false,
+      "language": "",
+      "scanned": false,
+      "symbols": 0,
+      "signatures": 0,
+      "call_sites": 0
+    }
+  ]
+}

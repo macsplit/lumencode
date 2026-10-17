@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Todo</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .inline-banner { color: red; }
+    </style>
+</head>
+<body>
+    <header id="app-header" class="header inline-banner">
+        <h1>todos</h1>
+        <input id="new-todo" class="new-todo" placeholder="What needs to be done?" onkeydown="handleKey(event)">
+    </header>
+    <ul id="todo-list" class="todo-list"></ul>
+    <button id="clear" class="clear-completed" onclick="clearCompleted()">Clear completed</button>
+    <todo-counter id="counter"></todo-counter>
+    <a href="about.html">About</a>
+    <form id="login" action="login.php" method="post" onsubmit="return validateLogin()"></form>
+    <script>
+        function validateLogin() {
+            return document.getElementById('new-todo').value !== '';
+        }
+    </script>
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "date": "2026-10-12",
+  "swift_commit": "b619b822f5222419740e28e806a416b6fe26f924",
+  "original_commit": "48cf4db8042d51cfe67c2344e4d7a3824576517f",
+  "macos": "27.0.1",
+  "swift": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+  "configuration": "Debug",
+  "gui_method": "AppKit NSWindow hosting actual app ContentView and WorkspaceViewModel; model actions, not OS input events",
+  "build_checks": {
+    "swift_package": "passed",
+    "xcode_app_without_codesigning": "passed"
+  },
+  "observed_gui_warning": "Application performed a reentrant operation in its NSTableView delegate. This warning will become an assert in the future."
+}

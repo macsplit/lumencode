@@ -19,7 +19,10 @@ public struct ProjectScanner {
 
     public init() {}
 
-    public func scan(rootPath: String, selectedPath: String?) -> ProjectScanResult {
+    public func scan(rootPath requestedRoot: String, selectedPath: String?) -> ProjectScanResult {
+        // Enumeration yields physical paths on macOS (e.g. /private/tmp).
+        // Resolve the root once rather than canonicalizing both paths per entry.
+        let rootPath = WorkspaceSupport.resolvePath(requestedRoot, relativeTo: FileManager.default.currentDirectoryPath)
         let rootURL = URL(fileURLWithPath: rootPath)
         let fileManager = FileManager.default
 
@@ -159,8 +162,10 @@ public struct ProjectScanner {
 
     private func chooseMainEntryPoint(rootPath: String, candidateFiles: [String]) -> String {
         let preferred = [
+            "Sources/LumencodeSwiftApp/LumencodeApp.swift",
             "Sources/LumencodeSwift/main.swift",
             "Package.swift",
+            "src/main.cpp", "src/main.cc", "src/main.cxx", "src/main.c",
             "src/main.tsx", "src/main.ts", "src/main.jsx", "src/main.js",
             "src/index.tsx", "src/index.ts", "src/index.jsx", "src/index.js",
             "main.ts", "main.js", "app.ts", "app.js", "index.ts", "index.js",
@@ -173,9 +178,10 @@ public struct ProjectScanner {
             return packageEntry
         }
 
-        let candidatesByRelative = Dictionary(uniqueKeysWithValues: candidateFiles.map {
-            (relativePathString(path: $0, rootPath: rootPath).lowercased(), $0)
-        })
+        let candidatesByRelative = candidateFiles.sorted().reduce(into: [String: String]()) { values, path in
+            let key = relativePathString(path: path, rootPath: rootPath).lowercased()
+            if values[key] == nil { values[key] = path }
+        }
 
         for relative in preferred {
             if let path = candidatesByRelative[relative.lowercased()] {
@@ -214,7 +220,8 @@ public struct ProjectScanner {
         var result = 0
         if relative.hasPrefix("src/") { result += 80 }
         if !relative.contains("/") { result += 20 }
-        if relative.contains("/test/") || relative.contains("/tests/") { result -= 200 }
+        if relative.hasPrefix("test/") || relative.hasPrefix("tests/") || relative.contains("/test/") || relative.contains("/tests/") { result -= 200 }
+        if relative.hasPrefix("third_party/") || relative.hasPrefix("vendor/") || relative.hasPrefix("engine/upstream/") { result -= 500 }
         if relative.contains("/dist/") || relative.contains("/build/") { result -= 150 }
         if fileName == "main.ts" || fileName == "main.js" || fileName == "main.tsx" || fileName == "main.jsx" { result += 120 }
         if fileName == "main.swift" { result += 120 }
@@ -232,17 +239,20 @@ public struct ProjectScanner {
     private func shouldIgnoreDirectory(_ name: String) -> Bool {
         let ignored = Set([
             ".git", ".build", ".swiftpm", ".next", ".nuxt", "node_modules",
-            "dist", "build", "coverage", "vendor", "DerivedData"
+            "dist", "build", "coverage", "vendor", "deriveddata", "__pycache__", "venv", ".venv"
         ])
-        return ignored.contains(name)
+        return ignored.contains(name.lowercased())
     }
 
     private func shouldIncludeFile(url: URL) -> Bool {
         let supported = Set([
             "swift", "js", "jsx", "ts", "tsx", "php", "html", "css", "json", "py",
-            "c", "cc", "cpp", "cxx", "h", "hpp", "java", "cs", "rs", "m", "mm"
+            "c", "cc", "cpp", "cxx", "h", "hpp", "hh", "hxx", "java", "cs", "rs", "m", "mm",
+            "mjs", "cjs", "mts", "cts", "htm", "qml", "go", "vb", "sql", "sh", "bash", "zsh",
+            "rb", "rake", "gemspec", "ru", "kt", "kts", "scss", "less",
+            "aspx", "ascx", "master", "ashx", "asmx", "asax"
         ])
-        return supported.contains(url.pathExtension.lowercased())
+        return supported.contains(url.pathExtension.lowercased()) || ["Gemfile", "Rakefile"].contains(url.lastPathComponent)
     }
 
     private func detectFileType(url: URL, isDirectory: Bool) -> String {
@@ -252,11 +262,11 @@ public struct ProjectScanner {
         switch url.pathExtension.lowercased() {
         case "swift":
             return "swift"
-        case "js", "jsx", "ts", "tsx":
+        case "js", "jsx", "ts", "tsx", "mjs", "cjs", "mts", "cts":
             return "code"
         case "php":
             return "php"
-        case "html":
+        case "html", "htm", "aspx", "ascx", "master", "ashx", "asmx", "asax":
             return "html"
         case "css":
             return "css"
@@ -270,16 +280,24 @@ public struct ProjectScanner {
             return "csharp"
         case "rs":
             return "rust"
-        case "c", "cc", "cpp", "cxx", "h", "hpp", "m", "mm":
+        case "m", "mm":
+            return "objc"
+        case "c", "cc", "cpp", "cxx", "h", "hpp", "hh", "hxx":
             return "cpp"
+        case "qml", "go", "sql", "scss", "less":
+            return url.pathExtension.lowercased()
+        case "vb": return "vbnet"
+        case "sh", "bash", "zsh": return "shell"
+        case "kt", "kts": return "kotlin"
+        case "rb", "rake", "gemspec", "ru": return "ruby"
         default:
-            return "file"
+            return ["Gemfile", "Rakefile"].contains(url.lastPathComponent) ? "ruby" : "file"
         }
     }
 }
 
 private func relativePathString(path: String, rootPath: String) -> String {
-    URL(fileURLWithPath: path).path.replacingOccurrences(of: URL(fileURLWithPath: rootPath).path + "/", with: "")
+    WorkspaceSupport.relativePath(path, from: rootPath)
 }
 
 private extension String {

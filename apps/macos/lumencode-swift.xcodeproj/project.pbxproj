@@ -201,6 +201,7 @@
 				A30000000000000000000001 /* Frameworks */,
 				A70000000000000000000001 /* Sources */,
 				A70000000000000000000002 /* Resources */,
+				A70000000000000000000003 /* Build Analysis Engine */,
 			);
 			buildRules = (
 			);
@@ -257,34 +258,26 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		A70000000000000000000003 /* Build Analysis Engine */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = ();
+			inputPaths = ();
+			name = "Build Analysis Engine";
+			outputPaths = ();
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -eu\nexport PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\"\npython3 \"$SRCROOT/tools/build_engine.py\" --build \"$DERIVED_FILE_DIR/engine\" --runtime \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/EngineRuntime\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		A70000000000000000000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A10000000000000000000008 /* lib.c in Sources */,
-				A10000000000000000000009 /* parser.c in Sources */,
-				A1000000000000000000000A /* scanner.c in Sources */,
-				A1000000000000000000000C /* parser_java.c in Sources */,
-				A1000000000000000000000D /* parser_c_sharp.c in Sources */,
-				A1000000000000000000000E /* scanner_c_sharp.c in Sources */,
-				A1000000000000000000000F /* parser_javascript.c in Sources */,
-				A10000000000000000000010 /* scanner_javascript.c in Sources */,
-				A10000000000000000000011 /* parser_typescript.c in Sources */,
-				A10000000000000000000012 /* scanner_typescript.c in Sources */,
-				A10000000000000000000013 /* parser_tsx.c in Sources */,
-				A10000000000000000000014 /* scanner_tsx.c in Sources */,
-				A10000000000000000000015 /* parser_php.c in Sources */,
-				A10000000000000000000016 /* scanner_php.c in Sources */,
-				A10000000000000000000017 /* parser_css.c in Sources */,
-				A10000000000000000000018 /* scanner_css.c in Sources */,
-				A10000000000000000000019 /* parser_python.c in Sources */,
-				A1000000000000000000001A /* scanner_python.c in Sources */,
-				A1000000000000000000001B /* parser_rust.c in Sources */,
-				A1000000000000000000001C /* scanner_rust.c in Sources */,
-				A1000000000000000000001D /* parser_html.c in Sources */,
-				A1000000000000000000001E /* scanner_html.c in Sources */,
-				A10000000000000000000006 /* lumencode_bridge.cpp in Sources */,
 				A10000000000000000000001 /* LumencodeApp.swift in Sources */,
 				A10000000000000000000002 /* Models.swift in Sources */,
 				A10000000000000000000003 /* NativeBridge.swift in Sources */,

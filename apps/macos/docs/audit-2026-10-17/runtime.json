@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "relocation_passed": true,
+  "exit_code": 0,
+  "external_dependencies": [],
+  "libraries": 8,
+  "relocated_path_with_spaces": true,
+  "minimum_macos": {
+    "bin/lumencode-engine": "14.0",
+    "lib/QtConcurrent": "11.0",
+    "lib/QtCore": "11.0",
+    "lib/libpcre2-16.0.dylib": "27.0",
+    "lib/libzstd.1.5.7.dylib": "26.0",
+    "lib/libgthread-2.0.0.dylib": "27.0",
+    "lib/libglib-2.0.0.dylib": "27.0",
+    "lib/libintl.8.dylib": "26.0",
+    "lib/libpcre2-8.0.dylib": "27.0"
+  },
+  "target_macos": null,
+  "incompatible_dependencies": {}
+}

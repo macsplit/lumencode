@@ -8,7 +8,10 @@ struct CLI {
 
     func run() throws {
         if let dumpFilePath = optionValue(named: "--dump-file") {
-            let analysis = try analyzer.analyzeFile(path: resolvedPath(dumpFilePath))
+            // Upstream's dump contract preserves an absolute input path, including
+            // symlink spelling. GUI workspace identity still uses resolved paths.
+            let path = NSString(string: dumpFilePath).isAbsolutePath ? dumpFilePath : resolvedPath(dumpFilePath)
+            let analysis = try analyzer.analyzeFile(path: path)
             try printJSON(analysis)
             return
         }
@@ -17,20 +20,15 @@ struct CLI {
         let absoluteRootPath = resolvedPath(rootPath)
         let selectedPath = optionValue(named: "--path").map(resolvedPath)
 
+        if let query = optionValue(named: "--search") {
+            try printJSON(analyzer.search(query: query, rootPath: absoluteRootPath, kinds: optionValue(named: "--kind") ?? ""))
+            return
+        }
+
         let scan = scanner.scan(rootPath: absoluteRootPath, selectedPath: selectedPath)
-        let rawAnalysis = scan.selectedPath.isEmpty
+        let analysis = scan.selectedPath.isEmpty
             ? FileAnalysis.skeleton(path: "", fileName: "", language: "")
-            : (try? analyzer.analyzeFile(path: scan.selectedPath)) ?? FileAnalysis.skeleton(
-                path: scan.selectedPath,
-                fileName: URL(fileURLWithPath: scan.selectedPath).lastPathComponent,
-                language: ""
-            )
-        let analysis = ProjectRelationships.augmentSelectedAnalysis(
-            rawAnalysis,
-            rootPath: absoluteRootPath,
-            entries: scan.entries,
-            analyzer: analyzer
-        )
+            : try analyzer.analyzeFile(path: scan.selectedPath, rootPath: absoluteRootPath)
 
         let state = CLIState(
             rootPath: absoluteRootPath,
@@ -46,7 +44,13 @@ struct CLI {
     }
 
     private func rootArgument() -> String? {
-        arguments.dropFirst().first { !$0.hasPrefix("-") }
+        var skipValue = false
+        for argument in arguments.dropFirst() {
+            if skipValue { skipValue = false; continue }
+            if ["--path", "--dump-file", "--search", "--kind"].contains(argument) { skipValue = true; continue }
+            if !argument.hasPrefix("-") { return argument }
+        }
+        return nil
     }
 
     private func optionValue(named name: String) -> String? {

@@ -1,5 +1,7 @@
 # Swift and Kirigami Parity Guide
 
+Since 16 October 2026, both Swift entry points use the pinned original C++ engine through a helper process. See [engine integration](engine-integration.md) for measured parity and remaining GUI/release gates. The [17 October follow-up](follow-up-2026-10-17.md) records broader public-corpus and damage comparisons plus native GUI input checks.
+
 ## Purpose
 
 This document explains how to evolve `lumencode-swift` in parallel with the original Kirigami/Qt version without creating accidental behavioral drift.
@@ -202,14 +204,9 @@ If the answer is product-level, document it and decide whether both repos should
 
 ## Current known asymmetry
 
-Kirigami original is ahead in:
+The active parser, signature, recovery, index and web-link implementations are now shared with the pinned original revision. The 101 shared cases and 99 live single-file payload comparisons pass. Remaining differences concern presentation completeness, indexing lifecycle, filesystem updates and release packaging; they are tracked in the [integration report](engine-integration.md).
 
-- parser depth
-- Tree-sitter integration breadth
-- lower-pane diagnostics/highlighting
-- quick links and related-file richness
-- package and web-stack detail extraction
-- typed signatures and project-wide call indexing (a Swift port is partially in place; see the status section in the [Development Plan](development-plan.md))
+The Swift interface still needs richer diagnostics/highlighting, type-link interactions, damaged-line gutter markers and broader OS/accessibility/menu input automation. The audit now dispatches native mouse/key events inside its own application. Keep testing whether it presents all of the shared engine's useful data.
 
 Swift version is ahead or different in:
 

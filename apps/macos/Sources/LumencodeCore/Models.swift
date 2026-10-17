@@ -150,6 +150,8 @@ public struct SymbolItem: Identifiable, Hashable, Codable, Sendable {
     public var calls: [SymbolRelationItem]
     public var calledBy: [SymbolRelationItem]
     public var signature: SignatureInfo?
+    public var sourceMode: String? = nil
+    public var confidence: String? = nil
 
     public init(
         id: UUID = UUID(),
@@ -326,6 +328,8 @@ public struct QuickLinkItem: Identifiable, Hashable, Codable, Sendable {
     public var line: Int
     public var snippet: String
     public var detail: String
+    public var sourcePath: String? = nil
+    public var sourceLanguage: String? = nil
 
     public init(
         id: UUID = UUID(),
@@ -416,6 +420,47 @@ public struct FileAnalysis: Hashable, Codable, Sendable {
     // Index facts (Phase 3)
     public var indexFacts: IndexFacts?                 // Per-file facts for project index
     public var callEdges: [CallEdge] = []              // Cross-file relations
+    public var analysisConfidenceLabel: String = ""
+    public var analysisHasAstErrors: Bool = false
+    public var analysisPartial: Bool = false
+    public var analysisNotices: [DiagnosticItem] = []
+    // Original engine payload, retained rather than narrowing its CLI contract.
+    public var engineJSON: Data? = nil
+
+    private enum CodingKeys: String, CodingKey {
+        case path, fileName, language, symbols, quickLinks, dependencies, routes, relatedFiles
+        case packageSummary, cssSummary, summary, analysisSourceMode, analysisConfidence
+        case analysisDamagedLines, indexFacts, callEdges, analysisConfidenceLabel
+        case analysisHasAstErrors, analysisPartial, analysisNotices
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        if let engineJSON {
+            try JSONDecoder().decode(EngineJSONValue.self, from: engineJSON).encode(to: encoder)
+            return
+        }
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(path, forKey: .path)
+        try container.encode(fileName, forKey: .fileName)
+        try container.encode(language, forKey: .language)
+        try container.encode(symbols, forKey: .symbols)
+        try container.encode(quickLinks, forKey: .quickLinks)
+        try container.encode(dependencies, forKey: .dependencies)
+        try container.encode(routes, forKey: .routes)
+        try container.encode(relatedFiles, forKey: .relatedFiles)
+        try container.encode(packageSummary, forKey: .packageSummary)
+        try container.encode(cssSummary, forKey: .cssSummary)
+        try container.encode(summary, forKey: .summary)
+        try container.encode(analysisSourceMode, forKey: .analysisSourceMode)
+        try container.encode(analysisConfidence, forKey: .analysisConfidence)
+        try container.encode(analysisDamagedLines, forKey: .analysisDamagedLines)
+        try container.encodeIfPresent(indexFacts, forKey: .indexFacts)
+        try container.encode(callEdges, forKey: .callEdges)
+        try container.encode(analysisConfidenceLabel, forKey: .analysisConfidenceLabel)
+        try container.encode(analysisHasAstErrors, forKey: .analysisHasAstErrors)
+        try container.encode(analysisPartial, forKey: .analysisPartial)
+        try container.encode(analysisNotices, forKey: .analysisNotices)
+    }
 
     public init(
         path: String,

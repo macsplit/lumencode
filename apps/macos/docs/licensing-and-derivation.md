@@ -1,5 +1,7 @@
 # Licensing and Tree-sitter Derivation
 
+The active engine is now pinned under `Engine/Upstream`, including its original license and third-party notices. `Engine/upstream.json` records source hashes and revision. The runtime packaging tool copies Qt license texts, available transitive dependency notices and source/version receipts into `EngineRuntime/licenses`. Complete release dependency notices and signing remain release gates; see [Engine build and packaging](../Engine/README.md).
+
 ## Purpose
 
 This document records where the vendored Tree-sitter code in `lumencode-swift` comes from, what parts are generated, and what license obligations must be preserved.

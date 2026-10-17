@@ -12,6 +12,15 @@ struct LumencodeApp: App {
         WindowGroup {
             ContentView(workspace: workspace)
                 .frame(minWidth: 1080, minHeight: 560)
+                .onAppear {
+                    guard workspace.rootPath.isEmpty else { return }
+                    if let folder = CommandLine.arguments.dropFirst().first(where: {
+                        var isDirectory: ObjCBool = false
+                        return FileManager.default.fileExists(atPath: $0, isDirectory: &isDirectory) && isDirectory.boolValue
+                    }) {
+                        workspace.loadProject(at: folder)
+                    }
+                }
         }
         .defaultSize(width: 1240, height: 680)
         .commands {
@@ -20,6 +29,10 @@ struct LumencodeApp: App {
                     workspace.openFolder()
                 }
                 .keyboardShortcut("o")
+                Button("Refresh File") { workspace.refreshCurrentFile() }
+                    .keyboardShortcut("r")
+                Button("Find in Project") { workspace.searchFocusRequested.toggle() }
+                    .keyboardShortcut("f")
             }
         }
     }
@@ -62,12 +75,95 @@ final class WorkspaceViewModel: ObservableObject {
     @Published var inspectionSelection: InspectionSelection = .file
     @Published var isScanning = false
     @Published var isAnalyzingFile = false
+    @Published var isIndexing = false
+    @Published var detailSignature: SignatureInfo?
+    @Published var searchQuery = "" { didSet { if searchQuery != oldValue { updateSearch() } } }
+    @Published var searchKinds = "" { didSet { if searchKinds != oldValue { updateSearch() } } }
+    @Published var searchResults: [SymbolSearchResult] = []
+    @Published var isSearching = false
+    @Published var searchFocusRequested = false
     @Published var expandedFolders: Set<String> = []
 
     private var scanTask: Task<Void, Never>?
     private var analysisTask: Task<Void, Never>?
-    private var analysisCache: [String: FileAnalysis] = [:]
+    private var analysisRequest: AnalysisRequest?
+    private var indexRequest: AnalysisRequest?
+    private var indexTask: Task<Void, Never>?
+    private var searchTask: Task<Void, Never>?
+    private var searchRequest: AnalysisRequest?
+    private var generation = UUID()
+    fileprivate var projectGeneration: UUID { generation }
+    private var indexReady = false
+    private struct FileRevision: Equatable {
+        let modified: Date?
+        let size: UInt64
+        let inode: UInt64
+        init(_ path: String) {
+            let attributes = (try? FileManager.default.attributesOfItem(atPath: path)) ?? [:]
+            modified = attributes[.modificationDate] as? Date
+            size = (attributes[.size] as? NSNumber)?.uint64Value ?? 0
+            inode = (attributes[.systemFileNumber] as? NSNumber)?.uint64Value ?? 0
+        }
+    }
+    private struct CachedAnalysis {
+        let revision: FileRevision
+        let analysis: FileAnalysis
+        let indexed: Bool
+    }
+    private var analysisCache: [String: CachedAnalysis] = [:]
     private var pendingSymbolName: String?
+    private var pendingSymbolLine: Int?
+
+    deinit {
+        analysisRequest?.cancel()
+        indexRequest?.cancel()
+        searchRequest?.cancel()
+    }
+
+    func refreshCurrentFile() {
+        if let path = selectedEntryID { analysisCache[path] = nil }
+        selectCurrentEntry()
+    }
+
+    private func updateSearch() {
+        searchTask?.cancel()
+        searchRequest?.cancel()
+        if !searchResults.isEmpty { searchResults = [] }
+        let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty, !rootPath.isEmpty else { isSearching = false; return }
+        if !isSearching { isSearching = true }
+        let root = rootPath
+        let kinds = searchKinds
+        let projectGeneration = generation
+        let request = AnalysisRequest()
+        searchRequest = request
+        searchTask = Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(180)) } catch { return }
+            let result = await Task.detached(priority: .userInitiated) {
+                Result { try NativeAnalyzer().search(query: query, rootPath: root, kinds: kinds, request: request) }
+            }.value
+            guard let self, !Task.isCancelled, self.generation == projectGeneration, self.searchRequest === request else { return }
+            self.isSearching = false
+            switch result {
+            case .success(let matches): self.searchResults = matches
+            case .failure(let error): self.errorMessage = "Search unavailable: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    func openSearchResult(_ result: SymbolSearchResult) {
+        let path = WorkspaceSupport.resolvePath(result.path, relativeTo: rootPath)
+        if result.kind != "file" {
+            pendingSymbolName = result.name.components(separatedBy: ".").last
+            pendingSymbolLine = result.line
+        }
+        if selectedEntryID == path {
+            if result.kind == "file" { resetToFileContext() }
+            else { applyPendingSymbol() }
+        } else {
+            selectedEntryID = path
+        }
+    }
 
     var isInspectingSymbolContext: Bool {
         switch inspectionSelection {
@@ -117,11 +213,13 @@ final class WorkspaceViewModel: ObservableObject {
     }
 
     private func revealInTree(_ path: String) {
+        var revealed = expandedFolders
         var parent = (path as NSString).deletingLastPathComponent
         while parent.count > rootPath.count, parent.hasPrefix(rootPath) {
-            expandedFolders.insert(parent)
+            revealed.insert(parent)
             parent = (parent as NSString).deletingLastPathComponent
         }
+        if revealed != expandedFolders { expandedFolders = revealed }
     }
 
     func openFolder() {
@@ -140,11 +238,28 @@ final class WorkspaceViewModel: ObservableObject {
         let absolutePath = WorkspaceSupport.resolvePath(path, relativeTo: FileManager.default.currentDirectoryPath)
         scanTask?.cancel()
         analysisTask?.cancel()
+        analysisRequest?.cancel()
+        indexTask?.cancel()
+        indexRequest?.cancel()
+        searchTask?.cancel()
+        searchRequest?.cancel()
+        generation = UUID()
+        let projectGeneration = generation
+        indexReady = false
+        isIndexing = false
+        isAnalyzingFile = false
+        searchQuery = ""
+        searchResults = []
         analysisCache = [:]
         expandedFolders = []
         selectedEntryID = nil
         scanResult = ProjectScanResult(entries: [], projectSummary: .empty, selectedPath: "")
         rootPath = absolutePath
+        selectedAnalysis = .skeleton(path: "", fileName: "", language: "")
+        resetToFileContext()
+        selectedSnippet = .empty
+        pendingSymbolName = nil
+        pendingSymbolLine = nil
         errorMessage = ""
         statusMessage = "Scanning \((absolutePath as NSString).lastPathComponent)…"
         isScanning = true
@@ -153,7 +268,7 @@ final class WorkspaceViewModel: ObservableObject {
             let result = await Task.detached(priority: .userInitiated) {
                 ProjectScanner().scan(rootPath: absolutePath, selectedPath: nil)
             }.value
-            guard let self, !Task.isCancelled, self.rootPath == absolutePath else {
+            guard let self, !Task.isCancelled, self.generation == projectGeneration else {
                 return
             }
             self.isScanning = false
@@ -162,6 +277,7 @@ final class WorkspaceViewModel: ObservableObject {
 
             if let selectedPath = result.selectedPath.isEmpty ? result.entries.first(where: { !$0.isDirectory })?.id : result.selectedPath {
                 self.selectedEntryID = selectedPath
+                self.startProjectIndex()
             } else {
                 self.statusMessage = "No supported files were found in this folder."
                 self.selectedAnalysis = FileAnalysis.skeleton(path: "", fileName: "", language: "")
@@ -179,6 +295,7 @@ final class WorkspaceViewModel: ObservableObject {
         detailMembers = symbol.members
         detailCalls = symbol.calls
         detailCalledBy = symbol.calledBy
+        detailSignature = symbol.signature
 
         // Get cross-file call edges for this symbol
         detailCrossFileCalls = selectedAnalysis.callEdges.filter { $0.fromName == symbol.name }
@@ -198,6 +315,7 @@ final class WorkspaceViewModel: ObservableObject {
         detailMembers = symbol.members
         detailCalls = symbol.calls
         detailCalledBy = symbol.calledBy
+        detailSignature = symbol.signature
 
         // Get cross-file call edges for this symbol
         detailCrossFileCalls = selectedAnalysis.callEdges.filter { $0.fromName == symbol.name }
@@ -211,6 +329,7 @@ final class WorkspaceViewModel: ObservableObject {
     }
 
     func inspectDependency(_ dependency: DependencyItem) {
+        detailSignature = nil
         inspectionSelection = .dependency(dependency.id)
         detailTitle = "Dependency: \(dependency.label)"
         detailSubtitle = dependency.detail.isEmpty ? dependency.target : dependency.detail
@@ -225,6 +344,7 @@ final class WorkspaceViewModel: ObservableObject {
     }
 
     func inspectRoute(_ route: RouteItem) {
+        detailSignature = nil
         inspectionSelection = .route(route.id)
         detailTitle = route.label.isEmpty ? "\(route.method) \(route.path)" : route.label
         detailSubtitle = route.detail.isEmpty ? "Route" : route.detail
@@ -239,6 +359,7 @@ final class WorkspaceViewModel: ObservableObject {
     }
 
     func inspectQuickLink(_ quickLink: QuickLinkItem) {
+        detailSignature = nil
         inspectionSelection = .quickLink(quickLink.id)
         detailTitle = "Quick Link: \(quickLink.label)"
         detailSubtitle = quickLink.detail.isEmpty ? quickLink.target : quickLink.detail
@@ -253,7 +374,16 @@ final class WorkspaceViewModel: ObservableObject {
     }
 
     func inspectRelation(_ relation: SymbolRelationItem) {
+        if let path = relation.path,
+           entries.contains(where: { $0.path == path && !$0.isDirectory }) {
+            pendingSymbolName = relation.name
+            pendingSymbolLine = relation.line
+            if path == selectedAnalysis.path { applyPendingSymbol() }
+            else { selectedEntryID = path }
+            return
+        }
         inspectionSelection = .relation(relation.id)
+        detailSignature = nil
         detailTitle = "\(relation.kind.capitalized): \(relation.name)"
         detailSubtitle = relation.detail.isEmpty ? "Line \(relation.line)" : relation.detail
         detailMembers = []
@@ -295,9 +425,11 @@ final class WorkspaceViewModel: ObservableObject {
             return
         }
         pendingSymbolName = nil
+        let line = pendingSymbolLine
+        pendingSymbolLine = nil
         func find(_ symbols: [SymbolItem]) -> SymbolItem? {
             for symbol in symbols {
-                if symbol.name == name { return symbol }
+                if symbol.name == name && (line == nil || symbol.line == line) { return symbol }
                 if let match = find(symbol.members) { return match }
             }
             return nil
@@ -316,6 +448,7 @@ final class WorkspaceViewModel: ObservableObject {
         detailCalledBy = []
         detailCrossFileCalls = []
         detailCrossFileCalledBy = []
+        detailSignature = nil
         selectedSnippet = WorkspaceSupport.snippetPayload(from: selectedAnalysis)
     }
 
@@ -349,15 +482,24 @@ final class WorkspaceViewModel: ObservableObject {
 
     private func selectCurrentEntry() {
         analysisTask?.cancel()
+        analysisRequest?.cancel()
+        analysisRequest = nil
         isAnalyzingFile = false
         guard let entry = selectedEntry else {
             return
         }
 
         errorMessage = ""
-        revealInTree(entry.path)
+        // SwiftUI's table delegate may still be applying selection. Reveal folders
+        // on the next turn so the table's row set does not mutate reentrantly.
+        let selectedPath = entry.path
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.selectedEntryID == selectedPath else { return }
+            self.revealInTree(selectedPath)
+        }
 
         if entry.isDirectory {
+            detailSignature = nil
             let childCount = entries.filter {
                 $0.path.hasPrefix(entry.path + "/") && $0.depth == entry.depth + 1
             }.count
@@ -395,8 +537,8 @@ final class WorkspaceViewModel: ObservableObject {
             return
         }
 
-        if let cached = analysisCache[entry.path] {
-            showAnalysis(cached, for: entry)
+        if let cached = analysisCache[entry.path], cached.revision == FileRevision(entry.path), cached.indexed == indexReady {
+            showAnalysis(cached.analysis, for: entry)
             return
         }
 
@@ -404,33 +546,57 @@ final class WorkspaceViewModel: ObservableObject {
         isAnalyzingFile = true
         let path = entry.path
         let root = rootPath
-        let projectEntries = entries
+        let projectGeneration = generation
+        let revision = FileRevision(path)
+        let indexed = indexReady
+        let request = AnalysisRequest()
+        analysisRequest = request
+        selectedAnalysis = .skeleton(path: path, fileName: entry.name, language: entry.fileType)
+        resetToFileContext()
         analysisTask = Task { [weak self] in
             let result = await Task.detached(priority: .userInitiated) { () -> Result<FileAnalysis, any Error> in
-                let analyzer = NativeAnalyzer()
                 return Result {
-                    let raw = try analyzer.analyzeFile(path: path)
-                    return ProjectRelationships.augmentSelectedAnalysis(
-                        raw,
-                        rootPath: root,
-                        entries: projectEntries,
-                        analyzer: analyzer
-                    )
+                    try NativeAnalyzer().analyzeFile(path: path, rootPath: indexed ? root : nil, request: request)
                 }
             }.value
-            guard let self, !Task.isCancelled, self.selectedEntryID == path else {
+            guard let self, !Task.isCancelled, self.generation == projectGeneration,
+                  self.analysisRequest === request, self.selectedEntryID == path else {
                 return
             }
             self.isAnalyzingFile = false
             switch result {
             case .success(let analysis):
-                self.analysisCache[path] = analysis
+                guard revision == FileRevision(path) else { self.selectCurrentEntry(); return }
+                self.analysisCache[path] = CachedAnalysis(revision: revision, analysis: analysis, indexed: indexed)
                 self.showAnalysis(analysis, for: entry)
             case .failure(let error):
                 self.selectedAnalysis = FileAnalysis.skeleton(path: path, fileName: entry.name, language: entry.fileType)
                 self.selectedAnalysis.summary = "Analysis failed: \(error)"
                 self.resetToFileContext()
                 self.errorMessage = "Failed to analyze \(entry.name)."
+            }
+        }
+    }
+
+    private func startProjectIndex() {
+        let root = rootPath
+        let projectGeneration = generation
+        let request = AnalysisRequest()
+        indexRequest = request
+        isIndexing = true
+        indexTask = Task { [weak self] in
+            let result = await Task.detached(priority: .utility) {
+                Result { try NativeAnalyzer().buildIndex(rootPath: root, request: request) }
+            }.value
+            guard let self, !Task.isCancelled, self.generation == projectGeneration else { return }
+            self.isIndexing = false
+            switch result {
+            case .success:
+                self.indexReady = true
+                // Preserve an active symbol inspection; its next file visit uses indexed data.
+                if self.inspectionSelection == .file { self.selectCurrentEntry() }
+            case .failure(let error):
+                self.errorMessage = "Project relationships unavailable: \(error.localizedDescription)"
             }
         }
     }
@@ -445,6 +611,7 @@ final class WorkspaceViewModel: ObservableObject {
 
 struct ContentView: View {
     @ObservedObject var workspace: WorkspaceViewModel
+    @FocusState private var searchFocused: Bool
 
     var body: some View {
         VSplitView {
@@ -452,6 +619,7 @@ struct ContentView: View {
                 sidebar
                     .frame(minWidth: 280, idealWidth: 320, maxWidth: 420)
                 overviewPane
+                    .id(workspace.selectedEntryID)
                     .frame(minWidth: 340, idealWidth: 420)
                 detailPane
                     .frame(minWidth: 320, idealWidth: 400)
@@ -461,6 +629,7 @@ struct ContentView: View {
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .preferredColorScheme(.dark)
+        .onChange(of: workspace.searchFocusRequested) { _, _ in searchFocused = true }
         .toolbar {
             ToolbarItemGroup {
                 Button("Open Folder…") {
@@ -489,12 +658,31 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 12) {
             headerCard(title: "Project", subtitle: workspace.statusMessage)
                 .overlay(alignment: .topTrailing) {
-                    if workspace.isScanning || workspace.isAnalyzingFile {
+                    if workspace.isScanning || workspace.isAnalyzingFile || workspace.isIndexing {
                         ProgressView()
                             .controlSize(.small)
                             .padding(16)
                     }
                 }
+
+            if !workspace.rootPath.isEmpty {
+                TextField("Search files and symbols", text: $workspace.searchQuery)
+                    .textFieldStyle(.roundedBorder)
+                    .focused($searchFocused)
+                    .onSubmit {
+                        if let first = workspace.searchResults.first { workspace.openSearchResult(first) }
+                    }
+                if !workspace.searchQuery.isEmpty {
+                    Picker("Search scope", selection: $workspace.searchKinds) {
+                        Text("All").tag("")
+                        Text("Files").tag("file")
+                        Text("Functions").tag("function,method,constructor")
+                        Text("Types").tag("class,struct,interface,enum,type,trait,object,module")
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                }
+            }
 
             if workspace.isScanning {
                 Spacer()
@@ -509,43 +697,40 @@ struct ContentView: View {
                     description: Text("Choose a folder to start exploring.")
                 )
                 Spacer()
+            } else if !workspace.searchQuery.isEmpty {
+                searchResultsPane
             } else {
-                List(selection: $workspace.selectedEntryID) {
-                    ForEach(workspace.visibleEntries) { entry in
-                        HStack(spacing: 6) {
-                            if entry.isDirectory {
-                                Button {
-                                    workspace.toggleFolder(entry)
-                                } label: {
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.secondary)
-                                        .rotationEffect(.degrees(workspace.expandedFolders.contains(entry.id) ? 90 : 0))
-                                        .frame(width: 14, height: 14)
-                                        .contentShape(Rectangle())
-                                }
-                                .buttonStyle(.plain)
-                                Image(systemName: "folder.fill")
-                                    .foregroundStyle(.blue)
-                            } else {
-                                Color.clear.frame(width: 14, height: 14)
-                                Image(systemName: iconName(for: entry.fileType))
-                                    .foregroundStyle(.secondary)
-                            }
-                            Text(entry.name)
-                                .lineLimit(1)
-                        }
-                        .padding(.leading, CGFloat(entry.depth) * 14)
-                        .tag(entry.id)
-                    }
+                if workspace.isIndexing {
+                    Text("Building project relationships…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-                .listStyle(.sidebar)
-                .scrollContentBackground(.hidden)
-                .background(Color.clear)
+                FileTreeView(workspace: workspace)
+
             }
         }
         .padding(16)
         .background(shellPanel)
+    }
+
+    private var searchResultsPane: some View {
+        VStack(alignment: .leading) {
+            if workspace.isSearching { ProgressView("Searching…").controlSize(.small) }
+            else if workspace.searchResults.isEmpty { Text("No matches").foregroundStyle(.secondary) }
+            List(workspace.searchResults) { result in
+                Button { workspace.openSearchResult(result) } label: {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(result.name).font(.body.weight(.medium))
+                        Text("\(result.kind) · \(result.path):\(result.line)")
+                            .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+            .listStyle(.sidebar)
+            .scrollContentBackground(.hidden)
+            .background(Color.clear)
+        }
     }
 
     private var overviewPane: some View {
@@ -563,6 +748,22 @@ struct ContentView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 headerCard(title: workspace.detailTitle, subtitle: workspace.detailSubtitle)
+
+                if let signature = workspace.detailSignature,
+                   !signature.parameters.isEmpty || signature.returnType != nil {
+                    sectionCard(title: "Signature") {
+                        ForEach(Array(signature.parameters.enumerated()), id: \.offset) { _, parameter in
+                            Text(parameter.name + (parameter.type.map { ": " + $0 } ?? "") + (parameter.defaultValue.map { " = " + $0 } ?? ""))
+                                .font(.system(.caption, design: .monospaced))
+                                .textSelection(.enabled)
+                        }
+                        if let returns = signature.returnType {
+                            Text("Returns: " + returns)
+                                .font(.system(.caption, design: .monospaced))
+                                .textSelection(.enabled)
+                        }
+                    }
+                }
 
                 if !workspace.detailMembers.isEmpty {
                     sectionCard(title: "Members") {
@@ -803,6 +1004,15 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
             }
 
+            if workspace.selectedAnalysis.analysisHasAstErrors || workspace.selectedAnalysis.analysisPartial {
+                Label("Syntax damage detected · \(workspace.selectedAnalysis.analysisSourceMode) · \(workspace.selectedAnalysis.analysisConfidenceLabel) confidence", systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+            ForEach(workspace.selectedAnalysis.analysisNotices) { notice in
+                Text(notice.message).font(.caption).foregroundStyle(.orange)
+            }
+
             CodeSnippetView(
                 text: workspace.selectedSnippet.displaySnippet.isEmpty
                     ? "Select a file, symbol, dependency, or route to inspect its source snippet."
@@ -838,43 +1048,49 @@ struct ContentView: View {
         }
     }
 
+    private struct SymbolRow: Identifiable {
+        let id: String
+        let symbol: SymbolItem
+        let isMember: Bool
+    }
+
+    private var overviewRows: [SymbolRow] {
+        workspace.selectedAnalysis.symbols.flatMap { symbol in
+            [SymbolRow(id: symbol.id.uuidString, symbol: symbol, isMember: false)] +
+            symbol.members.map { member in
+                SymbolRow(id: symbol.id.uuidString + member.id.uuidString, symbol: member, isMember: true)
+            }
+        }
+    }
+
     @ViewBuilder
     private var overviewSection: some View {
         if let entry = workspace.selectedEntry, !entry.isDirectory {
             if !workspace.selectedAnalysis.symbols.isEmpty {
-                sectionCard(title: "Symbols") {
-                    ForEach(workspace.selectedAnalysis.symbols) { symbol in
-                        VStack(alignment: .leading, spacing: 8) {
+                LazyVStack(alignment: .leading, spacing: 12) {
+                    Text("Symbols").font(.headline)
+                    ForEach(overviewRows) { row in
+                        HStack(spacing: 12) {
+                            if row.isMember {
+                                Rectangle().fill(Color.secondary.opacity(0.3)).frame(width: 2)
+                            }
                             selectionRow(
-                                title: symbol.name,
-                                subtitle: symbolSubtitle(for: symbol),
+                                title: row.symbol.name,
+                                subtitle: symbolSubtitle(for: row.symbol),
                                 actionTitle: "Inspect"
                             ) {
-                                workspace.inspectSymbol(symbol)
-                            }
-
-                            if !symbol.members.isEmpty {
-                                ForEach(symbol.members) { member in
-                                    HStack(spacing: 12) {
-                                        Rectangle()
-                                            .fill(Color.secondary.opacity(0.3))
-                                            .frame(width: 2)
-                                        selectionRow(
-                                            title: member.name,
-                                            subtitle: symbolSubtitle(for: member),
-                                            actionTitle: "Inspect"
-                                        ) {
-                                            workspace.inspectMember(member)
-                                        }
-                                    }
-                                    .padding(.leading, 16)
-                                }
+                                if row.isMember { workspace.inspectMember(row.symbol) }
+                                else { workspace.inspectSymbol(row.symbol) }
                             }
                         }
+                        .padding(.leading, row.isMember ? 16 : 0)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background(cardPanel)
             } else {
-                headerCard(title: "No Symbols", subtitle: "The current analyzer did not find structured symbols for this file yet.")
+                headerCard(title: "No Symbols", subtitle: "No structured declarations found in this file.")
             }
         } else {
             headerCard(title: "Folder Summary", subtitle: workspace.selectedAnalysis.summary)
@@ -986,22 +1202,191 @@ struct ContentView: View {
             .shadow(color: Color.black.opacity(0.18), radius: 12, y: 6)
     }
 
-    private func iconName(for fileType: String) -> String {
-        switch fileType {
-        case "swift":
-            return "swift"
-        case "cpp":
-            return "chevron.left.forwardslash.chevron.right"
-        case "json":
-            return "curlybraces"
-        case "html":
-            return "chevron.left.slash.chevron.right"
-        case "css":
-            return "paintpalette"
-        case "php", "code":
-            return "doc.plaintext"
-        default:
-            return "doc"
+
+}
+
+// AppKit owns row selection and keyboard navigation. Updating its snapshot never
+// publishes back into SwiftUI from inside a table delegate/update callback.
+private struct FileTreeView: NSViewRepresentable {
+    @ObservedObject var workspace: WorkspaceViewModel
+
+    func makeCoordinator() -> Coordinator { Coordinator(workspace: workspace) }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scroll = NSScrollView()
+        scroll.drawsBackground = false
+        scroll.hasVerticalScroller = true
+        scroll.autohidesScrollers = true
+        let table = FileTreeTable()
+        table.setAccessibilityIdentifier("project-file-tree")
+        table.setAccessibilityLabel("Project files")
+        table.headerView = nil
+        table.style = .sourceList
+        table.backgroundColor = .clear
+        scroll.contentView.drawsBackground = false
+        table.rowHeight = 26
+        table.intercellSpacing = NSSize(width: 0, height: 2)
+        table.allowsEmptySelection = true
+        table.columnAutoresizingStyle = .lastColumnOnlyAutoresizingStyle
+        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("file"))
+        column.resizingMask = .autoresizingMask
+        table.addTableColumn(column)
+        table.delegate = context.coordinator
+        table.dataSource = context.coordinator
+        table.folderKey = { [weak coordinator = context.coordinator] expand in coordinator?.folderKey(expand: expand) }
+        scroll.documentView = table
+        return scroll
+    }
+
+    func updateNSView(_ view: NSScrollView, context: Context) {
+        guard let table = view.documentView as? FileTreeTable else { return }
+        context.coordinator.update(table: table)
+    }
+
+    final class FileTreeTable: NSTableView {
+        var folderKey: ((Bool) -> Void)?
+        override func keyDown(with event: NSEvent) {
+            if event.keyCode == 124 { folderKey?(true) }
+            else if event.keyCode == 123 { folderKey?(false) }
+            else { super.keyDown(with: event) }
+        }
+    }
+
+    final class Cell: NSTableCellView {
+        let disclosure = NSButton()
+        let icon = NSImageView()
+        let label = NSTextField(labelWithString: "")
+        var leading: NSLayoutConstraint!
+        var toggle: (() -> Void)?
+
+        override init(frame: NSRect) {
+            super.init(frame: frame)
+            disclosure.isBordered = false
+            disclosure.title = ""
+            disclosure.imagePosition = .imageOnly
+            disclosure.setButtonType(.onOff)
+            disclosure.target = self
+            disclosure.action = #selector(disclose)
+            disclosure.refusesFirstResponder = true
+            label.lineBreakMode = .byTruncatingMiddle
+            label.font = .systemFont(ofSize: NSFont.systemFontSize)
+            for child in [disclosure, icon, label] {
+                child.translatesAutoresizingMaskIntoConstraints = false
+                addSubview(child)
+                child.centerYAnchor.constraint(equalTo: centerYAnchor).isActive = true
+            }
+            leading = disclosure.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4)
+            NSLayoutConstraint.activate([
+                leading,
+                disclosure.widthAnchor.constraint(equalToConstant: 14),
+                disclosure.heightAnchor.constraint(equalToConstant: 18),
+                icon.leadingAnchor.constraint(equalTo: disclosure.trailingAnchor, constant: 4),
+                icon.widthAnchor.constraint(equalToConstant: 16),
+                icon.heightAnchor.constraint(equalToConstant: 16),
+                label.leadingAnchor.constraint(equalTo: icon.trailingAnchor, constant: 6),
+                label.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -6)
+            ])
+            textField = label
+        }
+        required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+        @objc private func disclose() { toggle?() }
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate {
+        let workspace: WorkspaceViewModel
+        var entries: [FileTreeEntry] = []
+        var expanded: Set<String> = []
+        var root = ""
+        var updating = false
+        weak var table: NSTableView?
+
+        init(workspace: WorkspaceViewModel) { self.workspace = workspace }
+
+        func update(table: NSTableView) {
+            self.table = table
+            let next = workspace.visibleEntries
+            let changedRoot = root != workspace.rootPath
+            updating = true
+            defer { updating = false }
+            if changedRoot || entries != next || expanded != workspace.expandedFolders {
+                root = workspace.rootPath
+                entries = next
+                expanded = workspace.expandedFolders
+                table.reloadData()
+                if changedRoot { table.enclosingScrollView?.contentView.scroll(to: .zero) }
+            }
+            let row = entries.firstIndex { $0.id == workspace.selectedEntryID }
+            if table.selectedRow != (row ?? -1) {
+                if let row {
+                    table.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+                    table.scrollRowToVisible(row)
+                } else { table.deselectAll(nil) }
+            }
+        }
+
+        func numberOfRows(in tableView: NSTableView) -> Int { entries.count }
+
+        func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+            guard entries.indices.contains(row) else { return nil }
+            let entry = entries[row]
+            let identifier = NSUserInterfaceItemIdentifier("file-cell")
+            let cell = tableView.makeView(withIdentifier: identifier, owner: self) as? Cell ?? Cell()
+            cell.identifier = identifier
+            cell.leading.constant = 4 + CGFloat(entry.depth) * 14
+            cell.label.stringValue = entry.name
+            cell.toolTip = entry.path
+            cell.disclosure.isHidden = !entry.isDirectory
+            cell.disclosure.state = expanded.contains(entry.id) ? .on : .off
+            cell.disclosure.image = NSImage(systemSymbolName: expanded.contains(entry.id) ? "chevron.down" : "chevron.right", accessibilityDescription: nil)
+            cell.disclosure.setAccessibilityLabel("\(expanded.contains(entry.id) ? "Collapse" : "Expand") \(entry.name)")
+            let image: String
+            switch entry.fileType {
+            case "swift": image = "swift"
+            case "cpp", "html": image = "chevron.left.forwardslash.chevron.right"
+            case "json": image = "curlybraces"
+            case "css": image = "paintpalette"
+            default: image = "doc.text"
+            }
+            cell.icon.image = NSImage(systemSymbolName: entry.isDirectory ? "folder.fill" : image, accessibilityDescription: nil)
+            cell.icon.contentTintColor = entry.isDirectory ? .systemBlue : .secondaryLabelColor
+            cell.toggle = { [weak self] in self?.deferAction { $0.toggleFolder(entry) } }
+            return cell
+        }
+
+        // The root and current native selection guard queued actions when a project
+        // is replaced or several input events arrive before SwiftUI updates.
+        private func deferAction(_ action: @escaping @MainActor (WorkspaceViewModel) -> Void) {
+            let expectedRoot = root
+            let expectedGeneration = workspace.projectGeneration
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.workspace.rootPath == expectedRoot,
+                      self.workspace.projectGeneration == expectedGeneration else { return }
+                action(self.workspace)
+            }
+        }
+
+        func tableViewSelectionDidChange(_ notification: Notification) {
+            guard !updating, let table, entries.indices.contains(table.selectedRow) else { return }
+            let path = entries[table.selectedRow].id
+            deferAction { [weak self] workspace in
+                guard let self, let table = self.table,
+                      self.entries.indices.contains(table.selectedRow), self.entries[table.selectedRow].id == path else { return }
+                workspace.selectedEntryID = path
+            }
+        }
+
+        func folderKey(expand: Bool) {
+            guard let table, entries.indices.contains(table.selectedRow) else { return }
+            let entry = entries[table.selectedRow]
+            if entry.isDirectory && workspace.expandedFolders.contains(entry.id) != expand {
+                deferAction { $0.toggleFolder(entry) }
+            } else if expand, entry.isDirectory, table.selectedRow + 1 < entries.count {
+                table.selectRowIndexes(IndexSet(integer: table.selectedRow + 1), byExtendingSelection: false)
+            } else if !expand,
+                      let parent = entries.firstIndex(where: { $0.path == (entry.path as NSString).deletingLastPathComponent }) {
+                table.selectRowIndexes(IndexSet(integer: parent), byExtendingSelection: false)
+            }
         }
     }
 }
@@ -1009,6 +1394,13 @@ struct ContentView: View {
 private struct CodeSnippetView: NSViewRepresentable {
     let text: String
     let language: String
+
+    final class Coordinator {
+        var text: String?
+        var language: String?
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeNSView(context: Context) -> NSScrollView {
         let scrollView = NSScrollView()
@@ -1042,23 +1434,24 @@ private struct CodeSnippetView: NSViewRepresentable {
 
         scrollView.documentView = textView
         update(textView: textView)
+        context.coordinator.text = text
+        context.coordinator.language = language
         return scrollView
     }
 
     func updateNSView(_ nsView: NSScrollView, context: Context) {
+        guard context.coordinator.text != text || context.coordinator.language != language else { return }
         guard let textView = nsView.documentView as? NSTextView else {
             return
         }
         update(textView: textView)
+        context.coordinator.text = text
+        context.coordinator.language = language
     }
 
     private func update(textView: NSTextView) {
         let attributed = SyntaxHighlighter.highlight(text: text, language: language)
-        if textView.textStorage?.string != text || textView.textStorage?.length != attributed.length {
-            textView.textStorage?.setAttributedString(attributed)
-        } else {
-            textView.textStorage?.setAttributedString(attributed)
-        }
+        textView.textStorage?.setAttributedString(attributed)
         textView.scroll(NSPoint(x: 0, y: 0))
     }
 }
@@ -1120,7 +1513,7 @@ private enum SyntaxHighlighter {
                 HighlightRule(pattern: "\\b-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?\\b", attributes: [.foregroundColor: numberColor]),
                 HighlightRule(pattern: "[\\{\\}\\[\\]:,]", attributes: [.foregroundColor: punctuationColor]),
             ]
-        case "javascript", "typescript", "tsx", "jsx", "css", "html", "cpp", "c", "php", "rust", "python", "java", "csharp":
+        case "script", "ts", "javascript", "typescript", "tsx", "jsx", "css", "scss", "less", "html", "cpp", "c", "objc", "php", "rust", "python", "java", "csharp", "go", "kotlin", "ruby", "shell", "qml":
             return shared + [
                 HighlightRule(pattern: "//.*", attributes: [.foregroundColor: commentColor]),
                 HighlightRule(pattern: "/\\*[\\s\\S]*?\\*/", options: [.dotMatchesLineSeparators], attributes: [.foregroundColor: commentColor]),

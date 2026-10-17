@@ -2,7 +2,7 @@
 
 A macOS tool for source code exploration.
 
-*This version is a Swift and SwiftUI port of [`lumencode`](https://github.com/macsplit/lumencode), with a native C++ bridge for analysis logic and a separate internal CLI harness for tight development loops.*
+*A SwiftUI macOS interface for the original [`lumencode`](https://github.com/macsplit/lumencode) C++ analysis engine, with a shared Swift core and CLI harness.*
 
 ## Screenshot
 
@@ -13,17 +13,27 @@ A macOS tool for source code exploration.
 - `lumencode-swift.xcodeproj`
   A real macOS app project for day-to-day GUI development in Xcode.
 - `Package.swift`
-  Swift Package manifest used for the shared core, native bridge, and CLI harness.
+  Swift Package manifest for the Swift core, app, CLI harness and integration tests.
 - `Sources/LumencodeSwiftApp`
   SwiftUI macOS interface layer.
 - `Sources/LumencodeCore`
   Shared Swift models and workspace helpers used by both the GUI and CLI.
 - `Sources/LumencodeNativeBridge`
-  Native C/C++ bridge boundary used by Swift for file analysis.
+  Vendored parser inputs reused by the shared engine; the earlier bridge is excluded from builds.
+- `Engine`
+  Pinned original engine, JSON helper, source provenance and CMake build.
 - `Sources/LumencodeCLI`
   Internal harness for regression-style development and analysis validation.
 
 ## Open and run
+
+Install the engine build prerequisites once:
+
+```sh
+brew install cmake qt@5
+```
+
+The Xcode build packages the pinned engine and its runtime libraries automatically. See [engine build and packaging](Engine/README.md), including the current macOS runtime compatibility limitation.
 
 For the GUI app, open:
 
@@ -51,6 +61,13 @@ cd /lumencode-swift
 swift build
 ```
 
+Build the analysis runtime before using the package executables or running tests:
+
+```sh
+python3 tools/build_engine.py
+swift test
+```
+
 Run the internal harness:
 
 ```zsh
@@ -76,14 +93,16 @@ swift run lumencode-swift-cli --dump-file /path/to/file.swift
   - path and snippet helpers
   - selection payload shaping
   - project scanning
-- Native bridge responsibilities:
-  - file parsing
-  - symbol extraction
-  - dependency extraction
-  - native-language expansion path toward parity with the Kirigami version
+- Shared engine responsibilities:
+  - the original AST parsing, recovery, fallbacks and callable signatures
+  - the original project index and reciprocal relations
+  - web/HTTP links, routes and ranked search
+  - JSON transport through a separate helper process
 
 ## Key documents
 
+- [Engine Integration and Verification](docs/engine-integration.md) — implemented changes, current measurements and remaining gates.
+- [Current Assessment and Priorities](docs/current-assessment.md) — measured backend parity, GUI responsiveness, screenshots and the plan for sharing the original engine.
 - [Architecture Guide](docs/architecture-guide.md)
 - [Development Plan](docs/development-plan.md)
 - [Parity Guide](docs/parity-guide.md)
@@ -93,12 +112,12 @@ swift run lumencode-swift-cli --dump-file /path/to/file.swift
 
 ## Vendored parser policy
 
-Tree-sitter code in this repo is vendored source code, not a runtime dependency on the Tree-sitter app or CLI.
+Tree-sitter and the original engine are pinned source inputs. Builds do not require the sibling repository or the Tree-sitter CLI.
 
 That means:
 
-- Xcode builds should work from checked-in code alone
-- SwiftPM builds should work from checked-in code alone
+- after installing Qt 5 and CMake, Xcode packages the engine from checked-in sources
+- SwiftPM executables use the runtime built by `tools/build_engine.py`
 - generated parser sources and upstream license/provenance notes must stay documented
 
 ## Current status
@@ -111,11 +130,9 @@ The Swift app now has:
 - symbol inspection
 - dependency and route inspection hooks
 - a lower source pane
-- a native analysis bridge
+- the original analysis engine in an isolated helper
 
 - a collapsible project tree, background folder scanning, and on-demand per-file analysis so the UI stays responsive
 
-It is still behind the Kirigami original in parser depth, detail richness, and some interface behavior.
-
-A port of the Kirigami heuristics (AST recovery, typed signatures, project-wide cross-file call index) is partially implemented and paused. Recovery runs in the bridge; signatures and the cross-file index are scaffolding only and do not yet produce results. See [Development Plan: Kirigami heuristics port status](docs/development-plan.md#kirigami-heuristics-port-status-at-pause-2026-10-11) for what is done, what is blocking, and the resume order.
+The current engine passes all 101 shared baseline cases and matches the original CLI's single-file payloads on all 99 fixture files. The GUI includes signatures, recovery notices and project search. The 17 October follow-up adds native sidebar/input regression checks and broader original-CLI comparisons across the pinned public corpus. Current evidence and remaining release, refresh and presentation work are tracked in the [follow-up report](docs/follow-up-2026-10-17.md) and [development plan](docs/development-plan.md).
 
