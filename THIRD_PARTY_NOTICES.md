@@ -96,6 +96,15 @@ LumenCode vendors parser sources directly in `third_party/` so the application c
 - License: MIT
 - License file retained at: `third_party/tree-sitter-c-sharp/LICENSE`
 
+### Tree-sitter Swift Grammar
+
+- Source: https://github.com/alex-pinkus/tree-sitter-swift
+- Vendored path: `third_party/tree-sitter-swift`
+- Version recorded by upstream package: 0.7.1
+- License: MIT
+- License file retained at: `third_party/tree-sitter-swift/LICENSE`
+- Migration input hashes: `third_party/provenance.json`
+
 ## Additional Upstream Notices
 
 The vendored Tree-sitter core also retains upstream Unicode-related notice files inside its source tree, including:

@@ -22,9 +22,9 @@ engine changes in one location.
 | Linux rendered offscreen regression | 126 files, 895 selections, zero timeouts or QML problems |
 | Linux real desktop dark-mode regression | 4 files, 67 selections, zero timeouts or QML problems; production app stayed running |
 | Linux agent initialize, tool listing and project summary | Passed |
-| Linux Flatpak local build | Passed; no installation or publication |
-| macOS Swift package | 9 tests passed |
-| macOS shared-scheme Xcode app | Build passed |
+| Linux Flatpak local build and desktop launch | Passed; stayed running for eight seconds; no installation or publication |
+| macOS Swift package | 9 tests passed, including fresh clone with spaces and external scratch directory |
+| macOS shared-scheme Xcode app | Fresh clone/DerivedData paths containing spaces: build passed |
 | macOS shared fixture expectations | 101 cases, 625 checks passed |
 | macOS C++ and Swift full JSON contracts against original CLI | 99 files each, zero differences/issues |
 | Pinned public corpus against original CLI | 6,360 comparisons, zero differences/failures |
@@ -52,11 +52,26 @@ it does not change desktop settings or force the application's production theme.
 For repeatable desktop captures, run from the repository root in the KDE session:
 
 ```sh
+cmake --build build --target lumencode-gui-smoke
 python3 tools/run_qt_gui_audit.py --build build --output /tmp/lumencode-qt-dark
 ```
 
 The audit output retains the palette used. The offscreen CI smoke is a functional
 rendering gate; its default palette is not the dark-mode visual acceptance gate.
+
+## Fresh checkout verification
+
+Fresh independent clones on both machines use paths containing spaces and no
+recursive clone flags. Linux builds all four consumers, passes 101 cases/625
+assertions and the 99-file frozen-original contract comparison, and reruns the
+dark-mode desktop audit. The workflow YAML parses successfully. macOS builds
+the helper, Swift package and shared-scheme Xcode application; all nine Swift
+tests pass using an external scratch directory. This caught and fixed package
+working-directory runtime discovery. A relocated runtime with a path containing
+spaces launches with no external developer-library references.
+
+The new GitHub workflow has local command coverage; hosted execution is recorded
+separately after the migration branch is pushed.
 
 ## Accepted beta limits
 

@@ -1,6 +1,8 @@
 # Licensing and Tree-sitter Derivation
 
-The active engine is now pinned under `Engine/Upstream`, including its original license and third-party notices. `Engine/upstream.json` records source hashes and revision. The runtime packaging tool copies Qt license texts, available transitive dependency notices and source/version receipts into `EngineRuntime/licenses`. Complete release dependency notices and signing remain release gates; see [Engine build and packaging](../Engine/README.md).
+The active shared engine lives in root `engine/`, with all parser inputs in `third_party/`. Root `LICENSE`, `THIRD_PARTY_NOTICES.md`, `engine/origin.json` and `third_party/provenance.json` are authoritative. Runtime packaging copies licenses recursively, plus available Qt/transitive dependency notices and receipts. See the [engine guide](../../engine/README.md).
+
+The derivation notes below describe the earlier separate Swift bridge and are retained as historical context; that bridge is excluded from current builds.
 
 ## Purpose
 

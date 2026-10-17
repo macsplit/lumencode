@@ -1,37 +1,14 @@
-# Vendor Update Notes
+# Vendored parser updates
 
-## Tree-sitter update workflow
+The active runtime and all grammars are ordinary checked-in sources in root
+`third_party/`, compiled once through the shared CMake engine target. The former
+Swift bridge is excluded from builds and has no independent parser stack to update.
 
-When refreshing the Swift parser stack:
+Update the relevant upstream inputs, preserve generated parsers and license files,
+and record the reviewed revision and hashes in `third_party/provenance.json` and
+root `THIRD_PARTY_NOTICES.md`. Normal builds must not regenerate or download them.
 
-1. Update the vendored Tree-sitter runtime from `tree-sitter/tree-sitter`.
-2. Update the vendored Swift grammar from `alex-pinkus/tree-sitter-swift`.
-3. Refresh generated Swift parser sources if needed.
-4. Rebuild both:
-   - `swift build`
-   - Xcode app target
-5. Run the CLI harness against representative Swift files before trusting GUI behavior.
-
-## Keep this split clear
-
-Runtime layer:
-
-- generic Tree-sitter C runtime
-- language-agnostic
-
-Grammar layer:
-
-- Swift-specific generated parser
-- Swift-specific scanner
-
-Bridge layer:
-
-- our handwritten extraction code
-- turns AST nodes into `FileAnalysis` JSON
-
-## Update checklist
-
-- keep upstream license files available
-- record upstream source repo and revision in commit messages when possible
-- do not require local parser generation for normal development
-- treat generated parser files as vendored build inputs, not user-generated artifacts
+Run both CLI fixture/contract checks, the pinned public corpus and damaged-source
+comparisons, then rebuild Qt, SwiftPM and Xcode. Use an independent pre-change
+executable when validating a parser update. See the [engine guide](../../engine/README.md)
+for the commands and [migration evidence](../migration/status.md) for the baseline.
