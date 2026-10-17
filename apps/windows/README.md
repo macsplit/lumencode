@@ -40,6 +40,12 @@ The output folder includes the self-contained .NET/WinUI app and `EngineRuntime`
 with the helper, public CLI, Qt DLLs/plugins, MSVC runtime DLLs, notices and source
 provenance. Copy the **whole package folder**, not just its executable.
 
+The WinUI project explicitly publishes its own `.pri` resource index and `.xbf`
+compiled views. The unpackaged Windows App SDK publish pipeline otherwise omits
+these files, producing an executable that builds but cannot load its main window.
+This is handled in the project file, so direct `dotnet publish` also includes
+the resources; engine runtime packaging still uses the script above.
+
 For development builds, `LUMENCODE_ENGINE` can select an explicit helper path;
 the default is `EngineRuntime/lumencode-engine.exe` beside the application.
 Normal settings and caches live under `%LOCALAPPDATA%/LumenCode`.

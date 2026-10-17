@@ -51,8 +51,10 @@ public partial class App : Application
             int position = Array.IndexOf(args, "--gui-audit");
             if (position >= 0 && args.Length > position + 2) folder = Path.GetFullPath(args[position + 2]);
             Directory.CreateDirectory(folder);
-            File.WriteAllText(Path.Combine(folder, "startup-error.txt"), error.ToString());
-            if (position >= 0) File.WriteAllText(Path.Combine(folder, "gui.json"), System.Text.Json.JsonSerializer.Serialize(new { passed = false, failure = error.ToString(), stage = "startup" }));
+            string detail = error + Environment.NewLine + string.Join(Environment.NewLine,
+                error.Data.Keys.Cast<object>().Select(key => $"{key}: {error.Data[key]}"));
+            File.WriteAllText(Path.Combine(folder, "startup-error.txt"), detail);
+            if (position >= 0) File.WriteAllText(Path.Combine(folder, "gui.json"), System.Text.Json.JsonSerializer.Serialize(new { passed = false, failure = detail, stage = "startup" }));
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }

@@ -1,1 +1,179 @@
-{"passed":false,"failure":"Microsoft.UI.Xaml.Markup.XamlParseException: XAML parsing failed.\r\n   at WinRT.ExceptionHelpers.\u003CThrowExceptionForHR\u003Eg__Throw|38_0(Int32 hr)\r\n   at WinRT.ExceptionHelpers.ThrowExceptionForHR(Int32 hr)\r\n   at ABI.Microsoft.UI.Xaml.IApplicationStaticsMethods.LoadComponent(IObjectReference _obj, Object component, Uri resourceLocator, ComponentResourceLocation componentResourceLocation)\r\n   at Microsoft.UI.Xaml.Application.LoadComponent(Object component, Uri resourceLocator, ComponentResourceLocation componentResourceLocation)\r\n   at LumenCode.Windows.MainWindow.InitializeComponent() in C:\\Users\\leeha\\lumencode\\apps\\windows\\LumenCode.Windows\\obj\\x64\\Release\\net10.0-windows10.0.19041.0\\win-x64\\MainWindow.g.i.cs:line 87\r\n   at LumenCode.Windows.MainWindow..ctor() in C:\\Users\\leeha\\lumencode\\apps\\windows\\LumenCode.Windows\\MainWindow.xaml.cs:line 30\r\n   at LumenCode.Windows.App.OnLaunched(LaunchActivatedEventArgs args) in C:\\Users\\leeha\\lumencode\\apps\\windows\\LumenCode.Windows\\App.xaml.cs:line 24","stage":"startup"}
+{
+  "passed": true,
+  "checks": [
+    {
+      "name": "Project tree populated",
+      "passed": true
+    },
+    {
+      "name": "Dark theme",
+      "passed": true
+    },
+    {
+      "name": "Real engine analysis visible",
+      "passed": true
+    },
+    {
+      "name": "Source preview populated",
+      "passed": true
+    },
+    {
+      "name": "Source read-only",
+      "passed": true
+    },
+    {
+      "name": "Project index built",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.js",
+      "passed": true
+    },
+    {
+      "name": "Selected main.js",
+      "passed": true
+    },
+    {
+      "name": "Selected alias.js",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected main.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected alias.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected broken.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.php",
+      "passed": true
+    },
+    {
+      "name": "Selected Broken.php",
+      "passed": true
+    },
+    {
+      "name": "Selected App.swift",
+      "passed": true
+    },
+    {
+      "name": "Selected sample.py",
+      "passed": true
+    },
+    {
+      "name": "Selected broken.py",
+      "passed": true
+    },
+    {
+      "name": "Symbol details and calls",
+      "passed": true
+    },
+    {
+      "name": "Navigation history",
+      "passed": true
+    },
+    {
+      "name": "Engine search results: 6 search results",
+      "passed": true
+    },
+    {
+      "name": "Clearing search restores tree",
+      "passed": true
+    },
+    {
+      "name": "Clearing search restores status",
+      "passed": true
+    },
+    {
+      "name": "Selectable source text",
+      "passed": true
+    },
+    {
+      "name": "Minimum pane dimensions",
+      "passed": true
+    },
+    {
+      "name": "Minimum rows fit without clipping",
+      "passed": true
+    }
+  ],
+  "timings": [
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\helper.js",
+      "elapsedMs": 24.9414
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\main.js",
+      "elapsedMs": 137.9486
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\alias.js",
+      "elapsedMs": 147.4548
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\helper.ts",
+      "elapsedMs": 120.5236
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\main.ts",
+      "elapsedMs": 157.225
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\alias.ts",
+      "elapsedMs": 117.5482
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_recovery\\broken.ts",
+      "elapsedMs": 140.8219
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\php_basic\\helper.php",
+      "elapsedMs": 131.3067
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\php_recovery\\Broken.php",
+      "elapsedMs": 136.1587
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\swift_basic\\App.swift",
+      "elapsedMs": 108.0188
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\python_basic\\sample.py",
+      "elapsedMs": 136.6439
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\python_recovery\\broken.py",
+      "elapsedMs": 133.1009
+    }
+  ],
+  "failure": null,
+  "heartbeat": {
+    "nominalIntervalMs": 16,
+    "samples": 63,
+    "maxGapMs": 163.98239999999998,
+    "p95GapMs": 106.72199999999998
+  },
+  "limitations": "Programmatic workflow checks on this VM, not mouse/keyboard, accessibility, multiple-DPI or clean-machine acceptance."
+}

@@ -22,8 +22,9 @@ needed. The former Swift repository's main history is imported under `apps/macos
 
 Windows development is tracked separately in the
 [checkpoint and resume notes](docs/windows/status.md), with
-[build instructions](apps/windows/README.md). Its engine checks pass; the initial
-frontend still has an unresolved XAML startup failure and is not release-ready.
+[build instructions](apps/windows/README.md). Its shared-engine checks and initial
+GUI smoke pass, and the native application can be run from the published folder.
+It remains an early frontend with presentation and performance work outstanding.
 
 ## Linux Qt application and public CLI
 

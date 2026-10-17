@@ -37,6 +37,13 @@ public sealed partial class MainWindow : Window
         };
         Closed += (_, _) => { SaveSettings(); projectRequest.Cancel(); selectionRequest.Cancel(); searchRequest.Cancel(); };
         Root.Loaded += Loaded;
+        WorkspaceGrid.SizeChanged += (_, _) =>
+        {
+            // A manually sized preview must still leave room for the overview
+            // after shrinking the window. Star sizing handles the default case.
+            if (PreviewRow.Height.IsAbsolute)
+                PreviewRow.Height = new GridLength(Math.Clamp(PreviewRow.Height.Value, 140, Math.Max(140, WorkspaceGrid.ActualHeight - 226)));
+        };
     }
 
     private async void Loaded(object sender, RoutedEventArgs e)
@@ -322,7 +329,11 @@ public sealed partial class MainWindow : Window
         Files.Visibility = query.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
         SearchResults.Visibility = query.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
         SearchResults.ItemsSource = null;
-        if (query.Length == 0) return;
+        if (query.Length == 0)
+        {
+            Status.Text = indexReady || rootPath.Length == 0 ? "Ready" : "Project indexing continues";
+            return;
+        }
         if (!indexReady) { Status.Text = "Search will be available when project indexing finishes."; return; }
         try
         {

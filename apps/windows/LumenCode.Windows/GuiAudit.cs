@@ -57,10 +57,17 @@ public sealed partial class MainWindow
             Check("Symbol details and calls", DetailTitle.Text == "wrapper" && wrapper.Items("calls").Any(s => s.Text("name") == "helper"));
             Check("Navigation history", history.Count > 1 && BackButton.IsEnabled);
             SearchBox.Text = "wrapper";
-            await SearchAsync();
-            Check("Engine search results", SearchResults.Items.Count > 0);
+            // TextChanged is dispatched by XAML. Drive that real event path and
+            // wait for its asynchronous result, rather than starting a second
+            // competing request that can cancel the one being awaited.
+            var searchDeadline = DateTime.UtcNow.AddSeconds(10);
+            while (SearchResults.Items.Count == 0 && DateTime.UtcNow < searchDeadline) await Task.Delay(20);
+            Check("Engine search results: " + Status.Text, SearchResults.Items.Count > 0);
             SearchBox.Text = "";
+            var clearDeadline = DateTime.UtcNow.AddSeconds(2);
+            while (Files.Visibility != Visibility.Visible && DateTime.UtcNow < clearDeadline) await Task.Delay(20);
             Check("Clearing search restores tree", Files.Visibility == Visibility.Visible);
+            Check("Clearing search restores status", Status.Text == "Ready");
             Code.Document.Selection.SetRange(0, Math.Min(10, previewText.Length));
             Code.Document.Selection.GetText(Microsoft.UI.Text.TextGetOptions.None, out string selected);
             Check("Selectable source text", selected.Length > 0);
@@ -68,6 +75,7 @@ public sealed partial class MainWindow
             AppWindow.Resize(new global::Windows.Graphics.SizeInt32(1080, 700));
             await Task.Delay(300);
             Check("Minimum pane dimensions", FilesColumn.ActualWidth >= 220 && OverviewColumn.ActualWidth >= 260 && DetailColumn.ActualWidth >= 260);
+            Check("Minimum rows fit without clipping", ContentRow.ActualHeight + PreviewRow.ActualHeight + 6 <= WorkspaceGrid.ActualHeight + 1);
             await CaptureAsync(output, "windows-minimum.png");
         }
         catch (Exception error) { failure = error.ToString(); }

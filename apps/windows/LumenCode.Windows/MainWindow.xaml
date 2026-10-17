@@ -30,7 +30,7 @@
    </StackPanel>
   </Grid>
   <Grid x:Name="WorkspaceGrid" Grid.Row="1">
-   <Grid.RowDefinitions><RowDefinition x:Name="ContentRow" Height="*" MinHeight="220"/><RowDefinition Height="6"/><RowDefinition x:Name="PreviewRow" Height="240" MinHeight="140"/></Grid.RowDefinitions>
+   <Grid.RowDefinitions><RowDefinition x:Name="ContentRow" Height="2*" MinHeight="220"/><RowDefinition Height="6"/><RowDefinition x:Name="PreviewRow" Height="*" MinHeight="140"/></Grid.RowDefinitions>
    <Grid.ColumnDefinitions><ColumnDefinition x:Name="FilesColumn" Width="290" MinWidth="220"/><ColumnDefinition Width="6"/><ColumnDefinition x:Name="OverviewColumn" Width="*" MinWidth="260"/><ColumnDefinition Width="6"/><ColumnDefinition x:Name="DetailColumn" Width="*" MinWidth="260"/></Grid.ColumnDefinitions>
    <Grid Grid.Column="0" Padding="12" RowSpacing="10" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>

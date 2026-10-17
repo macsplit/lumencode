@@ -1,0 +1,179 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "name": "Project tree populated",
+      "passed": true
+    },
+    {
+      "name": "Dark theme",
+      "passed": true
+    },
+    {
+      "name": "Real engine analysis visible",
+      "passed": true
+    },
+    {
+      "name": "Source preview populated",
+      "passed": true
+    },
+    {
+      "name": "Source read-only",
+      "passed": true
+    },
+    {
+      "name": "Project index built",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.js",
+      "passed": true
+    },
+    {
+      "name": "Selected main.js",
+      "passed": true
+    },
+    {
+      "name": "Selected alias.js",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected main.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected alias.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected broken.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.php",
+      "passed": true
+    },
+    {
+      "name": "Selected Broken.php",
+      "passed": true
+    },
+    {
+      "name": "Selected App.swift",
+      "passed": true
+    },
+    {
+      "name": "Selected sample.py",
+      "passed": true
+    },
+    {
+      "name": "Selected broken.py",
+      "passed": true
+    },
+    {
+      "name": "Symbol details and calls",
+      "passed": true
+    },
+    {
+      "name": "Navigation history",
+      "passed": true
+    },
+    {
+      "name": "Engine search results: 6 search results",
+      "passed": true
+    },
+    {
+      "name": "Clearing search restores tree",
+      "passed": true
+    },
+    {
+      "name": "Clearing search restores status",
+      "passed": true
+    },
+    {
+      "name": "Selectable source text",
+      "passed": true
+    },
+    {
+      "name": "Minimum pane dimensions",
+      "passed": true
+    },
+    {
+      "name": "Minimum rows fit without clipping",
+      "passed": true
+    }
+  ],
+  "timings": [
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\helper.js",
+      "elapsedMs": 24.723
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\main.js",
+      "elapsedMs": 186.9783
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\alias.js",
+      "elapsedMs": 130.9503
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\helper.ts",
+      "elapsedMs": 145.136
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\main.ts",
+      "elapsedMs": 152.3385
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\alias.ts",
+      "elapsedMs": 134.5136
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_recovery\\broken.ts",
+      "elapsedMs": 158.1496
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\php_basic\\helper.php",
+      "elapsedMs": 127.0631
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\php_recovery\\Broken.php",
+      "elapsedMs": 109.6177
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\swift_basic\\App.swift",
+      "elapsedMs": 116.5254
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\python_basic\\sample.py",
+      "elapsedMs": 120.877
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\python_recovery\\broken.py",
+      "elapsedMs": 115.8875
+    }
+  ],
+  "failure": null,
+  "heartbeat": {
+    "nominalIntervalMs": 16,
+    "samples": 72,
+    "maxGapMs": 172.5951,
+    "p95GapMs": 77.63910000000001
+  },
+  "limitations": "Programmatic workflow checks on this VM, not mouse/keyboard, accessibility, multiple-DPI or clean-machine acceptance."
+}
