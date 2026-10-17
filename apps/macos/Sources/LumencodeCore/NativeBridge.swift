@@ -86,12 +86,16 @@ public struct NativeAnalyzer: Sendable {
         }
         let executable = URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL.deletingLastPathComponent()
         candidates.append(executable.appendingPathComponent("EngineRuntime/bin/lumencode-engine"))
-        var ancestor = executable
-        for _ in 0..<6 {
-            candidates.append(ancestor.appendingPathComponent(".build/EngineRuntime/bin/lumencode-engine"))
-            ancestor.deleteLastPathComponent()
+        // SwiftPM runs tests from the package directory, including when the build
+        // output is outside the checkout. Search its parents for the root runtime.
+        let workingDirectory = URL(fileURLWithPath: manager.currentDirectoryPath)
+        for start in [executable, workingDirectory] {
+            var ancestor = start
+            for _ in 0..<6 {
+                candidates.append(ancestor.appendingPathComponent(".build/EngineRuntime/bin/lumencode-engine"))
+                ancestor.deleteLastPathComponent()
+            }
         }
-        candidates.append(URL(fileURLWithPath: manager.currentDirectoryPath).appendingPathComponent(".build/EngineRuntime/bin/lumencode-engine"))
         return candidates.first { manager.isExecutableFile(atPath: $0.path) }
     }
 

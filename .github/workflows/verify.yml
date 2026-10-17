@@ -34,7 +34,7 @@ jobs:
       - name: Shared fixture and contract checks
         run: |
           mkdir -p reports
-          python3 tools/parity_audit.py --cli build/bin/lumencode-cli --output reports/parity.json
+          python3 tools/parity_audit.py --interface qt --cli build/bin/lumencode-cli --output reports/parity.json
           python3 tools/verify_engine_contract.py --cli build/bin/lumencode-cli --reference-cli build/bin/lumencode-engine --output reports/contracts.json
       - name: Qt rendered smoke
         env:

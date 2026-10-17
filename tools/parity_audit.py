@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the Swift CLI against the original repository's baseline contract.
+"""Check either CLI against the original repository's baseline contract.
 
 Uses expected behavior from the checked-in manifest, not a live original CLI.
 Nonzero exit means parity gaps remain. Timings include process launch and JSON.
@@ -83,6 +83,7 @@ def evaluate(case, analysis):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cli", type=pathlib.Path, required=True)
+    parser.add_argument("--interface", choices=("swift", "qt"), default="swift", help="project-state filesystem field contract")
     parser.add_argument("--original", "--fixtures-root", dest="original", type=pathlib.Path, default=pathlib.Path(__file__).resolve().parent.parent)
     parser.add_argument("--output", type=pathlib.Path, required=True)
     parser.add_argument("--timeout", type=float, default=15)
@@ -101,7 +102,7 @@ def main():
                 if proc.returncode:
                     raise RuntimeError(f"exit {proc.returncode}: {proc.stderr[:400]}")
                 state = json.loads(proc.stdout)
-                cache[key] = dict(analysis=state["selectedFileData"], elapsed_ms=(time.perf_counter()-start)*1000, scanned_paths=[x["path"] for x in state["fileSystem"] if not x["isDirectory"]])
+                cache[key] = dict(analysis=state["selectedFileData"], elapsed_ms=(time.perf_counter()-start)*1000, scanned_paths=[x["path"] for x in state["fileSystem"] if not x["isDirectory" if args.interface == "swift" else "isDir"]])
             except (subprocess.TimeoutExpired, RuntimeError, ValueError, KeyError) as error:
                 cache[key] = dict(error=str(error), elapsed_ms=(time.perf_counter()-start)*1000)
         run = cache[key]
@@ -114,7 +115,7 @@ def main():
         results.append(result)
     checks = [x for r in results for x in r["checks"]]
     summary = dict(cases=len(results), cases_passed=sum(r["passed"] for r in results), assertions=len(checks), assertions_passed=sum(x["passed"] for x in checks), unique_invocations=len(cache), errors=sum("error" in r for r in results))
-    output = dict(method="Swift project-mode CLI versus original checked-in fixture expectations; no live original binary", summary=summary, results=results)
+    output = dict(method=f"{args.interface} project-mode CLI versus original checked-in fixture expectations; no live original binary", summary=summary, results=results)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(output, indent=2) + "\n")
     print(json.dumps(summary, indent=2))

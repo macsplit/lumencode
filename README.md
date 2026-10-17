@@ -80,7 +80,7 @@ runtime and never searches for another checkout.
 ```sh
 python3 tools/verify_consolidation.py
 python3 tools/verify_engine_contract.py --cli build/bin/lumencode-cli --output /tmp/contracts.json
-python3 tools/parity_audit.py --cli build/bin/lumencode-cli --output /tmp/parity.json
+python3 tools/parity_audit.py --interface qt --cli build/bin/lumencode-cli --output /tmp/parity.json
 cmake --build build --target lumencode-gui-smoke
 QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software \
   ./build/bin/lumencode-gui-smoke tests/fixtures/baseline
