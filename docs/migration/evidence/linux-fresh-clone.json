@@ -1,0 +1,9 @@
+{
+  "fresh_clone": true,
+  "path_contains_spaces": true,
+  "build": "passed",
+  "fixtures": "passed",
+  "contracts": "passed",
+  "dark_gui": "passed",
+  "workflow_yaml": "parsed"
+}

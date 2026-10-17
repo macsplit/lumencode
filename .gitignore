@@ -4,3 +4,12 @@ tools/__pycache__/
 .flatpak-builder/
 repo/
 build-*/
+
+# Shared and macOS build outputs
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.DS_Store
+*.log
+.migration-backups/

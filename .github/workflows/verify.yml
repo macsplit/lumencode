@@ -1,0 +1,98 @@
+name: Verify shared engine and interfaces
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      macos:
+        description: Run native macOS build and integration checks
+        type: boolean
+        default: true
+      resilience:
+        description: Run the full pinned corpus and damage comparisons
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Qt and KDE build/runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build qtbase5-dev qtdeclarative5-dev qtquickcontrols2-5-dev extra-cmake-modules kirigami2-dev libkf5coreaddons-dev qml-module-org-kde-kirigami2 qml-module-qtquick-controls2 qml-module-qtquick-layouts qml-module-qt-labs-settings qml-module-qtquick-window2 qml-module-qtgraphicaleffects
+      - name: Verify ordinary checkout
+        run: python3 tools/verify_consolidation.py
+      - name: Build all Qt consumers of shared analysis
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --target lumencode lumencode-cli lumencode-engine lumencode-gui-smoke --parallel 2
+      - name: Shared fixture and contract checks
+        run: |
+          mkdir -p reports
+          python3 tools/parity_audit.py --interface qt --cli build/bin/lumencode-cli --output reports/parity.json
+          python3 tools/verify_engine_contract.py --cli build/bin/lumencode-cli --reference-cli build/bin/lumencode-engine --output reports/contracts.json
+      - name: Qt rendered smoke
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
+        run: build/bin/lumencode-gui-smoke tests/fixtures/baseline
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-reports
+          path: reports/
+  macos:
+    if: github.event_name == 'workflow_dispatch' && inputs.macos
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native dependencies
+        run: brew install cmake qt@5
+      - name: Build shared runtime and Swift targets
+        run: |
+          export QT5_PREFIX="$(brew --prefix qt@5)"
+          python3 tools/build_engine.py
+          swift test --package-path apps/macos
+          xcodebuild -project apps/macos/lumencode-swift.xcodeproj -scheme lumencode-swift -configuration Debug -destination 'platform=macOS' -derivedDataPath /tmp/lumencode-ci-xcode CODE_SIGNING_ALLOWED=NO build
+      - name: Contracts and relocated runtime
+        run: |
+          mkdir -p reports
+          python3 tools/verify_engine_contract.py --cli apps/macos/.build/debug/lumencode-swift-cli --output reports/contracts.json
+          python3 tools/verify_runtime.py --runtime .build/EngineRuntime --output reports/runtime.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-reports
+          path: reports/
+  resilience:
+    if: github.event_name == 'workflow_dispatch' && inputs.resilience
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build qtbase5-dev
+      - name: Build current and frozen original CLI
+        run: |
+          cmake -S . -B build -G Ninja -DLUMENCODE_CLI_ONLY=ON -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel 2
+          mkdir -p /tmp/lumencode-reference
+          git archive 48cf4db8042d51cfe67c2344e4d7a3824576517f | tar -x -C /tmp/lumencode-reference
+          cmake -S /tmp/lumencode-reference -B /tmp/lumencode-reference-build -G Ninja -DLUMENCODE_CLI_ONLY=ON -DCMAKE_BUILD_TYPE=Release
+          cmake --build /tmp/lumencode-reference-build --parallel 2
+      - name: Full public corpus and damage sweep
+        run: |
+          mkdir -p reports
+          python3 tools/fetch_corpus.py --dest /tmp/lumencode-corpus
+          python3 tools/upstream_resilience.py corpus --cli build/bin/lumencode-cli --reference-cli /tmp/lumencode-reference-build/bin/lumencode-cli --root /tmp/lumencode-corpus --output reports/corpus.json
+          python3 tools/upstream_resilience.py damage --cli build/bin/lumencode-cli --reference-cli /tmp/lumencode-reference-build/bin/lumencode-cli --root /tmp/lumencode-corpus --output reports/damage.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: resilience-reports
+          path: reports/

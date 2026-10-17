@@ -1,0 +1,3370 @@
+{
+  "origin_repository": "https://github.com/macsplit/lumencode",
+  "origin_revision": "48cf4db8042d51cfe67c2344e4d7a3824576517f",
+  "files": [
+    {
+      "path": "third_party/tree-sitter-c-sharp/.editorconfig",
+      "sha256": "90496ff136741e183308ae716913a90325bb20f5a83194b37aee5182501c81ee"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/.gitattributes",
+      "sha256": "4af865e7a4e4a96e9e465794e6b112bd922c4b81bea45f8162f529c69c9fd9be"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/.github/FUNDING.yml",
+      "sha256": "03bca99f25635436efcfb9d18ae1c958c07be0da9402e1a25ced7a83d51c49fc"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/.github/dependabot.yml",
+      "sha256": "c01afa83dc30168c1c6181aab5a764a1be055d9e8f9a47004bbdbe3e032916a5"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/.github/workflows/ci.yml",
+      "sha256": "47fd715492e7f29d8a282d7a3119a5ad403e973f82c351d9f1e6136b3542bd10"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/.github/workflows/fuzz.yml",
+      "sha256": "52f783022ce0960cfec204a97ee61020d520b15df96d1bb3338e2d03179479c8"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/.github/workflows/lint.yml",
+      "sha256": "64b91e3b7bc07da22264dbbfb52183f79e6fea0ccf4c3680fa6d7c024cc43bfd"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/.github/workflows/publish.yml",
+      "sha256": "0af81fc6243170b3e6587e76969737c71e222d322977d7e8b7e550ffeb14aad7"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/.gitignore",
+      "sha256": "050f2faa88a472f910254725d8a55a175c133cc1656f3808be529bb51493088e"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/CMakeLists.txt",
+      "sha256": "a02f253498923097da20cb22de7150e7d6de6cd8dc911e8bb5b4f7509f6bd016"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/Cargo.lock",
+      "sha256": "b03abe5fa823a442b4b9adab4751ed8aef3b780312c237f42fb35eb418986845"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/Cargo.toml",
+      "sha256": "5fc31bf7da04d408846216f007ee0581ee38f11c3233414b6cf8c13a6828d47b"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/LICENSE",
+      "sha256": "778fb7d63b8c1844da315648c02f325c4713a6f4a5d19644fd413421422776d3"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/Makefile",
+      "sha256": "5cf3acba7a3cf98b4c6eeedcd2c2e1babed697c2e7effaa0d34a3ccab6f62f79"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/Package.swift",
+      "sha256": "41993844d5d94589fd32485f4cf88904614fbf1b1bb2196e6f5a777e9b33ee82"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/README.md",
+      "sha256": "02064c1b27ec5eff2da98aa34fdfe84a2850510e962d101ed2f34b9e114198db"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/binding.gyp",
+      "sha256": "3fd983db9aff51fc2d0aaa5d2bfc2b470a02df76ecd8a4178e3c12a1927391ad"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/bindings/c/tree-sitter-c-sharp.h",
+      "sha256": "4bbd3579b44524e1caec91859abe3186f7d4ea07e649eba8f6509fc06c943966"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/bindings/c/tree-sitter-c-sharp.pc.in",
+      "sha256": "4f0855e145383a74f19bec0f4d3d92539a04758881999297dd6533f716b483c2"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/bindings/go/binding.go",
+      "sha256": "36965cda76a70d14d4ed37e6794a6600321b042b9e63d9a1a6801c6e2526c80d"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/bindings/go/binding_test.go",
+      "sha256": "6efb833f4f5282b9d200063a66f1b4f00ab3e84fd5d0669f502d331ada53a315"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/bindings/node/binding.cc",
+      "sha256": "d98846e15cbdc765e71433ccf76732afb6a334cc3d3c2f1b70cd02e2402fbd14"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/bindings/node/binding_test.js",
+      "sha256": "d21db69cd974fafa44724a73dd9788d3b393a4d6af68f65a58486548e5b00f58"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/bindings/node/index.d.ts",
+      "sha256": "a7172f36563c0f13aeefde5303e3fc8bb1eec26c9d28aba301157af4712e8420"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/bindings/node/index.js",
+      "sha256": "ff612477fc133722f747c201e9605bdfb2789d94cf6c7763b48e0318de00f18c"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/bindings/python/tests/test_binding.py",
+      "sha256": "327bd68749e6bda1558a069c0e79fef200647d60d63fd4e02c84fe51f57b8fa4"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/bindings/python/tree_sitter_c_sharp/__init__.py",
+      "sha256": "d1ee78cd57aa257786b22a555f1ee227180fe6a07fbd4e684c852255d77b06b9"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/bindings/python/tree_sitter_c_sharp/__init__.pyi",
+      "sha256": "fceb2c08289d035296c8ce9df63df8df2e40cd2bcf72d7d9f601394ce7ff577c"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/bindings/python/tree_sitter_c_sharp/binding.c",
+      "sha256": "d1d0841f648b6a36f3cad673a9c861c54bf6ca70b52ef17839d1465ffc898663"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/bindings/python/tree_sitter_c_sharp/py.typed",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/bindings/rust/build.rs",
+      "sha256": "a79cda4849518b66f82fb41a83e304421cd24f0738c73e025cb18864eca8a1fd"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/bindings/rust/lib.rs",
+      "sha256": "e02b1302656d8b0e87e0b25ff5a6dadfdb748069feaab6ad784f80337114709f"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/bindings/swift/TreeSitterCSharp/c-sharp.h",
+      "sha256": "4bbd3579b44524e1caec91859abe3186f7d4ea07e649eba8f6509fc06c943966"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/bindings/swift/TreeSitterCSharpTests/TreeSitterCSharpTests.swift",
+      "sha256": "ab3b859e624b3424256ec4a78b33c40470cedba16a09acd717fb909014b58e6a"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/eslint.config.mjs",
+      "sha256": "e7b2dbe4f462cf890b53cc2d140aef6785fa31caabaaf6a11a38bf12a3ece091"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/go.mod",
+      "sha256": "70eabbc1c601645ee48f3c0c9c5cda017ec258cb1390776a58003a423fa628ad"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/go.sum",
+      "sha256": "a7d2dd524ce7f8e47eb33d9aa480d5011628376107c15e3a415cfef44d22fc44"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/grammar.js",
+      "sha256": "3d1083346508643888af58c362c66619a13dce21101f0ffe54b611dbd1b51605"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/package-lock.json",
+      "sha256": "d3e4a9f9fb4ea7477f731f975c8d651a453cd7e2e45b538e3323762e2a8fe88e"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/package.json",
+      "sha256": "91493840568ddec1fdf17522842f0da96c8561acb3cacf14ee6aaad581cb23d8"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/pyproject.toml",
+      "sha256": "31481edcb09ae3e031bec8a16b7e53c7028b6d622bb4a07df7a0316813d48d42"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/queries/highlights.scm",
+      "sha256": "77cf520a0256a61b66db84b683861d78fdfe4c6724a5cbb7fd6c2eb5b55bc544"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/queries/tags.scm",
+      "sha256": "4ed08da0162ecd48206ac34bebe7ea9757a8c7b617f6ad8f70c168d685d514fe"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/setup.py",
+      "sha256": "e0e2217a3075ea4adb3ebd6d3bc01decd6a683c2055f5aeb945322587bc251b2"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/src/grammar.json",
+      "sha256": "bc06b66a5760de961f4e0e4245aeb28d7cd79ba7c1d209581d21f4c8c37f311e"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/src/node-types.json",
+      "sha256": "3e6c0e6a1c8eaa81d694faf71e42ac2e9f4f2a61f29d190e6613ff3465670ad6"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/src/parser.c",
+      "sha256": "d1a24aa1157e19ed4cd0eb6980eeafe9959dbc85e72b7acc621443de3de8fe99"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/src/scanner.c",
+      "sha256": "00920daa0fdf3050d441475e8effe996b60ee8acc1bdbcbbc4c83d56a6987705"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/src/tree_sitter/alloc.h",
+      "sha256": "b29c1c9fb7cc82f58c84b376df1297d6e2737a1d655fd356db0859e3c29c2fea"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/src/tree_sitter/array.h",
+      "sha256": "4483dc3d37ab62fc8cabd5cfbd7de8267a2b1e3b12da3a90a5b8b324dacd5498"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/src/tree_sitter/parser.h",
+      "sha256": "180b893c8734778fd32f372dfbc27bd6ad1cd2221f26150b31256ff6716320d2"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/corpus/attributes.txt",
+      "sha256": "4b31b96b540599a1a9c106af1101193fae7255a9890e57396ad672e0c3689058"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/corpus/classes.txt",
+      "sha256": "a7aeca1dbd5325ad7cf89538a7d97b5f97eb70ad6704f0ef03897aa507fd32b6"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/corpus/contextual-keywords.txt",
+      "sha256": "8c2f58669b430f38e169c940b769c5ffd44bd6e614f47d27760ee98fe96e5a3c"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/corpus/enums.txt",
+      "sha256": "9f730fa925de66766a16a401864689fa4691ee3959f44a97881a248ceae6f845"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/corpus/expressions.txt",
+      "sha256": "1ed16a7d3763e0b54966dad4aec38280d199eb14bdcdfb8884dfa87c9a75422c"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/corpus/identifiers.txt",
+      "sha256": "fca438023da222598c43b023cf9953bdd1afe4adf384550cdfa4ea28748fbeb9"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/corpus/interfaces.txt",
+      "sha256": "c8b948a099f2471eb61d9ab4bcefb96cae515c022b5b349f63841ac1fb3f3692"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/corpus/literals.txt",
+      "sha256": "2e6553e1fe3bb6c7ef697d07cd25e900268ba5f1e418d58f5e9764fdb69d16df"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/corpus/preprocessor.txt",
+      "sha256": "27abc827fc8fe70fe17f368c628bd915dacf482aef91460c964008989a317905"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/corpus/query-syntax.txt",
+      "sha256": "753c048ecf24b297db58f920e8390d836560190bd7022cf58f55eb2490cd72e6"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/corpus/records.txt",
+      "sha256": "91dceea88e2cefaf0ab09edadd038d991284fab3b52d9f7893afdfe27ae5ed24"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/corpus/source-file-structure.txt",
+      "sha256": "daa8ade2fe85a216b148fcd80660e4c892185bcac9696f100eda0081531a94c1"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/corpus/statements.txt",
+      "sha256": "5166222fb162e32cce11a35d76e3ac0f725051c848c5d034f8b4f8d8bd4cab4f"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/corpus/structs.txt",
+      "sha256": "299d9e0396d09e63b19fa4f8d44f018cffce2874b2a53da305e0c36d20304327"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/corpus/type-events.txt",
+      "sha256": "4bdeb474e15635b2f2c70962b94001fa34e63604a0310f40b9ce1e91c60e5f3a"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/corpus/type-fields.txt",
+      "sha256": "25fecf26204943a3ca677cdcfc56fe58997969b36d126562197c593620f70649"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/corpus/type-methods.txt",
+      "sha256": "bfc130d1525a1c6b119919e539d23346f18ec7a964f684540fd52a7db4139151"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/corpus/type-operators.txt",
+      "sha256": "ac9a2d79c5f23ede9a0d25fc001b0da8ab3e240b0032de180f866044e09d54e7"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/corpus/type-properties.txt",
+      "sha256": "7099554d8e864e49139ae0f6c4b4af413886f7e06f5d704ee9f9b41cd92f1ad4"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/highlight/baseline.cs",
+      "sha256": "727b185873e53ec5390f10e69162804a0d96e8584a540bcc806d46c065875a26"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/highlight/operators.cs",
+      "sha256": "b4845827258f464935c8e791b29e7865758b40885ddcd85641dd7452d3be53e9"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/highlight/types.cs",
+      "sha256": "f5da692092d99c34ac795a25f0b77c9236020468f505af8c84e7a2b7cd0f1cd0"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/highlight/var.cs",
+      "sha256": "9cd9697f6c3edfcaa617cc8ca71ec63cee999efe9fa81c91291a6c0fdcea25ff"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/highlight/variableDeclarations.cs",
+      "sha256": "d532120abe52b3af477aa079e33a6998ef6b1a4370cff257277d319cd1912dd1"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/test/queries/identifiers.cs",
+      "sha256": "3e29eba7d63e4513fe74a966ed30830e81277334d8c54f9da84335a6e19ceb1a"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/tools/highlight-test-generator/.gitignore",
+      "sha256": "d4a12a536055dfa486d2615a73ec457957de1e0707face982dfc8830eecce59b"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/tools/highlight-test-generator/.vscode/launch.json",
+      "sha256": "d6562789fc4657aacd7e7d8b4dade77fe0ee0f42025475e57e6a9a5d6edafa9b"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/tools/highlight-test-generator/.vscode/tasks.json",
+      "sha256": "f001c4b7d371b50c206d48e4f7fd4d685a36d975fd72f92ee8b0558041c84927"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/tools/highlight-test-generator/Generator.cs",
+      "sha256": "716c8858e3461dd64106c5e3d7f88dccc3f37e7f05486db2a447356a5c685cda"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/tools/highlight-test-generator/Generator.csproj",
+      "sha256": "ac3f740be12f3d8c238431c70d2a013725a88a902f8e1fa7dc43b733d20ce343"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/tools/highlight-test-generator/run-generator",
+      "sha256": "00ee41fdc8463e058e00adff46d3b7c7043924662d2b42da51443a8e13500684"
+    },
+    {
+      "path": "third_party/tree-sitter-c-sharp/tree-sitter.json",
+      "sha256": "737073369acc818138e132f7e9db8f47768de95cff4abb4f10b3951aee75256f"
+    },
+    {
+      "path": "third_party/tree-sitter-cpp/LICENSE",
+      "sha256": "2e0110e07abef7c2548b26ec9d6969775617ca539a0dc8dbeeb14d6452c711d1"
+    },
+    {
+      "path": "third_party/tree-sitter-cpp/README.md",
+      "sha256": "5d92873bd818c73343cca9ee0afd7e8aaa1117a471af4aaef6d8bc3b52ed7b22"
+    },
+    {
+      "path": "third_party/tree-sitter-cpp/grammar.js",
+      "sha256": "d02422914b390597e589dcd61f21b340e3a6b407a0b278119b7d90f57595e58b"
+    },
+    {
+      "path": "third_party/tree-sitter-cpp/queries/highlights.scm",
+      "sha256": "52136576a9a9dacd9e95a8de0f351689bf46140738572ab4e9f24c9278e6b458"
+    },
+    {
+      "path": "third_party/tree-sitter-cpp/queries/injections.scm",
+      "sha256": "0791a308ef7c0a9e40b8415a2e9cee85b528a8bb21697e65c79872e8848dd972"
+    },
+    {
+      "path": "third_party/tree-sitter-cpp/queries/tags.scm",
+      "sha256": "029731ca946e32f919491d9f76c85a50e5deb5ad1934e37fd6849312c0d4a705"
+    },
+    {
+      "path": "third_party/tree-sitter-cpp/src/grammar.json",
+      "sha256": "c0a93751d708440bb2c1929d738a5b03c4b835f61e5aeb580d0af269faf68f8d"
+    },
+    {
+      "path": "third_party/tree-sitter-cpp/src/node-types.json",
+      "sha256": "fdfd4b1f3dca1516616a1eb615bb6c1ad3082b8937ad21070d0def5dcfe7e535"
+    },
+    {
+      "path": "third_party/tree-sitter-cpp/src/parser.c",
+      "sha256": "2a35a43b4af6c9f7b69624ac00c2c50808912591450dc79c05dea03ac1bae814"
+    },
+    {
+      "path": "third_party/tree-sitter-cpp/src/scanner.c",
+      "sha256": "cf60387d290271f4d2fb558d0569b2b9ef879cb72206a9df5cc73b0b1a4b20ff"
+    },
+    {
+      "path": "third_party/tree-sitter-cpp/src/tree_sitter/alloc.h",
+      "sha256": "b29c1c9fb7cc82f58c84b376df1297d6e2737a1d655fd356db0859e3c29c2fea"
+    },
+    {
+      "path": "third_party/tree-sitter-cpp/src/tree_sitter/array.h",
+      "sha256": "4ff743903dc46f5db6aa54f31c6b4d160a8a9779e5b2ab1ee59ae7ebcd850ea1"
+    },
+    {
+      "path": "third_party/tree-sitter-cpp/src/tree_sitter/parser.h",
+      "sha256": "a1f6ef161fbaf48a0e10fca90ef5290a062462b307b3898aa562993853b9f80a"
+    },
+    {
+      "path": "third_party/tree-sitter-css/.editorconfig",
+      "sha256": "90496ff136741e183308ae716913a90325bb20f5a83194b37aee5182501c81ee"
+    },
+    {
+      "path": "third_party/tree-sitter-css/.gitattributes",
+      "sha256": "eb0be13e2b94d874f6b7f8554bf06b4d0bc1e91b901eaf40ee5b06327352f813"
+    },
+    {
+      "path": "third_party/tree-sitter-css/.github/FUNDING.yml",
+      "sha256": "03bca99f25635436efcfb9d18ae1c958c07be0da9402e1a25ced7a83d51c49fc"
+    },
+    {
+      "path": "third_party/tree-sitter-css/.github/ISSUE_TEMPLATE/bug_report.yml",
+      "sha256": "265f801e85a5a3392a4d3b41237069561a14089f9e87ba343b3004f166b50eaa"
+    },
+    {
+      "path": "third_party/tree-sitter-css/.github/ISSUE_TEMPLATE/config.yml",
+      "sha256": "1f103c6a9dd07cd13a9a6f17ace6b813f47747eb9cb7e00488cb2073caaf91bb"
+    },
+    {
+      "path": "third_party/tree-sitter-css/.github/ISSUE_TEMPLATE/feature_request.yml",
+      "sha256": "2419c07ad896c8ba06ae26269b2fbf63a41f96d9764fb3a30fc7a8cc122852a6"
+    },
+    {
+      "path": "third_party/tree-sitter-css/.github/workflows/ci.yml",
+      "sha256": "447aa7cf83e477cccc8a5e65a280281f3c0d39bcb5e72cc2cb2e5fe727d8932f"
+    },
+    {
+      "path": "third_party/tree-sitter-css/.github/workflows/fuzz.yml",
+      "sha256": "838976d90ef5584adeb56fd34bc3aae62d18b0bc2e64d85208e9876c2908b93b"
+    },
+    {
+      "path": "third_party/tree-sitter-css/.github/workflows/lint.yml",
+      "sha256": "a6aa2ec3193c90e4bb5793130070e12be4743d07f7087b9eba00b4242670f96d"
+    },
+    {
+      "path": "third_party/tree-sitter-css/.github/workflows/publish.yml",
+      "sha256": "0af81fc6243170b3e6587e76969737c71e222d322977d7e8b7e550ffeb14aad7"
+    },
+    {
+      "path": "third_party/tree-sitter-css/.gitignore",
+      "sha256": "980204d79ab18ad6e2b0e3c423d42e50790742db4a4f83806551e561a0d15c3d"
+    },
+    {
+      "path": "third_party/tree-sitter-css/CMakeLists.txt",
+      "sha256": "d823ad4abe3c965ca5ab2bb7c85617f8aeaabcbfebb73353083a750107956856"
+    },
+    {
+      "path": "third_party/tree-sitter-css/Cargo.lock",
+      "sha256": "23b9b41cb21375779395a339d899de8972095dcded2a85de9b6950588c3c22ff"
+    },
+    {
+      "path": "third_party/tree-sitter-css/Cargo.toml",
+      "sha256": "f38c38743b6b434b0114421049329061778b362b761b7478cda81ea2c6881d1e"
+    },
+    {
+      "path": "third_party/tree-sitter-css/LICENSE",
+      "sha256": "c5cfb43042b6b72045f4ba997834d0a7786d2793d91680868b5815b39f14fc78"
+    },
+    {
+      "path": "third_party/tree-sitter-css/Makefile",
+      "sha256": "7d3ae359bb1d7c767ad65d1823bc1a1b9081ac2a2d86823931b665f78bf48b51"
+    },
+    {
+      "path": "third_party/tree-sitter-css/Package.swift",
+      "sha256": "a7f6d6c92ed68a510d6877aa77fb978d9115735960d467fd2659f234a612ed2c"
+    },
+    {
+      "path": "third_party/tree-sitter-css/README.md",
+      "sha256": "bc7adb1cbb0679cb96d1b48246d1a685701cc46eba83d6f41f02ac73c3d717f7"
+    },
+    {
+      "path": "third_party/tree-sitter-css/binding.gyp",
+      "sha256": "f5d352cb0738423e5cc4a726fbad220212eb3b6a690f7d209ed209410818b51e"
+    },
+    {
+      "path": "third_party/tree-sitter-css/bindings/c/tree-sitter-css.pc.in",
+      "sha256": "4aa88acadf6b7399d73d9fd0cce6daef1842602e1a79b42377bbeb997f2af5a2"
+    },
+    {
+      "path": "third_party/tree-sitter-css/bindings/c/tree_sitter/tree-sitter-css.h",
+      "sha256": "51951e429fb123a2d618c063deef66319d36064e74ed381c976090cbef3e701a"
+    },
+    {
+      "path": "third_party/tree-sitter-css/bindings/go/binding.go",
+      "sha256": "532a41b412dd098f86c35f62094e162bc1e396a68469edf4849ba9700a273072"
+    },
+    {
+      "path": "third_party/tree-sitter-css/bindings/go/binding_test.go",
+      "sha256": "503f5edf1dd57feeb9bab6e6cab381df89af3148b1da4bda50a2eb8c50139a1e"
+    },
+    {
+      "path": "third_party/tree-sitter-css/bindings/node/binding.cc",
+      "sha256": "2fdf5882c5e5b2c342ec603ea02f365ce8df53a25722505f2001d9f1901a84a8"
+    },
+    {
+      "path": "third_party/tree-sitter-css/bindings/node/binding_test.js",
+      "sha256": "d21db69cd974fafa44724a73dd9788d3b393a4d6af68f65a58486548e5b00f58"
+    },
+    {
+      "path": "third_party/tree-sitter-css/bindings/node/index.d.ts",
+      "sha256": "6d2edc31741aa299535a8a1d7c38707cd746da88de2e88f242e8a354f7788eed"
+    },
+    {
+      "path": "third_party/tree-sitter-css/bindings/node/index.js",
+      "sha256": "68c08c8055394763cb5770290bc8a0874c56e018bbb04d9fd60b0da16bcd4e78"
+    },
+    {
+      "path": "third_party/tree-sitter-css/bindings/python/tests/test_binding.py",
+      "sha256": "0973e9ae5c376265877e3ab0fd367251eba93918a8b087451e137dbecf33b168"
+    },
+    {
+      "path": "third_party/tree-sitter-css/bindings/python/tree_sitter_css/__init__.py",
+      "sha256": "0070746c917ce987853ec4ce55dc6f1d7adaae9d6793ecdd319b2f38e9a3e502"
+    },
+    {
+      "path": "third_party/tree-sitter-css/bindings/python/tree_sitter_css/__init__.pyi",
+      "sha256": "d87c0ec31bebd1822064c5120c8e4b1073d283086936fdda465f31ed3b863ddb"
+    },
+    {
+      "path": "third_party/tree-sitter-css/bindings/python/tree_sitter_css/binding.c",
+      "sha256": "fffb81360b8afad54c3fb327e2506e58e51ea323b3523f8bf6a6fb65c4d65c13"
+    },
+    {
+      "path": "third_party/tree-sitter-css/bindings/python/tree_sitter_css/py.typed",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "third_party/tree-sitter-css/bindings/rust/build.rs",
+      "sha256": "3c3216dd226a3d3d5df69ece83d66ed560b4ca7213b61863e08e8bd970c5e503"
+    },
+    {
+      "path": "third_party/tree-sitter-css/bindings/rust/lib.rs",
+      "sha256": "4cb7cf5f7186aa1777d0b4df86ac13440c23d52845f917641961397cd31f6e58"
+    },
+    {
+      "path": "third_party/tree-sitter-css/bindings/swift/TreeSitterCSS/css.h",
+      "sha256": "51951e429fb123a2d618c063deef66319d36064e74ed381c976090cbef3e701a"
+    },
+    {
+      "path": "third_party/tree-sitter-css/bindings/swift/TreeSitterCSSTests/TreeSitterCSSTests.swift",
+      "sha256": "c5040ccca1bc903a37770d3a70b605d74a9e122bb06f23f3e5b35608a2cc46fd"
+    },
+    {
+      "path": "third_party/tree-sitter-css/eslint.config.mjs",
+      "sha256": "e7b2dbe4f462cf890b53cc2d140aef6785fa31caabaaf6a11a38bf12a3ece091"
+    },
+    {
+      "path": "third_party/tree-sitter-css/examples/atom.io.css",
+      "sha256": "d07fb056ef2d634ceceb5d75e5f172318d5f5eddcae0ea7738e8ab8b7667c1b0"
+    },
+    {
+      "path": "third_party/tree-sitter-css/examples/github.com.css",
+      "sha256": "0807ce5ae9dba65ab5377c609119fe271ca7528e698311104823ce32d3b16d78"
+    },
+    {
+      "path": "third_party/tree-sitter-css/go.mod",
+      "sha256": "b0a0dbcf4113c93d7e8c3e0589c8d79a23298f7d7df9134371728a6108c7c68c"
+    },
+    {
+      "path": "third_party/tree-sitter-css/go.sum",
+      "sha256": "a7d2dd524ce7f8e47eb33d9aa480d5011628376107c15e3a415cfef44d22fc44"
+    },
+    {
+      "path": "third_party/tree-sitter-css/grammar.js",
+      "sha256": "c6d9efdeaf3a4902f026849e08a103a6d1ec1f015c5f396d3fe92dc57ce034ae"
+    },
+    {
+      "path": "third_party/tree-sitter-css/package-lock.json",
+      "sha256": "35f2beb5a6b6fa9553de001541f886883ad3b17910447e32ca353084524b0ea1"
+    },
+    {
+      "path": "third_party/tree-sitter-css/package.json",
+      "sha256": "074f92a25e9272478986165fd7673889676aaaeb9163bdcba068798c185a74ca"
+    },
+    {
+      "path": "third_party/tree-sitter-css/pyproject.toml",
+      "sha256": "49bb52e6bac61b0e68fc7fc45baca03ee978477033f13cbb547a085eba04d4df"
+    },
+    {
+      "path": "third_party/tree-sitter-css/queries/highlights.scm",
+      "sha256": "23f7948a3817a0d06d7120158c3bee4ec5b58daa77e524985a4738b364db17b2"
+    },
+    {
+      "path": "third_party/tree-sitter-css/setup.py",
+      "sha256": "e740571dde627023acbeb562c50cc4a8503d6e5065811599a4ba665e6ac1277b"
+    },
+    {
+      "path": "third_party/tree-sitter-css/src/grammar.json",
+      "sha256": "1a170e0c93009b5b592a611c663d4af4d625ddb97ebff1550c3e7f32fd045292"
+    },
+    {
+      "path": "third_party/tree-sitter-css/src/node-types.json",
+      "sha256": "fbbf8d22d82608f6d2f61cfdb374e6758779754fb2f42643e9dc5af6ead0d5d2"
+    },
+    {
+      "path": "third_party/tree-sitter-css/src/parser.c",
+      "sha256": "2e5150071220012ee635ac9e2119f4f3a93e0b51a7a3b69ab0cd87c18cf5e51e"
+    },
+    {
+      "path": "third_party/tree-sitter-css/src/scanner.c",
+      "sha256": "18dae8c8c4f515f28a3dc7ffb5bda259b06013a752921dc411a2fad8ecf78988"
+    },
+    {
+      "path": "third_party/tree-sitter-css/src/tree_sitter/alloc.h",
+      "sha256": "b29c1c9fb7cc82f58c84b376df1297d6e2737a1d655fd356db0859e3c29c2fea"
+    },
+    {
+      "path": "third_party/tree-sitter-css/src/tree_sitter/array.h",
+      "sha256": "5bdf6ed1a78e3409fd443e085ca967a64c188a5d082aaf7f819bccd53a471c94"
+    },
+    {
+      "path": "third_party/tree-sitter-css/src/tree_sitter/parser.h",
+      "sha256": "180b893c8734778fd32f372dfbc27bd6ad1cd2221f26150b31256ff6716320d2"
+    },
+    {
+      "path": "third_party/tree-sitter-css/test/corpus/declarations.txt",
+      "sha256": "33562492d93e161dd8b98a2529b2375f4337f1d9a3c61028246d87848e818b1d"
+    },
+    {
+      "path": "third_party/tree-sitter-css/test/corpus/selectors.txt",
+      "sha256": "051ddd44937448342ff2cb3f0213431273c50952064f6973f9987ff78d3e2c70"
+    },
+    {
+      "path": "third_party/tree-sitter-css/test/corpus/statements.txt",
+      "sha256": "b5a58eb36bb1d86d13802d4e8feda501311049efd618cb0110416cbd408f4141"
+    },
+    {
+      "path": "third_party/tree-sitter-css/test/corpus/stylesheets.txt",
+      "sha256": "36bd964f59df243e184a888a0fd8827c6535cac7d0696827805da21fba73dd6e"
+    },
+    {
+      "path": "third_party/tree-sitter-css/test/highlight/test_css.css",
+      "sha256": "a989ec634809deba587bf99a1a2123ed4144190bba79e9985dd33c028233f758"
+    },
+    {
+      "path": "third_party/tree-sitter-css/tree-sitter.json",
+      "sha256": "c425a4125bb8c1907db2f5c4837bfdd9e14e796960e68384c962a719c94bbd16"
+    },
+    {
+      "path": "third_party/tree-sitter-go/LICENSE",
+      "sha256": "2e0110e07abef7c2548b26ec9d6969775617ca539a0dc8dbeeb14d6452c711d1"
+    },
+    {
+      "path": "third_party/tree-sitter-go/README.md",
+      "sha256": "37e2434348fcf0f67520f55fe71090b72d23ebfedb453c351492ec6e11bcb4d2"
+    },
+    {
+      "path": "third_party/tree-sitter-go/grammar.js",
+      "sha256": "60f0dbf951c2969cf1fcf63aef13b0bc59b152a04aebc8c0d5d3221597f001e1"
+    },
+    {
+      "path": "third_party/tree-sitter-go/queries/highlights.scm",
+      "sha256": "81182c986547eba7fa6316e82dfd621fb13b8fc89efac85432aee51a48ed0896"
+    },
+    {
+      "path": "third_party/tree-sitter-go/queries/tags.scm",
+      "sha256": "d1a9b1f678fe0278b85054e2dc56a28ef26aa478b8c88fb2b0dd83cdcdb9db35"
+    },
+    {
+      "path": "third_party/tree-sitter-go/src/grammar.json",
+      "sha256": "ba4eef4b99e2692584c68bc6733db65484328e95a16036b8b3f08b6844857b0b"
+    },
+    {
+      "path": "third_party/tree-sitter-go/src/node-types.json",
+      "sha256": "a5dd5e5316dc9c00d6e370673260a1ba35fa8d422e6150debf5dea527aae7130"
+    },
+    {
+      "path": "third_party/tree-sitter-go/src/parser.c",
+      "sha256": "3e412fb341a5ccb20455b34a8e3c1068cc064bd044146255fd47442458f5d575"
+    },
+    {
+      "path": "third_party/tree-sitter-go/src/tree_sitter/alloc.h",
+      "sha256": "b29c1c9fb7cc82f58c84b376df1297d6e2737a1d655fd356db0859e3c29c2fea"
+    },
+    {
+      "path": "third_party/tree-sitter-go/src/tree_sitter/array.h",
+      "sha256": "4ff743903dc46f5db6aa54f31c6b4d160a8a9779e5b2ab1ee59ae7ebcd850ea1"
+    },
+    {
+      "path": "third_party/tree-sitter-go/src/tree_sitter/parser.h",
+      "sha256": "a1f6ef161fbaf48a0e10fca90ef5290a062462b307b3898aa562993853b9f80a"
+    },
+    {
+      "path": "third_party/tree-sitter-html/LICENSE",
+      "sha256": "2e0110e07abef7c2548b26ec9d6969775617ca539a0dc8dbeeb14d6452c711d1"
+    },
+    {
+      "path": "third_party/tree-sitter-html/README.md",
+      "sha256": "1e27ed8ccd8096ace1af54e0ba29113d2e2efb1d960ae7ae4048ee8d7432d52f"
+    },
+    {
+      "path": "third_party/tree-sitter-html/grammar.js",
+      "sha256": "c139ccf784d7f2c377cbf702e0fe1daaa8e9ac2d76a7a8c0f81bfdb387b45ee2"
+    },
+    {
+      "path": "third_party/tree-sitter-html/queries/highlights.scm",
+      "sha256": "1ebb3811a8cdc054385b847a3aac6fbf7079faefd5b3dfab5bbad256cd5afdcf"
+    },
+    {
+      "path": "third_party/tree-sitter-html/queries/injections.scm",
+      "sha256": "6faa29537e952ee444aaa6ac00f72956d13f65616aade74bd665f5ac405f9c32"
+    },
+    {
+      "path": "third_party/tree-sitter-html/src/grammar.json",
+      "sha256": "242c55ee874835b2d47288859878a0cf5dba50ffaae861a81d19fef6d010e227"
+    },
+    {
+      "path": "third_party/tree-sitter-html/src/node-types.json",
+      "sha256": "e04d0a6e667ee3773ceeb0751466ce314f29bafc9b1c7d2466414c39c3eda178"
+    },
+    {
+      "path": "third_party/tree-sitter-html/src/parser.c",
+      "sha256": "65768172733b3bbe461cbdc14ea928f00fbfcc51d8ac68f0a5c72071c6a0bbf1"
+    },
+    {
+      "path": "third_party/tree-sitter-html/src/scanner.c",
+      "sha256": "5c0a0567e010277b81fe63be0acd04f6b44c3ef3063ac01429b910c1d22f0dca"
+    },
+    {
+      "path": "third_party/tree-sitter-html/src/tag.h",
+      "sha256": "aaf1a10c8a2f685ef51a4aa6c01a2cbe166bff67eeccf6b9501a625b71f9ab70"
+    },
+    {
+      "path": "third_party/tree-sitter-html/src/tree_sitter/alloc.h",
+      "sha256": "b29c1c9fb7cc82f58c84b376df1297d6e2737a1d655fd356db0859e3c29c2fea"
+    },
+    {
+      "path": "third_party/tree-sitter-html/src/tree_sitter/array.h",
+      "sha256": "4ff743903dc46f5db6aa54f31c6b4d160a8a9779e5b2ab1ee59ae7ebcd850ea1"
+    },
+    {
+      "path": "third_party/tree-sitter-html/src/tree_sitter/parser.h",
+      "sha256": "a1f6ef161fbaf48a0e10fca90ef5290a062462b307b3898aa562993853b9f80a"
+    },
+    {
+      "path": "third_party/tree-sitter-java/.editorconfig",
+      "sha256": "90496ff136741e183308ae716913a90325bb20f5a83194b37aee5182501c81ee"
+    },
+    {
+      "path": "third_party/tree-sitter-java/.gitattributes",
+      "sha256": "4af865e7a4e4a96e9e465794e6b112bd922c4b81bea45f8162f529c69c9fd9be"
+    },
+    {
+      "path": "third_party/tree-sitter-java/.github/FUNDING.yml",
+      "sha256": "03bca99f25635436efcfb9d18ae1c958c07be0da9402e1a25ced7a83d51c49fc"
+    },
+    {
+      "path": "third_party/tree-sitter-java/.github/dependabot.yml",
+      "sha256": "c01afa83dc30168c1c6181aab5a764a1be055d9e8f9a47004bbdbe3e032916a5"
+    },
+    {
+      "path": "third_party/tree-sitter-java/.github/workflows/ci.yml",
+      "sha256": "caf9f3b72e6cbb216ccf558055eb040d6f1601ddc2ef3556a9c48dd1f63db919"
+    },
+    {
+      "path": "third_party/tree-sitter-java/.github/workflows/lint.yml",
+      "sha256": "a6aa2ec3193c90e4bb5793130070e12be4743d07f7087b9eba00b4242670f96d"
+    },
+    {
+      "path": "third_party/tree-sitter-java/.github/workflows/publish.yml",
+      "sha256": "0af81fc6243170b3e6587e76969737c71e222d322977d7e8b7e550ffeb14aad7"
+    },
+    {
+      "path": "third_party/tree-sitter-java/.gitignore",
+      "sha256": "b3ab146577626a302df228cfdbe663020ecbed513dd0a02700b68fea1e8ce00e"
+    },
+    {
+      "path": "third_party/tree-sitter-java/CMakeLists.txt",
+      "sha256": "77cf97147ddc8e0ca73fbf78b4d54a294571a04ebbb2c01d82765d59c0cbbb47"
+    },
+    {
+      "path": "third_party/tree-sitter-java/Cargo.lock",
+      "sha256": "a33e07dfd9cc047db8bc36550c90e7facca414f22be3ce27c5ac9f4ce8a34638"
+    },
+    {
+      "path": "third_party/tree-sitter-java/Cargo.toml",
+      "sha256": "d9c0aeb7337690d14c5b9fdca3aed5a002179385f41e92994ead038756e77ba7"
+    },
+    {
+      "path": "third_party/tree-sitter-java/LICENSE",
+      "sha256": "52ed137b039cd9c46409bc22e89938af911c95b157feae2d040b51e6084369a7"
+    },
+    {
+      "path": "third_party/tree-sitter-java/Makefile",
+      "sha256": "fbd9e6b6b0e4b60402fe98552614231f7091d4ba364de68d341539f8d7c6c0a9"
+    },
+    {
+      "path": "third_party/tree-sitter-java/Package.swift",
+      "sha256": "605fea500583abe2f8684414b31ea84ee182749d7c6c34a214a84a25d50f0ac9"
+    },
+    {
+      "path": "third_party/tree-sitter-java/README.md",
+      "sha256": "82250389ffc5e51aa84e0d36159c7d142d92489b5bec8784e57bbeeda966adf3"
+    },
+    {
+      "path": "third_party/tree-sitter-java/binding.gyp",
+      "sha256": "42305f7d7305fc3a6d2cee4ee5e0e73e0db708e967f351bfad04872f46c8a3ac"
+    },
+    {
+      "path": "third_party/tree-sitter-java/bindings/c/tree-sitter-java.h",
+      "sha256": "bd561d88bb3c01f2541696f4a0a929f1751e87459a1092f390fb480ef4f7f796"
+    },
+    {
+      "path": "third_party/tree-sitter-java/bindings/c/tree-sitter-java.pc.in",
+      "sha256": "4020ab696991c0534ec4d2d39c0f89c2e8ff80cb7b244feb3a76adffd2c4a133"
+    },
+    {
+      "path": "third_party/tree-sitter-java/bindings/go/binding.go",
+      "sha256": "7f8468acd000849d639ca3417b955ff67d311b43bf966a48b6a4828ea0840b07"
+    },
+    {
+      "path": "third_party/tree-sitter-java/bindings/go/binding_test.go",
+      "sha256": "7d08b5343ad3fab2541a7e1004dec63ba1ef66e59116595deef39d1f4bae287d"
+    },
+    {
+      "path": "third_party/tree-sitter-java/bindings/node/binding.cc",
+      "sha256": "861ff9ef49c3e080dd00eebfd4d75b83f0ac64551a859caed23d4b416de88bf0"
+    },
+    {
+      "path": "third_party/tree-sitter-java/bindings/node/binding_test.js",
+      "sha256": "c35f2aaec5d06fa42a4cea226fa4cb841a04a7506e70086c2ea5d9fd67d8c482"
+    },
+    {
+      "path": "third_party/tree-sitter-java/bindings/node/index.d.ts",
+      "sha256": "5f593f781f7cb12a3dcdcab2f9c063a77b9965f537bb01c5c05958947f5ff8fd"
+    },
+    {
+      "path": "third_party/tree-sitter-java/bindings/node/index.js",
+      "sha256": "ada8505e3c97f2f319cabe073c6d188a2bd5eb7092a5b637f0a701e336cd2755"
+    },
+    {
+      "path": "third_party/tree-sitter-java/bindings/python/tests/test_binding.py",
+      "sha256": "14304aeca54457be4dd6938dc0a12f7d21b1ff489e3194fd5bc9dd478d78fe7e"
+    },
+    {
+      "path": "third_party/tree-sitter-java/bindings/python/tree_sitter_java/__init__.py",
+      "sha256": "ef10da4947ee5567ad296494d9051d1f1a2b1abd5e40ab1720584f17ff4efac0"
+    },
+    {
+      "path": "third_party/tree-sitter-java/bindings/python/tree_sitter_java/__init__.pyi",
+      "sha256": "a0f8fab5449fa47334f1b4e6104e63e42da66c730158d90cf0eba130673954c8"
+    },
+    {
+      "path": "third_party/tree-sitter-java/bindings/python/tree_sitter_java/binding.c",
+      "sha256": "f62d846c352e0cc50b1c261f01b94583d5ef3b04a9c62a8ce60d60359a6ea33b"
+    },
+    {
+      "path": "third_party/tree-sitter-java/bindings/python/tree_sitter_java/py.typed",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "third_party/tree-sitter-java/bindings/rust/build.rs",
+      "sha256": "f0bb2a9bab500d44db01ae3a0537c648aba9f5a2b6cda39ea22f2897e2a38441"
+    },
+    {
+      "path": "third_party/tree-sitter-java/bindings/rust/lib.rs",
+      "sha256": "447525e5afdc29d94ad4014c525a43c04d4193de2f4131d774ad41ac51600218"
+    },
+    {
+      "path": "third_party/tree-sitter-java/bindings/swift/TreeSitterJava/java.h",
+      "sha256": "bd561d88bb3c01f2541696f4a0a929f1751e87459a1092f390fb480ef4f7f796"
+    },
+    {
+      "path": "third_party/tree-sitter-java/bindings/swift/TreeSitterJavaTests/TreeSitterJavaTests.swift",
+      "sha256": "d198073daea9e9d895dc0008f67690ca8f9a73b61e58a40de4a7e8bef942ab81"
+    },
+    {
+      "path": "third_party/tree-sitter-java/eslint.config.mjs",
+      "sha256": "e7b2dbe4f462cf890b53cc2d140aef6785fa31caabaaf6a11a38bf12a3ece091"
+    },
+    {
+      "path": "third_party/tree-sitter-java/go.mod",
+      "sha256": "96226748d0b9b2f001be9cce49f9cedc6d68b3b36f741a18d8f18fbb7bb80552"
+    },
+    {
+      "path": "third_party/tree-sitter-java/go.sum",
+      "sha256": "baf206f1aa0c93bdac4bdf8c03ea55b06b0487969b9cc032a85aead1cd27c9ec"
+    },
+    {
+      "path": "third_party/tree-sitter-java/grammar.js",
+      "sha256": "b89ada7566bda16a8d7a710755c27824d6097e44b8d3b1dafbb749f3c34d13e0"
+    },
+    {
+      "path": "third_party/tree-sitter-java/package-lock.json",
+      "sha256": "be9d1572d9868e64af87d1ebfd0575c58e173816efbd1b38da31a354ae2ad8e4"
+    },
+    {
+      "path": "third_party/tree-sitter-java/package.json",
+      "sha256": "c0c99e633aa28b2c1c58e61f91211391a9363d7d532aa5795bf4003f2dc14dba"
+    },
+    {
+      "path": "third_party/tree-sitter-java/pyproject.toml",
+      "sha256": "60c4954be86eb1a5ef8238dd7aace1f42c1764702fd1a50284784834c670c7f8"
+    },
+    {
+      "path": "third_party/tree-sitter-java/queries/highlights.scm",
+      "sha256": "576c0df8df0b116cd642140ddc508c01f9d3283582afd8581c1f35caf4d71386"
+    },
+    {
+      "path": "third_party/tree-sitter-java/queries/tags.scm",
+      "sha256": "bcb22147b8582d92743fc973864cefb894a4c12b3957f16f3d472b2ec7cd4c49"
+    },
+    {
+      "path": "third_party/tree-sitter-java/setup.py",
+      "sha256": "42e55e6fa7bf687e684f29a893ba151dd2a01533a3bca9467f1a095cf4e310df"
+    },
+    {
+      "path": "third_party/tree-sitter-java/src/grammar.json",
+      "sha256": "47ca521cd7a888d671d9f26301e8697fa686e04912032e959d242b5f25877eb6"
+    },
+    {
+      "path": "third_party/tree-sitter-java/src/node-types.json",
+      "sha256": "19c46facc653381c337ff6cad75dd8b052524179a366c80825d6d0010520eef2"
+    },
+    {
+      "path": "third_party/tree-sitter-java/src/parser.c",
+      "sha256": "4add5150cf4531eb5dd97f3343dcf65cd11704c84711348b328582b83424a0e4"
+    },
+    {
+      "path": "third_party/tree-sitter-java/src/tree_sitter/alloc.h",
+      "sha256": "b29c1c9fb7cc82f58c84b376df1297d6e2737a1d655fd356db0859e3c29c2fea"
+    },
+    {
+      "path": "third_party/tree-sitter-java/src/tree_sitter/array.h",
+      "sha256": "5bdf6ed1a78e3409fd443e085ca967a64c188a5d082aaf7f819bccd53a471c94"
+    },
+    {
+      "path": "third_party/tree-sitter-java/src/tree_sitter/parser.h",
+      "sha256": "a1f6ef161fbaf48a0e10fca90ef5290a062462b307b3898aa562993853b9f80a"
+    },
+    {
+      "path": "third_party/tree-sitter-java/test/corpus/comments.txt",
+      "sha256": "56d36d11ba83f59dda06cbe76f275f3c0cea2fb126e29b3236a662f0d7cb766e"
+    },
+    {
+      "path": "third_party/tree-sitter-java/test/corpus/declarations.txt",
+      "sha256": "c1f27cf33257368caa9e7c6aa3906fbcf43247631f0725bb8c09cf65ef92fa20"
+    },
+    {
+      "path": "third_party/tree-sitter-java/test/corpus/expressions.txt",
+      "sha256": "85106c000e4bad6392b2d37973ec822e22b2cf466a9c89a7a9a23b45916ab533"
+    },
+    {
+      "path": "third_party/tree-sitter-java/test/corpus/literals.txt",
+      "sha256": "aa326ee6b556e3eab3e4f9d5b843f4ce6c36167dcb9dd6dbe2342fd3272e989f"
+    },
+    {
+      "path": "third_party/tree-sitter-java/test/corpus/precedence.txt",
+      "sha256": "91af55bd4eaa7d87989ca76d62917277b970356b21636e664d17a556d4e3c643"
+    },
+    {
+      "path": "third_party/tree-sitter-java/test/corpus/types.txt",
+      "sha256": "eb55fa3f45eb1bb8f94cd3ab740db2104c7ee7464cc972a0967beb8aad59b081"
+    },
+    {
+      "path": "third_party/tree-sitter-java/test/highlight/types.java",
+      "sha256": "a0e01ba654f16ff57688b6c641f3a44461f3d137f826a77eb86c96b897b80261"
+    },
+    {
+      "path": "third_party/tree-sitter-java/tree-sitter.json",
+      "sha256": "5b8f0cb5514a4a04720beba0e5991c48837844fe0ce2ba2d02ec7e6a44a344d8"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/.editorconfig",
+      "sha256": "90496ff136741e183308ae716913a90325bb20f5a83194b37aee5182501c81ee"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/.gitattributes",
+      "sha256": "eb0be13e2b94d874f6b7f8554bf06b4d0bc1e91b901eaf40ee5b06327352f813"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/.github/FUNDING.yml",
+      "sha256": "03bca99f25635436efcfb9d18ae1c958c07be0da9402e1a25ced7a83d51c49fc"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/.github/ISSUE_TEMPLATE/bug_report.md",
+      "sha256": "8e2c1726e56d2dd1db9758600e746f099415509e8e27f19c4988f1c0a84768ef"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/.github/ISSUE_TEMPLATE/feature_request.md",
+      "sha256": "f83145454efb76852fc72ce41dae6cf6d3e57917ae784639ae22dfe4688e80fc"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/.github/dependabot.yml",
+      "sha256": "c01afa83dc30168c1c6181aab5a764a1be055d9e8f9a47004bbdbe3e032916a5"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/.github/workflows/ci.yml",
+      "sha256": "40c5af3faf8737553432e5e66ec2b4b62bbcc54012c1cbbe8cffb3dc4c1c4523"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/.github/workflows/fuzz.yml",
+      "sha256": "838976d90ef5584adeb56fd34bc3aae62d18b0bc2e64d85208e9876c2908b93b"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/.github/workflows/lint.yml",
+      "sha256": "a6aa2ec3193c90e4bb5793130070e12be4743d07f7087b9eba00b4242670f96d"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/.github/workflows/publish.yml",
+      "sha256": "0af81fc6243170b3e6587e76969737c71e222d322977d7e8b7e550ffeb14aad7"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/.gitignore",
+      "sha256": "980204d79ab18ad6e2b0e3c423d42e50790742db4a4f83806551e561a0d15c3d"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/CMakeLists.txt",
+      "sha256": "f3425dbe717e760048804d571f9f2148b01c5f2623214ba1395abb6ebc6b55ab"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/Cargo.lock",
+      "sha256": "a10d31bf8f75b7736a97cce7e8f8cce0347b6642489e63953a9ba542826f652e"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/Cargo.toml",
+      "sha256": "00c047f354a97883c34e6336b1db56dc6fbae658740b49841d39d1d7129468a0"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/LICENSE",
+      "sha256": "2e0110e07abef7c2548b26ec9d6969775617ca539a0dc8dbeeb14d6452c711d1"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/Makefile",
+      "sha256": "3c20b3367e1522b2b35408eb4901bea1c79687976baa425ce90b2f028ad5efd6"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/Package.resolved",
+      "sha256": "cef0ed0b229ba190f267939af963f3ca1411da00d4e32950b7085d6c46210104"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/Package.swift",
+      "sha256": "88581869cc5b6cde3caeb57cc1c96203da9318e93ceec3aa95e63b525b439d69"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/README.md",
+      "sha256": "1cd898586f38dccb86b53cb38806dbde2cace16b3131dd5a162d63babe420c84"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/binding.gyp",
+      "sha256": "2539a994c9db570ee29805282e35452ff20ba72188d8caf99c502229b33dfca6"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/bindings/c/tree-sitter-javascript.pc.in",
+      "sha256": "10fe5c9ea9f290a6b662f918cb72960b192e28da02d2d49c175551212c82ef15"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/bindings/c/tree_sitter/tree-sitter-javascript.h",
+      "sha256": "4b1c5b04bf06cc5d19e743cee75ae271fbc604493ea36cab3b80af944af77ac2"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/bindings/go/binding.go",
+      "sha256": "9dac161fe73b440bcff6aefd1d8fd7e1af3f26fbe58e03058f0cf825e9bad661"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/bindings/go/binding_test.go",
+      "sha256": "e3c839cb54edba19b2cdabb18b96fcce830221f8f022a0d1cde0b5183310ea1a"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/bindings/node/binding.cc",
+      "sha256": "5aa023ff1fb0adf66ab87ad79c1125d57953b0347e4e6dba96321008abb41fb5"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/bindings/node/binding_test.js",
+      "sha256": "c35f2aaec5d06fa42a4cea226fa4cb841a04a7506e70086c2ea5d9fd67d8c482"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/bindings/node/index.d.ts",
+      "sha256": "6d2edc31741aa299535a8a1d7c38707cd746da88de2e88f242e8a354f7788eed"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/bindings/node/index.js",
+      "sha256": "c26ab19beade70208be359018210766beab412d96da0530afd060598a6432e9e"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/bindings/python/tests/test_binding.py",
+      "sha256": "fc0221b1469f123318d18c3f726fd87bcaeacecf3cacd1e25352db4b9c91611a"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/bindings/python/tree_sitter_javascript/__init__.py",
+      "sha256": "2698d9027b5e25e144001780969f0bd74bdc54cac97eca4f6b06cda587811167"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/bindings/python/tree_sitter_javascript/__init__.pyi",
+      "sha256": "6597a73086aa430e563ec2e55d19db6794e1cb284c43511700cd8153080736f1"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/bindings/python/tree_sitter_javascript/binding.c",
+      "sha256": "871d8022a047f015458fcea5b3f7ab0a22b9a9a0461ac00150322d7e6bffed25"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/bindings/python/tree_sitter_javascript/py.typed",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/bindings/rust/build.rs",
+      "sha256": "3b3eb16f02f402ab88518f8366baf27d270bd8024f3d667737958dadd92e17be"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/bindings/rust/lib.rs",
+      "sha256": "2a4b6006f56496889c70de480f2fd0e866da9bfd4100387be4f57c43d88d4fe8"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/bindings/swift/TreeSitterJavaScript/javascript.h",
+      "sha256": "4b1c5b04bf06cc5d19e743cee75ae271fbc604493ea36cab3b80af944af77ac2"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/bindings/swift/TreeSitterJavaScriptTests/TreeSitterJavaScriptTests.swift",
+      "sha256": "1e50f4585fba6382e1a364b90b31598d95ff39b1c468cc206ab3b8334de19f36"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/eslint.config.mjs",
+      "sha256": "e7b2dbe4f462cf890b53cc2d140aef6785fa31caabaaf6a11a38bf12a3ece091"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/examples/jquery.js",
+      "sha256": "140ff438eaaede046f1ceba27579d16dc980595709391873fa9bf74d7dbe53ac"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/examples/text-editor-component.js",
+      "sha256": "abe4f0e324382be35a6c11a659d3de1133017178f9a45113502f345cee00f76a"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/go.mod",
+      "sha256": "9e1b50f3488dfd1e1ecbfa2926be1f34f81933ff3d8ad1a9266c4742031e494b"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/go.sum",
+      "sha256": "0cbef7627f9f73a074e1123792f5d1005c3da1f6ece03c21f403f2073ec1ed5c"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/grammar.js",
+      "sha256": "80b3c803ee463fa769dbaf71537b8b7d432e108c28d7ba16cc0511cce8b110ab"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/package-lock.json",
+      "sha256": "614f8d244e6f152286f4268c32bb792e5ae85b7acf9774ae25987008822e7ca3"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/package.json",
+      "sha256": "6a1b9e54d5b3a44b88d849e3799dc25682da7bcd26a70a425971277e0bc32462"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/pyproject.toml",
+      "sha256": "931582cb5bef505008b169e6175685d642ddfa50b4fdfa05ba6d6e2dcb8013f6"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/queries/highlights-jsx.scm",
+      "sha256": "0cad1712acaf40804bc5dc7c8476858752c1f549cdf7d8c63c747317be0f8fa6"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/queries/highlights-params.scm",
+      "sha256": "bbe7a58cacfb1c954cb0eab44779fd80421ed59b762b975723447207635de50d"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/queries/highlights.scm",
+      "sha256": "d3630ae6dc9b2b27b230b5f8bb92b05cd491fb12bff353dae62a0a6d780461ee"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/queries/injections.scm",
+      "sha256": "bea345407ce1f24bccf2b3c1a128acc14e19301327074285368586e793dcb86d"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/queries/locals.scm",
+      "sha256": "c1dd2cfa1400d397fa974208fc9edfe817be4a3c8b42bb99af5c8d193b1bb753"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/queries/tags.scm",
+      "sha256": "6ef988cce5a428a15b5460e3ee96f1478705f965fc6e848a91a18bfa6c6f0212"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/setup.py",
+      "sha256": "92fc5d88dc53dac8351cd8c1b2431b8535701a78c5e9d9eb02becac76ca7c987"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/src/grammar.json",
+      "sha256": "7d9364b824be9250ba023065784550475d277b9dc9a7d20f9bebe9e471c908c3"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/src/node-types.json",
+      "sha256": "188a8baa97018edaf63bf7ece372c07bc0d74d1301004bc8f211eb7dee5a6e70"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/src/parser.c",
+      "sha256": "67209ca7ef6e1a4f74e29e48b5928455f892fe1821a3960fbcd62f4e972f7384"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/src/scanner.c",
+      "sha256": "b3d3f64284d97bf80749c026862427782cf7ecc0b7dc094e6698ab311c9a42c7"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/src/tree_sitter/alloc.h",
+      "sha256": "b29c1c9fb7cc82f58c84b376df1297d6e2737a1d655fd356db0859e3c29c2fea"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/src/tree_sitter/array.h",
+      "sha256": "5bdf6ed1a78e3409fd443e085ca967a64c188a5d082aaf7f819bccd53a471c94"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/src/tree_sitter/parser.h",
+      "sha256": "180b893c8734778fd32f372dfbc27bd6ad1cd2221f26150b31256ff6716320d2"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/test/corpus/destructuring.txt",
+      "sha256": "79dcf38c3be5e614ba479b28e33f58dbcd841b4d36c753088ec0fd771b6cf571"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/test/corpus/expressions.txt",
+      "sha256": "024f268c6ec99b706fedffc0e6b5f4ccaa09a1199c0823ddb90bf9cce6de79a2"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/test/corpus/injectables.txt",
+      "sha256": "53a093f1f9e69f8053b0360d3329d101ba051f22a35256ad73b1e6cea5653cc2"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/test/corpus/literals.txt",
+      "sha256": "df22ef2f8121521978a9340cee9ba9e4f945c1482850fa22c4030f112ae86f4e"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/test/corpus/semicolon_insertion.txt",
+      "sha256": "3c3c28f171f9388fe4043cb0bb2f939107b22fe0b5231f527d813719ca561377"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/test/corpus/statements.txt",
+      "sha256": "456c3314b2adb5228329d131d0cd3c2259c2820cd9736d38b24a8a5885ccb62c"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/test/highlight/functions.js",
+      "sha256": "06a53d5fd7265258e58d489b016d3766caf3c4e2fbf3b9891c7f3428f486dcc6"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/test/highlight/imports.js",
+      "sha256": "04108b8647ec48d87719c52df9795d861229983ad8a6def40821e50ed1d29f6e"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/test/highlight/injection.js",
+      "sha256": "d52bc9ad2005e16422027a5c3ff81130cff1ce6ea8427cbba12e92e151044ae1"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/test/highlight/keywords.js",
+      "sha256": "9a66c7a248abc299463167ace12e99ad0e3e1cab94cda4b1a9604d08ec42c451"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/test/highlight/variables.js",
+      "sha256": "4808ef48df87bb8b929a52d91bcc87c125aaa117535612efa90ea94116cf01ec"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/test/tags/classes.js",
+      "sha256": "f94cf37bc907aa53f503f57dafc6835e64cd57e4370e1a16e2dcc6b104eee9c4"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/test/tags/functions.js",
+      "sha256": "0bbd2cdb0a0492055e442c44b533797386ec9c8aeb7ce8a4d0f5f5a4681e3b90"
+    },
+    {
+      "path": "third_party/tree-sitter-javascript/tree-sitter.json",
+      "sha256": "43f1abe79d69601f9699d292ccbdcf04c8c836911984bd6e466c8368711a1d65"
+    },
+    {
+      "path": "third_party/tree-sitter-php/.editorconfig",
+      "sha256": "90496ff136741e183308ae716913a90325bb20f5a83194b37aee5182501c81ee"
+    },
+    {
+      "path": "third_party/tree-sitter-php/.gitattributes",
+      "sha256": "c84414ad6a0df8cea9ebd92a6da2f6c4090c4a915d0df7bd71b8e3525c830a44"
+    },
+    {
+      "path": "third_party/tree-sitter-php/.github/FUNDING.yml",
+      "sha256": "03bca99f25635436efcfb9d18ae1c958c07be0da9402e1a25ced7a83d51c49fc"
+    },
+    {
+      "path": "third_party/tree-sitter-php/.github/ISSUE_TEMPLATE/bug_report.yml",
+      "sha256": "0ec586d018b7ca40f59473b01ec30889c5d1337f8d5284f0a9e377938c3b2ddb"
+    },
+    {
+      "path": "third_party/tree-sitter-php/.github/ISSUE_TEMPLATE/config.yml",
+      "sha256": "1f103c6a9dd07cd13a9a6f17ace6b813f47747eb9cb7e00488cb2073caaf91bb"
+    },
+    {
+      "path": "third_party/tree-sitter-php/.github/ISSUE_TEMPLATE/feature_request.yml",
+      "sha256": "550ad9050277677019399cc37c9c555f754e395d9c45ca65848148a08f6cc65b"
+    },
+    {
+      "path": "third_party/tree-sitter-php/.github/dependabot.yml",
+      "sha256": "99c78d4ac39e5e4e777e5c5e74578a3ce09d24975403c532ce2b7730220d2f07"
+    },
+    {
+      "path": "third_party/tree-sitter-php/.github/workflows/ci.yml",
+      "sha256": "104e5514222ba47bca09df403deec80f6a1e2a03ed05ddb63baaa1df728871cf"
+    },
+    {
+      "path": "third_party/tree-sitter-php/.github/workflows/fuzz.yml",
+      "sha256": "4711ce53f93d95b620ab0d1a33a48e06664e7226e22d285526e1369cf944560f"
+    },
+    {
+      "path": "third_party/tree-sitter-php/.github/workflows/lint.yml",
+      "sha256": "b01e4093173156aafeaf0f6b4c18c84be800bad166cca28ae46b3d47f24c9e4c"
+    },
+    {
+      "path": "third_party/tree-sitter-php/.github/workflows/publish.yml",
+      "sha256": "0af81fc6243170b3e6587e76969737c71e222d322977d7e8b7e550ffeb14aad7"
+    },
+    {
+      "path": "third_party/tree-sitter-php/.gitignore",
+      "sha256": "c01dbe2c1d023bec91b77ade26d2f1b3c60c93992849897c3dd1b5347b30a865"
+    },
+    {
+      "path": "third_party/tree-sitter-php/CMakeLists.txt",
+      "sha256": "26375fbe2d2242445e89207099769a76b6dc43f8f156d349746852fa8e303d64"
+    },
+    {
+      "path": "third_party/tree-sitter-php/Cargo.lock",
+      "sha256": "6ee2b7ad9b60a9e28d20c34b8f0c71f1e27c088cb73baed0666bfb5a5bac9d48"
+    },
+    {
+      "path": "third_party/tree-sitter-php/Cargo.toml",
+      "sha256": "5bf453089b5b530aa5eea1920b9f8c4db22cd4d60762b70e6366762d8d7c1f5b"
+    },
+    {
+      "path": "third_party/tree-sitter-php/LICENSE",
+      "sha256": "664764fabf40c0b318e06324a5a12379092a2df25b8cbf2415f71bc0bb352346"
+    },
+    {
+      "path": "third_party/tree-sitter-php/Makefile",
+      "sha256": "12c98c207167fc6286443082e59ad18cae92984d909c91bcb7da292cb0806892"
+    },
+    {
+      "path": "third_party/tree-sitter-php/Package.resolved",
+      "sha256": "0bde18417f881b033d47b8a5476d00bfcd97c3052a19261f24bade59f44528f9"
+    },
+    {
+      "path": "third_party/tree-sitter-php/Package.swift",
+      "sha256": "5c79e19e51d6b1d7bf04fc08d1b473f12560b9ed43ec17a82ddd94b2dd626e0d"
+    },
+    {
+      "path": "third_party/tree-sitter-php/README.md",
+      "sha256": "3db5ce1b0157f9b3f7a9733decf0354ebba18a84d4d34f55c8a3a98aa4a59346"
+    },
+    {
+      "path": "third_party/tree-sitter-php/binding.gyp",
+      "sha256": "3f1bc1bcb1b9ca0ba1a0e1f044e1c24741c2e79e32c834ce98639b795d911030"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/c/tree-sitter-php.pc.in",
+      "sha256": "b356ff3fa31104f97cd2ffdc7c0af4074c172b2191ee321b129421fe776e9689"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/c/tree-sitter-php_only.pc.in",
+      "sha256": "cf57e62746eb956104c3a83e542dace260986e9ca7faf30fbb87b2fb4b9b973d"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/c/tree_sitter/tree-sitter-php.h",
+      "sha256": "98b86d8de485131052576e95b9a791f01ec36c5e4fabbfc2f463266a93aa0633"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/c/tree_sitter/tree-sitter-php_only.h",
+      "sha256": "42e403963bb5c204370437b38fab2a04bebc60e120265231fb429f5d7706a3d3"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/go/binding_php.go",
+      "sha256": "ac0793058c35a444dfbac83a434a440a99dd9d526dceb2e8bc0fd38bf584c88c"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/go/binding_php_only.go",
+      "sha256": "fc78925aef763dc3bdff27dcd720de7620a35f35aab3dc3a79aeaaf4c5fa8e08"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/go/binding_test.go",
+      "sha256": "325b8b5886a79f7c4e6a06fcd5544f4fba2dc0ebec05ed0cee20ff18a70a026f"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/node/binding.cc",
+      "sha256": "e8d79620958b7daa283bfd658ce6f94d5774ecb2da84819e6dde244d3acd095d"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/node/binding_test.js",
+      "sha256": "2323ec4a4bca2f00fd583a3d099a445ce450f8645001167c9a8679a6a241eb4d"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/node/index.d.ts",
+      "sha256": "77321914062ddd43a6f5a33402cba50259309dca7fe909a49db8eaccffcc322e"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/node/index.js",
+      "sha256": "e6e9126a9e695f6cdce0ab669891186dd12af948be107e4f890d0785d75cdade"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/node/php.js",
+      "sha256": "86c4fdb5eba4c8b2cbb5057b3ce8cb7718d0fae41c156ba2e4717380723042e1"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/node/php_only.js",
+      "sha256": "373ffa8f12117974868666aaf227503d96657fe7d3f7eae056eeeb77d031bcfe"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/python/tests/test_binding.py",
+      "sha256": "645f6fa04e77b405b443653a24eb33b90bba9a7fb00b7f4a2db53b12e6f90666"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/python/tree_sitter_php/__init__.py",
+      "sha256": "1cecd02f398097800d5932a4fd6f715d6247507bd7a2bff62e13358d832df806"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/python/tree_sitter_php/__init__.pyi",
+      "sha256": "226cb5725b78ddbb48c8a56733388f73cbb1750b2d2ec9a619dd22449ae973f3"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/python/tree_sitter_php/binding.c",
+      "sha256": "b603cd8a2a468eb1be65d9f51237e5dbfecd2ae0cab4f76d95dc952d9f0f153a"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/python/tree_sitter_php/py.typed",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/rust/build.rs",
+      "sha256": "64a9fe1d12863855ad4eda623639b603d2de3fd3c1702f68ff8b8bd0921b049b"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/rust/lib.rs",
+      "sha256": "eef983644bffaa56b08c327d16c48c2f584927dad36a0541e6e0d0ed1b39177b"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/swift/TreeSitterPHP/php.h",
+      "sha256": "93792117437e9497e650c56f7c5bdbcd85dcc8c476e3105b44b359acfe46d4a0"
+    },
+    {
+      "path": "third_party/tree-sitter-php/bindings/swift/TreeSitterPHPTests/TreeSitterPHPTests.swift",
+      "sha256": "91ab871f13efa1f6dd8a5e8789ea122ed75d30ca723306306d11a62d547aee63"
+    },
+    {
+      "path": "third_party/tree-sitter-php/common/common.mak",
+      "sha256": "af2c2f8ccf85d8d4863ff6f143a6191e8912f864993a0e483a02718378451aac"
+    },
+    {
+      "path": "third_party/tree-sitter-php/common/define-grammar.js",
+      "sha256": "f0c86051f1676272cc59645534b7aead09382179eff8ecca812ebb2d8c9537af"
+    },
+    {
+      "path": "third_party/tree-sitter-php/common/scanner.h",
+      "sha256": "b882662c76677999dc22c4fe0146626282170171dcca2af5b6a38e1c1829352c"
+    },
+    {
+      "path": "third_party/tree-sitter-php/eslint.config.mjs",
+      "sha256": "e7b2dbe4f462cf890b53cc2d140aef6785fa31caabaaf6a11a38bf12a3ece091"
+    },
+    {
+      "path": "third_party/tree-sitter-php/go.mod",
+      "sha256": "a9ac50f684d4abc910420311dfa799a8067085fd9371d1cadc74353a8c8c387d"
+    },
+    {
+      "path": "third_party/tree-sitter-php/go.sum",
+      "sha256": "88571a9f1926e986777355c0bc83aaf868233409e09a4baf3e77a9053957b502"
+    },
+    {
+      "path": "third_party/tree-sitter-php/package-lock.json",
+      "sha256": "8f61ddcefa1aee7312e4596d008fec28c13b7dae08b298517182688400a6c931"
+    },
+    {
+      "path": "third_party/tree-sitter-php/package.json",
+      "sha256": "471873ecf54d3fd6367b5393e30d198d75be559c50fe919b7bcb695b98b3ecf2"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php/CMakeLists.txt",
+      "sha256": "29d5bf61a744ba4825ef6ecbd38b661768bcfb8a786763dab5b1e5fe4f54ddda"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php/Makefile",
+      "sha256": "30a51398fa960cd58553dfdb61933ef46a8ef88b30fd62411006359a31bfe068"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php/grammar.js",
+      "sha256": "a9f44740c7a11a673a997c42486954482084cdadecbbce89f5bcd066bfd853a5"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php/package.json",
+      "sha256": "1bd0d42935d3a8c0e049294ee566ebed8a4f1efa882ae13a39e49cb0a649110b"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php/src/grammar.json",
+      "sha256": "4dd996a822c6d9130db3541104169cc45db90f03ec10627dd1a1aa3197916e7a"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php/src/node-types.json",
+      "sha256": "336426deddc0b49a1c5056466a879238b6f0eeb76e5306432ef907ea4c3b3ffe"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php/src/parser.c",
+      "sha256": "0f28076a40e7fe18d9000d2ccbdeebe3293f07cbf3a90644c1a0359b05af0dcd"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php/src/scanner.c",
+      "sha256": "58c92cafe4ebda509c3ad3864fa6fc0e9877bbac26e17a03d23ea2101c291ad5"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php/src/tree_sitter/alloc.h",
+      "sha256": "b29c1c9fb7cc82f58c84b376df1297d6e2737a1d655fd356db0859e3c29c2fea"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php/src/tree_sitter/array.h",
+      "sha256": "31e60a1bff6f715afacce03b5b70efe42b58371b4f9595dd4af52a577ff9608c"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php/src/tree_sitter/parser.h",
+      "sha256": "180b893c8734778fd32f372dfbc27bd6ad1cd2221f26150b31256ff6716320d2"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php_only/CMakeLists.txt",
+      "sha256": "235c26912e6b3686af57cd4fa1671974e1a9a11ba01f18d4a870921278bcba85"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php_only/Makefile",
+      "sha256": "010539aff6303cc9dd8ff91f9c43227f854ab1aec8d13affd769f96b30ebf73c"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php_only/grammar.js",
+      "sha256": "573860765669f90e59b6d9f902b86a51671a2cd0b58cab5b403f66564d358dfb"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php_only/package.json",
+      "sha256": "256d6141bbdbe379fa5e5f47ac4019dca3fa23963f02659285c05cf6345aa616"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php_only/src/grammar.json",
+      "sha256": "7bf20551ade15edfbcbfb462ccf1a96346093e04c3f83e111b6feb472964a850"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php_only/src/node-types.json",
+      "sha256": "01add2ef26adb5d69fb041761b07a6f32520cfedacf9339328ca8a72ed440c28"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php_only/src/parser.c",
+      "sha256": "54a13aabc9c7f4ae0ced4037481c6bbccddbb1b21fc7c122ad21a0b277e2ddd0"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php_only/src/scanner.c",
+      "sha256": "7a91ec341bef67f006e508f720edcd70b0d0eb73773584afa87ab7d12be25b14"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php_only/src/tree_sitter/alloc.h",
+      "sha256": "b29c1c9fb7cc82f58c84b376df1297d6e2737a1d655fd356db0859e3c29c2fea"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php_only/src/tree_sitter/array.h",
+      "sha256": "31e60a1bff6f715afacce03b5b70efe42b58371b4f9595dd4af52a577ff9608c"
+    },
+    {
+      "path": "third_party/tree-sitter-php/php_only/src/tree_sitter/parser.h",
+      "sha256": "180b893c8734778fd32f372dfbc27bd6ad1cd2221f26150b31256ff6716320d2"
+    },
+    {
+      "path": "third_party/tree-sitter-php/pyproject.toml",
+      "sha256": "17e1813bc3da2021b3bcec24d0a97ce7c0eb958debf24d8cec615b9e66460ec3"
+    },
+    {
+      "path": "third_party/tree-sitter-php/queries/highlights.scm",
+      "sha256": "a2a7367659cff3b4be09961c8117d69a9b8703bfc266f8092e089b1760f197e9"
+    },
+    {
+      "path": "third_party/tree-sitter-php/queries/injections-text.scm",
+      "sha256": "ff860723e49b56f0c4c2913e3711e76e822067e0afc8ecfbefeccf5b0c6a4385"
+    },
+    {
+      "path": "third_party/tree-sitter-php/queries/injections.scm",
+      "sha256": "8ea6bcf32f19a43cb102fb962d8fa9395a51d08102c0a4495b61a923887fc5cd"
+    },
+    {
+      "path": "third_party/tree-sitter-php/queries/tags.scm",
+      "sha256": "4ac5e30f99f3abe5417dcb42219e0790c66f9b4bb3be071bc60160dd012f3cd8"
+    },
+    {
+      "path": "third_party/tree-sitter-php/setup.py",
+      "sha256": "97c778c5be8bdd1f7aaf7701dc9bbf514ee4c4d1e3d2148283ffec3626476cad"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/corpus/bugs.txt",
+      "sha256": "4dd9e26480fff19181e5522a9fa260284b540c4d60cb236d1aa0d9b5f1ad0458"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/corpus/class.txt",
+      "sha256": "916feac6adbdddcc66e52991a1e189cf1fe9d811f95f6e610c7bab50e0529bb3"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/corpus/declarations.txt",
+      "sha256": "9a07b0b3ce18a8f962855f32ebd5e890aae031867a6d3d3914b037b420ce53d2"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/corpus/errors.txt",
+      "sha256": "76cfd1c86bd955b5cee171d26d07df44623d3842b2669877780108eda31b7dc7"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/corpus/execution_operator.txt",
+      "sha256": "f8b0d62ee56e562ec91688b2c217d832ca3151f5cca43cae46d1a2460d0070de"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/corpus/expressions.txt",
+      "sha256": "1caae94cd78be92ea52b4afb35421d703d0a669a9d11fd372da2c818f4c9b0c6"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/corpus/interpolation.txt",
+      "sha256": "f7b17e777c42aef944a81c2848dd7b01773bc421a8e3ab84d34d2b6103fb61f6"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/corpus/literals.txt",
+      "sha256": "4b0fe968a55c5d29f135a1f328fb5a8874b505346f338cf1989e828690cd9775"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/corpus/nowdoc.txt",
+      "sha256": "bf83eebfb77d90738701521c09856410cdb96a328032b63c9de56a9a75dfdbe3"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/corpus/php_only.txt",
+      "sha256": "a2b0a9c0415afe8d3c5a3e72aef2c3830531b9434c71a66f5ec93eb9d485e4d8"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/corpus/statements.txt",
+      "sha256": "6a39c02c9b418c44afe179f9148209b6bc1093e045e29ccc003cb12ab240d9de"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/corpus/string.txt",
+      "sha256": "27bcd170946154b9c62c0e3958d56404fa211c7fe72c29a7b2436de693782d1d"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/corpus/types.txt",
+      "sha256": "9488ca1917729c6e60a2b52b3dfaa8e37faa45a65a108ad4ae6eb4280eea85d1"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/highlight/keywords.php",
+      "sha256": "61fe206f4f5d60d9ea8f558876edce415bd1e2ff917e93bb39eb79304416a310"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/highlight/literals.php",
+      "sha256": "42156e2f275a38690fd313d05b4e911ca81d32ad1eb66ad88edf676122716d68"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/highlight/namespaces.php",
+      "sha256": "9a663e5796c9f4c3ae12a524805f94657d29a787671d93fa79818b5562f66366"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/highlight/types.php",
+      "sha256": "e2b0fff796d3206186ba3c3687786d1b6c12086fe8145e4b1f9a86b41591925b"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/highlight/variables.php",
+      "sha256": "9b059d1a07abfba8584ed7377c52306797cf7bff9621c1829a7022aa18a0bcaf"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/tags/definition.php",
+      "sha256": "e3b0f76ed30419d3b3340a0d1899d95d72a47a08891f7b89fec32ea7318b2a59"
+    },
+    {
+      "path": "third_party/tree-sitter-php/test/tags/reference.php",
+      "sha256": "268e3f4131f400cf5b0a3a0314ed4b41f233623805c9d26b0f0d040ab1eb80d5"
+    },
+    {
+      "path": "third_party/tree-sitter-php/tree-sitter.json",
+      "sha256": "4cf51cc1a80e6e74d42b1020ab5c6ef14e33f656844dbb53319404966a821402"
+    },
+    {
+      "path": "third_party/tree-sitter-python/.editorconfig",
+      "sha256": "90496ff136741e183308ae716913a90325bb20f5a83194b37aee5182501c81ee"
+    },
+    {
+      "path": "third_party/tree-sitter-python/.gitattributes",
+      "sha256": "eb0be13e2b94d874f6b7f8554bf06b4d0bc1e91b901eaf40ee5b06327352f813"
+    },
+    {
+      "path": "third_party/tree-sitter-python/.github/FUNDING.yml",
+      "sha256": "03bca99f25635436efcfb9d18ae1c958c07be0da9402e1a25ced7a83d51c49fc"
+    },
+    {
+      "path": "third_party/tree-sitter-python/.github/ISSUE_TEMPLATE/bug_report.yml",
+      "sha256": "7982645c290b1c553e2bc23f99078af167b07d7129427c0da85dd487adddb3e3"
+    },
+    {
+      "path": "third_party/tree-sitter-python/.github/ISSUE_TEMPLATE/config.yml",
+      "sha256": "1f103c6a9dd07cd13a9a6f17ace6b813f47747eb9cb7e00488cb2073caaf91bb"
+    },
+    {
+      "path": "third_party/tree-sitter-python/.github/ISSUE_TEMPLATE/feature_request.yml",
+      "sha256": "1293135509f0d0562a454cddd6c80f9595cdb460f708ba0907d6e4e2a7ab018f"
+    },
+    {
+      "path": "third_party/tree-sitter-python/.github/workflows/ci.yml",
+      "sha256": "247b1dc99a357f3edde13afb4771abc9cb29753e86118c92f4bfbaa3db166a37"
+    },
+    {
+      "path": "third_party/tree-sitter-python/.github/workflows/fuzz.yml",
+      "sha256": "201352cfe99697632737cea16887397cb3e7b2b81e9f5d7ea71640493d0faff0"
+    },
+    {
+      "path": "third_party/tree-sitter-python/.github/workflows/lint.yml",
+      "sha256": "b31b4fe53081449ab8e37d88b5ed9c5c154be94b5fb80694a46ad5c04fdafbb1"
+    },
+    {
+      "path": "third_party/tree-sitter-python/.github/workflows/publish.yml",
+      "sha256": "0af81fc6243170b3e6587e76969737c71e222d322977d7e8b7e550ffeb14aad7"
+    },
+    {
+      "path": "third_party/tree-sitter-python/.gitignore",
+      "sha256": "980204d79ab18ad6e2b0e3c423d42e50790742db4a4f83806551e561a0d15c3d"
+    },
+    {
+      "path": "third_party/tree-sitter-python/CMakeLists.txt",
+      "sha256": "0fcf5b2618f8340f27c42ac2e93f8e0737b54fa9b4e40674f054d9c5f9476531"
+    },
+    {
+      "path": "third_party/tree-sitter-python/Cargo.lock",
+      "sha256": "7788086594312471d788dd0ce71c3be5e285fec63bd09ea027276c8a9cbaeccd"
+    },
+    {
+      "path": "third_party/tree-sitter-python/Cargo.toml",
+      "sha256": "b95f18430326426f37b00e812ced9374b4644ede19c91f7a6573fb69d40d4bdf"
+    },
+    {
+      "path": "third_party/tree-sitter-python/LICENSE",
+      "sha256": "d724405ce238a22c0d35769c5a36b386ad5958192efe8bbb304fb2896254575f"
+    },
+    {
+      "path": "third_party/tree-sitter-python/Makefile",
+      "sha256": "dc4cfd7a789ad0bb4afe32aaf4939d6851837b3710f5d1218d3d175531182b06"
+    },
+    {
+      "path": "third_party/tree-sitter-python/Package.resolved",
+      "sha256": "cef0ed0b229ba190f267939af963f3ca1411da00d4e32950b7085d6c46210104"
+    },
+    {
+      "path": "third_party/tree-sitter-python/Package.swift",
+      "sha256": "5baeba461ea73c918690bba570031e490236767db30bf3312c6d3521d3a17955"
+    },
+    {
+      "path": "third_party/tree-sitter-python/README.md",
+      "sha256": "f36a78a14e69e951378922daebc85a385930fbdcd1cc32624456c45d0bf365c2"
+    },
+    {
+      "path": "third_party/tree-sitter-python/binding.gyp",
+      "sha256": "e1aba9f4d6fcfa13948e7c8002164e87710b3f1c18635803b7c92840ba00dc4a"
+    },
+    {
+      "path": "third_party/tree-sitter-python/bindings/c/tree-sitter-python.pc.in",
+      "sha256": "d00d5bfea7c5093a79f98b2a0b688a256a5428875be85ee2246f9236e759319a"
+    },
+    {
+      "path": "third_party/tree-sitter-python/bindings/c/tree_sitter/tree-sitter-python.h",
+      "sha256": "97b04d6bb59e89ee4ef7e9647abf16c1be504f818894343ececd379c47b00ea4"
+    },
+    {
+      "path": "third_party/tree-sitter-python/bindings/go/binding.go",
+      "sha256": "e9806b28753b4bb4527836e90e72e9712c54251c0cc89d9bd3cc1edd54a7e022"
+    },
+    {
+      "path": "third_party/tree-sitter-python/bindings/go/binding_test.go",
+      "sha256": "2382c5c706c01f45602d2f11f414cb9804326067eac2ebd4668438d8163d6c0e"
+    },
+    {
+      "path": "third_party/tree-sitter-python/bindings/node/binding.cc",
+      "sha256": "6cd53871272e31d737b914e5a4232e5b4d5e7970fcd53cbdf92e0b9fbac72192"
+    },
+    {
+      "path": "third_party/tree-sitter-python/bindings/node/binding_test.js",
+      "sha256": "c35f2aaec5d06fa42a4cea226fa4cb841a04a7506e70086c2ea5d9fd67d8c482"
+    },
+    {
+      "path": "third_party/tree-sitter-python/bindings/node/index.d.ts",
+      "sha256": "6d2edc31741aa299535a8a1d7c38707cd746da88de2e88f242e8a354f7788eed"
+    },
+    {
+      "path": "third_party/tree-sitter-python/bindings/node/index.js",
+      "sha256": "00933308a12e31635d6ca8b9b7b3a6248c22e524a8a066a87ae98c341d572d5e"
+    },
+    {
+      "path": "third_party/tree-sitter-python/bindings/python/tests/test_binding.py",
+      "sha256": "cac37ddb7ad1cb8de7a14a637134d484315e63b2ba1d03cc05d70359714fc538"
+    },
+    {
+      "path": "third_party/tree-sitter-python/bindings/python/tree_sitter_python/__init__.py",
+      "sha256": "98fa266176168e70ea8dd6b972dded515ebf1226a78e34cdd840a393e861842f"
+    },
+    {
+      "path": "third_party/tree-sitter-python/bindings/python/tree_sitter_python/__init__.pyi",
+      "sha256": "a0f8fab5449fa47334f1b4e6104e63e42da66c730158d90cf0eba130673954c8"
+    },
+    {
+      "path": "third_party/tree-sitter-python/bindings/python/tree_sitter_python/binding.c",
+      "sha256": "abfa942912fef835aa77e635573fc3e1d86285c7ac8b6e9ca3cd2ec78149a78e"
+    },
+    {
+      "path": "third_party/tree-sitter-python/bindings/python/tree_sitter_python/py.typed",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "third_party/tree-sitter-python/bindings/rust/build.rs",
+      "sha256": "4e069992deffe54f04909739e954f581409c7d167cb5ba1f775717258751568f"
+    },
+    {
+      "path": "third_party/tree-sitter-python/bindings/rust/lib.rs",
+      "sha256": "b582f6091fe5978d9c12fb50438de0e0dcc2b962f297e633793523009e40e202"
+    },
+    {
+      "path": "third_party/tree-sitter-python/bindings/swift/TreeSitterPython/python.h",
+      "sha256": "97b04d6bb59e89ee4ef7e9647abf16c1be504f818894343ececd379c47b00ea4"
+    },
+    {
+      "path": "third_party/tree-sitter-python/bindings/swift/TreeSitterPythonTests/TreeSitterPythonTests.swift",
+      "sha256": "940c71b45bd1656e77f69807f33ab7a30a8395c345950aaa1b34ad58ca30ccb7"
+    },
+    {
+      "path": "third_party/tree-sitter-python/eslint.config.mjs",
+      "sha256": "e7b2dbe4f462cf890b53cc2d140aef6785fa31caabaaf6a11a38bf12a3ece091"
+    },
+    {
+      "path": "third_party/tree-sitter-python/examples/compound-statement-without-trailing-newline.py",
+      "sha256": "15c4e253bc8342b7b271fc0d01066776f2db5e1758fd9f96ea92ef84445d57ff"
+    },
+    {
+      "path": "third_party/tree-sitter-python/examples/crlf-line-endings.py",
+      "sha256": "7519a49988b65f3823aa1126b431c8b2782599d6becce9d7ce3f57855f8260d7"
+    },
+    {
+      "path": "third_party/tree-sitter-python/examples/mixed-spaces-tabs.py",
+      "sha256": "2fe77b01e6e989bc120dd4985bbe06beb15ab84e8fb81350fc53b480f5f1cd9b"
+    },
+    {
+      "path": "third_party/tree-sitter-python/examples/multiple-newlines.py",
+      "sha256": "43b9ea50f59013b0204eac91c14ebccd6e8507780923516f7f0d40146adcbb68"
+    },
+    {
+      "path": "third_party/tree-sitter-python/examples/python2-grammar-crlf.py",
+      "sha256": "d39024725d7d23201fa5329e863ccf1cf5573cb4d6ed5103fc548124b504b8c0"
+    },
+    {
+      "path": "third_party/tree-sitter-python/examples/python2-grammar.py",
+      "sha256": "5008d0357851f744321f0ec3e8c6568214d5dd88e251c9a861ad533b1557d92a"
+    },
+    {
+      "path": "third_party/tree-sitter-python/examples/python3-grammar-crlf.py",
+      "sha256": "056180721faddd13f998a640a2f74d53ef1f61d45a83c6269c8d31ee0303a312"
+    },
+    {
+      "path": "third_party/tree-sitter-python/examples/python3-grammar.py",
+      "sha256": "eddc388af6d77394197d51276263b90a8f722bc12c58330829a22b1ce4baae38"
+    },
+    {
+      "path": "third_party/tree-sitter-python/examples/python3.8_grammar.py",
+      "sha256": "1258cf29872d22d9c61870494f2069c2ebd6d898f62094a900c81901cba2430e"
+    },
+    {
+      "path": "third_party/tree-sitter-python/examples/simple-statements-without-trailing-newline.py",
+      "sha256": "35b1cefdabf4ddfe171073aed03d903af42713ac1aab854e94e4c3ac09ee42dc"
+    },
+    {
+      "path": "third_party/tree-sitter-python/examples/tabs.py",
+      "sha256": "6f3c435bec254bbaff69f0835685f018db23d21e6cae8cb77aaaaff030a08075"
+    },
+    {
+      "path": "third_party/tree-sitter-python/examples/trailing-whitespace.py",
+      "sha256": "7d63af3a7bf0ad5f851005a540d9c0ee6bb92c07f90969361047ab0632a09eb3"
+    },
+    {
+      "path": "third_party/tree-sitter-python/go.mod",
+      "sha256": "497191a2cf64e83e9cbef02e6c4c16918dfa69cc8d163e4ac724773236cd4e1b"
+    },
+    {
+      "path": "third_party/tree-sitter-python/go.sum",
+      "sha256": "fdc1c220e32034eef3a987ec6719a7896abced8c2177c59c70348da89cf7e82f"
+    },
+    {
+      "path": "third_party/tree-sitter-python/grammar.js",
+      "sha256": "5071cb77def12a276ec71c2c584ef276b1266df720e16f642530bac35c5c2560"
+    },
+    {
+      "path": "third_party/tree-sitter-python/package-lock.json",
+      "sha256": "4e5fef510e428e709c8c26daf0b9d2fc4c70ad89cc0451a2ced64eba87c2dffb"
+    },
+    {
+      "path": "third_party/tree-sitter-python/package.json",
+      "sha256": "cc682da95140c947fa0d67f9307e2017def0b4584c15b60386344ac78853d1a8"
+    },
+    {
+      "path": "third_party/tree-sitter-python/pyproject.toml",
+      "sha256": "1006711ea9fb6f0542589d1189fd4cc8ebb6c761cc0607ecdbcb0d024de41ceb"
+    },
+    {
+      "path": "third_party/tree-sitter-python/queries/highlights.scm",
+      "sha256": "a6708f209381618e2b398972c8f1ccd892f0c064eab35a2a3f911c3e22e79a7e"
+    },
+    {
+      "path": "third_party/tree-sitter-python/queries/tags.scm",
+      "sha256": "d0f3e577878167bfabc30e526e497bce58d1699b9bcabf8ab3a50698efb5ca3e"
+    },
+    {
+      "path": "third_party/tree-sitter-python/setup.py",
+      "sha256": "36d3315f035567be1b040e2ee55010d94aebb3fff0d7a9770d5594be35ffa29b"
+    },
+    {
+      "path": "third_party/tree-sitter-python/src/grammar.json",
+      "sha256": "d933cfea6197e57354c9ec86888adbb95971b4372efef514b82e601b5067580d"
+    },
+    {
+      "path": "third_party/tree-sitter-python/src/node-types.json",
+      "sha256": "6d26089d798b66b9a68dd5f6e278cf1ea00b31537ac48a7efbbe5bb63094c473"
+    },
+    {
+      "path": "third_party/tree-sitter-python/src/parser.c",
+      "sha256": "53a7bd87ba22c4fdbb8566a2caf848a1478f3ac9d47a1b32677a71de75d75db6"
+    },
+    {
+      "path": "third_party/tree-sitter-python/src/scanner.c",
+      "sha256": "6db82134ac2d4c90a1a1475487a625cface02662ebda9b7478cad9c7147e9afe"
+    },
+    {
+      "path": "third_party/tree-sitter-python/src/tree_sitter/alloc.h",
+      "sha256": "b29c1c9fb7cc82f58c84b376df1297d6e2737a1d655fd356db0859e3c29c2fea"
+    },
+    {
+      "path": "third_party/tree-sitter-python/src/tree_sitter/array.h",
+      "sha256": "5bdf6ed1a78e3409fd443e085ca967a64c188a5d082aaf7f819bccd53a471c94"
+    },
+    {
+      "path": "third_party/tree-sitter-python/src/tree_sitter/parser.h",
+      "sha256": "180b893c8734778fd32f372dfbc27bd6ad1cd2221f26150b31256ff6716320d2"
+    },
+    {
+      "path": "third_party/tree-sitter-python/test/corpus/errors.txt",
+      "sha256": "4f6f1a24e825b0b8d4c43dcc218bbf3b012c256d2f677ca2df7a630e3ddf887b"
+    },
+    {
+      "path": "third_party/tree-sitter-python/test/corpus/expressions.txt",
+      "sha256": "79953d92e374febfd100c847cf4ad624398120f780fca28133d806bce684375c"
+    },
+    {
+      "path": "third_party/tree-sitter-python/test/corpus/literals.txt",
+      "sha256": "c29e922d95a0ce1069d2e9b5c0082ed2c053a76ce809eccf938a29c7b04d2744"
+    },
+    {
+      "path": "third_party/tree-sitter-python/test/corpus/pattern_matching.txt",
+      "sha256": "3b7ab996d02165f6b8018bb9c566713c4f7fd8875a812f328ee0be2139d695ac"
+    },
+    {
+      "path": "third_party/tree-sitter-python/test/corpus/statements.txt",
+      "sha256": "6da0953463e613d123e865ec450b9d8ab2bfa7f9a9b1d420b252c3794dc208eb"
+    },
+    {
+      "path": "third_party/tree-sitter-python/test/highlight/keywords.py",
+      "sha256": "5209cfe62baefa489f21f00ca457880a0908c54e3613ab5f73fb0d568e3d9d69"
+    },
+    {
+      "path": "third_party/tree-sitter-python/test/highlight/parameters.py",
+      "sha256": "71aeb9a20f6752310f9256cb0c5a7abf29a8e01aeb49f4857c6af0362ee0c072"
+    },
+    {
+      "path": "third_party/tree-sitter-python/test/highlight/pattern_matching.py",
+      "sha256": "9f5c10ed608893ffcbc0d85ea94ab67e50f903c25aee2982ad29f806f8298998"
+    },
+    {
+      "path": "third_party/tree-sitter-python/test/tags/main.py",
+      "sha256": "1c2ad2e5b66260e6488814b689d79c937b2298ea45f54f16fc5b8213d7d871df"
+    },
+    {
+      "path": "third_party/tree-sitter-python/tree-sitter.json",
+      "sha256": "0682bc3796601f623928259e244fa45c113f286cac7606719db792911cf051f9"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/.editorconfig",
+      "sha256": "90496ff136741e183308ae716913a90325bb20f5a83194b37aee5182501c81ee"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/.gitattributes",
+      "sha256": "4af865e7a4e4a96e9e465794e6b112bd922c4b81bea45f8162f529c69c9fd9be"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/.github/FUNDING.yml",
+      "sha256": "03bca99f25635436efcfb9d18ae1c958c07be0da9402e1a25ced7a83d51c49fc"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/.github/ISSUE_TEMPLATE/bug_report.yml",
+      "sha256": "71240d5c55497ffef7ce26f97444355d423cb8fe473ea710a009612b6adeb3b5"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/.github/ISSUE_TEMPLATE/config.yml",
+      "sha256": "1f103c6a9dd07cd13a9a6f17ace6b813f47747eb9cb7e00488cb2073caaf91bb"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/.github/ISSUE_TEMPLATE/feature_request.yml",
+      "sha256": "cfc066db10cc09298163be7c9d98fc055bb7513397df92854098875edbb6cf87"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/.github/dependabot.yml",
+      "sha256": "c01afa83dc30168c1c6181aab5a764a1be055d9e8f9a47004bbdbe3e032916a5"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/.github/workflows/ci.yml",
+      "sha256": "cfa0354bb59be360488b522cf6c1b4a8258bdee07b15bf478eff5dd34635d8c4"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/.github/workflows/fuzz.yml",
+      "sha256": "838976d90ef5584adeb56fd34bc3aae62d18b0bc2e64d85208e9876c2908b93b"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/.github/workflows/lint.yml",
+      "sha256": "a6aa2ec3193c90e4bb5793130070e12be4743d07f7087b9eba00b4242670f96d"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/.github/workflows/publish.yml",
+      "sha256": "2cbbd9c2cbdf9314167facba4623a05e18aa49bb5ff14594e618b4e4e199cc27"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/.gitignore",
+      "sha256": "b3ab146577626a302df228cfdbe663020ecbed513dd0a02700b68fea1e8ce00e"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/CMakeLists.txt",
+      "sha256": "983e7842de87aa939c1b02ae7cd416f795363a366919c6b914c1e5ca1dbea911"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/Cargo.lock",
+      "sha256": "59049b6aba9ade60d58cd3ad8cf94235f48c0aa65fcc2ad7538b80f1dfdd88c6"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/Cargo.toml",
+      "sha256": "440cf339794769b77b3433e14c223a347c993c5567bd728a7205fff2fbf3365a"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/LICENSE",
+      "sha256": "31d5b6f4243d5c7c6e1c4ebbbb9f6407bd1457a08bcc4f706521710341acba36"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/Makefile",
+      "sha256": "568e73ea6ee90ec2e59bf937de3a710ffe674bd0f1b5ee5d965c8048c003a5b0"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/Package.resolved",
+      "sha256": "d70105b7f8e59c6dff779a7ee8a60793756483c8f1231b9cefe1e5f9e601de93"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/Package.swift",
+      "sha256": "acc23c869ab2a0394ee16e3664fb4066d9cf9c526d2d4ca51f1b8c5eb3bfa825"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/README.md",
+      "sha256": "2d9ed9b99c93d7a48a3d4f0c3e957f12100eee0d8bb2c3e0a136926312d0e9f5"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/binding.gyp",
+      "sha256": "d50230fa1d56cc811f1ad744eb21ba0c30c6abd31fdd6c992b73673bccba25d7"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/bindings/c/tree-sitter-rust.h",
+      "sha256": "ce800b608d7722b205f98574d760b18a766111bdd9724c505b727e4a85a5d4f0"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/bindings/c/tree-sitter-rust.pc.in",
+      "sha256": "19dcd02af712366cec43506b108cd32e6b7fbf3296f803e99d6706f0e9d04437"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/bindings/go/binding.go",
+      "sha256": "f6cafa181c309aeb7e1aa5e1a1898b7b4ef28642b878eafc86155c7ccf5f3040"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/bindings/go/binding_test.go",
+      "sha256": "a00cdae19e2501aeec9346fa8f57df0aab9323f2f3d03f5f020f5270393445c6"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/bindings/node/binding.cc",
+      "sha256": "22a948d946137add9589d042505284cdac5b21e62e2bcf5118d79ae42464779e"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/bindings/node/binding_test.js",
+      "sha256": "c35f2aaec5d06fa42a4cea226fa4cb841a04a7506e70086c2ea5d9fd67d8c482"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/bindings/node/index.d.ts",
+      "sha256": "5f593f781f7cb12a3dcdcab2f9c063a77b9965f537bb01c5c05958947f5ff8fd"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/bindings/node/index.js",
+      "sha256": "e0a42d089243cc2ea9539fdd3b154f620a644abca0cc4d800e8b97e63490d147"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/bindings/python/tests/test_binding.py",
+      "sha256": "a196d9a3a9f8adafab9400a24d7923d0779abba1e31f7d0a8d415f34c7250392"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/bindings/python/tree_sitter_rust/__init__.py",
+      "sha256": "39c6727968787212fab8a02b9df0891af4bfa4cdee83fa7f6dc21772324f7550"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/bindings/python/tree_sitter_rust/__init__.pyi",
+      "sha256": "c58d914a565a66885029b46c5356709734ac94177a3777c99acf62cc9de2ef93"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/bindings/python/tree_sitter_rust/binding.c",
+      "sha256": "cdfd53e3ec5fd19076a26af1c5b4fb951adb4d262c2b1e9f800674832b9cf7d2"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/bindings/python/tree_sitter_rust/py.typed",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/bindings/rust/build.rs",
+      "sha256": "410942160f7d7b19c7c57ad2554cdc1bffb648e44d1f84377044aae9eb45e57a"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/bindings/rust/lib.rs",
+      "sha256": "b6bfc741a8de2d507484b23650fc6ea5af072a3b31f7cc5b7d19240390f19c20"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/bindings/swift/TreeSitterRust/rust.h",
+      "sha256": "ce800b608d7722b205f98574d760b18a766111bdd9724c505b727e4a85a5d4f0"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/bindings/swift/TreeSitterRustTests/TreeSitterRustTests.swift",
+      "sha256": "524b40672b8a0c3a2bd44fbcb62747861a2e609768e96ef7e5bcd704ecfcf72b"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/eslint.config.mjs",
+      "sha256": "e7b2dbe4f462cf890b53cc2d140aef6785fa31caabaaf6a11a38bf12a3ece091"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/examples/ast.rs",
+      "sha256": "43fc2344174da29bb3c032b260a009828e4636965c1ab8cfff62b651caf91b92"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/examples/weird-exprs.rs",
+      "sha256": "4968463f974c79afd641769a48d4e7e1c617b1acec03b5ccea3555b28def9dba"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/go.mod",
+      "sha256": "21c246165c3946e13b2efde9f5091ee39af8d0bbcddd703215d0eb12a7d02dda"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/go.sum",
+      "sha256": "fe3d6dbbdf144bfd804536990d4d54572f4c936940a656dd4f504adb1c7183fb"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/grammar.js",
+      "sha256": "e2b851418e14e3bacec9ef5993e0f8f05196a76641a5e1d488ab86d6973b3dc4"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/package-lock.json",
+      "sha256": "4dff39ad3bae48ca9d01396a3d45ddd165ad01e5a371b85d9385cd29bd8a47ca"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/package.json",
+      "sha256": "5abd4612ee8197b6d42a7dc5929550ce1c534cacebf6b687ed4befd339fea6c9"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/pyproject.toml",
+      "sha256": "156213970cb220bc7883f1552d810bf6425ee42e17e73b3ee3ca98442ffe8014"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/queries/highlights.scm",
+      "sha256": "0f0343107f14a7690157f51090a979eb8f8bfe4eada7c61763ddb4c54b1311d1"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/queries/injections.scm",
+      "sha256": "723146f179bc0edfba2f51731c99afce8bed3b677dfb4435c303859fae299ba5"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/queries/tags.scm",
+      "sha256": "f22867fdebde5cb091861c08d34690dc2540f4318068bf81be9f6b0d348ab8c1"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/setup.py",
+      "sha256": "1e5f69b63722937487d2a0b81d0961490a1ad85629481f0f65e1349322e3effb"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/src/grammar.json",
+      "sha256": "b0f58f41f5461fa141bb98d81fe8abece3056cff979c4068a2e6cddee5aa0663"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/src/node-types.json",
+      "sha256": "4b73a1248978340336100db455bf0731c23f9190568c9ae62265fa4a80a327d5"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/src/parser.c",
+      "sha256": "9602518f9e57919910bf0e777e52f6bfc9325d4c182e998bdb4efd5682b76e4a"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/src/scanner.c",
+      "sha256": "9609a2f92dbb7c32bc056fd8fb94e5478428f04496696aa08b048a9b66caf283"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/src/tree_sitter/alloc.h",
+      "sha256": "b29c1c9fb7cc82f58c84b376df1297d6e2737a1d655fd356db0859e3c29c2fea"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/src/tree_sitter/array.h",
+      "sha256": "31e60a1bff6f715afacce03b5b70efe42b58371b4f9595dd4af52a577ff9608c"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/src/tree_sitter/parser.h",
+      "sha256": "180b893c8734778fd32f372dfbc27bd6ad1cd2221f26150b31256ff6716320d2"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/test/corpus/async.txt",
+      "sha256": "406f2f345d462261735939b0f239b4aafe4f5dc2640fa223897b87c4f0e1a6d0"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/test/corpus/declarations.txt",
+      "sha256": "e97dbc3b949af13e65d6cc1e44e5ff09daaa265488bbb50bc165b9c3563d0d58"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/test/corpus/error.txt",
+      "sha256": "a77ce19d0443e8d99ff0f1c25227130272207fbec0745c59fb72d3b94fc76089"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/test/corpus/expressions.txt",
+      "sha256": "88e52e8d99ce78c617cf987e51e585419d8d5c59abcc77ae10be004d7566aee4"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/test/corpus/literals.txt",
+      "sha256": "01c8b777b61306180ef0eb739262bbb344213e557d7223c7d7643afeb2f3dd11"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/test/corpus/macros.txt",
+      "sha256": "cb02c4e641ba70467aca1cc084749b019e448ade3aee2a8108cc49fc77ab9485"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/test/corpus/patterns.txt",
+      "sha256": "65fc696b2c20f2ea7becd006183765cd53a4ee9ea8f7382a4fd345fbe7fbca02"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/test/corpus/source_files.txt",
+      "sha256": "2fe99ac43a5a2b16d3b1a12987588906eae133fe3f11c416189218003a6b6f80"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/test/corpus/types.txt",
+      "sha256": "48fbdb3b19da027da868b7ea9648dc7c67da3fed56cb876ed7239ab5bcc3c200"
+    },
+    {
+      "path": "third_party/tree-sitter-rust/tree-sitter.json",
+      "sha256": "1ff4c338e5f9a8ff725f2f37b2e125dceac46a139cd572064d8dcfbbef9c0aaf"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/.editorconfig",
+      "sha256": "9b6da2df3a325dbed2f93e1909dccdda3efa2eba84565b6ef7f0295c5551b770"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/.gitattributes",
+      "sha256": "5391eefcb19fff73e2cb47fca14c2b6ed73d22f1d6c16bf1937915bd1485d243"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/.github/workflows/check.yml",
+      "sha256": "8ac5f1f55bc569e293900d1d153120ed2b7e71d8eeb58fc3fef09de422623f0b"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/.github/workflows/generate-static-grammar.yml",
+      "sha256": "77e870123db95dad89c44950aca76e4ba973b76c1e30f2f8bd07f569d1263294"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/.github/workflows/parser-src.yml",
+      "sha256": "37c2f95d9a5ff8de2a2a7ae198b1cde86594842cea9e5c9a962aae41b6a6deff"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/.github/workflows/publish-prebuilt.yml",
+      "sha256": "a9b05a8557af2547f71d6b4fd52c25ff3be1af4e500caa45c0788c7190fcf906"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/.github/workflows/publish-pypi.yml",
+      "sha256": "090e5350ba0a71de9f6b71369bbe30d38858551a21ccd9fe087758b37453f0e7"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/.github/workflows/publish-rust.yml",
+      "sha256": "2b085bd21930ae2923b30bca3dfe8ce0960cf73e6cd0f47b98ca303065109d44"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/.github/workflows/release.yml",
+      "sha256": "84402806a15124843ecbd499b85f0527972bffce4ab75fcc801217496e27d74a"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/.github/workflows/test-older-tree-sitter.yml",
+      "sha256": "6256f02c8db56475e7caf5957d4fdcaed72a02c4f8c791b361c67d705bce8b2d"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/.github/workflows/top-repos.yml",
+      "sha256": "2b867409694294eaf0de8c31af25e1e529e7dbedf563ce5e5c7b8a92bd367304"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/.github/workflows/update-repos.yml",
+      "sha256": "73f61476077132a1792e8cb0bd8f4a0746f8de91d1e6208e6285b071e592cbb2"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/.gitignore",
+      "sha256": "b911ca1df38cbfa524f92047c484d26aaaf508fb716315c3ae3000e2a43badaa"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/.prettierignore",
+      "sha256": "457140463c070410e7fcd38c49f0084bc54df761df90245201ac1ad40f8c04d2"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/.prettierrc.json",
+      "sha256": "72930d5b136e0fe6a88b6fa8431b08c8fe6a7368dec894a5a0cc745bdeb2f39a"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/Cargo.toml",
+      "sha256": "ddcf6e28af74abdc21ee360478ee6fd2a37f84b521d8eb3ff6ed01a191d4303c"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/LICENSE",
+      "sha256": "3533cec129bb4bba015c0d61d86dd7c3b7e82110e4d2ff7837a01eff5bad5ccc"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/MANIFEST.in",
+      "sha256": "89d0b04c588b516f7c44f5d0e82b99f78ccc58c5c1231d19071444e82ac8538c"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/Makefile",
+      "sha256": "09435b85ae76a90b68df03e0416f344422d2cac5cfd08d0800746ef9796775f6"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/Package.swift",
+      "sha256": "f51e05bce5ed9b3028009b5767cb4107df0b35cb4a71431fffc8615ac1f3d562"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/README.md",
+      "sha256": "5f3d44f1d4093a045edd4b48dde12fe532e2bf373605a73291b61c5c659454d9"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/binding.gyp",
+      "sha256": "efd3469b9500f5d920e5fdaa153f9858004855d92d5c6e94cba2d0debfde6863"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/bindings/c/tree-sitter-swift.pc.in",
+      "sha256": "9f52bb4a9d13288602ef64d5be25f546267a6487fc076d749b88b5552381a8c6"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/bindings/c/tree-sitter.h.in",
+      "sha256": "ebb283ebe814f5cbd6c742d0ce5fc7ad1682fcfdfd7bc3232d12196236e29180"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/bindings/c/tree-sitter.pc.in",
+      "sha256": "1020d389b2fa7b1c872c174672e28daafebd1ef8094194abfb25761add411824"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/bindings/go/binding.go",
+      "sha256": "d0755ee2cb36d245f496e1d68d3d3253ce6506bc8b54959505c8eab59e79b551"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/bindings/go/binding_test.go",
+      "sha256": "f404a4506ff459cfec582ed7ecb3d174a3b625f87dfc5f7a39dbfb11bd7c3312"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/bindings/node/binding.cc",
+      "sha256": "3acfebae14c986c944fe643298387722928590769ce77f2039196220c474f541"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/bindings/node/binding_test.js",
+      "sha256": "74bae919b78d6fadc38898d7937c380c855b9c445b03b2df4cea0d3de95a4f1b"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/bindings/node/index.d.ts",
+      "sha256": "5f593f781f7cb12a3dcdcab2f9c063a77b9965f537bb01c5c05958947f5ff8fd"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/bindings/node/index.js",
+      "sha256": "609bdf22b8fd183025b3c24e8587f6211d50358e8f2e4c526b9217349ed9dbc0"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/bindings/python/tests/test_binding.py",
+      "sha256": "c2900c79a7fe85da97d748b08f19d59660aebc53fa28029e18ed8c7737ae1cf5"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/bindings/python/tree_sitter_swift/__init__.py",
+      "sha256": "fe91b5b4276ea960f683dbef5725be668679bc729b9b086d4173718a82b25942"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/bindings/python/tree_sitter_swift/__init__.pyi",
+      "sha256": "f317fb6d8d6cce00d8f47449ec5277dba4a8e121603224917c20782c00e44e95"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/bindings/python/tree_sitter_swift/binding.c",
+      "sha256": "8b004c2dd06633dedc3f12a05185123675dab10405e98f3c2f68eb764e6e2ba0"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/bindings/python/tree_sitter_swift/py.typed",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/bindings/rust/build.rs",
+      "sha256": "0b33a0c436b781f93037411cc1fd1d8536268e616949a222bf6b8d34dcc5366e"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/bindings/rust/lib.rs",
+      "sha256": "6d20c388c0d9da1af82304151cfd852955838ad456adc96864fe3016fc35ef92"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/bindings/swift/TreeSitterSwift/swift.h",
+      "sha256": "b3abf26b89f8cfcea6bcb6c9efa3947132bf41cc5c35bde1459a0c55ce24ceaf"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/bindings/swift/TreeSitterSwiftTests/TreeSitterSwiftTests.swift",
+      "sha256": "71da48aaecbbba195a97b7b7ba0a81bc6212b3edd172a7710eba094227b4ed00"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/go.mod",
+      "sha256": "5f34407e0a90542a1f622b92132eb92a1195587df086acde20683f5e1c4e874b"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/go.sum",
+      "sha256": "2d68d8d828bb507350365fd2a688cd0a36fbe13a63e2e48f41852210a16803b4"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/grammar.js",
+      "sha256": "803457bb92904d3fd2e48da525cfc25aa8d7ac83dd309b80f5b4e073466983dc"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/package-json-old-tree-sitter.json",
+      "sha256": "f60c28faf33a3ba786295073e46ffd5251c8d59856398b073a1cf4da26acc959"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/package-lock.json",
+      "sha256": "afa17aa95826f8fa620dc095ad586c4ba5e79d3ba2967067789103a4e4806585"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/package.json",
+      "sha256": "3695ce2ac505139dfb4b27276fa43605df1c732f8cf80f7791ff04439aa91e6f"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/pyproject.toml",
+      "sha256": "eb5f7293a8b68265c3de49cd3bda4ee54e647c704e9a6e33f65d9402bc88c08b"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/queries/folds.scm",
+      "sha256": "4f00b0b392dce70a0127b67d1c7858f1074768125f3c1702b22acd036e5c9ba0"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/queries/highlights.scm",
+      "sha256": "b0bbeb918904b252e8bd361f4afb4756647232391110a67deecbf7227464aff8"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/queries/indents.scm",
+      "sha256": "8c025f8b671167e87f371ef230cd68c953361c5a6f735cbb89985f791ffa7da0"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/queries/injections.scm",
+      "sha256": "fd541e467fd2667ed7cfdf604b0f3b3d1ac2632791972840eaedd0b99a581e58"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/queries/locals.scm",
+      "sha256": "430a7d71c30212e1e0e21eb1b3ed71959fb71bf74a6fea27a0efbf491ebda1c7"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/queries/outline.scm",
+      "sha256": "8646875169da813e8e273deb1e4a84627a11317c07cdad9dd6594279c4b73edd"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/queries/tags.scm",
+      "sha256": "6d3884e3f785d621128356a23ac81dfc438d9a853b8ee24b8070dc2caaf631ca"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/queries/textobjects.scm",
+      "sha256": "a8086f55963e0c79c91ded41c5dacc8da8ec8753f05b4db3ea70ce56e4281fa4"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/script-data/known_failures.txt",
+      "sha256": "a727bf9c811e86bf61f491207baaf122014b917030c4414165154cbc2215c5ce"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/script-data/top-repositories.txt",
+      "sha256": "5a3c1c0aa76479fb942227110ca6465c12a7a571e6369e2087331c45c1a73a95"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/scripts/calculate-parse-rate.sh",
+      "sha256": "fc55237b71799c5417063fda9dc2f43c03a0da5b5aa223a9ab846eff45541975"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/scripts/check-dirty.sh",
+      "sha256": "f2ee7d1dba5a35a344aa8467b35e8bb818999b8fa20a56510e2e15861953a829"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/scripts/common.sh",
+      "sha256": "20444243d699a878875c3c6412ebe815638ce9d9dfbb3af8d995c6c38c06f343"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/scripts/test-with-memcheck.sh",
+      "sha256": "01f3ec700a645c092c888b8ed0fef2976a17f864a1bf47375eda546aca7ee5a0"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/scripts/top-repos.sh",
+      "sha256": "f01ff7a7f7ef7052763b3016adc3d1564226ef955b2c8127d5ffacc36e7aa140"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/scripts/update-top-repos.sh",
+      "sha256": "5b9d40f75e4e78f64e0c0c4eef949d9c2e738c001e1859c8e6254a6f54c790ec"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/scripts/wait-for-tree-sitter.js",
+      "sha256": "512594a577bb016a08d27b7e0b26d0054cda0071600ab12756ccde37b4e32537"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/scripts/write-generated-grammar.sh",
+      "sha256": "9e09bee38e176e481f67b50da3598a9fe862683e7e1e4c04be858d7f4e5ad32c"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/setup.py",
+      "sha256": "e75687bdc5752d9048cdc4396e2caf1299f9581b7a1c1fccfb0eeab9312a2bc3"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/src/grammar.json",
+      "sha256": "4e2563022e6efde4c242e1bbbeed4da7067c3b94bffba518f6e3a33c0360b493"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/src/node-types.json",
+      "sha256": "1092eb8e9c622cfdd6ca414af88888ef7154b1792a96e6cc30db17e29f4edd99"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/src/parser.c",
+      "sha256": "6755b1673b0e364e51a137b98e62ba0937c30a461e96767b22f259a267f25207"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/src/scanner.c",
+      "sha256": "b835c1ded068e902944fe82c3770b9dcf85f67dcaab8fbf772f1606007da7373"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/src/tree_sitter/alloc.h",
+      "sha256": "253b44a7b4313a7afd0c505c2fc6e7ce4b8e78955ebf4be3ea000532ec060673"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/src/tree_sitter/array.h",
+      "sha256": "4ff743903dc46f5db6aa54f31c6b4d160a8a9779e5b2ab1ee59ae7ebcd850ea1"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/src/tree_sitter/parser.h",
+      "sha256": "a1f6ef161fbaf48a0e10fca90ef5290a062462b307b3898aa562993853b9f80a"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test-npm-package/index.js",
+      "sha256": "3f5662485e7ec081b133273de47c637ffb6db85c05a777c97bf67a4116f5b4ea"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test-npm-package/package-lock.json",
+      "sha256": "ab93ecdb424782320ec5835c40b3dd5c0db009de6023f4011a8af929c234fe5e"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test-npm-package/package.json",
+      "sha256": "197fa745e3518a476a6e51436f184e87d58e292b5b8e8ad6757a8a7ea6b2a122"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test/corpus/annotations.txt",
+      "sha256": "dd7a6cf376847fe826f37299751a0845192b8c624aa21c1724ff150de0d32b03"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test/corpus/classes.txt",
+      "sha256": "e7992710715ca8877896ce267b0c3fa5e2f1321e989b3c0a59bf10394b6d3013"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test/corpus/comments.txt",
+      "sha256": "7c2083b6d6973dc44e12928a46f0b9356fc16f71da197c40895a0cb6303da80b"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test/corpus/emojis.txt",
+      "sha256": "257fba8196000b6d395e4bacd559d6e609c1cd726230c65dcbe0e853725d5e3f"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test/corpus/expressions.txt",
+      "sha256": "6266a6b6e71773679cae201d3d9f8193d905e09520cc32bf618e95e7ffb939af"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test/corpus/functions.txt",
+      "sha256": "7ac4c5d613d470d2829db01bcb1f442c58885195e4eb3ae6d521d971776ed9f7"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test/corpus/literals.txt",
+      "sha256": "fcb90a3ca50166832d768293a87a201ee6b9ce0ae60640cc1c7e3ee3fa868447"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test/corpus/macros.txt",
+      "sha256": "625248a1fc204b36e52dd882404f9b8f20aff68ae6c923f94ba679453ae4fb42"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test/corpus/statements.txt",
+      "sha256": "0e2dd80e5acc61da0967af9c087cbbe8760e3c6860bde62256e3e0aea9816465"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test/corpus/types.txt",
+      "sha256": "c4c0830356f948f6d6f4356c03f3aebbf60f5228072d35fae1984f0cda1e5539"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test/highlight/AppDelegate.swift",
+      "sha256": "21e1e1215e0277c6cf951e6a07d1ad9093f7441633e364c391fd36b257510431"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test/highlight/Bag.swift",
+      "sha256": "804ec3d196df404e3da068ef9758a2fc045ecb99433deb221dd380671946a44b"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test/highlight/HeroStringConvertible.swift",
+      "sha256": "3381974ab1b339dfcf09fccf272432d455851439d10cfc6f50e0fe2e9ec1e54c"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test/highlight/ImagePipelineConfiguration.swift",
+      "sha256": "512c3cadee218f0cdf4402b047ecdb20819daef3b141aceac3e0aa2dcb8eeb14"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test/highlight/LazyImage.swift",
+      "sha256": "944564a24d9cc04c3caafc617510e376c08b824cf700da9aad3b25b627bad9e3"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test/highlight/MediaMessageCell.swift",
+      "sha256": "40ee86a982efda75f90c1a0bff885ecd28687c23fede0fda4aea6c446c43968e"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test/highlight/OperatorUsageWhitespaceConfiguration.swift",
+      "sha256": "5ae1e65a521cc2c97be6803993348d0f0e4cf4b13ddf20ad9432ad9e5041d4e2"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test/highlight/PlayerWindowController.swift",
+      "sha256": "b5f137706db3fdd7bd674a5ab600c1bdac9d1bdf701e56341e89cd7dc96a9a8b"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/test/outline/outline.swift",
+      "sha256": "64264a5113b16f32be733e009ae31b8bf6b4d0f45c8f5e3671f360f8105703fe"
+    },
+    {
+      "path": "third_party/tree-sitter-swift/tree-sitter.json",
+      "sha256": "642f7da7e0ad57c1a5d25c390989463562e8b7bbd1cce0d74043249cf837f4a1"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/.editorconfig",
+      "sha256": "90496ff136741e183308ae716913a90325bb20f5a83194b37aee5182501c81ee"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/.gitattributes",
+      "sha256": "21f5330d2ad46b11be96f937daef7d64567a86063dfc3f9e217a4c2c5d92dd61"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/.github/FUNDING.yml",
+      "sha256": "03bca99f25635436efcfb9d18ae1c958c07be0da9402e1a25ced7a83d51c49fc"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/.github/ISSUE_TEMPLATE/bug_report.yml",
+      "sha256": "c686ed6b66f64474d67a48c5682a5ff0dff05b8811d09f4322654704b9afd229"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/.github/ISSUE_TEMPLATE/config.yml",
+      "sha256": "1f103c6a9dd07cd13a9a6f17ace6b813f47747eb9cb7e00488cb2073caaf91bb"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/.github/ISSUE_TEMPLATE/feature_request.yml",
+      "sha256": "fb282afeea169cbbce4ba8153660650255f398984cf917d5536eadc9b38cd862"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/.github/workflows/ci.yml",
+      "sha256": "b443f3c6a4fcdc3d33aae9a54067069c5b5afbf1929a4a26e7eed3de2b326bbd"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/.github/workflows/fuzz.yml",
+      "sha256": "bbee8e8a33e8bef21965241843d44072dd237ec8327723f96a7b0ebe56e12db6"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/.github/workflows/lint.yml",
+      "sha256": "5564b73213e99bf51bb630019d19af4905ed560afc7edb2a98aed0da9411504f"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/.github/workflows/publish.yml",
+      "sha256": "0af81fc6243170b3e6587e76969737c71e222d322977d7e8b7e550ffeb14aad7"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/.gitignore",
+      "sha256": "b3ab146577626a302df228cfdbe663020ecbed513dd0a02700b68fea1e8ce00e"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/CMakeLists.txt",
+      "sha256": "2c99375ec496943ba177103b173e8e9dff7d3c9ad2014f2bf4eb98006a88fe81"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/Cargo.lock",
+      "sha256": "c8ea5b0ae8ecf378d8d2f863fb2481c66818a946d2311d1116e6fc0ec60e5365"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/Cargo.toml",
+      "sha256": "bbd7ab0577fbf2d6e54c6eb762f7a543ca55a8c9eafc7afa0a190e6c87c2b6a2"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/LICENSE",
+      "sha256": "49bf33cf78ef5897e4e161ce1517df7de1ae5042a65b6bcfd44401e0fc606559"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/Makefile",
+      "sha256": "c241360c44599c6c28d0ad6caf1cda51cb49882ea2e923ea3888b34e23e689c2"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/Package.resolved",
+      "sha256": "cef0ed0b229ba190f267939af963f3ca1411da00d4e32950b7085d6c46210104"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/Package.swift",
+      "sha256": "43e561c15311b62d5dbe50164062b1506449d7c8ba5a5d3a552158ee3c5ea361"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/README.md",
+      "sha256": "57352b23cb92e3c3244c7ea91c2f4a2fe894ae974d99de8c20a4b112951b6a6c"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/binding.gyp",
+      "sha256": "5451214724030d5150581c5af614d2d37c10379d9801c1170035f9777058b9e1"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/c/tree-sitter-tsx.h",
+      "sha256": "3e04f8aa2ec39e0d2f0df383fb2bb81a1b5543bc268e3e16d9fc653cf5f28fa0"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/c/tree-sitter-tsx.pc.in",
+      "sha256": "a31893e5e985338a5cb1ac7f8fa466943deda0809dd7a1a1304bc97b35bce5b6"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/c/tree-sitter-typescript.h",
+      "sha256": "4cb9b1b9fd0ddf646e945d53b5746beda59ca3e773b645b5748c4e5cd77b564c"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/c/tree-sitter-typescript.pc.in",
+      "sha256": "32f213faa63be8aae6ecfdb4266e5941a098ff6b8ae132e1b00718b7ec3f9721"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/go/binding_test.go",
+      "sha256": "8914c4a585af5715c52fddf3575d0a27985eae58da2718b0fc22355eae137bf2"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/go/tsx.go",
+      "sha256": "a5573f9816ebc330ec049fc7778e8689e52febcc3f9edb72368265b98f7a33df"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/go/typescript.go",
+      "sha256": "afbc8cb4722b2af1263496b1041623218bbd25f34940ddc840e3272d06988cb7"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/node/binding.cc",
+      "sha256": "4cd4aa17fc240701572efe79b016aae0f2fa067f28a551de3cdba0e98537bc00"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/node/binding_test.js",
+      "sha256": "0a5eabd8ae4e5b36870b702967fc689f2fe23f54602e1adacb1727fce840bbac"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/node/index.d.ts",
+      "sha256": "e5bd8a1be459aecc9b973d87eee92406f031132c078b5397479ccde39ad3673b"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/node/index.js",
+      "sha256": "b3bdc95667c309b13ffde9165aa27d3e1436ab957e99c7e5defa1eda699b0a1d"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/node/tsx.js",
+      "sha256": "e27d0b766fc7ec8459fb4e380b8e0f5885cbbd08de4c331d66c6bbf53f34aa9b"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/node/typescript.js",
+      "sha256": "3d500a9748eaa64ba2822789e1254a46dc2ce445461f268b9b87b2ff5b5d8ea6"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/python/tests/test_binding.py",
+      "sha256": "fb7415b3a61e9a0ee2024c2edc0f6246d98ab2cee7934d532743afb11a95a05c"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/python/tree_sitter_typescript/__init__.py",
+      "sha256": "48bcf7ce38cd4aed60ac59ad988e39db8498a57359a84c94c0c31762b145a0f3"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/python/tree_sitter_typescript/__init__.pyi",
+      "sha256": "56879c2e299a8b887f652f3f0ae7552b84cac755eddb14bcc98837883c76196a"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/python/tree_sitter_typescript/binding.c",
+      "sha256": "73501a1953754d44facedb230c1c8f5c3504aa37f834087747158e0d36b1ef21"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/python/tree_sitter_typescript/py.typed",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/rust/build.rs",
+      "sha256": "8e3ee9baddea25add039fc5d12d76fecfe81f1fd175429eb08694ccfcdaf85f4"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/rust/lib.rs",
+      "sha256": "f5d90ff81f962148bc0e4ce420f11dc8cc7750a53b65be667b18ca4e23fbc36c"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/swift/TreeSitterTypeScriptTests/TreeSitterTypeScriptTests.swift",
+      "sha256": "883ec63478c03d0dc250cbbedcd13e9801acff3be3239d6f573250e7132b16d6"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/swift/tsx/TreeSitterTSX/tsx.h",
+      "sha256": "11cd67fe06ca592585bc41db07973dfba3f12b2eea9f00b505a7acfcfb65615e"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/bindings/swift/typescript/TreeSitterTypeScript/typescript.h",
+      "sha256": "cec44d7f3030a71cc0ee169de547179acce36841c7c3db9d3f10e911b89028be"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/common/common.mak",
+      "sha256": "cf9c53b8b24c50796577aebbb5f5f6c08dd088952737260b37ec4827f0aa9a3f"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/common/define-grammar.js",
+      "sha256": "c2ac6894e0db6164f56dc339788d9da2da60ce1f81d888e6b74a74fc81db818f"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/common/scanner.h",
+      "sha256": "da66ef2bd14a3f7ea743e25ba068c6c9aae2c3509db200ff80c4a0e6116e564c"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/eslint.config.mjs",
+      "sha256": "e7b2dbe4f462cf890b53cc2d140aef6785fa31caabaaf6a11a38bf12a3ece091"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/examples/parser.ts",
+      "sha256": "e1429d9fa10832910568be5da7f38a6993db30c806a27e5375b02f95ccb51eb7"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/go.mod",
+      "sha256": "fbfa96d636447ee6ce2825faf65fdc310333f7fb78a4e1a379e6393e1a99e567"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/go.sum",
+      "sha256": "a7d2dd524ce7f8e47eb33d9aa480d5011628376107c15e3a415cfef44d22fc44"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/package-lock.json",
+      "sha256": "ecf16a3cca44269fc027c20278e818d4fb2bca683dd68217496cbda8b68ab93e"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/package.json",
+      "sha256": "26892ef49837678a747f81e344ed26938ec5804e29e003ad34fd5a3c87c68baf"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/pyproject.toml",
+      "sha256": "41ac97a4fb4d8f922dbfcc18742d49698ea9d951f07d38c4c2cdd066c9bb5c26"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/queries/highlights.scm",
+      "sha256": "e0c35adb819127bfd4f853fac5419e7d8ba44760246201d04a4a5ce0228a10c5"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/queries/locals.scm",
+      "sha256": "c3680f9b56276fb2ccc9f1d5f4d03dbca5d64bdf3e6d52ce5a4ad342cec162d5"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/queries/tags.scm",
+      "sha256": "b391288bcc71b513a5df7c9bb232d8bc7418d7e274b125aa0aa4bdd6121a0338"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/setup.py",
+      "sha256": "25a0dd25a6f314ac8904c0e48042e362a95e0e3478d9c63c5a062ce2373a157a"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/test/corpus/declarations.txt",
+      "sha256": "def4872b240ec88a3742e96d5669624c1ef22e8a94950148bd73ffcbf5ca02b7"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/test/corpus/expressions.txt",
+      "sha256": "999ae1e22344b5deadba3e36ca53fce47aaf9245e32ac2f32febdac83924af42"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/test/corpus/functions.txt",
+      "sha256": "992df043202aa4389c40550917e4b1374257b224082fb16e09ce7737e0f38697"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/test/corpus/types.txt",
+      "sha256": "5cb1c5799a0fcad900e8f9a445c7854fda8ab361e0196ad1f87f48abbad3d5ff"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/tree-sitter.json",
+      "sha256": "4f39daa6a0bde84506cdeaf0b4460ed262df880030b3e6073868d0c746932291"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/tsx/CMakeLists.txt",
+      "sha256": "21875872e03ba7f9b480f95e557be383e57a6c1e0fc31290741640c1ad018c65"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/tsx/Makefile",
+      "sha256": "c6d24f6f45dbe39f75a08aa4379b04ced191007e7e46d9e66fbe2a3f9ee8fe89"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/tsx/grammar.js",
+      "sha256": "19b7bc89bac1dfbb64e01ca15ca52345056028c2582d71762efd675af947a0f6"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/tsx/package.json",
+      "sha256": "d91e8e983679ba8bb4736e0680dc895513f2f10a7e7ff833bcc5f9e92ef0dfeb"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/tsx/src/grammar.json",
+      "sha256": "f98a7830b67be266c9e9effb673a5fc154ad6aa26f87f7c6d4a9191e09d8b357"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/tsx/src/node-types.json",
+      "sha256": "78b5789145286799a27a0a7ecc36cc1bcb151f94ec7fa631b248459867010c8c"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/tsx/src/parser.c",
+      "sha256": "1902cb53fa7ff5179df89b2eea863165e84c8cc866226419dc26921d8c055885"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/tsx/src/scanner.c",
+      "sha256": "d563cd30b2f39718c9ae4292795c5ce03a2ad01954ba3a86ef84c2781a736673"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/tsx/src/tree_sitter/alloc.h",
+      "sha256": "b29c1c9fb7cc82f58c84b376df1297d6e2737a1d655fd356db0859e3c29c2fea"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/tsx/src/tree_sitter/array.h",
+      "sha256": "4ff743903dc46f5db6aa54f31c6b4d160a8a9779e5b2ab1ee59ae7ebcd850ea1"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/tsx/src/tree_sitter/parser.h",
+      "sha256": "a1f6ef161fbaf48a0e10fca90ef5290a062462b307b3898aa562993853b9f80a"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/typescript/CMakeLists.txt",
+      "sha256": "085df7f624cfb0d23f6a07f1f34e4518c8d707cc1910caf7592a47a7a5751eab"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/typescript/Makefile",
+      "sha256": "1b200dd4bac601ca69a7c500346757d982c3a0356ef258ac05a4d53799e80a82"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/typescript/grammar.js",
+      "sha256": "7e4109889b2ce2731dde89f82f545a12f1e54a286f72bc874f1aed9965c5d5ae"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/typescript/package.json",
+      "sha256": "fcbd2e0fb7e7eed1af20cfd562cd3c3b22c839cb95b9d18df5793b850bd601dd"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/typescript/src/grammar.json",
+      "sha256": "99dc4b95424dff47c89acb50d5d3f25b081b07eaff43994b7881dccd4186b214"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/typescript/src/node-types.json",
+      "sha256": "c790a733fc756b54d4e54dceeb7d2d51e40d8b57136e70277753a75804cce3e3"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/typescript/src/parser.c",
+      "sha256": "74fe453edd70f4eae9af0a1050cbd7943d8971d59165b6aaebbaa0a0b716d1aa"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/typescript/src/scanner.c",
+      "sha256": "9125013b42cb888379d9be909f1d73dfb75a37626c2cdbf4122718a2b431a6d3"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/typescript/src/tree_sitter/alloc.h",
+      "sha256": "b29c1c9fb7cc82f58c84b376df1297d6e2737a1d655fd356db0859e3c29c2fea"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/typescript/src/tree_sitter/array.h",
+      "sha256": "4ff743903dc46f5db6aa54f31c6b4d160a8a9779e5b2ab1ee59ae7ebcd850ea1"
+    },
+    {
+      "path": "third_party/tree-sitter-typescript/typescript/src/tree_sitter/parser.h",
+      "sha256": "a1f6ef161fbaf48a0e10fca90ef5290a062462b307b3898aa562993853b9f80a"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/.ccls",
+      "sha256": "4fa5b0026a1719024a3fec19a939d4abf57f7ade2f3649fe03d794d4d6dca429"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/Cargo.toml",
+      "sha256": "e09af4d0ab19ab3eddc1910ff3e0a73bd1abe7fe5532bc778025700be3b918ce"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/LICENSE",
+      "sha256": "c5cfb43042b6b72045f4ba997834d0a7786d2793d91680868b5815b39f14fc78"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/README.md",
+      "sha256": "d242416514949a60f411aed912360e4bb68e526eb6c3bb3b024d8a3927585b91"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_rust/README.md",
+      "sha256": "0b7123387b8b32759c4f35cceec9ac0cbb0a9d0ab9146d1e62dc1f0ef671f557"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_rust/bindings.rs",
+      "sha256": "0d2c54cb70a151c3a65e5f8da4738e72b4b304acd310f88d6d43ea2706fa47e4"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_rust/build.rs",
+      "sha256": "d4700b8c8d0d3103c2813ced835c8e640609d39d5180fe40e7b8fe93f93efd97"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_rust/ffi.rs",
+      "sha256": "75043fd325b8a64be6b1c201fdf84faa1401bffe88c23e42c5ffd63a07552c91"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_rust/lib.rs",
+      "sha256": "d833ed6c16c92f602f218b68fae0449a5669802c4ada200ac859d1a8fbbc8c71"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_rust/util.rs",
+      "sha256": "5b828e25f6f426827f72356bd07e2fc11db8a30facee832f7d62897d018bc8f6"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_rust/wasm_language.rs",
+      "sha256": "c4f5b27490ef13da09540cf9539909ea154562a8c14218d88e9a6292c62bb1ef"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/.gitattributes",
+      "sha256": "65a93a8ffeecd1f15db95eb8ecc24dbda2c361dd8e07988caa05fc874d80ae10"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/.gitignore",
+      "sha256": "482fb75b0ba9f30c4f7a569b2e987754efb7904da8ab86cda3fc1373017f3b42"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/CONTRIBUTING.md",
+      "sha256": "18d8a9a2b7ca347725fd5b4dbab206bea3dffd6d718507a20a9ae211a6cfae03"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/README.md",
+      "sha256": "9bd503d3daf75007760bb5a8d6f075085268f7f894038516dde85ff852b21461"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/eslint.config.mjs",
+      "sha256": "c67beaaa93b0c98fa1e7da8abc2109e92a6fbfe97ab248de5d706dfe68507ce5"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/lib/exports.txt",
+      "sha256": "1a5f3e1ce90cbb97515f0946148f9a1c3f5af2bcfbbff3ff4e7554f71927efe8"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/lib/imports.js",
+      "sha256": "8ec1869dd0b6e928dbbd3178c810ee842144936de25fcc629c2065a34a67cf45"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/lib/prefix.js",
+      "sha256": "adfb177e8f3e51062b2c052b67c1168b685380131690956f13aadc3e7e76ae35"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/lib/tree-sitter.c",
+      "sha256": "9df4684de6bf22340dba3d607eec24ae15e31dbdc6ff000a84aa38f58c6c0bf9"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/lib/web-tree-sitter.d.ts",
+      "sha256": "1c9d74f30333eb6bcc1883c93d404e8896d84119d20bf1f3976cc8e06d69637d"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/package-lock.json",
+      "sha256": "62db071c5bff4a985d93e1d28c6a743386850e58b50c0a6d74f074a041d981cb"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/package.json",
+      "sha256": "10d9a8a3c1a094a88e938a6bc3211c6dc8b3da223d1ccd198a2c1c209bcac48d"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/package.nix",
+      "sha256": "85462c07b5a5ad68f32d622e88707b71d07e5253bfc6af3db741b539cc6fef99"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/script/build.js",
+      "sha256": "9dec92d73e32946518985cf8fac42e0a22c956b86ad08adc2820f3901eedea11"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/script/check-artifacts-fresh.ts",
+      "sha256": "cc1380a21c8c6d9cd7d74c8c0d36d199d0f1bbc4f09e9d21044d757f84584079"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/script/generate-dts.js",
+      "sha256": "f4e7d5f072bf9f90b7edcf73ac0facde09c2dd147cac8d2a1175f2fb5ed6d443"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/src/bindings.ts",
+      "sha256": "be9712a426bd4592d210936cccb4fe0efc32d475faaed0de41aded191062282a"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/src/constants.ts",
+      "sha256": "30a00afb66b2bf84e288c7a2f71ac1143d2ec78604b8241ea370531929fe254b"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/src/edit.ts",
+      "sha256": "3e9202d999e0aea9295f690d1a61d18f55f6a6f9667a16dc74e7d52bbfe63962"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/src/finalization_registry.ts",
+      "sha256": "3bf4531623433de69aef6c83c8756edacec6d5f48956fea2f67d583916d07fc0"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/src/index.ts",
+      "sha256": "7cf382be9a79e21e9f95b6a2c04c3cbba5ba8479a0fb18aa48458c107db49f31"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/src/language.ts",
+      "sha256": "078e5c34db1259e4f0d9e7d013f2d24a54bd14855b3cf2dd0e198961e43e8561"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/src/lookahead_iterator.ts",
+      "sha256": "dafd42de1104d5a46bfc031e5c4ff06b92238fa43e6f9e89daadbe40d73b5c5b"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/src/marshal.ts",
+      "sha256": "4ba76d6eb5120864e3985b694ff15572d284d0212c1ce4e9a24e7a12947129aa"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/src/node.ts",
+      "sha256": "2170eea0709f680b30e7174703cf59b5fc97d01a5ed0f7343170b851d6cd8252"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/src/parser.ts",
+      "sha256": "8764333dc8be5b24dd401558505fa2860259c102ca4e93be396a7f9dc6a1bbab"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/src/query.ts",
+      "sha256": "8d48989bf71046781afc4e1991cf54c62eae7e4be716539c1f190dad2e9fc496"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/src/tree.ts",
+      "sha256": "02c6d55636b726f0ec8bac90d9382577836860b4c769224f2eb13c084e003cc5"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/src/tree_cursor.ts",
+      "sha256": "005c6282de23519dff2bd28a7d30dd18db979b385f060cf37c820f8e87147b69"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/test/edit.test.ts",
+      "sha256": "e30f6c0496a4074024149a2a6f93eb1d342a5ad4abcbb3a9715c8459739049e7"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/test/helper.ts",
+      "sha256": "b18064667343b1b333794bf95c88c6cc1a84f601d169d827a956819819c9d87f"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/test/language.test.ts",
+      "sha256": "77c035305b5242cea0058d8c0901bb56010c7d839b0763c98e169e100777ac6a"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/test/memory.test.ts",
+      "sha256": "5838aa93bdc420b3011541ba9922e15a3ec238a82b4db45a19e35e1256b99961"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/test/memory.ts",
+      "sha256": "f7f1de81b5890ae4ba01be4c126056fd767e5dab508a1ffdfa4bc1eec8f31a67"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/test/memory_unsupported.test.ts",
+      "sha256": "439126f0dd042cc2a29c1a49eec4ec324fa5e2ee8cd921d8fb4f40dd53a7d086"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/test/node.test.ts",
+      "sha256": "6f413f15801c3b0b1ede60fe10aa587f03944198d7fd2b5adec0c0b0a503af1e"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/test/parser.test.ts",
+      "sha256": "a18dca7358409311e8f153e89078927f9a64546694e9cc78c7a2e963b92268e2"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/test/query.test.ts",
+      "sha256": "57875f13aad667f40463288049a221a018f7c5374278073c8d442b24b04b57fc"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/test/tree.test.ts",
+      "sha256": "8f542db4a0a12ba9ca66defdcc5709915437da810ffdd2ca5641403b8968eceb"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/tsconfig.json",
+      "sha256": "634ee89d6ee585537459c4d23d42b4b9ab7c645d75cff2fdd437a99a1471f4fa"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/vitest.config.ts",
+      "sha256": "5678dd3dbe78e66d7532775159b4b24e1c9d588754c14e749b22067070c81902"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/binding_web/wasm-test-grammars.nix",
+      "sha256": "39ad7dd38c0e2c3f3e7c38a7bbb964109ad38a4ecba696d7770df75de346246c"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/include/tree_sitter/api.h",
+      "sha256": "05ecdecaf37f915f0faaf9c22622590e7ea11265c1347f0891739de179a9e15d"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/lldb_pretty_printers/table_entry.py",
+      "sha256": "ffe6d1b497b2323b7fafd0bbc0bad1703aeef78044fb87297d97b1708c6f423c"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/lldb_pretty_printers/tree_sitter_types.py",
+      "sha256": "54d3a9637b81bd6ed11d5006ad9bed539e0e517438c25d57fa043d0e97ee03dd"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/lldb_pretty_printers/ts_array.py",
+      "sha256": "348963f261e3dfb32875d497031f56283a5dbc449532454340efc073bf8ce417"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/lldb_pretty_printers/ts_tree.py",
+      "sha256": "05f6dde0c4e0fbefbe1603dbd17d3fa255523cc229500df73e03e1e73109e4b6"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/package.nix",
+      "sha256": "e763f3a47469670e2c8496df4af31df7f6f3616f6a1077f85311a2b33370ef86"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/alloc.c",
+      "sha256": "c7d15b9015568f439af4adf28ead9e2bd14901221819276727c11227a29576da"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/alloc.h",
+      "sha256": "2ad7cc5391be8043ffdcc111b9b21b7767f592790fc8389acb6fcee7fd1acb61"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/array.h",
+      "sha256": "8d09903d836bd4238242e5d3b7e89d560f61a0ddb7dc297677bd190436770d8e"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/atomic.h",
+      "sha256": "bbc630cb913ac64274ce4412bc9d504174220323993f306ded74abe502867e74"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/error_costs.h",
+      "sha256": "0e8d1a21e0d60981e762989108231df6610d95591892f631c6c78a9ef831a2ab"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/get_changed_ranges.c",
+      "sha256": "6fcee7d2663ac67d88b9e79a03ff4854dde1e8d30d3c985d945bad8017532c52"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/get_changed_ranges.h",
+      "sha256": "f394bd0b6fce006be460fd16cbea3cc96e248c810a4d97e8830463c29c85e4a5"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/host.h",
+      "sha256": "e1982b9795b9c52b5ab564d8b9876189d65a97ca02f78351e1740b0985992fd2"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/language.c",
+      "sha256": "785c8271fac8c975f3bc605e98e455da439000c1b016354700719155903709f2"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/language.h",
+      "sha256": "fa8b64301392eb0d91fe30ff3c9bcb3c269c0777a7149c835aeadae3d575e169"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/length.h",
+      "sha256": "7fc186fb4bf50233059e8be9ca68efe95e66d34ced4b8a8f38f14497352faeb1"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/lexer.c",
+      "sha256": "4c740aa267fce15f3ff10911656276113898c7b53fc1124ff9d028a1ff40df55"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/lexer.h",
+      "sha256": "7d76308f7a2d3246a3e28fb27698be928f848130d1bfacc39f9f623127671b74"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/lib.c",
+      "sha256": "4e28f87edb86e5134d36ff7ba7e09a964ba9966a4b620c2735e3572b53c157d3"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/node.c",
+      "sha256": "356417378bc34c5fe8a96f591467aeaef4a224667aee72593f182d960c6d4393"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/parser.c",
+      "sha256": "81a3ebed9bacfc0f825c8071ccc1ec09e1806bd083da1c93592e34b5e8014b6b"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/parser.h",
+      "sha256": "180b893c8734778fd32f372dfbc27bd6ad1cd2221f26150b31256ff6716320d2"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/point.c",
+      "sha256": "04a101f16f40a651814c0f307fadf3f351d0f24013fa6d8b89c85bf1c6a5e717"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/point.h",
+      "sha256": "0929027be2ff54627be560f3bafc1af59e81ac6d5a8d5864455601a0dbee50ff"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/portable/endian.h",
+      "sha256": "999c2e28ba10a7c4f054de7c830b0558a431d0a4a87c2ac1439a65f4f67f157c"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/query.c",
+      "sha256": "e7fb249c0030c4c96d12dddb95c404ce850db9c7a7734f01bff2f8cdf38a46ec"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/reduce_action.h",
+      "sha256": "8f40396e431d7ff558694ca248eed1332b6cf6f7e6255f06cddfde78020bd308"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/reusable_node.h",
+      "sha256": "10be747ea4c733ca181dc43d55d155ac8e5b8caa247079621cca0ce633347bfb"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/stack.c",
+      "sha256": "f70b7e5823e82901801193562908037db4c1a73721e48da0fe54cdb2a6b5856d"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/stack.h",
+      "sha256": "13a2fb028036cf889fa92d55c3d7c0b57ba368a274f20a1961e695207cf3b91c"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/subtree.c",
+      "sha256": "b8799f776e0ebeb4b57941748f7dd7d10442e3f0eb38962b7693f3388398aedc"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/subtree.h",
+      "sha256": "93a2acaac1dc7cf9dcf1ad19eae0324d1f6469c9bf142d1c240f796234430d1b"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/tree.c",
+      "sha256": "06f7fece283fd9eb0eed3209b159ba82dba2daf3b7fbf5959bd21c527d8aac55"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/tree.h",
+      "sha256": "60591fb35ca078a8bb323004ece0377ac4f4c6cdbd3c4473af6e2b97186e024b"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/tree_cursor.c",
+      "sha256": "8d94832d6d68784252b2ff4c8abf9c37dd1672d2af9c4ab5588f342ed44b106e"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/tree_cursor.h",
+      "sha256": "3e8d9671ab1397bcaeb3e0cbf153a61a99e214782b43c09e5cde5a01e8283a1a"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/ts_assert.h",
+      "sha256": "ac1ec4b7ba388a9d8708feeb6c5c766b2927cecfd6db644b939772e1dc086526"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/unicode.h",
+      "sha256": "6cf0ec5a54e72644e506cca20b854dc7c49249cb1cff0d806635a10c8efba340"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/unicode/ICU_SHA",
+      "sha256": "2879b4cf5a2c625c6509c26e341b9c8b0c50fde284113b449e00567bdf4e593c"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/unicode/LICENSE",
+      "sha256": "6a18c5fac70d7860b57f5b72b4e2c9a1ba6b3d2741eef7ff9767c5379364f10d"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/unicode/README.md",
+      "sha256": "73bbccbcf2e6648385d188d914b16ae56b4553a0f1efb033e6b6d6242e41df1d"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/unicode/ptypes.h",
+      "sha256": "a87e9710c9cad7b08a945f4fb8b9d4629189897cc535f8ac927640c210a94b69"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/unicode/umachine.h",
+      "sha256": "2d79c0903d9e73e247b948bc0a12b6a785257ca0273bddab56fb59561f8d7391"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/unicode/urename.h",
+      "sha256": "a87e9710c9cad7b08a945f4fb8b9d4629189897cc535f8ac927640c210a94b69"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/unicode/utf.h",
+      "sha256": "a87e9710c9cad7b08a945f4fb8b9d4629189897cc535f8ac927640c210a94b69"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/unicode/utf16.h",
+      "sha256": "c370d9069f37fad2b53981c06dc648bbc21923db1655517a31bb237df4fba041"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/unicode/utf8.h",
+      "sha256": "39651224b2ca2452359c7f3339f3cc0a841fe7db64f8a00c9c5ec19c0389645c"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/wasm/stdlib-symbols.txt",
+      "sha256": "4fb97410d22925f88857d9adfecc2b955c08819e7d55de4e460d417bf1a2215d"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/wasm/wasm-stdlib.h",
+      "sha256": "ce898b0c65fb232646aacd10432cc3ddb067b48930f510b49cb7d7f4946880da"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/wasm_store.c",
+      "sha256": "3311776f41a461e1703ec04cb0f3f7b0e93bda56d2ca8c2cc1e085f862efffdc"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/src/wasm_store.h",
+      "sha256": "4f70d0500b0775e5d862a8e7d191b3853d73378c65e020e01767838a18debe0e"
+    },
+    {
+      "path": "third_party/tree-sitter/lib/tree-sitter.pc.in",
+      "sha256": "5783887cbbdb0874dcb0924221428d925fcf4d70f500bce2d62a1d93ec6149b4"
+    }
+  ]
+}

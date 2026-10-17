@@ -1,18 +1,15 @@
-# LumenCode Docs
+# LumenCode documentation
 
-- [End-User Guide](./end-user-guide.md)
-- [Developer Guide](./developer-guide.md)
-- [Specification](./spec.md)
-- [CLI Testing Strategy](./cli-testing-strategy.md)
-- [Implementation Log](./implementation-log.md)
-- [Roadmap: closing the known gaps](./roadmap.md)
+Both interfaces consume the shared engine in this repository. Start with the root
+[build instructions](../README.md) and [engine guide](../engine/README.md).
 
-These guides are meant to explain how to use and extend LumenCode without forcing the reader through every implementation caveat first.
+- [Consolidation plan](migration/plan.md)
+- [Consolidation status and evidence](migration/status.md)
+- [Qt user guide](qt/end-user-guide.md)
+- [Qt developer guide](qt/developer-guide.md)
+- [macOS architecture](macos/architecture-guide.md)
+- [macOS beta assessment](macos/follow-up-2026-10-17.md)
 
-Diagram sources live in `docs/diagrams/`.
-
-To render them to `docs/generated/` as SVG and PNG:
-
-```bash
-./tools/generate-doc-diagrams.sh
-```
+Dated audit reports preserve their original paths, measurements and context.
+Current build/source locations are authoritative in the root README and engine
+guide; older reports describing a copied upstream engine are historical baselines.

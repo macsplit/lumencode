@@ -4,8 +4,9 @@
 # Deploys static files to nuc and updates nginx configuration
 
 NUC_HOST="nuc"
-WEB_DIR="./web"
-REPO_DIR="./repo"
+SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+WEB_DIR="$SCRIPT_ROOT/web"
+REPO_DIR="$SCRIPT_ROOT/repo"
 REMOTE_DIR="/var/www/lumencode"
 PORT=33335
 DOMAIN="lumencode.app"

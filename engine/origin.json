@@ -1,0 +1,30 @@
+{
+  "qt": "48cf4db8042d51cfe67c2344e4d7a3824576517f",
+  "swift": "7523df005031c67c1d494699c57dc03a06283407",
+  "imported_swift": "62bc7af3007b6d5b7ae0964d59e8400f9c3d946c",
+  "branch": "consolidation/shared-engine",
+  "description": "Historical source origins; normal engine edits do not require resynchronisation.",
+  "migration_source_sha256": {
+    "engine/src/symbolparser.cpp": "962e41c74ff4f8544b1bea4eed1a2acd0598fb233105a2577018c5a5d3c11b79",
+    "engine/src/symbolparser.h": "1d734ede9d41cc807e515260f8e2f68b1889069a0e808f99c64d97e1a33c2427",
+    "engine/src/projectindex.cpp": "1f245f31876ff4be9ce8afd13f7c57adfe787752b057674e43b007b17fbb6f0a",
+    "engine/src/projectindex.h": "6fa91ca266ba0219df1ef8262ee9e2f0b9c2db60f5b3f878e713fb3668274255",
+    "engine/src/weblinks.cpp": "db010dd2e461b6609bbb70025a3f06805e39325db6707b93e50bcd35d0d3b1a1",
+    "engine/src/weblinks.h": "b422ea118cc206d32dc01fed8be85d4b58ad71e7854241499ee59d4e82e928fb",
+    "engine/src/httpclients.cpp": "75901706ad3169f9f29cc46c8cbe8d8e1f05aa269b91d396cb06b41cd8344148",
+    "engine/src/httpclients.h": "3006d9b93765c03bcd03e99c3fe5d5f369ed25c97a25ccce3c8ae3b7d1a71bb1",
+    "engine/src/agentqueries.cpp": "4a7b72da61f06e788e8c372bfc6b383e3bd95fb946aab52ce34367a60f4d5d39",
+    "engine/src/agentqueries.h": "3a337b0f7ae102d4a5f8a8da46c3ffcebeccfe1d3f8be342d24df86a5b01250d"
+  },
+  "qt_application_source_sha256": {
+    "apps/qt/src/filesystemmodel.h": "bf5500ac6ea1d9eff88530c891c896a999fa2321d862144e9d4fb373c345921f",
+    "apps/qt/src/projectcontroller.h": "c374490542e7eb662a365b77ed042013d3551608eca30ec6046bba33a833b7e1",
+    "apps/qt/src/resources.qrc": "10e24eeafc956d714d60cbbb2930b1aae8ed91e8b522eae6232ebbb88bc81ca6",
+    "apps/qt/src/lumencode-cli.cpp": "396a69cbcaabdf78c218fa0a3412c08c77ae12e8adae55a3f46b1f6a21a3dba0",
+    "apps/qt/src/main.cpp": "9feef87d9baf406e5c6e3b17e6fbccec388326f40f3a2067a5caeb4c7b92ad6c",
+    "apps/qt/src/filesystemmodel.cpp": "4427ad94c4f6229b9bccfcfe641621362223a7853180ccad76a1bc2df6e8046b",
+    "apps/qt/src/projectcontroller.cpp": "3a8c9b446d05421148e0ba4b1a85c6c8ae3724dda120946bab7f04595c92e427",
+    "apps/qt/src/icons/lumencode.svg": "7f02f684e46e098d1cd2147628e4bed8a4c7b73f989375bc2f18c8cde40659cc",
+    "apps/qt/src/contents/ui/Main.qml": "2ea0b12c76d94669cb41f3862b1cbb97a4797a4a9f458975ffaf8b493e2d634a"
+  }
+}

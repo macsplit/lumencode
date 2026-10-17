@@ -1,0 +1,182 @@
+{
+  "mode": "corpus",
+  "engine_revision": "48cf4db8042d51cfe67c2344e4d7a3824576517f",
+  "swift_cli": "/private/tmp/lumencode-mono-swift/out/Products/Debug/lumencode-swift-cli",
+  "reference_cli": "/Users/user/Code/Coding/lumencode-migration-backups-20261017/reference/original-cli",
+  "executable_sha256": {
+    "swift_cli": "149d4b83db7b01ae7d3bafda4df21faa78711e534f1d7089e77fd86365d6be4e",
+    "reference_cli": "0c0a3a813cce28e11e5cff551a2aa5a974f3ffb4d31cd05f9794b3291fdb1038",
+    "engine": "ba3aa76cee772a32db60fd4483d13382fb9fd96a0da9bc30a31b0391fdf18525"
+  },
+  "qt_hash_seed": 0,
+  "comparisons": 6360,
+  "differences": [],
+  "failures": [],
+  "corpus_revisions": [
+    {
+      "name": "50projects50days",
+      "expected": "c92b0bc3a87fc95d44b89552b7b6a2eeb36ca481",
+      "actual": "c92b0bc3a87fc95d44b89552b7b6a2eeb36ca481",
+      "matches": true
+    },
+    {
+      "name": "todomvc",
+      "expected": "ff43b02e59dfa604386bb382034b2cd07c2bcd8a",
+      "actual": "ff43b02e59dfa604386bb382034b2cd07c2bcd8a",
+      "matches": true
+    },
+    {
+      "name": "html5-boilerplate",
+      "expected": "b6597338e695dc4a8165c5abcb2bfffa586c3ee5",
+      "actual": "b6597338e695dc4a8165c5abcb2bfffa586c3ee5",
+      "matches": true
+    },
+    {
+      "name": "express",
+      "expected": "7ef98448f8b38099ab1ded55e458538ad47a51e7",
+      "actual": "7ef98448f8b38099ab1ded55e458538ad47a51e7",
+      "matches": true
+    },
+    {
+      "name": "hono",
+      "expected": "37ce06904e732d4bc11c9075adf362c76049a594",
+      "actual": "37ce06904e732d4bc11c9075adf362c76049a594",
+      "matches": true
+    },
+    {
+      "name": "flask",
+      "expected": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35",
+      "actual": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35",
+      "matches": true
+    },
+    {
+      "name": "requests",
+      "expected": "611c6162cbc4ac2020a2f91c7cfa4f3abf9bbb60",
+      "actual": "611c6162cbc4ac2020a2f91c7cfa4f3abf9bbb60",
+      "matches": true
+    },
+    {
+      "name": "Slim",
+      "expected": "3675bf6baac66b07032575b7bef4200b60b7974b",
+      "actual": "3675bf6baac66b07032575b7bef4200b60b7974b",
+      "matches": true
+    },
+    {
+      "name": "PHPMailer",
+      "expected": "50cd271fdf4e23673ded5455cdbaea007e05f619",
+      "actual": "50cd271fdf4e23673ded5455cdbaea007e05f619",
+      "matches": true
+    },
+    {
+      "name": "CodeIgniter",
+      "expected": "3658d731eaabe6117298a105ffb5b9dd59e190ce",
+      "actual": "3658d731eaabe6117298a105ffb5b9dd59e190ce",
+      "matches": true
+    },
+    {
+      "name": "gson",
+      "expected": "854c8255b625cf1e13c701a83ea9ccb4caaa576a",
+      "actual": "854c8255b625cf1e13c701a83ea9ccb4caaa576a",
+      "matches": true
+    },
+    {
+      "name": "MediatR",
+      "expected": "916ef1b3d68ccdc96db8f914eaf1b32fc7db52c5",
+      "actual": "916ef1b3d68ccdc96db8f914eaf1b32fc7db52c5",
+      "matches": true
+    },
+    {
+      "name": "Polly",
+      "expected": "0275bc22a5a8defb77415313112454a558d0f43a",
+      "actual": "0275bc22a5a8defb77415313112454a558d0f43a",
+      "matches": true
+    },
+    {
+      "name": "ripgrep",
+      "expected": "3fce3b5bb0236da2df6d99672afb8a719642eca7",
+      "actual": "3fce3b5bb0236da2df6d99672afb8a719642eca7",
+      "matches": true
+    },
+    {
+      "name": "Alamofire",
+      "expected": "bda9ed57d72988a3a2ada33d824583541f86eac6",
+      "actual": "bda9ed57d72988a3a2ada33d824583541f86eac6",
+      "matches": true
+    },
+    {
+      "name": "gin",
+      "expected": "43fe48e8a0f44af783116cdb010725e6bb50255f",
+      "actual": "43fe48e8a0f44af783116cdb010725e6bb50255f",
+      "matches": true
+    },
+    {
+      "name": "cobra",
+      "expected": "adbc8813901bba65827259daa8e22ff94ec1f30e",
+      "actual": "adbc8813901bba65827259daa8e22ff94ec1f30e",
+      "matches": true
+    },
+    {
+      "name": "cJSON",
+      "expected": "6d9f2443ab071f86e5d9b43025a40929ec41c46c",
+      "actual": "6d9f2443ab071f86e5d9b43025a40929ec41c46c",
+      "matches": true
+    },
+    {
+      "name": "kilo",
+      "expected": "323d93b29bd89a2cb446de90c4ed4fea1764176e",
+      "actual": "323d93b29bd89a2cb446de90c4ed4fea1764176e",
+      "matches": true
+    },
+    {
+      "name": "fmt",
+      "expected": "5da4e9a3fb15626ba92969199061e0169ebc8a00",
+      "actual": "5da4e9a3fb15626ba92969199061e0169ebc8a00",
+      "matches": true
+    },
+    {
+      "name": "sinatra",
+      "expected": "cb22afd7902b566b6eaba6c4ea89739494a65d12",
+      "actual": "cb22afd7902b566b6eaba6c4ea89739494a65d12",
+      "matches": true
+    },
+    {
+      "name": "okio",
+      "expected": "fb4817a396dd37d515d94e6033216214e07323d1",
+      "actual": "fb4817a396dd37d515d94e6033216214e07323d1",
+      "matches": true
+    },
+    {
+      "name": "nvm",
+      "expected": "09822033d2bdb555fc52fa64489aaa4928695da3",
+      "actual": "09822033d2bdb555fc52fa64489aaa4928695da3",
+      "matches": true
+    },
+    {
+      "name": "test_db",
+      "expected": "e324b56193ca506ab7cc1ab143a9153d8c4535d7",
+      "actual": "e324b56193ca506ab7cc1ab143a9153d8c4535d7",
+      "matches": true
+    },
+    {
+      "name": "kirigami",
+      "expected": "fead580c77c2a60f67e9e6075ec700f745983be3",
+      "actual": "fead580c77c2a60f67e9e6075ec700f745983be3",
+      "matches": true
+    },
+    {
+      "name": "SDWebImage",
+      "expected": "c3ad5e1a9bf55c9b76d4c362430b5fcded96c502",
+      "actual": "c3ad5e1a9bf55c9b76d4c362430b5fcded96c502",
+      "matches": true
+    },
+    {
+      "name": "dotnet-samples",
+      "expected": "acb39ceb13f910ae0f8f6298059c59102b749c41",
+      "actual": "acb39ceb13f910ae0f8f6298059c59102b749c41",
+      "matches": true
+    }
+  ],
+  "all_corpus_revisions_match": true,
+  "elapsed_seconds": 211.45,
+  "upstream_report": "/tmp/lumencode-mono-corpus-upstream.json"
+}

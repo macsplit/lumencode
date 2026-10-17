@@ -1,0 +1,23 @@
+set(QT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
+add_library(lumencode-qt-controller STATIC
+    ${QT_SOURCE_DIR}/filesystemmodel.cpp ${QT_SOURCE_DIR}/filesystemmodel.h
+    ${QT_SOURCE_DIR}/projectcontroller.cpp ${QT_SOURCE_DIR}/projectcontroller.h)
+target_include_directories(lumencode-qt-controller PUBLIC "${QT_SOURCE_DIR}")
+target_link_libraries(lumencode-qt-controller PUBLIC LumenCode::Analysis Qt5::Widgets)
+# The existing controller's debug-AST command uses the Tree-sitter C API too.
+target_link_libraries(lumencode-qt-controller PRIVATE vendor-tree-sitter)
+if(LUMENCODE_BUILD_CLI)
+    add_executable(lumencode-cli ${QT_SOURCE_DIR}/lumencode-cli.cpp)
+    target_link_libraries(lumencode-cli PRIVATE lumencode-qt-controller)
+    install(TARGETS lumencode-cli RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
+if(LUMENCODE_BUILD_QT_APP)
+    add_executable(lumencode ${QT_SOURCE_DIR}/main.cpp ${QT_SOURCE_DIR}/resources.qrc)
+    target_link_libraries(lumencode PRIVATE lumencode-qt-controller Qt5::Quick Qt5::QuickControls2 KF5::Kirigami2 KF5::CoreAddons)
+    add_executable(lumencode-gui-smoke EXCLUDE_FROM_ALL ${PROJECT_SOURCE_DIR}/tests/qt/gui_smoke.cpp ${QT_SOURCE_DIR}/resources.qrc)
+    target_link_libraries(lumencode-gui-smoke PRIVATE lumencode-qt-controller Qt5::Quick Qt5::QuickControls2 KF5::Kirigami2 KF5::CoreAddons)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/packaging/app.lumencode.LumenCode.desktop.in app.lumencode.LumenCode.desktop @ONLY)
+    install(TARGETS lumencode ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/app.lumencode.LumenCode.desktop DESTINATION ${KDE_INSTALL_APPDIR})
+    install(FILES ${QT_SOURCE_DIR}/icons/lumencode.svg DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps RENAME app.lumencode.LumenCode.svg)
+endif()

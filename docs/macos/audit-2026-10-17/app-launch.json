@@ -1,0 +1,6 @@
+{
+  "launched_and_remained_running": true,
+  "exit_after_shutdown": -15,
+  "diagnostics": "",
+  "method": "Production app executable launched with project folder from temporary cwd; terminated after five seconds"
+}
