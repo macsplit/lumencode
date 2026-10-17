@@ -23,6 +23,8 @@ public sealed partial class MainWindow : Window
     private string rootPath = "", selectedPath = "", previewText = "";
     private bool indexReady;
     private JsonElement analysis;
+    private sealed record SelectionMeasurement(bool CacheHit, double PreviewReadyMs, double AnalysisReadyMs, double UiApplyMs, double CompletedMs);
+    private SelectionMeasurement? lastSelectionMeasurement;
     private readonly string settingsFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LumenCode", "settings.json");
 
     public MainWindow()
@@ -161,6 +163,7 @@ public sealed partial class MainWindow : Window
 
     private async Task SelectFileAsync(NavigationTarget target, bool recordHistory = true)
     {
+        var watch = Stopwatch.StartNew();
         if (!File.Exists(target.Path)) { Status.Text = "This file is no longer available."; return; }
         selectionRequest.Cancel(); selectionRequest.Dispose();
         selectionRequest = CancellationTokenSource.CreateLinkedTokenSource(projectRequest.Token);
@@ -185,28 +188,46 @@ public sealed partial class MainWindow : Window
         BusyStarted();
         try
         {
-            var preview = ReadPreviewAsync(requested, token);
-            var info = new FileInfo(requested);
-            JsonElement data;
-            if (cache.TryGetValue(requested, out var saved) && saved.Stamp == info.LastWriteTimeUtc.Ticks && saved.Length == info.Length) data = saved.Data;
-            else
+            // Show source independently of process startup, indexing and analysis.
+            // File opening/decoding also belongs off the dispatcher (network roots
+            // and large previews can otherwise block even before the first await).
+            var source = await Task.Run(async () =>
             {
-                data = await engine.AnalyzeAsync(requested, indexReady ? rootPath : null, token);
-                if (data.GetRawText().Length <= 512 * 1024)
-                {
-                    if (cache.Count >= 16) cache.Remove(cache.Keys.First());
-                    cache[requested] = (info.LastWriteTimeUtc.Ticks, info.Length, data);
-                }
-            }
-            string text = await preview;
+                var info = new FileInfo(requested);
+                return (Text: await ReadPreviewAsync(requested, token), Stamp: info.LastWriteTimeUtc.Ticks, Length: info.Length);
+            }, token);
             if (token.IsCancellationRequested || current != generation || requested != selectedPath) return;
+            double applyStart = watch.Elapsed.TotalMilliseconds;
+            SetPreview(source.Text, Path.GetRelativePath(rootPath, requested));
+            double previewReadyMs = watch.Elapsed.TotalMilliseconds;
+            double uiApplyMs = previewReadyMs - applyStart;
+            JsonElement data;
+            bool cacheHit = cache.TryGetValue(requested, out var saved) && saved.Stamp == source.Stamp && saved.Length == source.Length;
+            if (cacheHit) data = saved.Data;
+            else data = await engine.AnalyzeAsync(requested, indexReady ? rootPath : null, token);
+            double analysisReadyMs = watch.Elapsed.TotalMilliseconds;
+            if (token.IsCancellationRequested || current != generation || requested != selectedPath) return;
+            // Flatten/format JSON and inspect its size on a worker, not the UI.
+            var presentation = await Task.Run(() =>
+            {
+                var symbols = Payload.Symbols(data).ToArray();
+                var rows = symbols.Select(s => DisplayItem.From(s, "Symbols")).ToList();
+                foreach (var section in new[] { ("dependencies", "Dependencies"), ("routes", "Routes"), ("quickLinks", "Links"), ("relatedFiles", "Related files"), ("analysisNotices", "Analysis notices") })
+                    rows.AddRange(data.Items(section.Item1).Select(s => DisplayItem.From(s, section.Item2)));
+                return (Rows: rows, SymbolCount: symbols.Length, Cacheable: cacheHit || data.GetRawText().Length <= 512 * 1024);
+            }, token);
+            if (token.IsCancellationRequested || current != generation || requested != selectedPath) return;
+            applyStart = watch.Elapsed.TotalMilliseconds;
+            // A cancelled selection from an older project must never populate
+            // the new project's cache with stale relationship data.
+            if (!cacheHit && presentation.Cacheable)
+            {
+                if (cache.Count >= 16) cache.Remove(cache.Keys.First());
+                cache[requested] = (source.Stamp, source.Length, data);
+            }
             analysis = data;
-            var rows = Payload.Symbols(data).Select(s => DisplayItem.From(s, "Symbols")).ToList();
-            foreach (var section in new[] { ("dependencies", "Dependencies"), ("routes", "Routes"), ("quickLinks", "Links"), ("relatedFiles", "Related files"), ("analysisNotices", "Analysis notices") })
-                rows.AddRange(data.Items(section.Item1).Select(s => DisplayItem.From(s, section.Item2)));
-            Overview.ItemsSource = rows;
-            AnalysisSummary.Text = string.Join(" · ", new[] { data.Text("language"), data.Text("analysisSourceMode"), "confidence " + data.Text("analysisConfidence"), $"{Payload.Symbols(data).Count()} symbols" });
-            SetPreview(text, Path.GetRelativePath(rootPath, requested));
+            Overview.ItemsSource = presentation.Rows;
+            AnalysisSummary.Text = string.Join(" · ", new[] { data.Text("language"), data.Text("analysisSourceMode"), "confidence " + data.Text("analysisConfidence"), $"{presentation.SymbolCount} symbols" });
             ShowFileDetails(data);
             Status.Text = indexReady ? "Ready" : "File ready · project indexing continues";
             if (target.Name.Length > 0 || target.Line > 0)
@@ -215,6 +236,7 @@ public sealed partial class MainWindow : Window
                 if (symbol.ValueKind == JsonValueKind.Object) Inspect(DisplayItem.From(symbol, "Symbols"));
                 else if (target.Line > 0) SelectPreviewLine(target.Line);
             }
+            lastSelectionMeasurement = new(cacheHit, previewReadyMs, analysisReadyMs, uiApplyMs + watch.Elapsed.TotalMilliseconds - applyStart, watch.Elapsed.TotalMilliseconds);
         }
         catch (OperationCanceledException) { }
         catch (Exception error) { if (!token.IsCancellationRequested && current == generation) { AnalysisSummary.Text = "Analysis unavailable"; ShowError(error); } }

@@ -1,0 +1,298 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "name": "Project tree populated",
+      "passed": true
+    },
+    {
+      "name": "Dark theme",
+      "passed": true
+    },
+    {
+      "name": "Real engine analysis visible",
+      "passed": true
+    },
+    {
+      "name": "Source preview populated",
+      "passed": true
+    },
+    {
+      "name": "Source read-only",
+      "passed": true
+    },
+    {
+      "name": "Project index built",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.js",
+      "passed": true
+    },
+    {
+      "name": "Selected main.js",
+      "passed": true
+    },
+    {
+      "name": "Selected alias.js",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected main.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected alias.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected broken.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.php",
+      "passed": true
+    },
+    {
+      "name": "Selected Broken.php",
+      "passed": true
+    },
+    {
+      "name": "Selected App.swift",
+      "passed": true
+    },
+    {
+      "name": "Selected sample.py",
+      "passed": true
+    },
+    {
+      "name": "Selected broken.py",
+      "passed": true
+    },
+    {
+      "name": "Rapid navigation keeps latest analysis",
+      "passed": true
+    },
+    {
+      "name": "Rapid navigation keeps latest preview",
+      "passed": true
+    },
+    {
+      "name": "Revisit uses analysis cache",
+      "passed": true
+    },
+    {
+      "name": "Source available while engine analysis is pending",
+      "passed": true
+    },
+    {
+      "name": "Large file exposes all 2000 engine symbols",
+      "passed": true
+    },
+    {
+      "name": "Large source preview complete and read-only",
+      "passed": true
+    },
+    {
+      "name": "Symbol details and calls",
+      "passed": true
+    },
+    {
+      "name": "Navigation history",
+      "passed": true
+    },
+    {
+      "name": "Engine search results: 6 search results",
+      "passed": true
+    },
+    {
+      "name": "Clearing search restores tree",
+      "passed": true
+    },
+    {
+      "name": "Clearing search restores status",
+      "passed": true
+    },
+    {
+      "name": "Selectable source text",
+      "passed": true
+    },
+    {
+      "name": "Minimum pane dimensions",
+      "passed": true
+    },
+    {
+      "name": "Minimum rows fit without clipping",
+      "passed": true
+    }
+  ],
+  "timings": [
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\helper.js",
+      "elapsedMs": 15.8437,
+      "stages": {
+        "CacheHit": true,
+        "PreviewReadyMs": 14.8924,
+        "AnalysisReadyMs": 14.9701,
+        "UiApplyMs": 1.7871999999999986,
+        "CompletedMs": 15.6747
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\main.js",
+      "elapsedMs": 106.6613,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 13.5885,
+        "AnalysisReadyMs": 105.2734,
+        "UiApplyMs": 1.8289999999999935,
+        "CompletedMs": 106.3735
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\alias.js",
+      "elapsedMs": 119.603,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 5.8734,
+        "AnalysisReadyMs": 118.3728,
+        "UiApplyMs": 2.5253000000000014,
+        "CompletedMs": 119.3725
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\helper.ts",
+      "elapsedMs": 120.5465,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 5.4214,
+        "AnalysisReadyMs": 118.522,
+        "UiApplyMs": 2.6744999999999948,
+        "CompletedMs": 120.2834
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\main.ts",
+      "elapsedMs": 122.8596,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 14.1299,
+        "AnalysisReadyMs": 121.4763,
+        "UiApplyMs": 1.915300000000002,
+        "CompletedMs": 122.548
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\alias.ts",
+      "elapsedMs": 130.8914,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 5.1848,
+        "AnalysisReadyMs": 129.5355,
+        "UiApplyMs": 2.267400000000009,
+        "CompletedMs": 130.5659
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_recovery\\broken.ts",
+      "elapsedMs": 126.9278,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 8.5534,
+        "AnalysisReadyMs": 122.1337,
+        "UiApplyMs": 6.724699999999984,
+        "CompletedMs": 126.6325
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\php_basic\\helper.php",
+      "elapsedMs": 123.5599,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 7.1277,
+        "AnalysisReadyMs": 122.4548,
+        "UiApplyMs": 2.468599999999995,
+        "CompletedMs": 123.2938
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\php_recovery\\Broken.php",
+      "elapsedMs": 124.6092,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 6.1668,
+        "AnalysisReadyMs": 122.9715,
+        "UiApplyMs": 3.337399999999988,
+        "CompletedMs": 124.3065
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\swift_basic\\App.swift",
+      "elapsedMs": 108.7,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 6.2954,
+        "AnalysisReadyMs": 107.4444,
+        "UiApplyMs": 2.7409999999999997,
+        "CompletedMs": 108.4244
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\python_basic\\sample.py",
+      "elapsedMs": 124.6692,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 17.5002,
+        "AnalysisReadyMs": 122.6404,
+        "UiApplyMs": 3.7860000000000014,
+        "CompletedMs": 124.3758
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\python_recovery\\broken.py",
+      "elapsedMs": 110.3699,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 7.39,
+        "AnalysisReadyMs": 108.5717,
+        "UiApplyMs": 3.2845999999999975,
+        "CompletedMs": 110.0442
+      }
+    },
+    {
+      "operation": "select-large",
+      "symbols": 2000,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 138.1668,
+        "AnalysisReadyMs": 658.6103,
+        "UiApplyMs": 103.99249999999995,
+        "CompletedMs": 671.3322
+      }
+    }
+  ],
+  "failure": null,
+  "heartbeat": {
+    "nominalIntervalMs": 16,
+    "samples": 73,
+    "maxGapMs": 159.88569999999999,
+    "p95GapMs": 92.95769999999993
+  },
+  "limitations": "Programmatic workflow checks on this VM, not mouse/keyboard, accessibility, multiple-DPI or clean-machine acceptance."
+}

@@ -81,7 +81,10 @@ Narrator, multiple monitor DPIs or clean-machine distribution.
   because the native cache writer uses a single temporary filename per cache.
 - `LumenCode.Windows`: native views, navigation, dialogs, dark UI, preview and
   explicit audit mode. Folder scanning and engine work execute away from the UI
-  thread; stale selections/searches are cancelled and discarded.
+  thread; source is shown before waiting for analysis. JSON row preparation also
+  runs on workers; stale selections/searches are cancelled and discarded. The GUI
+  report separates preview, analysis and UI application timing, and includes a
+  generated 2,000-symbol source stress check.
 - `LumenCode.CoreChecks`: executable checks for argument preservation, helper
   failure, invalid JSON, output bounds, timeout, descendant-process cancellation
   and real engine indexing under a Unicode path with CRLF sources.

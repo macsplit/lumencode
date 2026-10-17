@@ -1,15 +1,16 @@
 # Windows development status
 
-Updated 17 October 2026 after resuming the initial checkpoint. The native Windows
-application now opens and can be tried normally. Continue this branch rather than
+Updated 17 October 2026 after the first responsiveness pass. The native Windows
+application opens normally and now displays source before waiting for analysis. Continue this branch rather than
 restarting the feasibility investigation or installing another UI stack.
 
 ## Position
 
 - Branch: `windows/native-winui`, based on canonical main
   `4d164034b992a7818b54c8ce30d831c6c875c850`.
-- Initial checkpoint: `f752dd68c7a14cb261e89d689a2f57b30c0012b9`. This follow-up fixes
-  its startup failure and validates the real frontend.
+- Initial checkpoint: `f752dd68c7a14cb261e89d689a2f57b30c0012b9`.
+  Startup fix: `79c5184c1ceb21fbc78b175cef90e3d773816f56`. The current
+  follow-up improves source responsiveness without changing the shared engine.
 - Architecture agreed: C#/WinUI 3/XAML frontend in `apps/windows`, .NET 10,
   existing C++17/Qt Core/Concurrent helper and canonical vendored grammars.
 - The shared engine build/parity gate is complete on this Windows VM.
@@ -31,8 +32,8 @@ restarting the feasibility investigation or installing another UI stack.
 | Public CLI versus helper complete JSON contracts | 99 files, zero contract issues, zero differences |
 | C# process/transport checks | 8/8 passed |
 | Real worker/index/search in a Unicode path with CRLF input | Passed, including same-file call and cross-file caller |
-| Actual published GUI smoke | 26/26 checks pass |
-| Fresh publish and bundled-runtime relocation in a path with spaces | Same 26/26 checks pass |
+| Actual published GUI smoke | 32/32 checks pass, including cancellation and a 2,000-symbol source file |
+| Package relocation in a path with spaces | 32/32 checks pass; initial fresh-folder startup check also passed 26/26 |
 | Normal executable launch with an initial file argument | Visible, responding window after five seconds; closed gracefully |
 
 Transport checks cover Unicode/quoted/empty arguments, invalid JSON, nonzero
@@ -42,12 +43,14 @@ These use the same process adapter that the frontend consumes.
 The GUI checks exercise the actual packaged frontend and bundled engine: tree,
 dark theme, analysis/preview, index readiness, 12 fixture file selections, symbol
 details/calls, history, asynchronous search/clear, selectable read-only source
-and minimum-window layout. Both final app-content screenshots were visually
+and minimum-window layout. The expanded checks also observe source while engine
+analysis is still pending, exercise cancellation during rapid navigation, confirm
+warm-cache reuse and display all 2,000 symbols from a generated JavaScript file. Both final app-content screenshots were visually
 inspected. They are in [evidence](evidence/); the earlier feasibility mockups are
 not counted as product acceptance. The normal-launch check restored the user's
 previous workspace settings and closed only the process it started.
 
-### Startup fix and measurements
+### Startup fix and initial measurements
 
 The original `0xc000027b`/generic `XamlParseException` concealed a packaging
 failure. Capturing `Exception.Data` revealed `Cannot locate resource from
@@ -79,13 +82,56 @@ indexing and layout activity; VM scheduling and timer coalescing also affect it.
 These results do not establish the optional 50 ms responsiveness goal. Profiling
 and improving UI latency remains a priority.
 
+### Responsiveness follow-up
+
+Source loading/decoding and analysis presentation preparation now run on workers.
+Source is applied before the engine request, so process startup and project
+analysis no longer delay reading the file. Overview JSON flattening, row formatting
+and the cache-size check also leave the dispatcher. Cache writes happen only
+after checking selection cancellation and project generation, preventing older
+results from populating a newer workspace cache.
+
+A diagnostic before/after run on the same VM used the same 12 fixture selections:
+
+| Stage, min / median / max | Before | After |
+|---|---:|---:|
+| Source applied | 20 / 134 / 212 ms | 5 / 7 / 18 ms |
+| Analysis available | 12 / 120 / 202 ms | 15 / 120 / 130 ms |
+| Explicit UI application work | 4 / 8 / 17 ms | 2 / 3 / 7 ms |
+| Whole selection operation | 20 / 135 / 213 ms | 16 / 121 / 131 ms |
+
+Raw measurements are [latency-before.json](evidence/latency-before.json) and
+[latency-after.json](evidence/latency-after.json). The baseline contains only
+instrumentation over the startup checkpoint; the after run also includes the
+expanded checks. These are single diagnostic runs, not statistical benchmarks.
+The source timestamp records RichEditBox text assignment, not a rendered frame;
+UI application excludes later layout/rendering and initial selection clearing.
+
+The added 2,000-function JavaScript case shows the remaining limit clearly:
+source assignment took 138 ms, analysis was available at 659 ms and selection
+completed at 671 ms. Explicit UI work was 104 ms, primarily the larger text
+assignment. The dispatcher timer still showed a 93 ms p95 gap and 160 ms maximum
+in the expanded run (101 / 155 ms in the baseline). The heartbeat workloads differ
+because the after run includes the new stress/cancellation checks. Do not claim
+a general 50 ms target or a measured frame-rate improvement from these samples.
+A second run against the usual `build-windows/package` executable also passed
+32/32 checks; its [gui.json](evidence/gui.json) records a 124 ms p95 dispatcher
+gap and 191 ms maximum, reinforcing that overall latency remains unresolved.
+Large-preview text rendering remains a profiling priority; syntax colouring has
+not been added in this pass.
+
+The audit now waits for the initial index-triggered file refresh, which can
+supersede its first selection. This fixes a test timing assumption exposed by the
+new asynchronous source path. Dark/default and minimum-window screenshots were
+inspected again; no layout regression was observed at this VM's scale.
+
 No Windows full public-corpus/damage sweep, direct cross-OS full-JSON comparison,
 multi-DPI/accessibility checks, installer/signing or clean-machine validation has
 been completed. Linux/macOS were not rebuilt locally during this checkpoint;
 the existing workflow still provides Linux checks on branch pushes. The initial
 checkpoint's [Linux CI passed](https://github.com/macsplit/lumencode/actions/runs/39038433627).
-Windows CI
-has not been added. Do not interpret unrun checks as successful.
+The startup-fix checkpoint's [Linux CI also passed](https://github.com/macsplit/lumencode/actions/runs/39047973149).
+Windows CI has not been added. Do not interpret unrun checks as successful.
 
 ## Implementation included
 
@@ -99,8 +145,8 @@ has not been added. Do not interpret unrun checks as successful.
   layout; native folder picker, lazy file tree, index/search, symbols/calls,
   dependency/route/link/notice presentation, navigation history, refresh,
   Explorer/default-editor integration, copyable/selectable read-only preview,
-  resize dividers and keyboard shortcuts. Compilation is verified; interactions
-  still require the actual GUI smoke and review.
+  resize dividers and keyboard shortcuts. The programmatic GUI workflow passes;
+  physical input and accessibility still need testing.
 - `apps/windows/LumenCode.CoreChecks`: executable adapter/integration checks.
 - Windows-specific helper executable discovery in the public Qt controller;
   explicit UTF-8 stdin in the shared helper and CLI; explicit UTF-8 decoding in
@@ -125,10 +171,11 @@ Windows via `ssh windows`:
   `fresh-publish.log`.
 - Current runnable app:
   `C:\Users\leeha\lumencode\build-windows\package\LumenCode.Windows.exe`.
-- Additional verified relocation:
+- Earlier verified relocation (startup checkpoint):
   `C:\Users\leeha\lumencode\build-windows\fresh verified package`.
-- Final raw GUI outputs: `build-windows/reports/gui-retry` and
-  `build-windows/reports/gui-fresh-final`; normal launch: `reports/normal-launch.json`.
+- Current responsiveness relocation: `C:\Users\leeha\lumencode\build-windows\latency-after package`.
+- Final raw GUI outputs: `build-windows/reports/latency-after` and
+  `build-windows/reports/latency-final`; normal launch: `reports/normal-launch.json`.
   The old `startup-error.txt` in a reused audit folder may be historical; use the
   newest `gui.json` result and file timestamps. Both final GUI reports pass.
 
@@ -148,8 +195,9 @@ was tested successfully; no SSH configuration changes were made by this work.
 
 1. Read this file and inspect `git status`, then fetch `origin` and use the existing
    `windows/native-winui` branch. Preserve any newer user edits.
-2. Profile real UI latency, separating process/index work from control creation,
-   text updates and layout. Keep the existing shared engine behavior intact.
+2. Continue profiling large-preview text assignment and rendered/input latency.
+   Small-file source display is decoupled from analysis; the shared engine is
+   unchanged. Stage timings in the GUI report are diagnostic, not frame timings.
 3. Test actual keyboard/pointer navigation, folder dialogs, pane dragging,
    accessibility and multiple DPIs. The current smoke is programmatic and does
    not establish those areas. Polish presentation, including source coloring.

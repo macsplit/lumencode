@@ -74,6 +74,30 @@
       "passed": true
     },
     {
+      "name": "Rapid navigation keeps latest analysis",
+      "passed": true
+    },
+    {
+      "name": "Rapid navigation keeps latest preview",
+      "passed": true
+    },
+    {
+      "name": "Revisit uses analysis cache",
+      "passed": true
+    },
+    {
+      "name": "Source available while engine analysis is pending",
+      "passed": true
+    },
+    {
+      "name": "Large file exposes all 2000 engine symbols",
+      "passed": true
+    },
+    {
+      "name": "Large source preview complete and read-only",
+      "passed": true
+    },
+    {
       "name": "Symbol details and calls",
       "passed": true
     },
@@ -110,70 +134,165 @@
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\js_commonjs\\helper.js",
-      "elapsedMs": 24.9414
+      "elapsedMs": 25.4407,
+      "stages": {
+        "CacheHit": true,
+        "PreviewReadyMs": 24.5498,
+        "AnalysisReadyMs": 24.6193,
+        "UiApplyMs": 1.4407999999999994,
+        "CompletedMs": 25.2444
+      }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\js_commonjs\\main.js",
-      "elapsedMs": 137.9486
+      "elapsedMs": 129.6147,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 3.1729,
+        "AnalysisReadyMs": 128.0128,
+        "UiApplyMs": 1.4946999999999946,
+        "CompletedMs": 129.393
+      }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\js_commonjs\\alias.js",
-      "elapsedMs": 147.4548
+      "elapsedMs": 113.9596,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 5.8504,
+        "AnalysisReadyMs": 112.7023,
+        "UiApplyMs": 2.5519999999999925,
+        "CompletedMs": 113.7156
+      }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\ts_module\\helper.ts",
-      "elapsedMs": 120.5236
+      "elapsedMs": 131.7325,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 5.2374,
+        "AnalysisReadyMs": 129.2427,
+        "UiApplyMs": 3.0997999999999877,
+        "CompletedMs": 131.4739
+      }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\ts_module\\main.ts",
-      "elapsedMs": 157.225
+      "elapsedMs": 126.413,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 17.7915,
+        "AnalysisReadyMs": 125.0138,
+        "UiApplyMs": 2.0349000000000075,
+        "CompletedMs": 126.1026
+      }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\ts_module\\alias.ts",
-      "elapsedMs": 117.5482
+      "elapsedMs": 110.781,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 5.6584,
+        "AnalysisReadyMs": 109.3241,
+        "UiApplyMs": 1.8443999999999932,
+        "CompletedMs": 110.4175
+      }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\ts_recovery\\broken.ts",
-      "elapsedMs": 140.8219
+      "elapsedMs": 121.6688,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 5.0738,
+        "AnalysisReadyMs": 116.8388,
+        "UiApplyMs": 5.474400000000003,
+        "CompletedMs": 121.3155
+      }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\php_basic\\helper.php",
-      "elapsedMs": 131.3067
+      "elapsedMs": 101.9313,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 6.0429,
+        "AnalysisReadyMs": 100.4455,
+        "UiApplyMs": 2.8085999999999984,
+        "CompletedMs": 101.6349
+      }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\php_recovery\\Broken.php",
-      "elapsedMs": 136.1587
+      "elapsedMs": 116.5367,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 8.0557,
+        "AnalysisReadyMs": 114.772,
+        "UiApplyMs": 3.624200000000002,
+        "CompletedMs": 116.2348
+      }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\swift_basic\\App.swift",
-      "elapsedMs": 108.0188
+      "elapsedMs": 91.4811,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 3.761,
+        "AnalysisReadyMs": 90.4445,
+        "UiApplyMs": 1.5756999999999977,
+        "CompletedMs": 91.2497
+      }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\python_basic\\sample.py",
-      "elapsedMs": 136.6439
+      "elapsedMs": 86.9445,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 14.2812,
+        "AnalysisReadyMs": 84.971,
+        "UiApplyMs": 3.4894000000000034,
+        "CompletedMs": 86.6681
+      }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\python_recovery\\broken.py",
-      "elapsedMs": 133.1009
+      "elapsedMs": 116.34,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 5.2021,
+        "AnalysisReadyMs": 115.1647,
+        "UiApplyMs": 2.332499999999996,
+        "CompletedMs": 116.1114
+      }
+    },
+    {
+      "operation": "select-large",
+      "symbols": 2000,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 127.4991,
+        "AnalysisReadyMs": 668.906,
+        "UiApplyMs": 86.92779999999993,
+        "CompletedMs": 682.924
+      }
     }
   ],
   "failure": null,
   "heartbeat": {
     "nominalIntervalMs": 16,
-    "samples": 63,
-    "maxGapMs": 163.98239999999998,
-    "p95GapMs": 106.72199999999998
+    "samples": 76,
+    "maxGapMs": 191.4312,
+    "p95GapMs": 123.53790000000004
   },
   "limitations": "Programmatic workflow checks on this VM, not mouse/keyboard, accessibility, multiple-DPI or clean-machine acceptance."
 }

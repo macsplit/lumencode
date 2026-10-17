@@ -33,6 +33,10 @@ public sealed partial class MainWindow
             Check("Dark theme", Root.RequestedTheme == ElementTheme.Dark);
             string file = Path.Combine(rootPath, "js_commonjs", "helper.js");
             await SelectFileAsync(new(file));
+            // Index completion may supersede this request with an augmented
+            // analysis of the same file. Await that real refresh as well.
+            var initialDeadline = DateTime.UtcNow.AddMinutes(2);
+            while (pending > 0 && DateTime.UtcNow < initialDeadline) await Task.Delay(20);
             Check("Real engine analysis visible", Payload.Symbols(analysis).Any(s => s.Text("name") == "wrapper"));
             Check("Source preview populated", previewText.Contains("function"));
             Check("Source read-only", Code.IsReadOnly);
@@ -49,8 +53,34 @@ public sealed partial class MainWindow
                 var watch = Stopwatch.StartNew();
                 await SelectFileAsync(new(path));
                 Check("Selected " + Path.GetFileName(path), analysis.Text("path").Replace('/', '\\').Equals(path.Replace('/', '\\'), StringComparison.OrdinalIgnoreCase));
-                timings.Add(new { operation = "select", path = Path.GetRelativePath(repo, path), elapsedMs = watch.Elapsed.TotalMilliseconds });
+                timings.Add(new { operation = "select", path = Path.GetRelativePath(repo, path), elapsedMs = watch.Elapsed.TotalMilliseconds, stages = lastSelectionMeasurement });
             }
+            // Start competing selections without waiting for the first one. A
+            // cancelled result must not overwrite the latest source or analysis.
+            cache.Remove(files[0]);
+            var superseded = SelectFileAsync(new(files[0]));
+            while (previewText.Length == 0 && !superseded.IsCompleted) await Task.Delay(1);
+            var latest = SelectFileAsync(new(files[^1]));
+            await Task.WhenAll(superseded, latest);
+            Check("Rapid navigation keeps latest analysis", analysis.Text("path").Replace('/', '\\').Equals(files[^1].Replace('/', '\\'), StringComparison.OrdinalIgnoreCase));
+            Check("Rapid navigation keeps latest preview", previewText == await ReadPreviewAsync(files[^1], CancellationToken.None));
+            Check("Revisit uses analysis cache", lastSelectionMeasurement?.CacheHit == true);
+            cache.Clear();
+            var selecting = SelectFileAsync(new(file));
+            while (previewText.Length == 0 && !selecting.IsCompleted) await Task.Delay(1);
+            bool sourceWhileAnalysing = previewText.Contains("function") && AnalysisSummary.Text == "Analysing…" && !selecting.IsCompleted;
+            await selecting;
+            Check("Source available while engine analysis is pending", sourceWhileAnalysing);
+            string largeFile = Path.Combine(output, "large-preview.js");
+            await File.WriteAllTextAsync(largeFile, string.Join("\n", Enumerable.Range(0, 2000).Select(n => $"export function sample{n}(value) {{ return value + {n}; }}")));
+            try
+            {
+                await SelectFileAsync(new(largeFile));
+                Check("Large file exposes all 2000 engine symbols", Payload.Symbols(analysis).Count() == 2000 && Overview.Items.Count == 2000);
+                Check("Large source preview complete and read-only", previewText.Contains("sample1999") && Code.IsReadOnly);
+                timings.Add(new { operation = "select-large", symbols = 2000, stages = lastSelectionMeasurement });
+            }
+            finally { File.Delete(largeFile); cache.Remove(largeFile); }
             await SelectFileAsync(new(file));
             var wrapper = Payload.Symbols(analysis).First(s => s.Text("name") == "wrapper");
             Inspect(DisplayItem.From(wrapper, "Symbols"));
