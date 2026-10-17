@@ -405,6 +405,11 @@ def validate_analysis_contract(parsed: dict, file_path: Path, issues: list[dict]
 
 
 def validate_symbol_expectation(file_path: Path, case_name: str, expectation: dict, symbol: dict, issues: list[dict], context: str) -> None:
+    if "callSites" in expectation:
+        actual = symbol.get("callSites", [])
+        missing = [site for site in expectation["callSites"] if site not in actual]
+        if missing:
+            add_issue(issues, "fixture_missing_call_site", file_path, case=case_name, context=context, name=expectation["name"], missing=missing, actual=actual)
     if "sourceMode" in expectation and symbol.get("sourceMode", "") != expectation["sourceMode"]:
         add_issue(issues, "fixture_wrong_symbol_source_mode", file_path, case=case_name, context=context, name=expectation["name"], expected=expectation["sourceMode"], actual=symbol.get("sourceMode", ""))
     if "confidence" in expectation and symbol.get("confidence", "") != expectation["confidence"]:
@@ -424,7 +429,7 @@ def validate_symbol_expectation(file_path: Path, case_name: str, expectation: di
 
 
 def expectation_needs_selection_roundtrip(expectation: dict) -> bool:
-    return any(key in expectation for key in ("sourceMode", "confidence", "parameters", "parameter_defaults", "returns"))
+    return any(key in expectation for key in ("sourceMode", "confidence", "parameters", "parameter_defaults", "returns", "callSites"))
 
 
 def find_symbol(symbols: list[dict], name: str, kind: str | None = None) -> dict | None:
@@ -621,6 +626,12 @@ def inspect_fixture_case(case: dict, issues: list[dict]) -> None:
 
     symbols = parsed.get("symbols", []) or []
     file_expectations = case.get("file_expectations", {})
+    for expectation_key, resolved in (("resolved_dependency_targets", True), ("unresolved_dependency_targets", False)):
+        if expectation_key in file_expectations:
+            actual = {entry.get("target") for entry in parsed.get("dependencies", []) if bool(entry.get("path")) == resolved}
+            missing = [target for target in file_expectations[expectation_key] if target not in actual]
+            if missing:
+                add_issue(issues, "fixture_wrong_dependency_resolution", file_path, case=case_name, expectation=expectation_key, missing=missing)
 
     if not symbols and expected_symbols:
         add_issue(issues, "fixture_no_symbols", file_path, case=case_name)

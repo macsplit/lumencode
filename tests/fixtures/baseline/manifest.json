@@ -2575,6 +2575,77 @@
           "parameter_defaults": ["'InvoiceDate'", "0"]
         }
       ]
+    },
+    {
+      "name": "swift_try_receiver_portability",
+      "root": "tests/fixtures/baseline/swift_try",
+      "file": "Calls.swift",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "probe",
+          "sourceMode": "ast",
+          "confidence": "high",
+          "callSites": [
+            {
+              "line": 2,
+              "name": "close",
+              "qualifier": "out"
+            },
+            {
+              "line": 3,
+              "name": "read",
+              "qualifier": "object"
+            },
+            {
+              "line": 4,
+              "name": "make",
+              "qualifier": "source"
+            }
+          ]
+        }
+      ],
+      "file_expectations": {
+        "analysis_source_mode": "ast",
+        "analysis_has_ast_errors": false
+      }
+    },
+    {
+      "name": "kotlin_case_sensitive_imports",
+      "root": "tests/fixtures/baseline/kotlin_case",
+      "file": "src/main/kotlin/com/example/consumer/Consumer.kt",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "consume",
+          "sourceMode": "heuristic"
+        }
+      ],
+      "file_expectations": {
+        "dependencies": 2,
+        "unresolved_dependency_targets": [
+          "com.example.widget"
+        ],
+        "resolved_dependency_targets": [
+          "com.example.Widget"
+        ]
+      }
+    },
+    {
+      "name": "ruby_normalized_relative_require",
+      "root": "tests/fixtures/baseline/ruby_relative",
+      "file": "spec/probe.rb",
+      "expectations": [
+        {
+          "kind": "function",
+          "name": "probe"
+        }
+      ],
+      "file_expectations": {
+        "resolved_dependency_targets": [
+          "../auto/helper.rb"
+        ]
+      }
     }
   ]
 }

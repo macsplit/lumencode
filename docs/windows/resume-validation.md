@@ -1,5 +1,9 @@
 # Windows resume validation — 17 October 2026
 
+This records the earlier `7e014f7` checkpoint. The subsequent shared-engine
+[portability follow-up](engine-portability.md) resolves the algorithmic corpus
+differences listed here; this document retains the original evidence.
+
 Continue `windows/native-winui`. The shared C++ engine, AST/fallback logic and all
 vendored grammars were preserved. This pass followed the agreed order: preview
 responsiveness, native Windows behaviour, broader engine comparisons, then

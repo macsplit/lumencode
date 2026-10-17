@@ -164,3 +164,7 @@ overwritten. The ZIP test verifies every file and runs the GUI suite from a fres
 directory with developer discovery paths removed from the child environment.
 Installed system components remain available: this is not a clean-machine test.
 See [current validation and remaining gaps](../../docs/windows/resume-validation.md).
+
+The subsequent [shared-engine portability results](../../docs/windows/engine-portability.md)
+cover the Swift scanner/repair and Kotlin/Ruby resolution fixes. They are canonical
+engine changes shared by Qt, Swift and WinUI, with no Windows parser fork.

@@ -2500,7 +2500,7 @@
     },
     {
       "path": "third_party/tree-sitter-swift/src/scanner.c",
-      "sha256": "b835c1ded068e902944fe82c3770b9dcf85f67dcaab8fbf772f1606007da7373"
+      "sha256": "304ce73d59fc54cea1ce94b2e8bfec9dec4a7219453b9a36e17fcec62e15ad38"
     },
     {
       "path": "third_party/tree-sitter-swift/src/tree_sitter/alloc.h",
@@ -3365,6 +3365,14 @@
     {
       "path": "third_party/tree-sitter/lib/tree-sitter.pc.in",
       "sha256": "5783887cbbdb0874dcb0924221428d925fcf4d70f500bce2d62a1d93ec6149b4"
+    }
+  ],
+  "local_patches": [
+    {
+      "path": "third_party/tree-sitter-swift/src/scanner.c",
+      "upstream_sha256": "b835c1ded068e902944fe82c3770b9dcf85f67dcaab8fbf772f1606007da7373",
+      "patched_sha256": "304ce73d59fc54cea1ce94b2e8bfec9dec4a7219453b9a36e17fcec62e15ad38",
+      "reason": "Use UINT64_C(1) for external token 32 in both Swift operator-suppression shifts; unsigned long is 32-bit on Windows and int shifts at 32 are undefined."
     }
   ]
 }

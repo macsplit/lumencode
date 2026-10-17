@@ -1,15 +1,16 @@
 # Windows development status
 
-Updated 17 October 2026 after preview, native behaviour, corpus and portable-ZIP validation. The native Windows
+Updated 17 October 2026 after shared-engine portability fixes. The native Windows
 application opens normally, previews source with the macOS dark palette, and
 passes OS-injected keyboard and pane-drag checks on the Windows VM. Continue this branch rather than
 restarting the feasibility investigation or installing another UI stack.
 
-The newest results and reproducible remaining issues are in
-[resume-validation.md](resume-validation.md). Large previews now use bounded,
-coloured pages. Real folder-dialog cancellation/high contrast and 81 GUI/input/
-behaviour checks pass. The 6,297-file cross-OS corpus sweep found reproducible
-differences: do not claim complete cross-platform JSON parity.
+The newest engine results are in [engine-portability.md](engine-portability.md).
+Windows and macOS now match complete JSON for all 6,297 regular corpus files.
+Linux differs only in two PHP include paths, verified as filesystem case aliases.
+The prior GUI/portable checkpoint is recorded in
+[resume-validation.md](resume-validation.md). Large previews use bounded,
+coloured pages; real folder-dialog cancellation/high contrast and input checks pass.
 
 ## Position
 
@@ -20,8 +21,9 @@ differences: do not claim complete cross-platform JSON parity.
   source preview checkpoint is `67d6ce63e07f4d08bff27f3218699f6818bea993`.
   Desktop input was verified at `f8a24844f5081d120362e4a29b2c4a649a1ff822`.
   Hosted Windows/Linux verification passed at `9d685425`.
-  The current follow-up changes only Windows presentation, accessibility and
-  validation/packaging tools; shared engine/grammar code remains unchanged.
+  The latest follow-up fixes canonical Swift scanner masks, deterministic repair,
+  Kotlin import case checks and Ruby path normalization. These fixes apply to
+  every interface; no Windows language implementation was introduced.
 - Architecture agreed: C#/WinUI 3/XAML frontend in `apps/windows`, .NET 10,
   existing C++17/Qt Core/Concurrent helper and canonical vendored grammars.
 - The shared engine build/parity gate is complete on this Windows VM.
@@ -306,8 +308,10 @@ Windows 11 GUI evidence above remains separate from CI coverage.
   the two Python audit tools; MSVC source-encoding options; checkout attributes
   preserving vendored and fixture bytes.
 
-The five shared analysis module pairs and all vendored grammar/runtime files
-remain unchanged. Do not fork them for Windows. The historical
+The initial Windows port preserved the five shared analysis module pairs and
+vendored inputs. The later [portability fixes](engine-portability.md) modify the
+canonical parser and record one local Swift scanner patch in vendor provenance.
+Do not fork them for Windows. The historical
 `--migration-baseline` audit intentionally checks pre-migration source identity;
 it is not a current development gate after deliberate CLI/controller changes.
 
@@ -356,10 +360,10 @@ was tested successfully; no SSH configuration changes were made by this work.
 3. Complete human Narrator, multiple-DPI/monitor and ordinary human-input checks.
    Owned folder-dialog cancellation, real contrast switching and keyboard/pointer
    regressions now pass. Keep `-DesktopInput` and `-WindowsBehaviour` available.
-4. Investigate the reproducible Swift recovery/call-site, Kotlin dependency and
-   PHP/Ruby resolution differences in the cross-OS evidence before claiming
-   parity. Keep any correction in the canonical shared engine, with regression
-   fixtures; do not add a Windows parser fork.
+4. Keep the shared-engine portability fixtures and corpus comparisons. The
+   algorithmic differences found in the first sweep are fixed; two PHP include
+   paths still reflect real filesystem case behaviour. Preserve those findings
+   rather than silently filtering them out of strict comparisons.
 5. Validate the portable ZIP on a clean Windows machine, then select installer
    and trusted-signing arrangements. Current ZIP extraction/file-hash/clean-child-
    environment tests pass on the developer VM; Sandbox is disabled. No installer

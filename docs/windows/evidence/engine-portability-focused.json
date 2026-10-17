@@ -1,0 +1,65 @@
+{
+  "passed": false,
+  "normalization": "Only absolute snapshot-root path prefixes/separators; no fields or array ordering discarded",
+  "comparisons": [
+    {
+      "reference": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "actual": "Linux-6.8.0-142-generic-x86_64-with-glibc2.39",
+      "files": 19,
+      "excludedFromReference": [],
+      "excludedFromActual": [],
+      "missingFiles": [],
+      "differentInputs": [],
+      "failures": [],
+      "differences": [
+        {
+          "file": "CodeIgniter/system/core/Hooks.php",
+          "fields": [
+            "$.dependencies[1].path: value differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        },
+        {
+          "file": "CodeIgniter/tests/mocks/database/db.php",
+          "fields": [
+            "$.dependencies[0].path: value differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        }
+      ],
+      "languages": {
+        "swift": 9,
+        "php": 2,
+        "ruby": 2,
+        "kotlin": 6
+      },
+      "modes": {
+        "recovered": 4,
+        "ast": 7,
+        "heuristic": 8
+      }
+    },
+    {
+      "reference": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "actual": "Windows-11-10.0.26200-SP0",
+      "files": 19,
+      "excludedFromReference": [],
+      "excludedFromActual": [],
+      "missingFiles": [],
+      "differentInputs": [],
+      "failures": [],
+      "differences": [],
+      "languages": {
+        "swift": 9,
+        "php": 2,
+        "ruby": 2,
+        "kotlin": 6
+      },
+      "modes": {
+        "recovered": 4,
+        "ast": 7,
+        "heuristic": 8
+      }
+    }
+  ]
+}

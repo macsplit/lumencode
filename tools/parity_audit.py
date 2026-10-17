@@ -36,6 +36,8 @@ def evaluate(case, analysis):
         for key in ("calls", "calledBy"):
             if key in expected:
                 check(label + " " + key, [x["name"] for x in symbol.get(key, [])], expected[key], subset=True)
+        if "callSites" in expected:
+            check(label + " callSites", symbol.get("callSites", []), expected["callSites"], subset=True)
         signature = symbol.get("signature") or {}
         for key in ("sourceMode", "confidence"):
             if key in expected:
@@ -59,6 +61,8 @@ def evaluate(case, analysis):
         "symbol_source_modes": dict(collections.Counter(s.get("sourceMode", "missing") for s in symbols)),
         "symbol_confidences": dict(collections.Counter(s.get("confidence", "missing") for s in symbols)),
         "dependencies": len(analysis.get("dependencies", [])),
+        "unresolved_dependency_targets": [item.get("target") for item in analysis.get("dependencies", []) if not item.get("path")],
+        "resolved_dependency_targets": [item.get("target") for item in analysis.get("dependencies", []) if item.get("path")],
         "routes": len(analysis.get("routes", [])),
         "quick_links": len(analysis.get("quickLinks", [])),
         "quick_link_labels": [x.get("label") for x in analysis.get("quickLinks", [])],
@@ -76,7 +80,7 @@ def evaluate(case, analysis):
             for value, count in expected.items():
                 check(key + " " + value, file_values[key].get(value, 0), count, minimum=True)
         else:
-            check(key, file_values[key], expected, subset=key == "quick_link_labels", minimum=key in ("dependencies", "routes", "quick_links", "analysis_notices", "package_scripts"))
+            check(key, file_values[key], expected, subset=key in ("quick_link_labels", "unresolved_dependency_targets", "resolved_dependency_targets"), minimum=key in ("dependencies", "routes", "quick_links", "analysis_notices", "package_scripts"))
     return checks
 
 

@@ -1,4 +1,4 @@
-// Transport only. Language behavior belongs to the unmodified upstream engine.
+// Transport only. Language behavior belongs to the canonical shared engine.
 #include "symbolparser.h"
 #include "projectindex.h"
 #include "agentqueries.h"
