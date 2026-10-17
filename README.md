@@ -15,9 +15,15 @@ needed. The former Swift repository's main history is imported under `apps/macos
 | `third_party/` | Checked-in Tree-sitter runtime/grammars and provenance |
 | `apps/qt/` | Qt/Kirigami application and original public CLI/controller |
 | `apps/macos/` | Swift package, native application and Xcode project |
+| `apps/windows/` | Initial C#/WinUI 3 frontend and process adapter (development checkpoint) |
 | `tests/fixtures/baseline/` | Shared language/recovery/relationship contracts |
 | `tools/` | Validation, runtime packaging, corpus and agent tools |
 | `docs/` | Engine, Qt, macOS and migration documentation |
+
+Windows development is tracked separately in the
+[checkpoint and resume notes](docs/windows/status.md), with
+[build instructions](apps/windows/README.md). Its engine checks pass; the initial
+frontend still has an unresolved XAML startup failure and is not release-ready.
 
 ## Linux Qt application and public CLI
 

@@ -89,7 +89,7 @@ def main():
     parser.add_argument("--timeout", type=float, default=15)
     args = parser.parse_args()
     original = args.original.resolve()
-    manifest = json.loads((original / "tests/fixtures/baseline/manifest.json").read_text())
+    manifest = json.loads((original / "tests/fixtures/baseline/manifest.json").read_text(encoding="utf-8"))
     cache, results = {}, []
     for case in manifest["cases"]:
         root = original / case["root"]
@@ -98,7 +98,7 @@ def main():
         if key not in cache:
             start = time.perf_counter()
             try:
-                proc = subprocess.run([str(args.cli.resolve()), str(root), "--path", str(path)], capture_output=True, text=True, timeout=args.timeout)
+                proc = subprocess.run([str(args.cli.resolve()), str(root), "--path", str(path)], capture_output=True, text=True, encoding="utf-8", timeout=args.timeout)
                 if proc.returncode:
                     raise RuntimeError(f"exit {proc.returncode}: {proc.stderr[:400]}")
                 state = json.loads(proc.stdout)

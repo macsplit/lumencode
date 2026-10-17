@@ -37,6 +37,7 @@ int main(int argc, char **argv)
     SymbolParser engine;
     if (parser.isSet("index-facts")) {
         QTextStream input(stdin);
+        input.setCodec("UTF-8");
         while (!input.atEnd()) {
             const QString line = input.readLine().trimmed();
             if (line.isEmpty()) continue;

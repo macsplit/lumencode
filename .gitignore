@@ -13,3 +13,8 @@ xcuserdata/
 .DS_Store
 *.log
 .migration-backups/
+
+# Native Windows outputs
+apps/windows/**/bin/
+apps/windows/**/obj/
+.vs/

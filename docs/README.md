@@ -1,6 +1,6 @@
 # LumenCode documentation
 
-Both interfaces consume the shared engine in this repository. Start with the root
+The interfaces consume the shared engine in this repository. Start with the root
 [build instructions](../README.md) and [engine guide](../engine/README.md).
 
 - [Consolidation plan](migration/plan.md)
@@ -9,6 +9,8 @@ Both interfaces consume the shared engine in this repository. Start with the roo
 - [Qt developer guide](qt/developer-guide.md)
 - [macOS architecture](macos/architecture-guide.md)
 - [macOS beta assessment](macos/follow-up-2026-10-17.md)
+- [Windows development checkpoint and resume instructions](windows/status.md)
+- [Windows feasibility investigation](windows/feasibility.md)
 
 Dated audit reports preserve their original paths, measurements and context.
 Current build/source locations are authoritative in the root README and engine
