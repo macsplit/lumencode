@@ -81,9 +81,14 @@ public sealed partial class MainWindow
                 Check("Large file exposes all 2000 engine symbols", Payload.Symbols(analysis).Count() == 2000 && Overview.Items.Count == 2000);
                 Check("Large source preview complete and read-only", previewText.Contains("sample1999") && Code.IsReadOnly);
                 timings.Add(new { operation = "select-large", symbols = 2000, stages = lastSelectionMeasurement });
+                await Task.Delay(150); // allow virtualized rows to realize for the screenshot
+                await CaptureAsync(output, "windows-large-preview.png");
             }
             finally { File.Delete(largeFile); cache.Remove(largeFile); }
             CheckPreviewFormatting(Check);
+            await CheckPreviewPagingAsync(Check);
+            if (args.Contains("--windows-behaviour")) await CheckWindowsBehaviourAsync(output, Check);
+            if (args.Contains("--preview-profile")) await ProfilePreviewsAsync(output, Check);
             await SelectFileAsync(new(file));
             if (args.Contains("--desktop-input")) await CheckDesktopInputAsync(file, files[^1], Check, inputDiagnostics);
             var wrapper = Payload.Symbols(analysis).First(s => s.Text("name") == "wrapper");
@@ -229,6 +234,15 @@ public sealed partial class MainWindow
         FilesColumn.Width = new GridLength(290);
         OverviewColumn.Width = new GridLength(1, GridUnitType.Star);
         PreviewRow.Height = new GridLength(1, GridUnitType.Star);
+        SetPreview(string.Concat(Enumerable.Repeat("const sample = 'café 日本語 😀';\r\n", 600)), "Keyboard page audit");
+        NextPreview.Focus(FocusState.Keyboard);
+        await input.KeysAsync(0x20);
+        await Task.Delay(100);
+        check("Next source page activates with Space", previewPage == 1);
+        PreviousPreview.Focus(FocusState.Keyboard);
+        await input.KeysAsync(0x20);
+        await Task.Delay(100);
+        check("Previous source page activates with Space", previewPage == 0);
         await SelectFileAsync(new(file));
     }
 

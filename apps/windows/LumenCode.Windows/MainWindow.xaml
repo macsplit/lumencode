@@ -65,7 +65,14 @@
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
     <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
      <TextBlock x:Name="PreviewTitle" Text="Source preview" TextTrimming="CharacterEllipsis" MaxLines="1" FontSize="12"/>
-     <Button Grid.Column="1" Content="Copy" Padding="10,2" Click="CopyClick" AutomationProperties.Name="Copy source preview"/>
+     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+      <StackPanel x:Name="PreviewNavigation" Orientation="Horizontal" Spacing="8" Visibility="Collapsed">
+       <Button x:Name="PreviousPreview" Content="Previous" Padding="10,2" Click="PreviousPreviewClick" AutomationProperties.Name="Previous source page"/>
+       <TextBlock x:Name="PreviewPosition" VerticalAlignment="Center" FontSize="12"/>
+       <Button x:Name="NextPreview" Content="Next" Padding="10,2" Click="NextPreviewClick" AutomationProperties.Name="Next source page"/>
+      </StackPanel>
+      <Button Content="Copy" Padding="10,2" Click="CopyClick" AutomationProperties.Name="Copy source preview" ToolTipService.ToolTip="Copy the full loaded source preview"/>
+     </StackPanel>
     </Grid>
     <RichEditBox x:Name="Code" Grid.Row="1" IsReadOnly="True" IsSpellCheckEnabled="False" IsTextPredictionEnabled="False" FontFamily="Cascadia Mono, Consolas" FontSize="13" TextWrapping="NoWrap" AutomationProperties.Name="Source preview"/>
    </Grid>

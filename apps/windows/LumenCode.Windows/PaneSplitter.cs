@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Automation.Peers;
 
 namespace LumenCode.Windows;
 
@@ -11,6 +12,13 @@ public sealed class PaneSplitter : UserControl
 {
     public bool IsVertical { get; set; }
     public event Action<PaneSplitter, double>? Dragged;
+    protected override AutomationPeer OnCreateAutomationPeer() => new SplitterPeer(this);
+    private sealed class SplitterPeer(PaneSplitter owner) : FrameworkElementAutomationPeer(owner)
+    {
+        protected override string GetClassNameCore() => nameof(PaneSplitter);
+        protected override AutomationControlType GetAutomationControlTypeCore() => AutomationControlType.Thumb;
+        protected override string GetHelpTextCore() => owner.IsVertical ? "Use Left and Right arrow keys to resize." : "Use Up and Down arrow keys to resize.";
+    }
     private global::Windows.Foundation.Point? last;
     public PaneSplitter()
     {

@@ -127,8 +127,10 @@ the gate, rather than requiring a redundant native rebuild for every UI edit.
   explicit audit mode. Folder scanning and engine work execute away from the UI
   thread; source is shown before waiting for analysis. JSON row preparation also
   runs on workers; stale selections/searches are cancelled and discarded. Source
-  colouring follows the macOS dark palette, with a plain-text fallback above
-  64K UTF-16 characters. This is presentation only; language facts remain native.
+  colouring follows the macOS dark palette. Previews use bounded 8,192-character
+  pages with Previous/Next controls; Copy retains the full loaded preview, and
+  line navigation selects the corresponding page. High contrast uses Windows
+  system text colour. This is presentation only; language facts remain native.
   Line navigation accounts for RichEdit paragraph normalization in CRLF files. The GUI
   report separates preview, analysis and UI application timing, and includes a
   generated 2,000-symbol source stress check.
@@ -140,3 +142,25 @@ the gate, rather than requiring a redundant native rebuild for every UI edit.
 Do not copy the engine into this app or silently replace its analysis fields.
 Retain raw engine JSON in the transport and use the existing fixtures/contracts
 when evolving the presentation.
+
+## Extended interactive validation and portable ZIP
+
+```powershell
+./tools/run_windows_gui_audit.ps1 -Output build-windows/reports/input -DesktopInput
+./tools/run_windows_gui_audit.ps1 -Output build-windows/reports/profile -PreviewProfile
+./tools/run_windows_gui_audit.ps1 -Output build-windows/reports/behaviour -WindowsBehaviour -DesktopInput
+./tools/package_windows.ps1 -Name LumenCode-Windows-x64-development
+./tools/test_windows_portable.ps1 -Archive build-windows/distribution/LumenCode-Windows-x64-development.zip -Output build-windows/reports/portable
+```
+
+`WindowsBehaviour` opens/cancels an owned native folder dialog, checks automation
+metadata, temporarily enables real Windows high contrast, and restores the
+original contrast setting in `finally`. Run on an available interactive desktop.
+It does not establish Narrator or multiple-DPI/monitor acceptance.
+
+The unsigned portable ZIP contains the full app, notices, source provenance,
+launch instructions and a SHA-256 file manifest. Existing archives are never
+overwritten. The ZIP test verifies every file and runs the GUI suite from a fresh
+directory with developer discovery paths removed from the child environment.
+Installed system components remain available: this is not a clean-machine test.
+See [current validation and remaining gaps](../../docs/windows/resume-validation.md).

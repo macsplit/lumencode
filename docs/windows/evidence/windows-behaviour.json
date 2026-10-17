@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "displayScale": 1.25,
+  "folderPicker": "Owned native dialog opened and cancelled",
+  "highContrast": "System setting enabled, source colour checked, original setting restored",
+  "limitations": "Automation peers and one real contrast theme on this VM; not a human Narrator review, multi-monitor or multiple-DPI acceptance."
+}

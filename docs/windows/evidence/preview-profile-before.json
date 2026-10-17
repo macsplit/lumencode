@@ -1,0 +1,149 @@
+{
+  "samples": [
+    {
+      "workload": "coloured",
+      "chars": 32760,
+      "repeat": 0,
+      "assignment": {
+        "SetTextMs": 101.2552,
+        "ColourMs": 0,
+        "DisplayMs": 132.61130000000003,
+        "TotalMs": 233.8673
+      },
+      "dispatcherDelayMs": 236.1879
+    },
+    {
+      "workload": "coloured",
+      "chars": 32760,
+      "repeat": 1,
+      "assignment": {
+        "SetTextMs": 99.4292,
+        "ColourMs": 0,
+        "DisplayMs": 99.1973,
+        "TotalMs": 198.628
+      },
+      "dispatcherDelayMs": 198.6897
+    },
+    {
+      "workload": "coloured",
+      "chars": 32760,
+      "repeat": 2,
+      "assignment": {
+        "SetTextMs": 105.1129,
+        "ColourMs": 0,
+        "DisplayMs": 147.553,
+        "TotalMs": 252.6665
+      },
+      "dispatcherDelayMs": 252.7453
+    },
+    {
+      "workload": "plain-128k",
+      "chars": 131040,
+      "repeat": 0,
+      "assignment": {
+        "SetTextMs": 260.3592,
+        "ColourMs": 33.1961,
+        "DisplayMs": 247.13939999999997,
+        "TotalMs": 540.6956
+      },
+      "dispatcherDelayMs": 540.7879
+    },
+    {
+      "workload": "plain-128k",
+      "chars": 131040,
+      "repeat": 1,
+      "assignment": {
+        "SetTextMs": 291.4074,
+        "ColourMs": 31.31310000000002,
+        "DisplayMs": 245.90499999999997,
+        "TotalMs": 568.6262
+      },
+      "dispatcherDelayMs": 568.691
+    },
+    {
+      "workload": "plain-128k",
+      "chars": 131040,
+      "repeat": 2,
+      "assignment": {
+        "SetTextMs": 298.0106,
+        "ColourMs": 32.22989999999999,
+        "DisplayMs": 267.23210000000006,
+        "TotalMs": 597.4732
+      },
+      "dispatcherDelayMs": 597.5425
+    },
+    {
+      "workload": "plain-256k",
+      "chars": 262119,
+      "repeat": 0,
+      "assignment": {
+        "SetTextMs": 560.4012,
+        "ColourMs": 61.93049999999994,
+        "DisplayMs": 509.41510000000005,
+        "TotalMs": 1131.7478
+      },
+      "dispatcherDelayMs": 1131.8105
+    },
+    {
+      "workload": "plain-256k",
+      "chars": 262119,
+      "repeat": 1,
+      "assignment": {
+        "SetTextMs": 607.7901,
+        "ColourMs": 63.86319999999989,
+        "DisplayMs": 509.6554,
+        "TotalMs": 1181.3094
+      },
+      "dispatcherDelayMs": 1181.4052
+    },
+    {
+      "workload": "plain-256k",
+      "chars": 262119,
+      "repeat": 2,
+      "assignment": {
+        "SetTextMs": 588.9321,
+        "ColourMs": 63.93560000000002,
+        "DisplayMs": 520.4582,
+        "TotalMs": 1173.3271
+      },
+      "dispatcherDelayMs": 1173.3905
+    },
+    {
+      "workload": "long-line",
+      "chars": 131070,
+      "repeat": 0,
+      "assignment": {
+        "SetTextMs": 3500.9574,
+        "ColourMs": 59.14160000000038,
+        "DisplayMs": 187.64670000000024,
+        "TotalMs": 3747.7466
+      },
+      "dispatcherDelayMs": 3747.852
+    },
+    {
+      "workload": "long-line",
+      "chars": 131070,
+      "repeat": 1,
+      "assignment": {
+        "SetTextMs": 6385.3977,
+        "ColourMs": 143.92679999999928,
+        "DisplayMs": 108.39300000000003,
+        "TotalMs": 6637.7178
+      },
+      "dispatcherDelayMs": 6637.7961
+    },
+    {
+      "workload": "long-line",
+      "chars": 131070,
+      "repeat": 2,
+      "assignment": {
+        "SetTextMs": 6136.3118,
+        "ColourMs": 146.60939999999937,
+        "DisplayMs": 110.96349999999984,
+        "TotalMs": 6393.8855
+      },
+      "dispatcherDelayMs": 6393.9703
+    }
+  ],
+  "limitations": "Three assignment samples per workload on this VM; dispatcher probe includes queued work, not rendered-frame or physical-input latency."
+}

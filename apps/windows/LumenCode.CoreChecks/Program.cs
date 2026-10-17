@@ -37,6 +37,23 @@ static bool Running(int pid)
     catch (ArgumentException) { return false; }
 }
 var client = new EngineClient(Environment.ProcessPath!);
+await Check("Preview pages preserve source and Unicode boundaries", () =>
+{
+    foreach (string text in new[] { "", "short\r\nsource", new string('x', PreviewDocument.PageLimit - 1) + "😀\r\nend", new string('x', PreviewDocument.PageLimit - 1) + "\r\nend", string.Concat(Enumerable.Repeat("café日本語😀\r\n", 26000)) })
+    {
+        var document = new PreviewDocument(text);
+        var pages = Enumerable.Range(0, document.PageCount).Select(document.PageText).ToArray();
+        if (string.Concat(pages) != text || pages.Any(p => p.Length > PreviewDocument.PageLimit)) throw new InvalidOperationException("Lost source or unbounded page");
+        for (int page = 0; page + 1 < pages.Length; page++)
+            if (char.IsHighSurrogate(pages[page][^1]) || (pages[page][^1] == '\r' && pages[page + 1][0] == '\n')) throw new InvalidOperationException("Split Unicode or CRLF");
+        for (int line = 1; line <= 3; line++)
+        {
+            int offset = document.LineStart(line), page = document.PageAt(offset);
+            if (offset < document.Start(page) || offset > document.End(page)) throw new InvalidOperationException("Line not on selected page");
+        }
+    }
+    return Task.CompletedTask;
+});
 await Check("Unicode and quoted arguments preserved", async () =>
 {
     string[] values = ["C:\\Project with spaces\\café\\日本語.cs", "a\"b", "trailing\\", ""];

@@ -1,0 +1,909 @@
+{
+  "samples": [
+    {
+      "workload": "coloured",
+      "chars": 32760,
+      "repeat": 0,
+      "assignment": {
+        "SetTextMs": 34.1578,
+        "ColourMs": 0,
+        "DisplayMs": 26.005499999999998,
+        "TotalMs": 60.1637
+      },
+      "dispatcherDelayMs": 62.1603
+    },
+    {
+      "workload": "coloured",
+      "chars": 32760,
+      "repeat": 1,
+      "assignment": {
+        "SetTextMs": 34.9551,
+        "ColourMs": 0,
+        "DisplayMs": 25.259,
+        "TotalMs": 60.2146
+      },
+      "dispatcherDelayMs": 60.3616
+    },
+    {
+      "workload": "coloured",
+      "chars": 32760,
+      "repeat": 2,
+      "assignment": {
+        "SetTextMs": 43.9244,
+        "ColourMs": 0,
+        "DisplayMs": 32.8918,
+        "TotalMs": 76.8168
+      },
+      "dispatcherDelayMs": 76.9592
+    },
+    {
+      "workload": "coloured",
+      "operation": "page",
+      "page": 0,
+      "assignment": {
+        "SetTextMs": 36.7716,
+        "ColourMs": 0,
+        "DisplayMs": 13.445999999999998,
+        "TotalMs": 50.2179
+      }
+    },
+    {
+      "workload": "coloured",
+      "operation": "page",
+      "page": 1,
+      "assignment": {
+        "SetTextMs": 27.3119,
+        "ColourMs": 0,
+        "DisplayMs": 24.1904,
+        "TotalMs": 51.5025
+      }
+    },
+    {
+      "workload": "coloured",
+      "operation": "page",
+      "page": 2,
+      "assignment": {
+        "SetTextMs": 38.6447,
+        "ColourMs": 0,
+        "DisplayMs": 14.237099999999998,
+        "TotalMs": 52.8821
+      }
+    },
+    {
+      "workload": "coloured",
+      "operation": "page",
+      "page": 3,
+      "assignment": {
+        "SetTextMs": 33.0319,
+        "ColourMs": 0,
+        "DisplayMs": 12.224499999999999,
+        "TotalMs": 45.2567
+      }
+    },
+    {
+      "workload": "plain-128k",
+      "chars": 131040,
+      "repeat": 0,
+      "assignment": {
+        "SetTextMs": 38.3452,
+        "ColourMs": 0,
+        "DisplayMs": 31.4204,
+        "TotalMs": 69.7659
+      },
+      "dispatcherDelayMs": 69.8558
+    },
+    {
+      "workload": "plain-128k",
+      "chars": 131040,
+      "repeat": 1,
+      "assignment": {
+        "SetTextMs": 37.5619,
+        "ColourMs": 0,
+        "DisplayMs": 28.824399999999997,
+        "TotalMs": 66.3865
+      },
+      "dispatcherDelayMs": 66.4826
+    },
+    {
+      "workload": "plain-128k",
+      "chars": 131040,
+      "repeat": 2,
+      "assignment": {
+        "SetTextMs": 38.3854,
+        "ColourMs": 0,
+        "DisplayMs": 49.219899999999996,
+        "TotalMs": 87.6057
+      },
+      "dispatcherDelayMs": 87.6946
+    },
+    {
+      "workload": "plain-128k",
+      "operation": "page",
+      "page": 0,
+      "assignment": {
+        "SetTextMs": 38.3915,
+        "ColourMs": 0,
+        "DisplayMs": 16.136400000000002,
+        "TotalMs": 54.5281
+      }
+    },
+    {
+      "workload": "plain-128k",
+      "operation": "page",
+      "page": 1,
+      "assignment": {
+        "SetTextMs": 38.3359,
+        "ColourMs": 0,
+        "DisplayMs": 17.9343,
+        "TotalMs": 56.2706
+      }
+    },
+    {
+      "workload": "plain-128k",
+      "operation": "page",
+      "page": 2,
+      "assignment": {
+        "SetTextMs": 33.278,
+        "ColourMs": 0,
+        "DisplayMs": 12.729999999999997,
+        "TotalMs": 46.0085
+      }
+    },
+    {
+      "workload": "plain-128k",
+      "operation": "page",
+      "page": 3,
+      "assignment": {
+        "SetTextMs": 27.8289,
+        "ColourMs": 0,
+        "DisplayMs": 12.559099999999997,
+        "TotalMs": 40.3883
+      }
+    },
+    {
+      "workload": "plain-128k",
+      "operation": "page",
+      "page": 4,
+      "assignment": {
+        "SetTextMs": 24.7446,
+        "ColourMs": 0,
+        "DisplayMs": 12.4952,
+        "TotalMs": 37.2401
+      }
+    },
+    {
+      "workload": "plain-128k",
+      "operation": "page",
+      "page": 5,
+      "assignment": {
+        "SetTextMs": 23.6632,
+        "ColourMs": 0,
+        "DisplayMs": 12.152600000000003,
+        "TotalMs": 35.8161
+      }
+    },
+    {
+      "workload": "plain-128k",
+      "operation": "page",
+      "page": 6,
+      "assignment": {
+        "SetTextMs": 24.4716,
+        "ColourMs": 0,
+        "DisplayMs": 12.195399999999996,
+        "TotalMs": 36.6673
+      }
+    },
+    {
+      "workload": "plain-128k",
+      "operation": "page",
+      "page": 7,
+      "assignment": {
+        "SetTextMs": 24.5591,
+        "ColourMs": 0,
+        "DisplayMs": 12.731199999999998,
+        "TotalMs": 37.2908
+      }
+    },
+    {
+      "workload": "plain-128k",
+      "operation": "page",
+      "page": 8,
+      "assignment": {
+        "SetTextMs": 24.4059,
+        "ColourMs": 0,
+        "DisplayMs": 12.282399999999999,
+        "TotalMs": 36.6886
+      }
+    },
+    {
+      "workload": "plain-128k",
+      "operation": "page",
+      "page": 9,
+      "assignment": {
+        "SetTextMs": 25.0732,
+        "ColourMs": 0,
+        "DisplayMs": 12.581399999999999,
+        "TotalMs": 37.6548
+      }
+    },
+    {
+      "workload": "plain-128k",
+      "operation": "page",
+      "page": 10,
+      "assignment": {
+        "SetTextMs": 24.3018,
+        "ColourMs": 0,
+        "DisplayMs": 23.308,
+        "TotalMs": 47.6102
+      }
+    },
+    {
+      "workload": "plain-128k",
+      "operation": "page",
+      "page": 11,
+      "assignment": {
+        "SetTextMs": 35.2921,
+        "ColourMs": 0,
+        "DisplayMs": 12.6618,
+        "TotalMs": 47.9543
+      }
+    },
+    {
+      "workload": "plain-128k",
+      "operation": "page",
+      "page": 12,
+      "assignment": {
+        "SetTextMs": 31.4776,
+        "ColourMs": 0,
+        "DisplayMs": 11.994200000000003,
+        "TotalMs": 43.472
+      }
+    },
+    {
+      "workload": "plain-128k",
+      "operation": "page",
+      "page": 13,
+      "assignment": {
+        "SetTextMs": 25.6606,
+        "ColourMs": 0,
+        "DisplayMs": 12.1966,
+        "TotalMs": 37.8575
+      }
+    },
+    {
+      "workload": "plain-128k",
+      "operation": "page",
+      "page": 14,
+      "assignment": {
+        "SetTextMs": 39.2405,
+        "ColourMs": 0,
+        "DisplayMs": 16.348799999999997,
+        "TotalMs": 55.5898
+      }
+    },
+    {
+      "workload": "plain-128k",
+      "operation": "page",
+      "page": 15,
+      "assignment": {
+        "SetTextMs": 33.3776,
+        "ColourMs": 0,
+        "DisplayMs": 12.508100000000006,
+        "TotalMs": 45.8859
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "chars": 262119,
+      "repeat": 0,
+      "assignment": {
+        "SetTextMs": 36.1403,
+        "ColourMs": 0,
+        "DisplayMs": 27.1556,
+        "TotalMs": 63.2966
+      },
+      "dispatcherDelayMs": 63.4229
+    },
+    {
+      "workload": "plain-256k",
+      "chars": 262119,
+      "repeat": 1,
+      "assignment": {
+        "SetTextMs": 20.4418,
+        "ColourMs": 0,
+        "DisplayMs": 26.5228,
+        "TotalMs": 46.9647
+      },
+      "dispatcherDelayMs": 47.0556
+    },
+    {
+      "workload": "plain-256k",
+      "chars": 262119,
+      "repeat": 2,
+      "assignment": {
+        "SetTextMs": 38.8277,
+        "ColourMs": 0,
+        "DisplayMs": 46.961099999999995,
+        "TotalMs": 85.7889
+      },
+      "dispatcherDelayMs": 85.889
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 0,
+      "assignment": {
+        "SetTextMs": 38.1205,
+        "ColourMs": 0,
+        "DisplayMs": 15.398399999999995,
+        "TotalMs": 53.5191
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 1,
+      "assignment": {
+        "SetTextMs": 33.0048,
+        "ColourMs": 0,
+        "DisplayMs": 12.277700000000003,
+        "TotalMs": 45.2827
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 2,
+      "assignment": {
+        "SetTextMs": 25.5704,
+        "ColourMs": 0,
+        "DisplayMs": 12.2927,
+        "TotalMs": 37.8633
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 3,
+      "assignment": {
+        "SetTextMs": 40.5322,
+        "ColourMs": 0,
+        "DisplayMs": 17.849199999999996,
+        "TotalMs": 58.3816
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 4,
+      "assignment": {
+        "SetTextMs": 34.3765,
+        "ColourMs": 0,
+        "DisplayMs": 12.200699999999998,
+        "TotalMs": 46.5775
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 5,
+      "assignment": {
+        "SetTextMs": 38.7639,
+        "ColourMs": 0,
+        "DisplayMs": 17.3649,
+        "TotalMs": 56.1291
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 6,
+      "assignment": {
+        "SetTextMs": 34.4122,
+        "ColourMs": 0,
+        "DisplayMs": 12.097000000000001,
+        "TotalMs": 46.5093
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 7,
+      "assignment": {
+        "SetTextMs": 45.0391,
+        "ColourMs": 0,
+        "DisplayMs": 18.250999999999998,
+        "TotalMs": 63.2903
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 8,
+      "assignment": {
+        "SetTextMs": 40.4502,
+        "ColourMs": 0,
+        "DisplayMs": 16.348599999999998,
+        "TotalMs": 56.7991
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 9,
+      "assignment": {
+        "SetTextMs": 32.4093,
+        "ColourMs": 0,
+        "DisplayMs": 12.180399999999999,
+        "TotalMs": 44.5899
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 10,
+      "assignment": {
+        "SetTextMs": 27.0947,
+        "ColourMs": 0,
+        "DisplayMs": 25.209100000000003,
+        "TotalMs": 52.3039
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 11,
+      "assignment": {
+        "SetTextMs": 36.7182,
+        "ColourMs": 0,
+        "DisplayMs": 14.564,
+        "TotalMs": 51.2823
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 12,
+      "assignment": {
+        "SetTextMs": 33.6795,
+        "ColourMs": 0,
+        "DisplayMs": 12.857500000000002,
+        "TotalMs": 46.5372
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 13,
+      "assignment": {
+        "SetTextMs": 25.733,
+        "ColourMs": 0,
+        "DisplayMs": 13.133600000000001,
+        "TotalMs": 38.8668
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 14,
+      "assignment": {
+        "SetTextMs": 22.6917,
+        "ColourMs": 0,
+        "DisplayMs": 12.059699999999996,
+        "TotalMs": 34.7514
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 15,
+      "assignment": {
+        "SetTextMs": 24.1952,
+        "ColourMs": 0,
+        "DisplayMs": 12.085100000000004,
+        "TotalMs": 36.2805
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 16,
+      "assignment": {
+        "SetTextMs": 41.9775,
+        "ColourMs": 0,
+        "DisplayMs": 18.274700000000003,
+        "TotalMs": 60.2525
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 17,
+      "assignment": {
+        "SetTextMs": 38.3034,
+        "ColourMs": 0,
+        "DisplayMs": 15.290100000000002,
+        "TotalMs": 53.5936
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 18,
+      "assignment": {
+        "SetTextMs": 33.5403,
+        "ColourMs": 0,
+        "DisplayMs": 12.099899999999998,
+        "TotalMs": 45.6402
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 19,
+      "assignment": {
+        "SetTextMs": 42.2035,
+        "ColourMs": 0,
+        "DisplayMs": 16.163399999999996,
+        "TotalMs": 58.3672
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 20,
+      "assignment": {
+        "SetTextMs": 38.2539,
+        "ColourMs": 0,
+        "DisplayMs": 15.250599999999999,
+        "TotalMs": 53.5048
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 21,
+      "assignment": {
+        "SetTextMs": 33.5882,
+        "ColourMs": 0,
+        "DisplayMs": 12.390500000000003,
+        "TotalMs": 45.9788
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 22,
+      "assignment": {
+        "SetTextMs": 24.563,
+        "ColourMs": 0,
+        "DisplayMs": 23.7044,
+        "TotalMs": 48.2676
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 23,
+      "assignment": {
+        "SetTextMs": 27.4593,
+        "ColourMs": 0,
+        "DisplayMs": 12.7803,
+        "TotalMs": 40.2397
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 24,
+      "assignment": {
+        "SetTextMs": 25.8639,
+        "ColourMs": 0,
+        "DisplayMs": 12.0659,
+        "TotalMs": 37.9298
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 25,
+      "assignment": {
+        "SetTextMs": 26.1046,
+        "ColourMs": 0,
+        "DisplayMs": 12.039599999999997,
+        "TotalMs": 38.1442
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 26,
+      "assignment": {
+        "SetTextMs": 24.7713,
+        "ColourMs": 0,
+        "DisplayMs": 12.731100000000001,
+        "TotalMs": 37.5026
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 27,
+      "assignment": {
+        "SetTextMs": 24.0436,
+        "ColourMs": 0,
+        "DisplayMs": 12.712999999999997,
+        "TotalMs": 36.7569
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 28,
+      "assignment": {
+        "SetTextMs": 24.1994,
+        "ColourMs": 0,
+        "DisplayMs": 12.639100000000003,
+        "TotalMs": 36.8386
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 29,
+      "assignment": {
+        "SetTextMs": 24.8918,
+        "ColourMs": 0,
+        "DisplayMs": 12.603900000000003,
+        "TotalMs": 37.4958
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 30,
+      "assignment": {
+        "SetTextMs": 38.2722,
+        "ColourMs": 0,
+        "DisplayMs": 16.406800000000004,
+        "TotalMs": 54.6792
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 31,
+      "assignment": {
+        "SetTextMs": 39.2691,
+        "ColourMs": 0,
+        "DisplayMs": 17.0073,
+        "TotalMs": 56.2766
+      }
+    },
+    {
+      "workload": "plain-256k",
+      "operation": "page",
+      "page": 32,
+      "assignment": {
+        "SetTextMs": 1.0766,
+        "ColourMs": 0,
+        "DisplayMs": 1.4868999999999999,
+        "TotalMs": 2.5636
+      }
+    },
+    {
+      "workload": "long-line",
+      "chars": 131070,
+      "repeat": 0,
+      "assignment": {
+        "SetTextMs": 63.7608,
+        "ColourMs": 0,
+        "DisplayMs": 84.0112,
+        "TotalMs": 147.7722
+      },
+      "dispatcherDelayMs": 147.9049
+    },
+    {
+      "workload": "long-line",
+      "chars": 131070,
+      "repeat": 1,
+      "assignment": {
+        "SetTextMs": 60.7079,
+        "ColourMs": 0,
+        "DisplayMs": 52.575300000000006,
+        "TotalMs": 113.2836
+      },
+      "dispatcherDelayMs": 113.4061
+    },
+    {
+      "workload": "long-line",
+      "chars": 131070,
+      "repeat": 2,
+      "assignment": {
+        "SetTextMs": 68.3493,
+        "ColourMs": 0,
+        "DisplayMs": 53.735299999999995,
+        "TotalMs": 122.0848
+      },
+      "dispatcherDelayMs": 122.2623
+    },
+    {
+      "workload": "long-line",
+      "operation": "page",
+      "page": 0,
+      "assignment": {
+        "SetTextMs": 47.3713,
+        "ColourMs": 0,
+        "DisplayMs": 43.1849,
+        "TotalMs": 90.5566
+      }
+    },
+    {
+      "workload": "long-line",
+      "operation": "page",
+      "page": 1,
+      "assignment": {
+        "SetTextMs": 46.621,
+        "ColourMs": 0,
+        "DisplayMs": 25.973100000000002,
+        "TotalMs": 72.5944
+      }
+    },
+    {
+      "workload": "long-line",
+      "operation": "page",
+      "page": 2,
+      "assignment": {
+        "SetTextMs": 45.387,
+        "ColourMs": 0,
+        "DisplayMs": 76.0957,
+        "TotalMs": 121.4828
+      }
+    },
+    {
+      "workload": "long-line",
+      "operation": "page",
+      "page": 3,
+      "assignment": {
+        "SetTextMs": 45.6237,
+        "ColourMs": 0,
+        "DisplayMs": 51.459500000000006,
+        "TotalMs": 97.0833
+      }
+    },
+    {
+      "workload": "long-line",
+      "operation": "page",
+      "page": 4,
+      "assignment": {
+        "SetTextMs": 50.0962,
+        "ColourMs": 0,
+        "DisplayMs": 63.345699999999994,
+        "TotalMs": 113.4421
+      }
+    },
+    {
+      "workload": "long-line",
+      "operation": "page",
+      "page": 5,
+      "assignment": {
+        "SetTextMs": 50.8106,
+        "ColourMs": 0,
+        "DisplayMs": 54.289500000000004,
+        "TotalMs": 105.1004
+      }
+    },
+    {
+      "workload": "long-line",
+      "operation": "page",
+      "page": 6,
+      "assignment": {
+        "SetTextMs": 47.6492,
+        "ColourMs": 0,
+        "DisplayMs": 42.50320000000001,
+        "TotalMs": 90.1526
+      }
+    },
+    {
+      "workload": "long-line",
+      "operation": "page",
+      "page": 7,
+      "assignment": {
+        "SetTextMs": 49.019,
+        "ColourMs": 0,
+        "DisplayMs": 54.562,
+        "TotalMs": 103.5812
+      }
+    },
+    {
+      "workload": "long-line",
+      "operation": "page",
+      "page": 8,
+      "assignment": {
+        "SetTextMs": 46.892,
+        "ColourMs": 0,
+        "DisplayMs": 78.00359999999999,
+        "TotalMs": 124.8958
+      }
+    },
+    {
+      "workload": "long-line",
+      "operation": "page",
+      "page": 9,
+      "assignment": {
+        "SetTextMs": 76.4038,
+        "ColourMs": 0,
+        "DisplayMs": 56.136799999999994,
+        "TotalMs": 132.5407
+      }
+    },
+    {
+      "workload": "long-line",
+      "operation": "page",
+      "page": 10,
+      "assignment": {
+        "SetTextMs": 47.4057,
+        "ColourMs": 0,
+        "DisplayMs": 79.00489999999999,
+        "TotalMs": 126.4108
+      }
+    },
+    {
+      "workload": "long-line",
+      "operation": "page",
+      "page": 11,
+      "assignment": {
+        "SetTextMs": 47.2549,
+        "ColourMs": 0,
+        "DisplayMs": 26.698,
+        "TotalMs": 73.9531
+      }
+    },
+    {
+      "workload": "long-line",
+      "operation": "page",
+      "page": 12,
+      "assignment": {
+        "SetTextMs": 47.1348,
+        "ColourMs": 0,
+        "DisplayMs": 77.32820000000001,
+        "TotalMs": 124.4632
+      }
+    },
+    {
+      "workload": "long-line",
+      "operation": "page",
+      "page": 13,
+      "assignment": {
+        "SetTextMs": 45.4343,
+        "ColourMs": 0,
+        "DisplayMs": 51.93560000000001,
+        "TotalMs": 97.3701
+      }
+    },
+    {
+      "workload": "long-line",
+      "operation": "page",
+      "page": 14,
+      "assignment": {
+        "SetTextMs": 45.5196,
+        "ColourMs": 0,
+        "DisplayMs": 76.1796,
+        "TotalMs": 121.6993
+      }
+    },
+    {
+      "workload": "long-line",
+      "operation": "page",
+      "page": 15,
+      "assignment": {
+        "SetTextMs": 45.2066,
+        "ColourMs": 0,
+        "DisplayMs": 52.3682,
+        "TotalMs": 97.5751
+      }
+    }
+  ],
+  "pageLimit": 8192,
+  "limitations": "Three assignment samples per workload on this VM; dispatcher probe includes queued work, not rendered-frame or physical-input latency."
+}

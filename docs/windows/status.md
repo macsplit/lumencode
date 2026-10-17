@@ -1,9 +1,15 @@
 # Windows development status
 
-Updated 17 October 2026 after adding hosted Windows verification. The native Windows
+Updated 17 October 2026 after preview, native behaviour, corpus and portable-ZIP validation. The native Windows
 application opens normally, previews source with the macOS dark palette, and
 passes OS-injected keyboard and pane-drag checks on the Windows VM. Continue this branch rather than
 restarting the feasibility investigation or installing another UI stack.
+
+The newest results and reproducible remaining issues are in
+[resume-validation.md](resume-validation.md). Large previews now use bounded,
+coloured pages. Real folder-dialog cancellation/high contrast and 81 GUI/input/
+behaviour checks pass. The 6,297-file cross-OS corpus sweep found reproducible
+differences: do not claim complete cross-platform JSON parity.
 
 ## Position
 
@@ -13,8 +19,9 @@ restarting the feasibility investigation or installing another UI stack.
   Startup fix: `79c5184c1ceb21fbc78b175cef90e3d773816f56`. The current
   source preview checkpoint is `67d6ce63e07f4d08bff27f3218699f6818bea993`.
   Desktop input was verified at `f8a24844f5081d120362e4a29b2c4a649a1ff822`.
-  The current follow-up adds hosted Windows build/package/engine verification;
-  the shared engine and GUI implementation remain unchanged.
+  Hosted Windows/Linux verification passed at `9d685425`.
+  The current follow-up changes only Windows presentation, accessibility and
+  validation/packaging tools; shared engine/grammar code remains unchanged.
 - Architecture agreed: C#/WinUI 3/XAML frontend in `apps/windows`, .NET 10,
   existing C++17/Qt Core/Concurrent helper and canonical vendored grammars.
 - The shared engine build/parity gate is complete on this Windows VM.
@@ -133,6 +140,9 @@ new asynchronous source path. Dark/default and minimum-window screenshots were
 inspected again; no layout regression was observed at this VM's scale.
 
 ### Source preview and desktop-input follow-up
+
+This subsection records the earlier single-document preview. The newer bounded
+page implementation and measurements are in [resume-validation.md](resume-validation.md).
 
 `apps/windows/LumenCode.Core/SourcePreview.cs` adds display-only lexical colouring
 using the existing macOS preview palette and the same general lightweight
@@ -340,15 +350,20 @@ was tested successfully; no SSH configuration changes were made by this work.
 
 1. Read this file and inspect `git status`, then fetch `origin` and use the existing
    `windows/native-winui` branch. Preserve any newer user edits.
-2. Continue profiling large-preview text assignment and rendered/input latency.
-   Small-file source display is decoupled from analysis; the shared engine is
-   unchanged. Stage timings in the GUI report are diagnostic, not frame timings.
-3. Test folder dialogs, accessibility, high contrast, multiple DPIs/monitors and
-   ordinary human input. The OS-injected keyboard/pane suite is now verified;
-   keep `-DesktopInput` available for regressions. Large previews use plain text.
-4. Extend coverage with cross-OS corpus comparisons and clean-machine/installer
-   validation. Windows CI now covers build/package and native engine/adapter gates. Same-VM fresh-folder publication has passed; a machine with no
-   developer/runtime setup has not yet been tested.
+2. Continue rendered/physical-input latency profiling. Bounded source pages
+   substantially reduce assignment stalls, but stress dispatcher gaps still
+   exceed 50 ms; assignment timestamps are not frame measurements.
+3. Complete human Narrator, multiple-DPI/monitor and ordinary human-input checks.
+   Owned folder-dialog cancellation, real contrast switching and keyboard/pointer
+   regressions now pass. Keep `-DesktopInput` and `-WindowsBehaviour` available.
+4. Investigate the reproducible Swift recovery/call-site, Kotlin dependency and
+   PHP/Ruby resolution differences in the cross-OS evidence before claiming
+   parity. Keep any correction in the canonical shared engine, with regression
+   fixtures; do not add a Windows parser fork.
+5. Validate the portable ZIP on a clean Windows machine, then select installer
+   and trusted-signing arrangements. Current ZIP extraction/file-hash/clean-child-
+   environment tests pass on the developer VM; Sandbox is disabled. No installer
+   or signed release has been published.
 
 Commands on the current VM (from the repository root):
 

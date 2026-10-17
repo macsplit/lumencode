@@ -1,7 +1,10 @@
 param(
     [string]$App = 'build-windows/package/LumenCode.Windows.exe',
     [Parameter(Mandatory=$true)][string]$Output,
-    [switch]$DesktopInput
+    [switch]$DesktopInput,
+    [switch]$PreviewProfile,
+    [switch]$WindowsBehaviour,
+    [switch]$CleanEnvironment
 )
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
@@ -15,7 +18,15 @@ $name = 'LumenCode-GUI-Audit-' + [guid]::NewGuid().ToString('N')
 $start = Get-Date
 $arguments = '--gui-audit "' + $repo + '" "' + $Output + '"'
 if ($DesktopInput) { $arguments += ' --desktop-input' }
+if ($PreviewProfile) { $arguments += ' --preview-profile' }
+if ($WindowsBehaviour) { $arguments += ' --windows-behaviour' }
 $action = New-ScheduledTaskAction -Execute $App -Argument $arguments -WorkingDirectory (Split-Path $App)
+if ($CleanEnvironment) {
+    if ($DesktopInput -or $PreviewProfile -or $WindowsBehaviour) { throw 'CleanEnvironment runs the default GUI suite only' }
+    $bootstrap = Join-Path $PSScriptRoot 'start_windows_clean_audit.ps1'
+    $bootstrapArguments = '-NoProfile -ExecutionPolicy Bypass -File "' + $bootstrap + '" -App "' + $App + '" -Repository "' + $repo + '" -Output "' + $Output + '"'
+    $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $bootstrapArguments -WorkingDirectory (Split-Path $App)
+}
 $principal = New-ScheduledTaskPrincipal -UserId ([Security.Principal.WindowsIdentity]::GetCurrent().Name) -LogonType Interactive -RunLevel Limited
 $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 4)
 $focusName = $name + '-Focus'

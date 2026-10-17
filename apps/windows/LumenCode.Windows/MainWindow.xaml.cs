@@ -25,6 +25,12 @@ public sealed partial class MainWindow : Window
     private JsonElement analysis;
     private sealed record SelectionMeasurement(bool CacheHit, double PreviewReadyMs, double AnalysisReadyMs, double UiApplyMs, double CompletedMs);
     private SelectionMeasurement? lastSelectionMeasurement;
+    private sealed record PreviewMeasurement(double SetTextMs, double DisplayMs, double TotalMs);
+    private PreviewMeasurement? lastPreviewMeasurement;
+    private PreviewDocument previewDocument = new("");
+    private int previewPage, previewVersion;
+    private string previewPath = "";
+    private readonly Microsoft.UI.System.ThemeSettings themeSettings;
     private readonly string settingsFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LumenCode", "settings.json");
 
     public MainWindow()
@@ -33,6 +39,8 @@ public sealed partial class MainWindow : Window
         // This is a source viewer. Retaining undo copies of every navigated file
         // wastes memory and adds work to large document replacements.
         Code.Document.UndoLimit = 0;
+        themeSettings = Microsoft.UI.System.ThemeSettings.CreateForWindowId(AppWindow.Id);
+        themeSettings.Changed += ThemeChanged;
         Title = "LumenCode";
         AppWindow.Resize(new global::Windows.Graphics.SizeInt32(1440, 920));
         AppWindow.Changed += (_, args) =>
@@ -40,7 +48,7 @@ public sealed partial class MainWindow : Window
             if (args.DidSizeChange && (AppWindow.Size.Width < 1080 || AppWindow.Size.Height < 700))
                 AppWindow.Resize(new global::Windows.Graphics.SizeInt32(Math.Max(1080, AppWindow.Size.Width), Math.Max(700, AppWindow.Size.Height)));
         };
-        Closed += (_, _) => { SaveSettings(); projectRequest.Cancel(); selectionRequest.Cancel(); searchRequest.Cancel(); };
+        Closed += (_, _) => { themeSettings.Changed -= ThemeChanged; SaveSettings(); projectRequest.Cancel(); selectionRequest.Cancel(); searchRequest.Cancel(); };
         Root.Loaded += Loaded;
         WorkspaceGrid.SizeChanged += (_, _) =>
         {
@@ -198,11 +206,12 @@ public sealed partial class MainWindow : Window
             {
                 var info = new FileInfo(requested);
                 string text = await ReadPreviewAsync(requested, token);
-                return (Text: text, Rtf: text.Length <= SourcePreview.ColourLimit ? SourcePreview.Format(text, requested) : null, Stamp: info.LastWriteTimeUtc.Ticks, Length: info.Length);
+                var document = new PreviewDocument(text);
+                return (Text: text, Document: document, Rtf: SourcePreview.Format(document.PageText(0), requested), Stamp: info.LastWriteTimeUtc.Ticks, Length: info.Length);
             }, token);
             if (token.IsCancellationRequested || current != generation || requested != selectedPath) return;
             double applyStart = watch.Elapsed.TotalMilliseconds;
-            SetPreview(source.Text, Path.GetRelativePath(rootPath, requested), source.Rtf);
+            SetPreview(source.Text, Path.GetRelativePath(rootPath, requested), source.Rtf, source.Document);
             double previewReadyMs = watch.Elapsed.TotalMilliseconds;
             double uiApplyMs = previewReadyMs - applyStart;
             JsonElement data;
@@ -258,38 +267,87 @@ public sealed partial class MainWindow : Window
         return count == buffer.Length ? text + "\n\n[Preview limited to 256 KiB of text]" : text;
     }
 
-    private void SetPreview(string text, string title, string? rtf = null)
+    private void SetPreview(string text, string title, string? rtf = null, PreviewDocument? document = null)
     {
-        previewText = text; PreviewTitle.Text = text.Length > SourcePreview.ColourLimit ? title + " · Plain text preview" : title;
+        previewVersion++;
+        previewText = text;
+        previewDocument = document ?? new(text);
+        previewPath = selectedPath;
+        PreviewTitle.Text = title;
+        // A caller's full-document RTF cannot be used for a single page.
+        ApplyPreviewPage(0, document is null && previewDocument.PageCount > 1 ? null : rtf);
+    }
+
+    private void ApplyPreviewPage(int page, string? rtf = null)
+    {
+        var measurement = Stopwatch.StartNew();
+        previewPage = page;
+        string text = previewDocument.PageText(page);
+        PreviewNavigation.Visibility = previewDocument.PageCount > 1 ? Visibility.Visible : Visibility.Collapsed;
+        PreviousPreview.IsEnabled = page > 0;
+        NextPreview.IsEnabled = page + 1 < previewDocument.PageCount;
+        PreviewPosition.Text = $"{page + 1} / {previewDocument.PageCount}";
         Code.IsReadOnly = false;
         Code.Document.BatchDisplayUpdates();
         try
         {
             if (text.Length == 0) Code.Document.SetText(Microsoft.UI.Text.TextSetOptions.None, "");
-            else if (text.Length > SourcePreview.ColourLimit)
+            else
             {
-                Code.Document.SetText(Microsoft.UI.Text.TextSetOptions.None, text);
-                var range = Code.Document.GetRange(0, 0);
-                range.Expand(Microsoft.UI.Text.TextRangeUnit.Story);
-                range.CharacterFormat.ForegroundColor = global::Windows.UI.Color.FromArgb(255, 224, 230, 237);
+                // Discard the previous page's runs before importing another
+                // RTF page; replacing a populated rich document costs more.
+                Code.Document.SetText(Microsoft.UI.Text.TextSetOptions.None, "");
+                if (themeSettings.HighContrast)
+                {
+                    Code.Document.SetText(Microsoft.UI.Text.TextSetOptions.None, text);
+                    var range = Code.Document.GetRange(0, 0);
+                    range.Expand(Microsoft.UI.Text.TextRangeUnit.Story);
+                    range.CharacterFormat.ForegroundColor = new global::Windows.UI.ViewManagement.UISettings().UIElementColor(global::Windows.UI.ViewManagement.UIElementType.WindowText);
+                }
+                else Code.Document.SetText(Microsoft.UI.Text.TextSetOptions.FormatRtf, rtf ?? SourcePreview.Format(text, previewPath));
             }
-            else Code.Document.SetText(Microsoft.UI.Text.TextSetOptions.FormatRtf, rtf ?? SourcePreview.Format(text, selectedPath));
         }
-        finally { try { Code.Document.ApplyDisplayUpdates(); } finally { Code.IsReadOnly = true; } }
+        finally
+        {
+            double textMs = measurement.Elapsed.TotalMilliseconds;
+            double displayStart = measurement.Elapsed.TotalMilliseconds;
+            try { Code.Document.ApplyDisplayUpdates(); } finally { Code.IsReadOnly = true; }
+            lastPreviewMeasurement = new(textMs, measurement.Elapsed.TotalMilliseconds - displayStart, measurement.Elapsed.TotalMilliseconds);
+        }
     }
+
+    private void ThemeChanged(Microsoft.UI.System.ThemeSettings sender, object args) => DispatcherQueue.TryEnqueue(() =>
+    {
+        previewVersion++;
+        ApplyPreviewPage(previewPage);
+    });
+
+    private async Task ChangePreviewPageAsync(int page)
+    {
+        if (page < 0 || page >= previewDocument.PageCount) return;
+        int version = ++previewVersion;
+        var document = previewDocument;
+        string path = previewPath;
+        string rtf = await Task.Run(() => SourcePreview.Format(document.PageText(page), path));
+        if (version != previewVersion || document != previewDocument) return;
+        ApplyPreviewPage(page, rtf);
+    }
+
+    private async void PreviousPreviewClick(object sender, RoutedEventArgs e) => await ChangePreviewPageAsync(previewPage - 1);
+    private async void NextPreviewClick(object sender, RoutedEventArgs e) => await ChangePreviewPageAsync(previewPage + 1);
 
     private void SelectPreviewLine(int line)
     {
-        // RichEdit normalizes paragraph endings. Use its actual text positions,
-        // not offsets into the original CRLF source (which drift after each line).
+        int offset = previewDocument.LineStart(line);
+        int page = previewDocument.PageAt(offset);
+        previewVersion++;
+        if (page != previewPage) ApplyPreviewPage(page);
+        // Work in the displayed page; RichEdit uses one position per paragraph
+        // ending whereas the source may use a two-character CRLF pair.
         Code.Document.GetText(Microsoft.UI.Text.TextGetOptions.None, out string documentText);
-        int start = 0;
-        for (int n = 1; n < line && start < documentText.Length; n++)
-        {
-            int next = documentText.IndexOfAny(['\r', '\n'], start); if (next < 0) break;
-            start = next + 1;
-            if (documentText[next] == '\r' && start < documentText.Length && documentText[start] == '\n') start++;
-        }
+        // CRLF pairs in the source occupy one RichEdit paragraph position.
+        string prefix = previewDocument.Text[previewDocument.Start(page)..Math.Max(previewDocument.Start(page), offset)];
+        int start = prefix.Replace("\r\n", "\n").Length;
         int end = documentText.IndexOfAny(['\r', '\n'], start); if (end < 0) end = documentText.Length;
         Code.Document.Selection.SetRange(start, end);
         Code.Document.Selection.ScrollIntoView(Microsoft.UI.Text.PointOptions.Start);
