@@ -41,8 +41,8 @@ execution; tracking refs alone are not a fresh remote inventory.
 | Distribution | Original Flatpak manifest, tracked `web/` assets and a signing/deployment script | Preserve application IDs, download paths and release assets; change path handling without deploying. |
 | Automation | Neither inspected main tree has tracked `.github` workflows | Add the proposed checks explicitly rather than assuming CI already exists. |
 
-Existing verification evidence is in the [integration report](engine-integration.md)
-and [17 October follow-up](follow-up-2026-10-17.md). The accepted baseline includes
+Existing verification evidence is in the [integration report](../macos/engine-integration.md)
+and [17 October follow-up](../macos/follow-up-2026-10-17.md). The accepted baseline includes
 an 84 ms maximum GUI heartbeat gap in the expanded audit and a failing macOS 14
 runtime gate. Those limitations remain visible; they are not new blockers that
 this structural migration must fix.

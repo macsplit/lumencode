@@ -2,8 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DIAGRAM_DIR="$ROOT_DIR/docs/diagrams"
-OUTPUT_DIR="$ROOT_DIR/docs/generated"
+DIAGRAM_DIR="$ROOT_DIR/docs/qt/diagrams"
+OUTPUT_DIR="$ROOT_DIR/docs/qt/generated"
 PUPPETEER_CONFIG="$(mktemp /tmp/lumencode-puppeteer-config.XXXXXX.json)"
 
 if ! command -v mmdc >/dev/null 2>&1; then

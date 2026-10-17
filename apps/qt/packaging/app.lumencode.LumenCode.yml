@@ -17,6 +17,6 @@ modules:
     buildsystem: cmake-ninja
     sources:
       - type: dir
-        path: .
+        path: ../../..
     config-opts:
       - -DCMAKE_BUILD_TYPE=Release
