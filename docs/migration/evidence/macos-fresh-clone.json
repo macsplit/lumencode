@@ -1,0 +1,24 @@
+{
+  "fresh_clone": true,
+  "path_contains_spaces": true,
+  "external_swift_scratch_directory": true,
+  "swift_tests": 9,
+  "xcode_build": "passed",
+  "cpp_build": "passed",
+  "qt_fixtures": {
+    "cases": 101,
+    "cases_passed": 101,
+    "assertions": 625,
+    "assertions_passed": 625,
+    "unique_invocations": 99,
+    "errors": 0
+  },
+  "swift_fixtures": {
+    "cases": 101,
+    "cases_passed": 101,
+    "assertions": 625,
+    "assertions_passed": 625,
+    "unique_invocations": 99,
+    "errors": 0
+  }
+}
