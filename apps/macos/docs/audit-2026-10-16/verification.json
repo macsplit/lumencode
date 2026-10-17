@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-16",
+  "upstream_revision": "48cf4db8042d51cfe67c2344e4d7a3824576517f",
+  "platform": "27.0.1",
+  "swift_tests": {
+    "passed": 8,
+    "failed": 0
+  },
+  "builds": {
+    "swift_package": "passed",
+    "xcode_app_debug_unsigned": "passed"
+  },
+  "native_app_startup": "passed",
+  "gui_warning": "Application performed a reentrant operation in its NSTableView delegate. This warning will become an assert in the future.",
+  "release_limitation": "Current packaged Homebrew transitive libraries require macOS 27; macOS 14-compatible dependencies and release signing remain unverified."
+}

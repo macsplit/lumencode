@@ -1,0 +1,150 @@
+{
+  "swift_signature_dump": {
+    "samples": [
+      {
+        "ms": 90.46899998793378,
+        "exit": 0,
+        "mode": "ast",
+        "symbols": 1,
+        "summary": "1 top-level symbols",
+        "output_bytes": 4469
+      },
+      {
+        "ms": 91.89720900030807,
+        "exit": 0,
+        "mode": "ast",
+        "symbols": 1,
+        "summary": "1 top-level symbols",
+        "output_bytes": 4469
+      },
+      {
+        "ms": 92.867125000339,
+        "exit": 0,
+        "mode": "ast",
+        "symbols": 1,
+        "summary": "1 top-level symbols",
+        "output_bytes": 4469
+      },
+      {
+        "ms": 97.09049999946728,
+        "exit": 0,
+        "mode": "ast",
+        "symbols": 1,
+        "summary": "1 top-level symbols",
+        "output_bytes": 4469
+      },
+      {
+        "ms": 98.44433300895616,
+        "exit": 0,
+        "mode": "ast",
+        "symbols": 1,
+        "summary": "1 top-level symbols",
+        "output_bytes": 4469
+      }
+    ],
+    "median_ms": 92.867125000339
+  },
+  "stress_single_file_dump": {
+    "samples": [
+      {
+        "ms": 96.75216599134728,
+        "exit": 0,
+        "mode": "ast",
+        "symbols": 2,
+        "summary": "2 top-level symbols",
+        "output_bytes": 2342
+      },
+      {
+        "ms": 98.13724999548867,
+        "exit": 0,
+        "mode": "ast",
+        "symbols": 2,
+        "summary": "2 top-level symbols",
+        "output_bytes": 2342
+      },
+      {
+        "ms": 100.68199998931959,
+        "exit": 0,
+        "mode": "ast",
+        "symbols": 2,
+        "summary": "2 top-level symbols",
+        "output_bytes": 2342
+      },
+      {
+        "ms": 107.22158302087337,
+        "exit": 0,
+        "mode": "ast",
+        "symbols": 2,
+        "summary": "2 top-level symbols",
+        "output_bytes": 2342
+      },
+      {
+        "ms": 108.48341701785102,
+        "exit": 0,
+        "mode": "ast",
+        "symbols": 2,
+        "summary": "2 top-level symbols",
+        "output_bytes": 2342
+      }
+    ],
+    "median_ms": 100.68199998931959
+  },
+  "stress_project_selection": {
+    "samples": [
+      {
+        "ms": 778.98775000358,
+        "exit": 0,
+        "mode": "ast",
+        "symbols": 2,
+        "summary": "2 top-level symbols",
+        "output_bytes": 158623
+      },
+      {
+        "ms": 770.1907500158995,
+        "exit": 0,
+        "mode": "ast",
+        "symbols": 2,
+        "summary": "2 top-level symbols",
+        "output_bytes": 158623
+      },
+      {
+        "ms": 786.9328749948181,
+        "exit": 0,
+        "mode": "ast",
+        "symbols": 2,
+        "summary": "2 top-level symbols",
+        "output_bytes": 158623
+      },
+      {
+        "ms": 767.5079589826055,
+        "exit": 0,
+        "mode": "ast",
+        "symbols": 2,
+        "summary": "2 top-level symbols",
+        "output_bytes": 158623
+      },
+      {
+        "ms": 762.135999975726,
+        "exit": 0,
+        "mode": "ast",
+        "symbols": 2,
+        "summary": "2 top-level symbols",
+        "output_bytes": 158623
+      }
+    ],
+    "median_ms": 770.1907500158995
+  },
+  "oversize_js_dump": {
+    "samples": [
+      {
+        "ms": 89.65249999891967,
+        "exit": 0,
+        "mode": "heuristic",
+        "symbols": 0,
+        "summary": "Analysis skipped: file is too large (2.4 MB, limit 2.0 MB)",
+        "output_bytes": 527
+      }
+    ],
+    "median_ms": 89.65249999891967
+  }
+}

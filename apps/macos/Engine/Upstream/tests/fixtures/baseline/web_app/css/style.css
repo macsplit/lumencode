@@ -1,0 +1,19 @@
+.header {
+    padding: 8px;
+}
+
+.new-todo {
+    font-size: 24px;
+}
+
+.todo-list li.completed {
+    text-decoration: line-through;
+}
+
+.hidden {
+    display: none;
+}
+
+.never-used {
+    color: blue;
+}

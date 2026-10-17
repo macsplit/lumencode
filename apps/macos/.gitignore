@@ -1,0 +1,23 @@
+# Xcode
+# Ignore Xcode-specific files and directories.
+*.xcuserdatad/
+*.xcuserstate
+*.xcscheme
+xcuserdata/
+
+# Swift Package Manager
+# Ignore Swift Package Manager build artifacts and configuration.
+.build/
+.swiftpm/
+
+# macOS
+# Ignore macOS-specific files that can clutter the repository.
+.DS_Store
+__pycache__/
+
+# Temporary files
+*.log
+tmp/
+
+# Locally assembled app bundles
+LumencodeSwift.app/

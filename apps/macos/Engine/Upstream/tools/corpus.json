@@ -1,0 +1,232 @@
+{
+  "description": "Pinned public source corpus for lumencode regression sweeps. Fetch with tools/fetch_corpus.py.",
+  "repos": [
+    {
+      "name": "50projects50days",
+      "repo": "https://github.com/bradtraversy/50projects50days",
+      "commit": "c92b0bc3a87fc95d44b89552b7b6a2eeb36ca481",
+      "focus": [
+        "web"
+      ]
+    },
+    {
+      "name": "todomvc",
+      "repo": "https://github.com/tastejs/todomvc",
+      "commit": "ff43b02e59dfa604386bb382034b2cd07c2bcd8a",
+      "focus": [
+        "web"
+      ]
+    },
+    {
+      "name": "html5-boilerplate",
+      "repo": "https://github.com/h5bp/html5-boilerplate",
+      "commit": "b6597338e695dc4a8165c5abcb2bfffa586c3ee5",
+      "focus": [
+        "web"
+      ]
+    },
+    {
+      "name": "express",
+      "repo": "https://github.com/expressjs/express",
+      "commit": "7ef98448f8b38099ab1ded55e458538ad47a51e7",
+      "focus": [
+        "js"
+      ]
+    },
+    {
+      "name": "hono",
+      "repo": "https://github.com/honojs/hono",
+      "commit": "37ce06904e732d4bc11c9075adf362c76049a594",
+      "focus": [
+        "ts"
+      ]
+    },
+    {
+      "name": "flask",
+      "repo": "https://github.com/pallets/flask",
+      "commit": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35",
+      "focus": [
+        "python"
+      ]
+    },
+    {
+      "name": "requests",
+      "repo": "https://github.com/psf/requests",
+      "commit": "611c6162cbc4ac2020a2f91c7cfa4f3abf9bbb60",
+      "focus": [
+        "python"
+      ]
+    },
+    {
+      "name": "Slim",
+      "repo": "https://github.com/slimphp/Slim",
+      "commit": "3675bf6baac66b07032575b7bef4200b60b7974b",
+      "focus": [
+        "php"
+      ]
+    },
+    {
+      "name": "PHPMailer",
+      "repo": "https://github.com/PHPMailer/PHPMailer",
+      "commit": "50cd271fdf4e23673ded5455cdbaea007e05f619",
+      "focus": [
+        "php"
+      ]
+    },
+    {
+      "name": "CodeIgniter",
+      "repo": "https://github.com/bcit-ci/CodeIgniter",
+      "commit": "3658d731eaabe6117298a105ffb5b9dd59e190ce",
+      "focus": [
+        "php"
+      ]
+    },
+    {
+      "name": "gson",
+      "repo": "https://github.com/google/gson",
+      "commit": "854c8255b625cf1e13c701a83ea9ccb4caaa576a",
+      "focus": [
+        "java"
+      ]
+    },
+    {
+      "name": "MediatR",
+      "repo": "https://github.com/jbogard/MediatR",
+      "commit": "916ef1b3d68ccdc96db8f914eaf1b32fc7db52c5",
+      "focus": [
+        "csharp"
+      ]
+    },
+    {
+      "name": "Polly",
+      "repo": "https://github.com/App-vNext/Polly",
+      "commit": "0275bc22a5a8defb77415313112454a558d0f43a",
+      "focus": [
+        "csharp"
+      ]
+    },
+    {
+      "name": "ripgrep",
+      "repo": "https://github.com/BurntSushi/ripgrep",
+      "commit": "3fce3b5bb0236da2df6d99672afb8a719642eca7",
+      "focus": [
+        "rust"
+      ]
+    },
+    {
+      "name": "Alamofire",
+      "repo": "https://github.com/Alamofire/Alamofire",
+      "commit": "bda9ed57d72988a3a2ada33d824583541f86eac6",
+      "focus": [
+        "swift"
+      ]
+    },
+    {
+      "name": "gin",
+      "repo": "https://github.com/gin-gonic/gin",
+      "commit": "43fe48e8a0f44af783116cdb010725e6bb50255f",
+      "focus": [
+        "go"
+      ]
+    },
+    {
+      "name": "cobra",
+      "repo": "https://github.com/spf13/cobra",
+      "commit": "adbc8813901bba65827259daa8e22ff94ec1f30e",
+      "focus": [
+        "go"
+      ]
+    },
+    {
+      "name": "cJSON",
+      "repo": "https://github.com/DaveGamble/cJSON",
+      "commit": "6d9f2443ab071f86e5d9b43025a40929ec41c46c",
+      "focus": [
+        "c"
+      ]
+    },
+    {
+      "name": "kilo",
+      "repo": "https://github.com/antirez/kilo",
+      "commit": "323d93b29bd89a2cb446de90c4ed4fea1764176e",
+      "focus": [
+        "c"
+      ]
+    },
+    {
+      "name": "fmt",
+      "repo": "https://github.com/fmtlib/fmt",
+      "commit": "5da4e9a3fb15626ba92969199061e0169ebc8a00",
+      "focus": [
+        "cpp"
+      ]
+    },
+    {
+      "name": "sinatra",
+      "repo": "https://github.com/sinatra/sinatra",
+      "commit": "cb22afd7902b566b6eaba6c4ea89739494a65d12",
+      "focus": [
+        "ruby"
+      ]
+    },
+    {
+      "name": "okio",
+      "repo": "https://github.com/square/okio",
+      "commit": "fb4817a396dd37d515d94e6033216214e07323d1",
+      "focus": [
+        "kotlin"
+      ]
+    },
+    {
+      "name": "nvm",
+      "repo": "https://github.com/nvm-sh/nvm",
+      "commit": "09822033d2bdb555fc52fa64489aaa4928695da3",
+      "focus": [
+        "bash"
+      ]
+    },
+    {
+      "name": "test_db",
+      "repo": "https://github.com/datacharmer/test_db",
+      "commit": "e324b56193ca506ab7cc1ab143a9153d8c4535d7",
+      "focus": [
+        "sql"
+      ]
+    },
+    {
+      "name": "kirigami",
+      "repo": "https://github.com/KDE/kirigami",
+      "commit": "fead580c77c2a60f67e9e6075ec700f745983be3",
+      "focus": [
+        "qml"
+      ]
+    },
+    {
+      "name": "SDWebImage",
+      "repo": "https://github.com/SDWebImage/SDWebImage",
+      "commit": "c3ad5e1a9bf55c9b76d4c362430b5fcded96c502",
+      "focus": [
+        "objc"
+      ]
+    },
+    {
+      "name": "dotnet-samples",
+      "repo": "https://github.com/dotnet/samples",
+      "commit": "acb39ceb13f910ae0f8f6298059c59102b749c41",
+      "focus": [
+        "vbnet",
+        "csharp"
+      ],
+      "sparse": [
+        "*.vb",
+        "*.vbproj",
+        "windowsforms/**",
+        "upgrades/matching-game-netframework/**",
+        "!*.png",
+        "!*.jpg",
+        "!*.ico",
+        "!*.resx"
+      ]
+    }
+  ]
+}

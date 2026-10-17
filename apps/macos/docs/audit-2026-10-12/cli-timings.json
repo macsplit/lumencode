@@ -1,0 +1,146 @@
+{
+  "swift_signature_dump": {
+    "samples": [
+      {
+        "ms": 9.687959000075352,
+        "exit": 0,
+        "mode": "recovered",
+        "symbols": 1,
+        "summary": "Native bridge analyzed Greeter.swift as swift, found 1 symbols and 1 dependencies.",
+        "output_bytes": 7472
+      },
+      {
+        "ms": 8.08833400151343,
+        "exit": 0,
+        "mode": "recovered",
+        "symbols": 1,
+        "summary": "Native bridge analyzed Greeter.swift as swift, found 1 symbols and 1 dependencies.",
+        "output_bytes": 7472
+      },
+      {
+        "ms": 7.8068750008242205,
+        "exit": 0,
+        "mode": "recovered",
+        "symbols": 1,
+        "summary": "Native bridge analyzed Greeter.swift as swift, found 1 symbols and 1 dependencies.",
+        "output_bytes": 7472
+      },
+      {
+        "ms": 7.762666000417084,
+        "exit": 0,
+        "mode": "recovered",
+        "symbols": 1,
+        "summary": "Native bridge analyzed Greeter.swift as swift, found 1 symbols and 1 dependencies.",
+        "output_bytes": 7472
+      },
+      {
+        "ms": 7.646375001058914,
+        "exit": 0,
+        "mode": "recovered",
+        "symbols": 1,
+        "summary": "Native bridge analyzed Greeter.swift as swift, found 1 symbols and 1 dependencies.",
+        "output_bytes": 7472
+      }
+    ],
+    "median_ms": 7.8068750008242205
+  },
+  "stress_single_file_dump": {
+    "samples": [
+      {
+        "ms": 11.237374999836902,
+        "exit": 0,
+        "mode": "recovered",
+        "symbols": 2,
+        "summary": "Native bridge analyzed file0001.js as script, found 2 symbols and 0 dependencies.",
+        "output_bytes": 3589
+      },
+      {
+        "ms": 8.268499999758205,
+        "exit": 0,
+        "mode": "recovered",
+        "symbols": 2,
+        "summary": "Native bridge analyzed file0001.js as script, found 2 symbols and 0 dependencies.",
+        "output_bytes": 3589
+      },
+      {
+        "ms": 8.010708001165767,
+        "exit": 0,
+        "mode": "recovered",
+        "symbols": 2,
+        "summary": "Native bridge analyzed file0001.js as script, found 2 symbols and 0 dependencies.",
+        "output_bytes": 3589
+      },
+      {
+        "ms": 8.298417000332847,
+        "exit": 0,
+        "mode": "recovered",
+        "symbols": 2,
+        "summary": "Native bridge analyzed file0001.js as script, found 2 symbols and 0 dependencies.",
+        "output_bytes": 3589
+      },
+      {
+        "ms": 8.401209001021925,
+        "exit": 0,
+        "mode": "recovered",
+        "symbols": 2,
+        "summary": "Native bridge analyzed file0001.js as script, found 2 symbols and 0 dependencies.",
+        "output_bytes": 3589
+      }
+    ],
+    "median_ms": 8.298417000332847
+  },
+  "stress_project_selection": {
+    "samples": [
+      {
+        "ms": 985.6917920005799,
+        "exit": 0,
+        "mode": "recovered",
+        "symbols": 2,
+        "summary": "Native bridge analyzed file0001.js as script, found 2 symbols and 0 dependencies.",
+        "output_bytes": 159754
+      },
+      {
+        "ms": 942.3209169999609,
+        "exit": 0,
+        "mode": "recovered",
+        "symbols": 2,
+        "summary": "Native bridge analyzed file0001.js as script, found 2 symbols and 0 dependencies.",
+        "output_bytes": 159754
+      },
+      {
+        "ms": 946.5417499995965,
+        "exit": 0,
+        "mode": "recovered",
+        "symbols": 2,
+        "summary": "Native bridge analyzed file0001.js as script, found 2 symbols and 0 dependencies.",
+        "output_bytes": 159754
+      },
+      {
+        "ms": 933.6361669993494,
+        "exit": 0,
+        "mode": "recovered",
+        "symbols": 2,
+        "summary": "Native bridge analyzed file0001.js as script, found 2 symbols and 0 dependencies.",
+        "output_bytes": 159754
+      },
+      {
+        "ms": 947.0260419984697,
+        "exit": 0,
+        "mode": "recovered",
+        "symbols": 2,
+        "summary": "Native bridge analyzed file0001.js as script, found 2 symbols and 0 dependencies.",
+        "output_bytes": 159754
+      }
+    ],
+    "median_ms": 946.5417499995965
+  },
+  "oversize_js_dump": {
+    "samples": [
+      {
+        "ms": 3008.94820800022,
+        "timed_out": true
+      }
+    ],
+    "median_ms": 3008.94820800022
+  }
+}
