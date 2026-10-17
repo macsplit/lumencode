@@ -1,6 +1,7 @@
 param(
     [string]$App = 'build-windows/package/LumenCode.Windows.exe',
-    [Parameter(Mandatory=$true)][string]$Output
+    [Parameter(Mandatory=$true)][string]$Output,
+    [switch]$DesktopInput
 )
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
@@ -10,7 +11,9 @@ if (-not (Test-Path $App)) { throw "Application not found: $App" }
 New-Item -ItemType Directory -Force $Output | Out-Null
 $name = 'LumenCode-GUI-Audit-' + [guid]::NewGuid().ToString('N')
 $start = Get-Date
-$action = New-ScheduledTaskAction -Execute $App -Argument ('--gui-audit "' + $repo + '" "' + $Output + '"') -WorkingDirectory (Split-Path $App)
+$arguments = '--gui-audit "' + $repo + '" "' + $Output + '"'
+if ($DesktopInput) { $arguments += ' --desktop-input' }
+$action = New-ScheduledTaskAction -Execute $App -Argument $arguments -WorkingDirectory (Split-Path $App)
 $principal = New-ScheduledTaskPrincipal -UserId ([Security.Principal.WindowsIdentity]::GetCurrent().Name) -LogonType Interactive -RunLevel Limited
 $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 4)
 try {

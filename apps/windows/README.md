@@ -74,6 +74,13 @@ not save audit workspace settings as the user's normal workspace. It tests real
 engine-backed workflows programmatically, not physical mouse/keyboard input,
 Narrator, multiple monitor DPIs or clean-machine distribution.
 
+For optional foreground-guarded OS keyboard/pointer input, add `-DesktopInput`.
+The desktop must be unlocked and the audit window foreground; it waits up to
+30 seconds for activation and stops before input if focus is unavailable. This
+checks shortcuts, search typing, history and divider resizing/dragging. Cursor
+position is restored. The current VM attempt was blocked by foreground focus;
+see the status document rather than treating this suite as passed.
+
 ## Source ownership
 
 - `LumenCode.Core`: bounded, cancellable process transport and JSON presentation
@@ -82,7 +89,10 @@ Narrator, multiple monitor DPIs or clean-machine distribution.
 - `LumenCode.Windows`: native views, navigation, dialogs, dark UI, preview and
   explicit audit mode. Folder scanning and engine work execute away from the UI
   thread; source is shown before waiting for analysis. JSON row preparation also
-  runs on workers; stale selections/searches are cancelled and discarded. The GUI
+  runs on workers; stale selections/searches are cancelled and discarded. Source
+  colouring follows the macOS dark palette, with a plain-text fallback above
+  64K UTF-16 characters. This is presentation only; language facts remain native.
+  Line navigation accounts for RichEdit paragraph normalization in CRLF files. The GUI
   report separates preview, analysis and UI application timing, and includes a
   generated 2,000-symbol source stress check.
 - `LumenCode.CoreChecks`: executable checks for argument preservation, helper

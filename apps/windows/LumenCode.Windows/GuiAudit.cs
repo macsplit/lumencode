@@ -81,7 +81,9 @@ public sealed partial class MainWindow
                 timings.Add(new { operation = "select-large", symbols = 2000, stages = lastSelectionMeasurement });
             }
             finally { File.Delete(largeFile); cache.Remove(largeFile); }
+            CheckPreviewFormatting(Check);
             await SelectFileAsync(new(file));
+            if (args.Contains("--desktop-input")) await CheckDesktopInputAsync(file, files[^1], Check);
             var wrapper = Payload.Symbols(analysis).First(s => s.Text("name") == "wrapper");
             Inspect(DisplayItem.From(wrapper, "Symbols"));
             Check("Symbol details and calls", DetailTitle.Text == "wrapper" && wrapper.Items("calls").Any(s => s.Text("name") == "helper"));
@@ -113,10 +115,100 @@ public sealed partial class MainWindow
         {
             timer.Stop();
             var sorted = gaps.Order().ToArray();
-            await File.WriteAllTextAsync(Path.Combine(output, "gui.json"), JsonSerializer.Serialize(new { passed = failure is null, checks, timings, failure, heartbeat = new { nominalIntervalMs = 16, samples = gaps.Count, maxGapMs = gaps.DefaultIfEmpty().Max(), p95GapMs = sorted.Length > 0 ? sorted[Math.Min(sorted.Length - 1, (int)(sorted.Length * .95))] : 0 }, limitations = "Programmatic workflow checks on this VM, not mouse/keyboard, accessibility, multiple-DPI or clean-machine acceptance." }, new JsonSerializerOptions { WriteIndented = true }));
+            bool desktopInput = args.Contains("--desktop-input");
+            await File.WriteAllTextAsync(Path.Combine(output, "gui.json"), JsonSerializer.Serialize(new { passed = failure is null, desktopInput, checks, timings, failure, heartbeat = new { nominalIntervalMs = 16, samples = gaps.Count, maxGapMs = gaps.DefaultIfEmpty().Max(), p95GapMs = sorted.Length > 0 ? sorted[Math.Min(sorted.Length - 1, (int)(sorted.Length * .95))] : 0 }, limitations = desktopInput ? "Programmatic workflows plus foreground-guarded OS-injected keyboard/pointer checks on this VM. Not human-input, accessibility, multiple-DPI or clean-machine acceptance." : "Programmatic workflows and text/colour checks. Desktop input was not requested; not mouse/keyboard, accessibility, multiple-DPI or clean-machine acceptance." }, new JsonSerializerOptions { WriteIndented = true }));
             projectRequest.Cancel(); selectionRequest.Cancel(); searchRequest.Cancel();
             Application.Current.Exit();
         }
+    }
+
+    private void CheckPreviewFormatting(Action<string, bool> check)
+    {
+        string source = "const text = \"{\\rtf1} café 日本語 😀 https://example/#tag\";\r\n// class \"comment\"\r\nfunction finalLine() { return 42; }";
+        SetPreview(source, "Formatting audit", SourcePreview.Format(source, "example.js"));
+        Code.Document.GetText(Microsoft.UI.Text.TextGetOptions.None, out string actual);
+        check("RTF preserves Unicode, braces, backslashes and CRLF text", actual.TrimEnd('\r', '\n').Replace('\r', '\n') == source.Replace("\r\n", "\n"));
+        var keyword = Code.Document.GetRange(0, 5).CharacterFormat.ForegroundColor;
+        var literal = Code.Document.GetRange(actual.IndexOf("https://", StringComparison.Ordinal), actual.IndexOf("https://", StringComparison.Ordinal) + 5).CharacterFormat.ForegroundColor;
+        var comment = Code.Document.GetRange(actual.IndexOf("class", StringComparison.Ordinal), actual.IndexOf("class", StringComparison.Ordinal) + 5).CharacterFormat.ForegroundColor;
+        check("Dark palette keyword colour", keyword.R == 252 && keyword.G == 158 && keyword.B == 79);
+        check("URL inside string retains string colour", literal.R == 143 && literal.G == 214 && literal.B == 143);
+        check("Keyword inside comment retains comment colour", comment.R == 133 && comment.G == 145 && comment.B == 161);
+        SelectPreviewLine(3);
+        Code.Document.Selection.GetText(Microsoft.UI.Text.TextGetOptions.None, out string selected);
+        check("Line navigation handles CRLF and astral Unicode", selected == "function finalLine() { return 42; }");
+        foreach (var sample in new[]
+        {
+            (Path: "example.py", Text: "# class comment\nvalue = \"\"\"multiline\n日本語 😀\"\"\"\nreturn value"),
+            (Path: "example.swift", Text: "// func comment\nstruct Example { let text = \"café\" }"),
+            (Path: "example.json", Text: "{\"unicode\":\"日本語 😀\",\"enabled\":true,\"value\":42}"),
+            (Path: "example.txt", Text: "{\\rtf1\\b literal} café 日本語 😀\tend")
+        })
+        {
+            SetPreview(sample.Text, sample.Path, SourcePreview.Format(sample.Text, sample.Path));
+            Code.Document.GetText(Microsoft.UI.Text.TextGetOptions.None, out actual);
+            check("Preview round trip " + Path.GetExtension(sample.Path), actual.TrimEnd('\r', '\n').Replace('\r', '\n') == sample.Text);
+        }
+    }
+
+    private async Task CheckDesktopInputAsync(string file, string other, Action<string, bool> check)
+    {
+        Activate();
+        using var input = new GuiInput(WinRT.Interop.WindowNative.GetWindowHandle(this));
+        await input.WaitForForegroundAsync();
+        await input.KeysAsync(0x11, 0x46); // Ctrl+F
+        check("Ctrl+F focuses project search", ReferenceEquals(Microsoft.UI.Xaml.Input.FocusManager.GetFocusedElement(Root.XamlRoot), SearchBox));
+        await input.TextAsync("wrapper");
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (SearchResults.Items.Count == 0 && DateTime.UtcNow < deadline) await Task.Delay(20);
+        check("Keyboard typing reaches engine search", SearchResults.Items.Count > 0);
+        await input.KeysAsync(0x11, 0x41); // Ctrl+A
+        await input.KeysAsync(0x08); // Backspace
+        check("Keyboard clears search and restores files", SearchBox.Text.Length == 0 && Files.Visibility == Visibility.Visible);
+        await input.KeysAsync(0x09); // Tab
+        check("Tab leaves search for another control", !ReferenceEquals(Microsoft.UI.Xaml.Input.FocusManager.GetFocusedElement(Root.XamlRoot), SearchBox));
+        await SelectFileAsync(new(file));
+        await SelectFileAsync(new(other));
+        await input.KeysAsync(0x12, 0x25); // Alt+Left
+        deadline = DateTime.UtcNow.AddSeconds(10);
+        while ((pending > 0 || selectedPath != file) && DateTime.UtcNow < deadline) await Task.Delay(20);
+        check("Alt+Left navigates back", selectedPath == file && analysis.Text("path").Replace('/', '\\').Equals(file.Replace('/', '\\'), StringComparison.OrdinalIgnoreCase));
+        await input.KeysAsync(0x12, 0x27); // Alt+Right
+        deadline = DateTime.UtcNow.AddSeconds(10);
+        while ((pending > 0 || selectedPath != other) && DateTime.UtcNow < deadline) await Task.Delay(20);
+        check("Alt+Right navigates forward", selectedPath == other);
+        double filesWidth = FilesColumn.ActualWidth, previewHeight = PreviewRow.ActualHeight;
+        FilesDivider.Focus(FocusState.Keyboard);
+        await input.KeysAsync(0x27); // Right
+        check("Project divider resizes with Right arrow", FilesColumn.ActualWidth > filesWidth + 8);
+        double resized = FilesColumn.ActualWidth;
+        await input.KeysAsync(0x28); // Down must not resize a vertical divider
+        check("Vertical divider ignores perpendicular arrows", Math.Abs(FilesColumn.ActualWidth - resized) < 1);
+        OverviewDivider.Focus(FocusState.Keyboard);
+        double overviewBefore = OverviewColumn.ActualWidth;
+        await input.KeysAsync(0x27);
+        check("Overview divider resizes with Right arrow", OverviewColumn.ActualWidth > overviewBefore + 8);
+        PreviewDivider.Focus(FocusState.Keyboard);
+        await input.KeysAsync(0x26); // Up
+        check("Preview divider resizes with Up arrow", PreviewRow.ActualHeight > previewHeight + 8);
+        resized = PreviewRow.ActualHeight;
+        await input.KeysAsync(0x27);
+        check("Horizontal divider ignores perpendicular arrows", Math.Abs(PreviewRow.ActualHeight - resized) < 1);
+        filesWidth = FilesColumn.ActualWidth;
+        await input.DragAsync(FilesDivider, Root, 32, 0);
+        check("Pointer drag resizes project pane", FilesColumn.ActualWidth > filesWidth + 16);
+        check("Pointer press focuses divider", ReferenceEquals(Microsoft.UI.Xaml.Input.FocusManager.GetFocusedElement(Root.XamlRoot), FilesDivider));
+        overviewBefore = OverviewColumn.ActualWidth;
+        await input.DragAsync(OverviewDivider, Root, 32, 0);
+        check("Pointer drag resizes overview pane", OverviewColumn.ActualWidth > overviewBefore + 16);
+        previewHeight = PreviewRow.ActualHeight;
+        await input.DragAsync(PreviewDivider, Root, 0, -32);
+        check("Pointer drag resizes preview pane", PreviewRow.ActualHeight > previewHeight + 16);
+        // Restore the default layout before normal/minimum screenshots.
+        FilesColumn.Width = new GridLength(290);
+        OverviewColumn.Width = new GridLength(1, GridUnitType.Star);
+        PreviewRow.Height = new GridLength(1, GridUnitType.Star);
+        await SelectFileAsync(new(file));
     }
 
     private async Task CaptureAsync(string directory, string name)

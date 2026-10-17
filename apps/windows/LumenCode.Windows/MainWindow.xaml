@@ -42,7 +42,7 @@
      <ListView.ItemTemplate><DataTemplate><StackPanel Padding="0,6"><TextBlock Text="{Binding Title}" FontWeight="SemiBold"/><TextBlock Text="{Binding Subtitle}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" MaxLines="2" TextTrimming="CharacterEllipsis"/></StackPanel></DataTemplate></ListView.ItemTemplate>
     </ListView>
    </Grid>
-   <local:PaneSplitter Grid.Column="1" IsVertical="True" Dragged="FilesSplit" AutomationProperties.Name="Resize project pane"/>
+   <local:PaneSplitter x:Name="FilesDivider" Grid.Column="1" IsVertical="True" Dragged="FilesSplit" AutomationProperties.Name="Resize project pane"/>
    <Grid Grid.Column="2" Padding="16" RowSpacing="8">
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
     <TextBlock x:Name="FileTitle" Text="Explore your code" FontSize="22" FontWeight="SemiBold"/>
@@ -51,7 +51,7 @@
      <ListView.ItemTemplate><DataTemplate><StackPanel Padding="0,7"><TextBlock Text="{Binding Section}" FontSize="11" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/><TextBlock Text="{Binding Title}" FontWeight="SemiBold"/><TextBlock Text="{Binding Subtitle}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" MaxLines="3" TextTrimming="CharacterEllipsis"/></StackPanel></DataTemplate></ListView.ItemTemplate>
     </ListView>
    </Grid>
-   <local:PaneSplitter Grid.Column="3" IsVertical="True" Dragged="OverviewSplit" AutomationProperties.Name="Resize overview pane"/>
+   <local:PaneSplitter x:Name="OverviewDivider" Grid.Column="3" IsVertical="True" Dragged="OverviewSplit" AutomationProperties.Name="Resize overview pane"/>
    <ScrollViewer Grid.Column="4" Padding="16" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
     <StackPanel Spacing="8">
      <TextBlock x:Name="DetailTitle" Text="Details" FontSize="22" FontWeight="SemiBold" IsTextSelectionEnabled="True"/>
@@ -60,7 +60,7 @@
      <StackPanel x:Name="DetailSections"/>
     </StackPanel>
    </ScrollViewer>
-   <local:PaneSplitter Grid.Row="1" Grid.ColumnSpan="5" Dragged="PreviewSplit" AutomationProperties.Name="Resize code preview"/>
+   <local:PaneSplitter x:Name="PreviewDivider" Grid.Row="1" Grid.ColumnSpan="5" Dragged="PreviewSplit" AutomationProperties.Name="Resize code preview"/>
    <Grid Grid.Row="2" Grid.ColumnSpan="5" Padding="12,8" RowSpacing="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
     <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>

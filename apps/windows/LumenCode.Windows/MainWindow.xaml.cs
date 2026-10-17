@@ -194,11 +194,12 @@ public sealed partial class MainWindow : Window
             var source = await Task.Run(async () =>
             {
                 var info = new FileInfo(requested);
-                return (Text: await ReadPreviewAsync(requested, token), Stamp: info.LastWriteTimeUtc.Ticks, Length: info.Length);
+                string text = await ReadPreviewAsync(requested, token);
+                return (Text: text, Rtf: text.Length <= SourcePreview.ColourLimit ? SourcePreview.Format(text, requested) : null, Stamp: info.LastWriteTimeUtc.Ticks, Length: info.Length);
             }, token);
             if (token.IsCancellationRequested || current != generation || requested != selectedPath) return;
             double applyStart = watch.Elapsed.TotalMilliseconds;
-            SetPreview(source.Text, Path.GetRelativePath(rootPath, requested));
+            SetPreview(source.Text, Path.GetRelativePath(rootPath, requested), source.Rtf);
             double previewReadyMs = watch.Elapsed.TotalMilliseconds;
             double uiApplyMs = previewReadyMs - applyStart;
             JsonElement data;
@@ -254,19 +255,39 @@ public sealed partial class MainWindow : Window
         return count == buffer.Length ? text + "\n\n[Preview limited to 256 KiB of text]" : text;
     }
 
-    private void SetPreview(string text, string title)
+    private void SetPreview(string text, string title, string? rtf = null)
     {
-        previewText = text; PreviewTitle.Text = title;
+        previewText = text; PreviewTitle.Text = text.Length > SourcePreview.ColourLimit ? title + " · Plain text preview" : title;
         Code.IsReadOnly = false;
-        try { Code.Document.SetText(Microsoft.UI.Text.TextSetOptions.None, text); }
-        finally { Code.IsReadOnly = true; }
+        Code.Document.BatchDisplayUpdates();
+        try
+        {
+            if (text.Length == 0) Code.Document.SetText(Microsoft.UI.Text.TextSetOptions.None, "");
+            else if (text.Length > SourcePreview.ColourLimit)
+            {
+                Code.Document.SetText(Microsoft.UI.Text.TextSetOptions.None, text);
+                var range = Code.Document.GetRange(0, 0);
+                range.Expand(Microsoft.UI.Text.TextRangeUnit.Story);
+                range.CharacterFormat.ForegroundColor = global::Windows.UI.Color.FromArgb(255, 224, 230, 237);
+            }
+            else Code.Document.SetText(Microsoft.UI.Text.TextSetOptions.FormatRtf, rtf ?? SourcePreview.Format(text, selectedPath));
+        }
+        finally { try { Code.Document.ApplyDisplayUpdates(); } finally { Code.IsReadOnly = true; } }
     }
 
     private void SelectPreviewLine(int line)
     {
+        // RichEdit normalizes paragraph endings. Use its actual text positions,
+        // not offsets into the original CRLF source (which drift after each line).
+        Code.Document.GetText(Microsoft.UI.Text.TextGetOptions.None, out string documentText);
         int start = 0;
-        for (int n = 1; n < line && start < previewText.Length; n++) { int next = previewText.IndexOf('\n', start); if (next < 0) break; start = next + 1; }
-        int end = previewText.IndexOf('\n', start); if (end < 0) end = previewText.Length;
+        for (int n = 1; n < line && start < documentText.Length; n++)
+        {
+            int next = documentText.IndexOfAny(['\r', '\n'], start); if (next < 0) break;
+            start = next + 1;
+            if (documentText[next] == '\r' && start < documentText.Length && documentText[start] == '\n') start++;
+        }
+        int end = documentText.IndexOfAny(['\r', '\n'], start); if (end < 0) end = documentText.Length;
         Code.Document.Selection.SetRange(start, end);
         Code.Document.Selection.ScrollIntoView(Microsoft.UI.Text.PointOptions.Start);
     }

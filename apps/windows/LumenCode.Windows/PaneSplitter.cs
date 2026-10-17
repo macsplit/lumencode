@@ -20,7 +20,13 @@ public sealed class PaneSplitter : UserControl
         HorizontalAlignment = HorizontalAlignment.Stretch;
         VerticalAlignment = VerticalAlignment.Stretch;
         Loaded += (_, _) => ProtectedCursor = InputSystemCursor.Create(IsVertical ? InputSystemCursorShape.SizeWestEast : InputSystemCursorShape.SizeNorthSouth);
-        PointerPressed += (_, e) => { last = e.GetCurrentPoint(Parent as UIElement).Position; CapturePointer(e.Pointer); e.Handled = true; };
+        PointerPressed += (_, e) =>
+        {
+            if (e.Pointer.PointerDeviceType == global::Microsoft.UI.Input.PointerDeviceType.Mouse && !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+            Focus(FocusState.Pointer);
+            if (CapturePointer(e.Pointer)) last = e.GetCurrentPoint(Parent as UIElement).Position;
+            e.Handled = true;
+        };
         PointerMoved += (_, e) =>
         {
             if (last is not { } previous) return;
@@ -32,8 +38,9 @@ public sealed class PaneSplitter : UserControl
         PointerCaptureLost += (_, _) => last = null;
         KeyDown += (_, e) =>
         {
-            double delta = e.Key is global::Windows.System.VirtualKey.Left or global::Windows.System.VirtualKey.Up ? -16 :
-                e.Key is global::Windows.System.VirtualKey.Right or global::Windows.System.VirtualKey.Down ? 16 : 0;
+            double delta = IsVertical
+                ? e.Key == global::Windows.System.VirtualKey.Left ? -16 : e.Key == global::Windows.System.VirtualKey.Right ? 16 : 0
+                : e.Key == global::Windows.System.VirtualKey.Up ? -16 : e.Key == global::Windows.System.VirtualKey.Down ? 16 : 0;
             if (delta != 0) { Dragged?.Invoke(this, delta); e.Handled = true; }
         };
     }

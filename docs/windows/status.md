@@ -1,7 +1,8 @@
 # Windows development status
 
-Updated 17 October 2026 after the first responsiveness pass. The native Windows
-application opens normally and now displays source before waiting for analysis. Continue this branch rather than
+Updated 17 October 2026 after the source preview pass. The native Windows
+application opens normally, displays source before waiting for analysis and
+colours ordinary-sized previews with the macOS dark palette. Continue this branch rather than
 restarting the feasibility investigation or installing another UI stack.
 
 ## Position
@@ -10,7 +11,8 @@ restarting the feasibility investigation or installing another UI stack.
   `4d164034b992a7818b54c8ce30d831c6c875c850`.
 - Initial checkpoint: `f752dd68c7a14cb261e89d689a2f57b30c0012b9`.
   Startup fix: `79c5184c1ceb21fbc78b175cef90e3d773816f56`. The current
-  follow-up improves source responsiveness without changing the shared engine.
+  follow-up adds display-only source colouring, fixes CRLF line navigation and
+  prepares optional desktop input checks without changing the shared engine.
 - Architecture agreed: C#/WinUI 3/XAML frontend in `apps/windows`, .NET 10,
   existing C++17/Qt Core/Concurrent helper and canonical vendored grammars.
 - The shared engine build/parity gate is complete on this Windows VM.
@@ -32,8 +34,9 @@ restarting the feasibility investigation or installing another UI stack.
 | Public CLI versus helper complete JSON contracts | 99 files, zero contract issues, zero differences |
 | C# process/transport checks | 8/8 passed |
 | Real worker/index/search in a Unicode path with CRLF input | Passed, including same-file call and cross-file caller |
-| Actual published GUI smoke | 32/32 checks pass, including cancellation and a 2,000-symbol source file |
-| Package relocation in a path with spaces | 32/32 checks pass; initial fresh-folder startup check also passed 26/26 |
+| Actual published GUI smoke | 41/41 checks pass, including source text/colour round trips, cancellation and a 2,000-symbol file |
+| Package relocation in a path with spaces | Earlier responsiveness checkpoint: 32/32 checks; initial fresh-folder startup check: 26/26 |
+| OS-injected keyboard and pointer checks | Implemented behind `-DesktopInput`; foreground focus blocked the attempted run before its first keystroke |
 | Normal executable launch with an initial file argument | Visible, responding window after five seconds; closed gracefully |
 
 Transport checks cover Unicode/quoted/empty arguments, invalid JSON, nonzero
@@ -117,13 +120,71 @@ a general 50 ms target or a measured frame-rate improvement from these samples.
 A second run against the usual `build-windows/package` executable also passed
 32/32 checks; its [gui.json](evidence/gui.json) records a 124 ms p95 dispatcher
 gap and 191 ms maximum, reinforcing that overall latency remains unresolved.
-Large-preview text rendering remains a profiling priority; syntax colouring has
-not been added in this pass.
+Large-preview text rendering remains a profiling priority. That checkpoint
+predates the source colouring described below.
 
 The audit now waits for the initial index-triggered file refresh, which can
 supersede its first selection. This fixes a test timing assumption exposed by the
 new asynchronous source path. Dark/default and minimum-window screenshots were
 inspected again; no layout regression was observed at this VM's scale.
+
+### Source preview and desktop-input follow-up
+
+`apps/windows/LumenCode.Core/SourcePreview.cs` adds display-only lexical colouring
+using the existing macOS preview palette and the same general lightweight
+approach. It does not produce engine facts or change language eligibility,
+Tree-sitter, analysis fallbacks, indexing or CLI results. No new GUI dependency
+was added. Comment/string tokens do not overwrite one another, so URL text inside
+a string retains its string colour and keywords in comments retain comment colour.
+The extension mapping chooses presentation rules only.
+
+Normal source RTF is escaped and prepared on the worker before a single batched
+RichEdit assignment. Regex initialization is lazy and normally occurs on that
+worker as well. Text above 65,536 UTF-16 characters uses the plain-text path and
+shows a plain-preview label. An initial implementation with thousands of colour
+runs made the 2,000-function case substantially slower; it was removed before
+this checkpoint. Large text assignment still exceeds the small-file latency
+budget. The source preview remains bounded at 256 Ki characters and the Copy
+button retains the original source text.
+
+Line navigation now uses RichEdit's actual paragraph positions. Previously,
+offsets calculated from CRLF source drifted after each line because RichEdit
+normalizes paragraph endings. The GUI test selects the exact third line after
+CRLF text containing an emoji. Other new checks round-trip escaped RTF syntax,
+Unicode, backslashes, braces, Python multiline strings, Swift, JSON and unknown
+plain text through the actual control, and inspect the applied dark colours.
+The default workflow now passes 41 checks. The final package sample recorded
+5 / 9 / 71 ms source assignment (min / median / max); cold rule initialization
+is included. The large-file sample used plain text, with source assigned at
+150 ms and selection complete at 716 ms. The dispatcher p95 / maximum gaps
+were 96 / 164 ms. These remain diagnostic samples with the earlier timing
+limitations, not a claim that every file meets a 50 ms goal. Screenshots were
+visually reviewed at the normal and minimum window sizes.
+
+Pane dividers now focus on a primary pointer press, ignore secondary mouse
+presses and accept only arrows along their resize axis. The optional OS-input
+checks cover Ctrl+F, typing/clearing search, Tab, Alt+Left/Right, divider arrow
+keys, perpendicular arrows, all three pane drags and divider pointer focus.
+They are **not yet verified**: Windows kept another window in the foreground,
+and the audit stopped before sending its first keystroke. See
+[the blocked attempt](evidence/desktop-input-blocked.json). The session reports
+active, but that alone does not establish usable foreground input. No desktop
+unlock or foreground policy changes were made.
+
+To retry from an unlocked Windows desktop, run:
+
+```powershell
+./tools/run_windows_gui_audit.ps1 -Output build-windows/reports/desktop-input-retry -DesktopInput
+```
+
+Activate the audit window if Windows does not give it foreground focus. The
+input phase waits up to 30 seconds. Every keyboard/mouse operation checks that
+this window is foreground; pointer targets must belong to it, and the prior
+cursor position is restored. Default audits do not inject desktop input. The
+foreground restriction is part of the documented
+[Windows activation API](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setforegroundwindow).
+Folder-picker interaction, actual human input, Narrator/high contrast and
+multiple DPIs remain untested.
 
 No Windows full public-corpus/damage sweep, direct cross-OS full-JSON comparison,
 multi-DPI/accessibility checks, installer/signing or clean-machine validation has
@@ -131,6 +192,8 @@ been completed. Linux/macOS were not rebuilt locally during this checkpoint;
 the existing workflow still provides Linux checks on branch pushes. The initial
 checkpoint's [Linux CI passed](https://github.com/macsplit/lumencode/actions/runs/39038433627).
 The startup-fix checkpoint's [Linux CI also passed](https://github.com/macsplit/lumencode/actions/runs/39047973149).
+The responsiveness checkpoint
+[also passed Linux CI](https://github.com/macsplit/lumencode/actions/runs/39052767320).
 Windows CI has not been added. Do not interpret unrun checks as successful.
 
 ## Implementation included
@@ -146,7 +209,8 @@ Windows CI has not been added. Do not interpret unrun checks as successful.
   dependency/route/link/notice presentation, navigation history, refresh,
   Explorer/default-editor integration, copyable/selectable read-only preview,
   resize dividers and keyboard shortcuts. The programmatic GUI workflow passes;
-  physical input and accessibility still need testing.
+  optional OS input checks are prepared but blocked by foreground focus;
+  accessibility still needs testing.
 - `apps/windows/LumenCode.CoreChecks`: executable adapter/integration checks.
 - Windows-specific helper executable discovery in the public Qt controller;
   explicit UTF-8 stdin in the shared helper and CLI; explicit UTF-8 decoding in
@@ -173,11 +237,13 @@ Windows via `ssh windows`:
   `C:\Users\leeha\lumencode\build-windows\package\LumenCode.Windows.exe`.
 - Earlier verified relocation (startup checkpoint):
   `C:\Users\leeha\lumencode\build-windows\fresh verified package`.
-- Current responsiveness relocation: `C:\Users\leeha\lumencode\build-windows\latency-after package`.
-- Final raw GUI outputs: `build-windows/reports/latency-after` and
-  `build-windows/reports/latency-final`; normal launch: `reports/normal-launch.json`.
+- Earlier responsiveness relocation: `C:\Users\leeha\lumencode\build-windows\latency-after package`.
+- Current raw GUI output: `build-windows/reports/preview-package`; blocked input
+  attempt: `build-windows/reports/desktop-input`; earlier responsiveness outputs:
+  `build-windows/reports/latency-after` and `build-windows/reports/latency-final`; normal launch: `reports/normal-launch.json`.
   The old `startup-error.txt` in a reused audit folder may be historical; use the
-  newest `gui.json` result and file timestamps. Both final GUI reports pass.
+  newest `gui.json` result and file timestamps. The default GUI workflow passes;
+  the separate desktop-input attempt is explicitly blocked.
 
 Installed for this work: VS 2022 C++ tools 14.44.35207 and CMake component,
 Python 3.13.15, a dedicated Python venv with aqtinstall 3.3.0/CMake 4.4.4/Ninja
@@ -198,9 +264,9 @@ was tested successfully; no SSH configuration changes were made by this work.
 2. Continue profiling large-preview text assignment and rendered/input latency.
    Small-file source display is decoupled from analysis; the shared engine is
    unchanged. Stage timings in the GUI report are diagnostic, not frame timings.
-3. Test actual keyboard/pointer navigation, folder dialogs, pane dragging,
-   accessibility and multiple DPIs. The current smoke is programmatic and does
-   not establish those areas. Polish presentation, including source coloring.
+3. Retry `-DesktopInput` with the audit window foreground on an unlocked desktop.
+   Verify folder dialogs, accessibility and multiple DPIs separately. Source
+   colouring is implemented; large previews intentionally use plain text.
 4. Add Windows CI, cross-OS corpus comparisons and clean-machine/installer
    validation. Same-VM fresh-folder publication has passed; a machine with no
    developer/runtime setup has not yet been tested.

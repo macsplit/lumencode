@@ -1,5 +1,6 @@
 {
   "passed": true,
+  "desktopInput": false,
   "checks": [
     {
       "name": "Project tree populated",
@@ -98,6 +99,42 @@
       "passed": true
     },
     {
+      "name": "RTF preserves Unicode, braces, backslashes and CRLF text",
+      "passed": true
+    },
+    {
+      "name": "Dark palette keyword colour",
+      "passed": true
+    },
+    {
+      "name": "URL inside string retains string colour",
+      "passed": true
+    },
+    {
+      "name": "Keyword inside comment retains comment colour",
+      "passed": true
+    },
+    {
+      "name": "Line navigation handles CRLF and astral Unicode",
+      "passed": true
+    },
+    {
+      "name": "Preview round trip .py",
+      "passed": true
+    },
+    {
+      "name": "Preview round trip .swift",
+      "passed": true
+    },
+    {
+      "name": "Preview round trip .json",
+      "passed": true
+    },
+    {
+      "name": "Preview round trip .txt",
+      "passed": true
+    },
+    {
       "name": "Symbol details and calls",
       "passed": true
     },
@@ -134,145 +171,145 @@
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\js_commonjs\\helper.js",
-      "elapsedMs": 25.4407,
+      "elapsedMs": 14.298,
       "stages": {
         "CacheHit": true,
-        "PreviewReadyMs": 24.5498,
-        "AnalysisReadyMs": 24.6193,
-        "UiApplyMs": 1.4407999999999994,
-        "CompletedMs": 25.2444
+        "PreviewReadyMs": 13.4707,
+        "AnalysisReadyMs": 13.537,
+        "UiApplyMs": 1.8268000000000004,
+        "CompletedMs": 14.1504
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\js_commonjs\\main.js",
-      "elapsedMs": 129.6147,
+      "elapsedMs": 114.1727,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 3.1729,
-        "AnalysisReadyMs": 128.0128,
-        "UiApplyMs": 1.4946999999999946,
-        "CompletedMs": 129.393
+        "PreviewReadyMs": 4.9499,
+        "AnalysisReadyMs": 112.5489,
+        "UiApplyMs": 2.0675000000000097,
+        "CompletedMs": 113.8926
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\js_commonjs\\alias.js",
-      "elapsedMs": 113.9596,
+      "elapsedMs": 131.8834,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 5.8504,
-        "AnalysisReadyMs": 112.7023,
-        "UiApplyMs": 2.5519999999999925,
-        "CompletedMs": 113.7156
+        "PreviewReadyMs": 6.7872,
+        "AnalysisReadyMs": 130.7847,
+        "UiApplyMs": 2.906499999999994,
+        "CompletedMs": 131.6441
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\ts_module\\helper.ts",
-      "elapsedMs": 131.7325,
+      "elapsedMs": 120.0727,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 5.2374,
-        "AnalysisReadyMs": 129.2427,
-        "UiApplyMs": 3.0997999999999877,
-        "CompletedMs": 131.4739
+        "PreviewReadyMs": 13.963,
+        "AnalysisReadyMs": 118.0577,
+        "UiApplyMs": 5.984200000000001,
+        "CompletedMs": 119.7545
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\ts_module\\main.ts",
-      "elapsedMs": 126.413,
+      "elapsedMs": 122.6293,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 17.7915,
-        "AnalysisReadyMs": 125.0138,
-        "UiApplyMs": 2.0349000000000075,
-        "CompletedMs": 126.1026
+        "PreviewReadyMs": 14.429,
+        "AnalysisReadyMs": 121.5887,
+        "UiApplyMs": 1.4986999999999995,
+        "CompletedMs": 122.3547
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\ts_module\\alias.ts",
-      "elapsedMs": 110.781,
+      "elapsedMs": 108.5005,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 5.6584,
-        "AnalysisReadyMs": 109.3241,
-        "UiApplyMs": 1.8443999999999932,
-        "CompletedMs": 110.4175
+        "PreviewReadyMs": 5.6765,
+        "AnalysisReadyMs": 107.1168,
+        "UiApplyMs": 2.2035000000000053,
+        "CompletedMs": 108.1794
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\ts_recovery\\broken.ts",
-      "elapsedMs": 121.6688,
+      "elapsedMs": 133.457,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 5.0738,
-        "AnalysisReadyMs": 116.8388,
-        "UiApplyMs": 5.474400000000003,
-        "CompletedMs": 121.3155
+        "PreviewReadyMs": 9.8413,
+        "AnalysisReadyMs": 128.8111,
+        "UiApplyMs": 7.7420999999999935,
+        "CompletedMs": 133.161
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\php_basic\\helper.php",
-      "elapsedMs": 101.9313,
+      "elapsedMs": 156.947,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 6.0429,
-        "AnalysisReadyMs": 100.4455,
-        "UiApplyMs": 2.8085999999999984,
-        "CompletedMs": 101.6349
+        "PreviewReadyMs": 52.6548,
+        "AnalysisReadyMs": 155.0206,
+        "UiApplyMs": 4.197199999999981,
+        "CompletedMs": 156.6533
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\php_recovery\\Broken.php",
-      "elapsedMs": 116.5367,
+      "elapsedMs": 113.9108,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 8.0557,
-        "AnalysisReadyMs": 114.772,
-        "UiApplyMs": 3.624200000000002,
-        "CompletedMs": 116.2348
+        "PreviewReadyMs": 9.0859,
+        "AnalysisReadyMs": 112.5751,
+        "UiApplyMs": 3.8936000000000064,
+        "CompletedMs": 113.7034
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\swift_basic\\App.swift",
-      "elapsedMs": 91.4811,
+      "elapsedMs": 112.1198,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 3.761,
-        "AnalysisReadyMs": 90.4445,
-        "UiApplyMs": 1.5756999999999977,
-        "CompletedMs": 91.2497
+        "PreviewReadyMs": 9.0096,
+        "AnalysisReadyMs": 110.9793,
+        "UiApplyMs": 3.1417,
+        "CompletedMs": 111.8756
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\python_basic\\sample.py",
-      "elapsedMs": 86.9445,
+      "elapsedMs": 175.2955,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 14.2812,
-        "AnalysisReadyMs": 84.971,
-        "UiApplyMs": 3.4894000000000034,
-        "CompletedMs": 86.6681
+        "PreviewReadyMs": 71.0715,
+        "AnalysisReadyMs": 173.1911,
+        "UiApplyMs": 4.977499999999992,
+        "CompletedMs": 174.9456
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\python_recovery\\broken.py",
-      "elapsedMs": 116.34,
+      "elapsedMs": 114.7128,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 5.2021,
-        "AnalysisReadyMs": 115.1647,
-        "UiApplyMs": 2.332499999999996,
-        "CompletedMs": 116.1114
+        "PreviewReadyMs": 8.3606,
+        "AnalysisReadyMs": 113.0209,
+        "UiApplyMs": 3.94019999999999,
+        "CompletedMs": 114.4151
       }
     },
     {
@@ -280,19 +317,19 @@
       "symbols": 2000,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 127.4991,
-        "AnalysisReadyMs": 668.906,
-        "UiApplyMs": 86.92779999999993,
-        "CompletedMs": 682.924
+        "PreviewReadyMs": 150.4171,
+        "AnalysisReadyMs": 704.1587,
+        "UiApplyMs": 123.1119000000001,
+        "CompletedMs": 716.3388
       }
     }
   ],
   "failure": null,
   "heartbeat": {
     "nominalIntervalMs": 16,
-    "samples": 76,
-    "maxGapMs": 191.4312,
-    "p95GapMs": 123.53790000000004
+    "samples": 79,
+    "maxGapMs": 164.4390000000003,
+    "p95GapMs": 96.19360000000006
   },
-  "limitations": "Programmatic workflow checks on this VM, not mouse/keyboard, accessibility, multiple-DPI or clean-machine acceptance."
+  "limitations": "Programmatic workflows and text/colour checks. Desktop input was not requested; not mouse/keyboard, accessibility, multiple-DPI or clean-machine acceptance."
 }

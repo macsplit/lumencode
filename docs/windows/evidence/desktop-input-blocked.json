@@ -1,0 +1,303 @@
+{
+  "passed": false,
+  "desktopInput": true,
+  "checks": [
+    {
+      "name": "Project tree populated",
+      "passed": true
+    },
+    {
+      "name": "Dark theme",
+      "passed": true
+    },
+    {
+      "name": "Real engine analysis visible",
+      "passed": true
+    },
+    {
+      "name": "Source preview populated",
+      "passed": true
+    },
+    {
+      "name": "Source read-only",
+      "passed": true
+    },
+    {
+      "name": "Project index built",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.js",
+      "passed": true
+    },
+    {
+      "name": "Selected main.js",
+      "passed": true
+    },
+    {
+      "name": "Selected alias.js",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected main.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected alias.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected broken.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.php",
+      "passed": true
+    },
+    {
+      "name": "Selected Broken.php",
+      "passed": true
+    },
+    {
+      "name": "Selected App.swift",
+      "passed": true
+    },
+    {
+      "name": "Selected sample.py",
+      "passed": true
+    },
+    {
+      "name": "Selected broken.py",
+      "passed": true
+    },
+    {
+      "name": "Rapid navigation keeps latest analysis",
+      "passed": true
+    },
+    {
+      "name": "Rapid navigation keeps latest preview",
+      "passed": true
+    },
+    {
+      "name": "Revisit uses analysis cache",
+      "passed": true
+    },
+    {
+      "name": "Source available while engine analysis is pending",
+      "passed": true
+    },
+    {
+      "name": "Large file exposes all 2000 engine symbols",
+      "passed": true
+    },
+    {
+      "name": "Large source preview complete and read-only",
+      "passed": true
+    },
+    {
+      "name": "RTF preserves Unicode, braces, backslashes and CRLF text",
+      "passed": true
+    },
+    {
+      "name": "Dark palette keyword colour",
+      "passed": true
+    },
+    {
+      "name": "URL inside string retains string colour",
+      "passed": true
+    },
+    {
+      "name": "Keyword inside comment retains comment colour",
+      "passed": true
+    },
+    {
+      "name": "Line navigation handles CRLF and astral Unicode",
+      "passed": true
+    },
+    {
+      "name": "Preview round trip .py",
+      "passed": true
+    },
+    {
+      "name": "Preview round trip .swift",
+      "passed": true
+    },
+    {
+      "name": "Preview round trip .json",
+      "passed": true
+    },
+    {
+      "name": "Preview round trip .txt",
+      "passed": true
+    }
+  ],
+  "timings": [
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\helper.js",
+      "elapsedMs": 18.2669,
+      "stages": {
+        "CacheHit": true,
+        "PreviewReadyMs": 17.2897,
+        "AnalysisReadyMs": 17.38,
+        "UiApplyMs": 3.168700000000001,
+        "CompletedMs": 18.052
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\main.js",
+      "elapsedMs": 112.4973,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 7.9407,
+        "AnalysisReadyMs": 111.1673,
+        "UiApplyMs": 2.390900000000002,
+        "CompletedMs": 112.3017
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\alias.js",
+      "elapsedMs": 118.3076,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 4.014,
+        "AnalysisReadyMs": 117.1101,
+        "UiApplyMs": 1.9248999999999938,
+        "CompletedMs": 118.0063
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\helper.ts",
+      "elapsedMs": 141.4739,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 17.6178,
+        "AnalysisReadyMs": 139.4198,
+        "UiApplyMs": 3.452300000000008,
+        "CompletedMs": 141.241
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\main.ts",
+      "elapsedMs": 148.4906,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 9.1096,
+        "AnalysisReadyMs": 147.0263,
+        "UiApplyMs": 2.380599999999987,
+        "CompletedMs": 148.131
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\alias.ts",
+      "elapsedMs": 105.3479,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 5.7641,
+        "AnalysisReadyMs": 104.0758,
+        "UiApplyMs": 2.267700000000005,
+        "CompletedMs": 105.0601
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_recovery\\broken.ts",
+      "elapsedMs": 125.6315,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 9.9664,
+        "AnalysisReadyMs": 120.7992,
+        "UiApplyMs": 7.1728999999999985,
+        "CompletedMs": 125.3083
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\php_basic\\helper.php",
+      "elapsedMs": 165.1147,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 55.3919,
+        "AnalysisReadyMs": 163.8309,
+        "UiApplyMs": 3.6002000000000294,
+        "CompletedMs": 164.8099
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\php_recovery\\Broken.php",
+      "elapsedMs": 111.6296,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 9.2783,
+        "AnalysisReadyMs": 110.4566,
+        "UiApplyMs": 3.831699999999998,
+        "CompletedMs": 111.4403
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\swift_basic\\App.swift",
+      "elapsedMs": 116.6286,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 5.7647,
+        "AnalysisReadyMs": 115.4213,
+        "UiApplyMs": 2.063699999999997,
+        "CompletedMs": 116.3313
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\python_basic\\sample.py",
+      "elapsedMs": 199.6429,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 83.6477,
+        "AnalysisReadyMs": 197.6828,
+        "UiApplyMs": 4.798300000000012,
+        "CompletedMs": 199.3325
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\python_recovery\\broken.py",
+      "elapsedMs": 119.81,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 8.2376,
+        "AnalysisReadyMs": 117.9761,
+        "UiApplyMs": 4.0001000000000175,
+        "CompletedMs": 119.5069
+      }
+    },
+    {
+      "operation": "select-large",
+      "symbols": 2000,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 170.2214,
+        "AnalysisReadyMs": 693.2118,
+        "UiApplyMs": 122.38030000000003,
+        "CompletedMs": 704.8668
+      }
+    }
+  ],
+  "failure": "System.InvalidOperationException: Audit window is not foreground (own 2163624, foreground 327702); input stopped.\r\n   at LumenCode.Windows.GuiInput.RequireForeground() in C:\\Users\\leeha\\lumencode\\apps\\windows\\LumenCode.Windows\\GuiInput.cs:line 19\r\n   at LumenCode.Windows.GuiInput.WaitForForegroundAsync() in C:\\Users\\leeha\\lumencode\\apps\\windows\\LumenCode.Windows\\GuiInput.cs:line 27\r\n   at LumenCode.Windows.MainWindow.CheckDesktopInputAsync(String file, String other, Action`2 check) in C:\\Users\\leeha\\lumencode\\apps\\windows\\LumenCode.Windows\\GuiAudit.cs:line 158\r\n   at LumenCode.Windows.MainWindow.RunAuditAsync(String[] args) in C:\\Users\\leeha\\lumencode\\apps\\windows\\LumenCode.Windows\\GuiAudit.cs:line 86",
+  "heartbeat": {
+    "nominalIntervalMs": 16,
+    "samples": 744,
+    "maxGapMs": 162.96209999999974,
+    "p95GapMs": 59.031299999999646
+  },
+  "limitations": "Programmatic workflows plus foreground-guarded OS-injected keyboard/pointer checks on this VM. Not human-input, accessibility, multiple-DPI or clean-machine acceptance."
+}
