@@ -3,11 +3,11 @@ import XCTest
 
 final class EngineIntegrationTests: XCTestCase {
     private var repo: URL {
-        URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
     }
 
     func testOriginalSwiftSignatureAndLosslessContract() throws {
-        let file = repo.appendingPathComponent("Engine/Upstream/tests/fixtures/baseline/swift_signatures/Greeter.swift")
+        let file = repo.appendingPathComponent("tests/fixtures/baseline/swift_signatures/Greeter.swift")
         let analysis = try NativeAnalyzer().analyzeFile(path: file.path)
         let greeter = try XCTUnwrap(analysis.symbols.first { $0.name == "Greeter" })
         let greet = try XCTUnwrap(greeter.members.first { $0.name == "greet" })
@@ -40,7 +40,7 @@ final class EngineIntegrationTests: XCTestCase {
     }
 
     func testCrossFileCallsUseOriginalIndexInBothDirections() throws {
-        let root = repo.appendingPathComponent("Engine/Upstream/tests/fixtures/baseline/cross_file/swift")
+        let root = repo.appendingPathComponent("tests/fixtures/baseline/cross_file/swift")
         let caller = try NativeAnalyzer().analyzeFile(path: root.appendingPathComponent("Receipt.swift").path, rootPath: root.path)
         let target = try NativeAnalyzer().analyzeFile(path: root.appendingPathComponent("Formatter.swift").path, rootPath: root.path)
         func flatten(_ symbols: [SymbolItem]) -> [SymbolItem] { symbols.flatMap { [$0] + flatten($0.members) } }
@@ -88,14 +88,14 @@ final class EngineIntegrationTests: XCTestCase {
     }
 
     func testScannerIncludesNewLanguagesAndModuleExtensions() throws {
-        let root = repo.appendingPathComponent("Engine/Upstream/tests/fixtures/baseline")
+        let root = repo.appendingPathComponent("tests/fixtures/baseline")
         let result = ProjectScanner().scan(rootPath: root.path, selectedPath: nil)
         let types = Set(result.entries.filter { !$0.isDirectory }.map(\.fileType))
         XCTAssertTrue(Set(["go", "vbnet", "sql", "ruby", "kotlin", "scss", "shell", "qml", "objc"]).isSubset(of: types))
     }
 
     func testRankedSearchAndFileScopeUseOriginalQueries() throws {
-        let root = repo.appendingPathComponent("Engine/Upstream/tests/fixtures/baseline/swift_signatures")
+        let root = repo.appendingPathComponent("tests/fixtures/baseline/swift_signatures")
         let matches = try NativeAnalyzer().search(query: "greet", rootPath: root.path)
         XCTAssertTrue(matches.contains { $0.name == "Greeter.greet" && $0.line == 10 })
         XCTAssertEqual(matches.map(\.score), matches.map(\.score).sorted(by: >))
@@ -105,7 +105,7 @@ final class EngineIntegrationTests: XCTestCase {
     }
 
     func testQuickLinkSeparatesNavigationTargetAndSourceContext() throws {
-        let root = repo.appendingPathComponent("Engine/Upstream/tests/fixtures/baseline/web_app")
+        let root = repo.appendingPathComponent("tests/fixtures/baseline/web_app")
         let file = root.appendingPathComponent("index.html")
         let analysis = try NativeAnalyzer().analyzeFile(path: file.path)
         let stylesheet = try XCTUnwrap(analysis.quickLinks.first { $0.type == "stylesheet" })

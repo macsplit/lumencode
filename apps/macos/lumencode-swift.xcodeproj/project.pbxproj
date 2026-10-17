@@ -269,7 +269,7 @@
 			outputPaths = ();
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -eu\nexport PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\"\npython3 \"$SRCROOT/tools/build_engine.py\" --build \"$DERIVED_FILE_DIR/engine\" --runtime \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/EngineRuntime\"\n";
+			shellScript = "set -eu\nexport PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\"\npython3 \"$SRCROOT/../../tools/build_engine.py\" --build \"$DERIVED_FILE_DIR/engine\" --runtime \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/EngineRuntime\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -303,23 +303,6 @@
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				GENERATE_INFOPLIST_FILE = NO;
-				HEADER_SEARCH_PATHS = (
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/include",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-runtime/lib/include",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-runtime/lib/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-swift/include",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-swift/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-java/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-c-sharp/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-javascript/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-typescript/typescript/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-typescript/tsx/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-php/php/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-css/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-python/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-rust/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-html/src",
-				);
 				INFOPLIST_FILE = Xcode/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
@@ -328,7 +311,6 @@
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "Xcode/LumencodeSwift-Bridging-Header.h";
 				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
@@ -344,23 +326,6 @@
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GENERATE_INFOPLIST_FILE = NO;
-				HEADER_SEARCH_PATHS = (
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/include",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-runtime/lib/include",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-runtime/lib/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-swift/include",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-swift/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-java/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-c-sharp/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-javascript/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-typescript/typescript/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-typescript/tsx/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-php/php/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-css/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-python/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-rust/src",
-					"$(PROJECT_DIR)/Sources/LumencodeNativeBridge/Vendor/tree-sitter-html/src",
-				);
 				INFOPLIST_FILE = Xcode/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
@@ -369,7 +334,6 @@
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "Xcode/LumencodeSwift-Bridging-Header.h";
 				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
