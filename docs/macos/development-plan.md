@@ -1,13 +1,13 @@
 # Development plan
 
 Updated 17 October 2026. The Swift GUI and CLI use the original LumenCode engine,
-pinned at `48cf4db`. Parser, recovery, fallbacks, signatures, indexing, web links
+in root `engine/`, extracted unchanged from `48cf4db`. Parser, recovery, fallbacks, signatures, indexing, web links
 and search must continue to come from those shared sources.
 
-The proposed next structural work is the [monorepo consolidation plan](monorepo-consolidation-plan.md).
-It preserves both main histories in `macsplit/lumencode`, removes source-copy and
-inactive Git-link dependencies, and validates both products against the accepted
-beta baseline. The product/release priorities below remain deferred work; they
+The [monorepo consolidation plan](../migration/plan.md) is implemented on the
+migration branch; [status and verification](../migration/status.md) record the
+remaining cutover steps. Both main histories are preserved and both products
+consume the same analysis sources. The product/release priorities below remain deferred work; they
 are not prerequisites to solving every beta limitation before consolidation.
 
 The [16 October integration report](engine-integration.md) records the initial
@@ -77,11 +77,11 @@ multilingual projects; useful shared-engine data is reachable from the GUI.
 
 ## Ongoing engine updates
 
-Advance the pinned source snapshot explicitly with `tools/sync_engine.py`.
+Edit root `engine/` directly; both interfaces consume the same sources.
 Run shared fixtures/contracts on each update, the public corpus and damage probe
 for parser changes, and rendered/native checks for presentation changes. Preserve
 complete payload comparisons rather than relaxing them to symbol counts. Retire
 unused parser/resolver scaffolding once the wider gates remain stable.
 
 Do not introduce language heuristics in Swift or the JSON transport. Fix analysis
-behavior in the original engine and import the reviewed revision.
+behavior in the shared engine and review both interfaces in the same change.

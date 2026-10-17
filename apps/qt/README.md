@@ -1,5 +1,9 @@
 # LumenCode
 
+This is the Qt application in the shared-engine monorepo. Use the current
+[root build instructions](../../README.md) and [engine guide](../../engine/README.md).
+The product guide below preserves the pre-consolidation feature description.
+
 LumenCode is a structural code explorer for local source trees. It focuses on code shape rather than freeform text editing. The application reads a filesystem tree, extracts symbols from supported source files, and lets the user drill from folders to files to symbols to member detail.
 
 LumenCode is intentionally:
@@ -13,9 +17,9 @@ LumenCode is intentionally:
 
 ## Guides
 
-- [Docs Index](docs/README.md)
-- [End-User Guide](docs/end-user-guide.md)
-- [Developer Guide](docs/developer-guide.md)
+- [Docs Index](../../docs/qt/README.md)
+- [End-User Guide](../../docs/qt/end-user-guide.md)
+- [Developer Guide](../../docs/qt/developer-guide.md)
 
 ## Current State
 
@@ -26,8 +30,8 @@ backend that is now developed and regression-tested almost entirely through
 its command-line twin, `lumencode-cli`. Roadmap phases A-G are done
 (project index, cross-file links, resilience, more languages, agent tooling,
 search and warning styling in the GUI); what is left is listed in
-[`docs/roadmap.md`](docs/roadmap.md) and Known Issues below. See [Recent History](#recent-history) for how it got here and
-[`docs/implementation-log.md`](docs/implementation-log.md) for the detail.
+[`docs/roadmap.md`](../../docs/qt/roadmap.md) and Known Issues below. See [Recent History](#recent-history) for how it got here and
+[`docs/implementation-log.md`](../../docs/qt/implementation-log.md) for the detail.
 
 ### The product
 
@@ -389,7 +393,7 @@ integrations live in `tools/agent/`:
 ## Roadmap
 Next: fix the Overview / Detail card binding loops (Known Issues), look at Phase F on a real desktop session, then tests for the agent tooling.
 
-**Current plan:** [`docs/roadmap.md`](docs/roadmap.md) re-examines the gaps below against corpus
+**Current plan:** [`docs/roadmap.md`](../../docs/qt/roadmap.md) re-examines the gaps below against corpus
 measurements and orders the next work in phases A–F: quick wins and a headless GUI check, a
 project index for cross-file relations, cross-language links on that index (e.g. `fetch()` →
 backend routes), a second round of syntax-error resilience, Kotlin/Ruby/LESS/SCSS, GUI work, and

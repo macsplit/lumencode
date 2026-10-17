@@ -94,8 +94,11 @@ shutil.copy2(repo / "LICENSE", licenses / "LumenCode-GPL-3.0.txt")
 for source in args.qt.glob("LICENSE*"):
     if source.is_file():
         shutil.copy2(source, licenses / source.name)
-for source in (repo / "third_party").glob("*/LICENSE*"):
-    shutil.copy2(source, licenses / (source.parent.name + "-" + source.name))
+for source in (repo / "third_party").rglob("*"):
+    if source.is_file() and source.name.upper().startswith(("LICENSE", "COPYING", "COPYRIGHT")):
+        target = licenses / "third_party" / source.relative_to(repo / "third_party")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
 shutil.copy2(repo / "THIRD_PARTY_NOTICES.md", licenses / "THIRD_PARTY_NOTICES.md")
 # Qt and transitive library formula receipts preserve source/version/license information.
 runtime_info = {}
