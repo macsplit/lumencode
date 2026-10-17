@@ -46,6 +46,69 @@ jobs:
         with:
           name: linux-reports
           path: reports/
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      PYTHONUTF8: '1'
+      QT_QPA_PLATFORM: offscreen
+      QT_HASH_SEED: '0'
+    steps:
+      - name: Preserve source bytes before checkout
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - name: Set Windows package paths
+        run: |
+          Add-Content $env:GITHUB_ENV "QT5_PREFIX=$env:RUNNER_TEMP/Qt/5.15.2/msvc2019_64"
+          Add-Content $env:GITHUB_ENV "LUMENCODE_TEST_PACKAGE=$env:RUNNER_TEMP/LumenCode Windows package"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.402'
+      - name: Cache pinned Qt kit
+        id: qt
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/Qt
+          key: windows-x64-qt-5.15.2-msvc2019-aqt-3.3.0-base-tools-v1
+      - name: Install pinned Qt kit
+        if: steps.qt.outputs.cache-hit != 'true'
+        run: |
+          python -m pip install aqtinstall==3.3.0
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m aqt install-qt windows desktop 5.15.2 win64_msvc2019_64 --archives qtbase qttools --outputdir "$env:RUNNER_TEMP/Qt"
+      - name: Verify ordinary checkout and vendored inputs
+        run: python tools/verify_consolidation.py --output build-windows/reports/layout.json
+      - name: Build and publish shared engine, CLI and native WinUI frontend
+        run: ./tools/build_windows.ps1 -Qt $env:QT5_PREFIX
+      - name: Relocate package into a path containing spaces
+        run: |
+          if (Test-Path $env:LUMENCODE_TEST_PACKAGE) { throw 'Relocation directory already exists' }
+          Copy-Item build-windows/package $env:LUMENCODE_TEST_PACKAGE -Recurse
+          python tools/verify_windows_package.py --package $env:LUMENCODE_TEST_PACKAGE --output build-windows/reports/package.json
+      - name: Shared fixture parity in relocated runtime
+        run: python tools/parity_audit.py --interface qt --cli "$env:LUMENCODE_TEST_PACKAGE/EngineRuntime/lumencode-cli.exe" --output build-windows/reports/parity.json
+      - name: Complete CLI and helper JSON contracts
+        run: python tools/verify_engine_contract.py --cli "$env:LUMENCODE_TEST_PACKAGE/EngineRuntime/lumencode-cli.exe" --reference-cli "$env:LUMENCODE_TEST_PACKAGE/EngineRuntime/lumencode-engine.exe" --output build-windows/reports/contracts.json
+      - name: Windows adapter and Unicode CRLF integration checks
+        run: dotnet run --project apps/windows/LumenCode.CoreChecks -c Release -- "$env:LUMENCODE_TEST_PACKAGE/EngineRuntime/lumencode-engine.exe" build-windows/reports/core-checks.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-reports
+          path: build-windows/reports/
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64-development
+          path: build-windows/package/
+          retention-days: 7
+          if-no-files-found: error
   macos:
     if: github.event_name == 'workflow_dispatch' && inputs.macos
     runs-on: macos-15

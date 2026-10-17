@@ -84,6 +84,40 @@ history, read-only source typing/selection and divider resizing/dragging. The
 ordinary workflow passes 42 checks. Other DPIs, accessibility, folder dialogs and
 human input remain separate validation work.
 
+## Continuous integration
+
+Every push and pull request runs a `windows-2022` job in
+[the shared verification workflow](../../.github/workflows/verify.yml). It installs
+Python 3.13, .NET SDK 10.0.402 and a cached Qt 5.15.2 MSVC x64 kit using
+`aqtinstall==3.3.0`. The same `build_windows.ps1` builds the C++ engine/public CLI
+and publishes the native WinUI frontend. Checkout settings preserve source bytes.
+
+The job copies the whole package into a path containing spaces, checks required
+XAML/.NET/native files and shared-source provenance, runs the existing fixture
+and full JSON contract audits against the relocated native executables, and runs
+the C# adapter/Unicode CRLF integration checks. Each native test is a separate
+workflow step so an earlier failed command cannot be hidden by a later success.
+
+Artifacts are `windows-reports` (14 days) and, on success,
+`windows-x64-development` (7 days). Extract the complete development artifact into
+one folder to try its EXE; retain `EngineRuntime` and all adjacent files. These
+are development builds, not an installer or signed release.
+
+The hosted job does not launch WinUI or inject desktop input. Continue using the
+Windows 11 interactive audit for rendering and keyboard/pointer acceptance.
+The package gate specifically guards the former missing PRI/XBF startup failure;
+file presence alone does not establish successful GUI startup.
+
+Run that gate locally after a build with:
+
+```powershell
+python tools/verify_windows_package.py --package build-windows/package --output build-windows/reports/package.json
+```
+
+Engine source hashes and grammar provenance must match the current checkout.
+The native build commit can predate UI-only commits; matching source hashes are
+the gate, rather than requiring a redundant native rebuild for every UI edit.
+
 ## Source ownership
 
 - `LumenCode.Core`: bounded, cancellable process transport and JSON presentation

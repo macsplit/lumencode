@@ -1,6 +1,6 @@
 # Windows development status
 
-Updated 17 October 2026 after verifying desktop input. The native Windows
+Updated 17 October 2026 after adding hosted Windows verification. The native Windows
 application opens normally, previews source with the macOS dark palette, and
 passes OS-injected keyboard and pane-drag checks on the Windows VM. Continue this branch rather than
 restarting the feasibility investigation or installing another UI stack.
@@ -12,8 +12,9 @@ restarting the feasibility investigation or installing another UI stack.
 - Initial checkpoint: `f752dd68c7a14cb261e89d689a2f57b30c0012b9`.
   Startup fix: `79c5184c1ceb21fbc78b175cef90e3d773816f56`. The current
   source preview checkpoint is `67d6ce63e07f4d08bff27f3218699f6818bea993`.
-  The current follow-up verifies desktop input and automates audit focus while
-  keeping the shared engine unchanged.
+  Desktop input was verified at `f8a24844f5081d120362e4a29b2c4a649a1ff822`.
+  The current follow-up adds hosted Windows build/package/engine verification;
+  the shared engine and GUI implementation remain unchanged.
 - Architecture agreed: C#/WinUI 3/XAML frontend in `apps/windows`, .NET 10,
   existing C++17/Qt Core/Concurrent helper and canonical vendored grammars.
 - The shared engine build/parity gate is complete on this Windows VM.
@@ -39,6 +40,8 @@ restarting the feasibility investigation or installing another UI stack.
 | Package path containing spaces | Input-tested package: 60/60 checks; initial fresh-folder startup check: 26/26 |
 | OS-injected keyboard and pointer checks | 60/60 checks pass with `-DesktopInput`, including 18 keyboard/pointer checks |
 | Normal executable launch with an initial file argument | Visible, responding window after five seconds; closed gracefully |
+| Windows CI | Automatic build, package gate, fixture/contracts and adapter checks on pushes/PRs; see the Actions run for current result |
+| Local package gate regressions | Working package accepted; omitted PRI and stale engine metadata rejected on disposable copies |
 
 Transport checks cover Unicode/quoted/empty arguments, invalid JSON, nonzero
 exit, output bounds, timeout, missing engine and cancellation of child workers.
@@ -240,7 +243,37 @@ The responsiveness checkpoint
 [also passed Linux CI](https://github.com/macsplit/lumencode/actions/runs/39052767320).
 The source preview checkpoint
 [passed Linux CI](https://github.com/macsplit/lumencode/actions/runs/39053867371).
-Windows CI has not been added. Do not interpret unrun checks as successful.
+Windows CI is now defined in the verification workflow. Its reports and run
+result are available from the branch
+[Actions page](https://github.com/macsplit/lumencode/actions/workflows/verify.yml?query=branch%3Awindows%2Fnative-winui).
+Do not interpret unrun GUI or distribution checks as successful.
+
+## Hosted Windows gate
+
+The `windows` job in `.github/workflows/verify.yml` runs for pushes, pull requests
+and manual dispatch on `windows-2022`, using the existing VS 2022 build script,
+Qt 5.15.2 MSVC2019 x64 (`qtbase` + `qttools`), pinned aqtinstall 3.3.0, .NET SDK
+10.0.402 and Python 3.13. It preserves checkout bytes, verifies vendored inputs,
+builds/publishes both native consumers and WinUI, and tests a relocated package
+whose path contains spaces. It runs the existing fixture baseline, complete
+CLI/helper JSON contracts and C# adapter/integration suite. Package and report
+artifacts are retained for 7 and 14 days respectively.
+
+`tools/verify_windows_package.py` checks 20 required files, including the own
+application PRI/XBF files, self-contained .NET/WinUI components, native helper/CLI,
+Qt/MSVC runtime inputs and notices. It compares every recorded engine-source hash
+and the grammar/runtime provenance with the checkout. It accepts an older native
+build commit when the actual source hashes match a newer UI-only checkout.
+This is a resource/provenance gate; the hosted job does not establish GUI startup,
+rendering, physical input, clean-user-machine distribution or cross-OS JSON parity.
+
+The current working VM package passes the new gate. A disposable copy reproduced
+the missing-PRI failure condition and a stale engine-source hash; both were
+rejected, while the original package was preserved. Results are
+[package-gate.json](evidence/package-gate.json) and
+[package-gate-regressions.json](evidence/package-gate-regressions.json).
+The hosted workflow result is the durable check on the branch; interactive
+Windows 11 GUI evidence above remains separate from CI coverage.
 
 ## Implementation included
 
@@ -313,8 +346,8 @@ was tested successfully; no SSH configuration changes were made by this work.
 3. Test folder dialogs, accessibility, high contrast, multiple DPIs/monitors and
    ordinary human input. The OS-injected keyboard/pane suite is now verified;
    keep `-DesktopInput` available for regressions. Large previews use plain text.
-4. Add Windows CI, cross-OS corpus comparisons and clean-machine/installer
-   validation. Same-VM fresh-folder publication has passed; a machine with no
+4. Extend coverage with cross-OS corpus comparisons and clean-machine/installer
+   validation. Windows CI now covers build/package and native engine/adapter gates. Same-VM fresh-folder publication has passed; a machine with no
    developer/runtime setup has not yet been tested.
 
 Commands on the current VM (from the repository root):
