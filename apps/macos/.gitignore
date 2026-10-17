@@ -21,3 +21,5 @@ tmp/
 
 # Locally assembled app bundles
 LumencodeSwift.app/
+
+!lumencode-swift.xcodeproj/xcshareddata/xcschemes/*.xcscheme

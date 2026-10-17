@@ -4,6 +4,12 @@ Updated 17 October 2026. The Swift GUI and CLI use the original LumenCode engine
 pinned at `48cf4db`. Parser, recovery, fallbacks, signatures, indexing, web links
 and search must continue to come from those shared sources.
 
+The proposed next structural work is the [monorepo consolidation plan](monorepo-consolidation-plan.md).
+It preserves both main histories in `macsplit/lumencode`, removes source-copy and
+inactive Git-link dependencies, and validates both products against the accepted
+beta baseline. The product/release priorities below remain deferred work; they
+are not prerequisites to solving every beta limitation before consolidation.
+
 The [16 October integration report](engine-integration.md) records the initial
 implementation. The [earlier plan](development-plan-archive-2026-10-16.md) is
 historical: its directions to finish the separate Swift parser/resolver no longer
