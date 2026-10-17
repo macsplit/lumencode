@@ -1,6 +1,8 @@
 # Consolidation verification — 17 October 2026
 
-The `consolidation/shared-engine` branch in `macsplit/lumencode` contains a normal
+**Status: merged and cutover completed on 17 October 2026.**
+
+Canonical `main` in `macsplit/lumencode` contains a normal
 monorepo with one engine and one set of vendored grammars. Qt's original main
 history is unchanged. Swift's main history is imported once under `apps/macos`,
 with the mapping retained in `swift-commit-map.txt`. No Git links, submodules,
@@ -70,8 +72,10 @@ tests pass using an external scratch directory. This caught and fixed package
 working-directory runtime discovery. A relocated runtime with a path containing
 spaces launches with no external developer-library references.
 
-The new GitHub workflow has local command coverage; hosted execution is recorded
-separately after the migration branch is pushed.
+The [hosted Linux PR workflow](https://github.com/macsplit/lumencode/actions/runs/39034304571)
+passed builds, fixture/contracts and the complete rendered Qt smoke. Native macOS
+and broad resilience evidence above comes from the completed local runs; their
+hosted workflow jobs remain manually triggered.
 
 ## Accepted beta limits
 
@@ -92,9 +96,19 @@ local modifications were backed up and left intact. Original repository bundles,
 patches, the Linux worktree archive, source maps and hosting inventories exist
 before any cutover.
 
-Review the migration branch and its CI before merging. Preserve the import merge
-and ancestry: use a normal merge, not squash/rebase. After review, switch working
-checkouts to the canonical monorepo, add a clear migration notice to the former
-Swift repository, and archive it. Canonical main and the Swift repository remain
-unchanged until that cutover is approved. No website deployment or release was
-performed.
+[PR #2](https://github.com/macsplit/lumencode/pull/2) merged with a normal merge
+commit, `6a68f9ad253a762b77d4882edfab5ba344d92ea7`, preserving the import ancestry.
+A fresh clone of canonical main matched the tested migration tree exactly and
+passed history/integrity checks, a helper-only build and all 99 frozen-original
+file contracts with zero differences or issues.
+
+The former [lumencode-swift repository](https://github.com/macsplit/lumencode-swift)
+now has a migration notice and is archived. Its last product-source revision is
+`7523df005031c67c1d494699c57dc03a06283407`; the administrative README notice is
+`831edc017041ef6e08393f22b7f486ffeeb0c81e`. Existing tags, releases and history
+are preserved.
+
+Future development uses canonical `macsplit/lumencode`. The dedicated
+`lumencode-consolidation` checkouts on Mac and Linux track its `main`; the original
+checkouts, including local Swift modifications, remain intact. No website
+deployment or release was performed.
