@@ -1,0 +1,19 @@
+{
+  "qt": "48cf4db8042d51cfe67c2344e4d7a3824576517f",
+  "swift": "7523df005031c67c1d494699c57dc03a06283407",
+  "imported_swift": "62bc7af3007b6d5b7ae0964d59e8400f9c3d946c",
+  "branch": "consolidation/shared-engine",
+  "description": "Historical source origins; normal engine edits do not require resynchronisation.",
+  "migration_source_sha256": {
+    "engine/src/symbolparser.cpp": "962e41c74ff4f8544b1bea4eed1a2acd0598fb233105a2577018c5a5d3c11b79",
+    "engine/src/symbolparser.h": "1d734ede9d41cc807e515260f8e2f68b1889069a0e808f99c64d97e1a33c2427",
+    "engine/src/projectindex.cpp": "1f245f31876ff4be9ce8afd13f7c57adfe787752b057674e43b007b17fbb6f0a",
+    "engine/src/projectindex.h": "6fa91ca266ba0219df1ef8262ee9e2f0b9c2db60f5b3f878e713fb3668274255",
+    "engine/src/weblinks.cpp": "db010dd2e461b6609bbb70025a3f06805e39325db6707b93e50bcd35d0d3b1a1",
+    "engine/src/weblinks.h": "b422ea118cc206d32dc01fed8be85d4b58ad71e7854241499ee59d4e82e928fb",
+    "engine/src/httpclients.cpp": "75901706ad3169f9f29cc46c8cbe8d8e1f05aa269b91d396cb06b41cd8344148",
+    "engine/src/httpclients.h": "3006d9b93765c03bcd03e99c3fe5d5f369ed25c97a25ccce3c8ae3b7d1a71bb1",
+    "engine/src/agentqueries.cpp": "4a7b72da61f06e788e8c372bfc6b383e3bd95fb946aab52ce34367a60f4d5d39",
+    "engine/src/agentqueries.h": "3a337b0f7ae102d4a5f8a8da46c3ffcebeccfe1d3f8be342d24df86a5b01250d"
+  }
+}
