@@ -75,11 +75,14 @@ engine-backed workflows programmatically, not physical mouse/keyboard input,
 Narrator, multiple monitor DPIs or clean-machine distribution.
 
 For optional foreground-guarded OS keyboard/pointer input, add `-DesktopInput`.
-The desktop must be unlocked and the audit window foreground; it waits up to
-30 seconds for activation and stops before input if focus is unavailable. This
-checks shortcuts, search typing, history and divider resizing/dragging. Cursor
-position is restored. The current VM attempt was blocked by foreground focus;
-see the status document rather than treating this suite as passed.
+The desktop must be unlocked. A second temporary task focuses the exact audit
+search field through Windows UI Automation and records `input-focus.json`. The
+input phase waits up to 30 seconds for foreground ownership and stops if focus
+is unavailable. Both temporary tasks are removed, and cursor position is restored.
+The VM passes 60 checks at 125% display scale, including shortcuts, search typing,
+history, read-only source typing/selection and divider resizing/dragging. The
+ordinary workflow passes 42 checks. Other DPIs, accessibility, folder dialogs and
+human input remain separate validation work.
 
 ## Source ownership
 

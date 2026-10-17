@@ -1,8 +1,8 @@
 # Windows development status
 
-Updated 17 October 2026 after the source preview pass. The native Windows
-application opens normally, displays source before waiting for analysis and
-colours ordinary-sized previews with the macOS dark palette. Continue this branch rather than
+Updated 17 October 2026 after verifying desktop input. The native Windows
+application opens normally, previews source with the macOS dark palette, and
+passes OS-injected keyboard and pane-drag checks on the Windows VM. Continue this branch rather than
 restarting the feasibility investigation or installing another UI stack.
 
 ## Position
@@ -11,8 +11,9 @@ restarting the feasibility investigation or installing another UI stack.
   `4d164034b992a7818b54c8ce30d831c6c875c850`.
 - Initial checkpoint: `f752dd68c7a14cb261e89d689a2f57b30c0012b9`.
   Startup fix: `79c5184c1ceb21fbc78b175cef90e3d773816f56`. The current
-  follow-up adds display-only source colouring, fixes CRLF line navigation and
-  prepares optional desktop input checks without changing the shared engine.
+  source preview checkpoint is `67d6ce63e07f4d08bff27f3218699f6818bea993`.
+  The current follow-up verifies desktop input and automates audit focus while
+  keeping the shared engine unchanged.
 - Architecture agreed: C#/WinUI 3/XAML frontend in `apps/windows`, .NET 10,
   existing C++17/Qt Core/Concurrent helper and canonical vendored grammars.
 - The shared engine build/parity gate is complete on this Windows VM.
@@ -34,9 +35,9 @@ restarting the feasibility investigation or installing another UI stack.
 | Public CLI versus helper complete JSON contracts | 99 files, zero contract issues, zero differences |
 | C# process/transport checks | 8/8 passed |
 | Real worker/index/search in a Unicode path with CRLF input | Passed, including same-file call and cross-file caller |
-| Actual published GUI smoke | 41/41 checks pass, including source text/colour round trips, cancellation and a 2,000-symbol file |
-| Package relocation in a path with spaces | Earlier responsiveness checkpoint: 32/32 checks; initial fresh-folder startup check: 26/26 |
-| OS-injected keyboard and pointer checks | Implemented behind `-DesktopInput`; foreground focus blocked the attempted run before its first keystroke |
+| Actual published GUI smoke | 42/42 checks pass, including source text/colour round trips, cancellation, a 2,000-symbol file and disabled source-viewer undo history |
+| Package path containing spaces | Input-tested package: 60/60 checks; initial fresh-folder startup check: 26/26 |
+| OS-injected keyboard and pointer checks | 60/60 checks pass with `-DesktopInput`, including 18 keyboard/pointer checks |
 | Normal executable launch with an initial file argument | Visible, responding window after five seconds; closed gracefully |
 
 Transport checks cover Unicode/quoted/empty arguments, invalid JSON, nonzero
@@ -165,11 +166,12 @@ Pane dividers now focus on a primary pointer press, ignore secondary mouse
 presses and accept only arrows along their resize axis. The optional OS-input
 checks cover Ctrl+F, typing/clearing search, Tab, Alt+Left/Right, divider arrow
 keys, perpendicular arrows, all three pane drags and divider pointer focus.
-They are **not yet verified**: Windows kept another window in the foreground,
-and the audit stopped before sending its first keystroke. See
-[the blocked attempt](evidence/desktop-input-blocked.json). The session reports
-active, but that alone does not establish usable foreground input. No desktop
-unlock or foreground policy changes were made.
+At the source preview checkpoint, Windows kept another window in the foreground
+and the audit stopped before its first keystroke; the
+[initial blocked attempt](evidence/desktop-input-blocked.json) is retained as
+historical evidence. The current follow-up resolves that test setup and verifies
+the input suite, as described below. No desktop unlock or foreground policy
+changes were made.
 
 To retry from an unlocked Windows desktop, run:
 
@@ -177,14 +179,56 @@ To retry from an unlocked Windows desktop, run:
 ./tools/run_windows_gui_audit.ps1 -Output build-windows/reports/desktop-input-retry -DesktopInput
 ```
 
-Activate the audit window if Windows does not give it foreground focus. The
-input phase waits up to 30 seconds. Every keyboard/mouse operation checks that
+The runner now uses a second temporary interactive task to focus the owned
+audit search field through Windows UI Automation. Activate the audit window
+manually if automatic focus is unavailable. The input phase waits up to 30 seconds. Every keyboard/mouse operation checks that
 this window is foreground; pointer targets must belong to it, and the prior
 cursor position is restored. Default audits do not inject desktop input. The
 foreground restriction is part of the documented
 [Windows activation API](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setforegroundwindow).
 Folder-picker interaction, actual human input, Narrator/high contrast and
 multiple DPIs remain untested.
+
+### Verified desktop input
+
+The packaged frontend now passes **60/60 checks** with `-DesktopInput`; the
+ordinary workflow passes **42/42**. The VM was tested at **125% display scale**,
+including the existing normal and minimum-window screenshots. This is one scale,
+not a multi-DPI acceptance claim.
+
+The 18 additional input checks exercise Ctrl+F, search typing,
+Ctrl+A/Backspace to clear search, Tab, Alt+Left/Right history, source keyboard
+focus and selection, rejection of typing/Undo in the read-only source preview,
+arrow-key resizing, rejection of perpendicular divider arrows, pointer focus
+and dragging all three dividers. Source-viewer undo storage is disabled; source
+replacement still temporarily enables programmatic writes as required by WinUI.
+The GUI confirms that no undo history is retained and typed input cannot alter
+source text.
+
+`tools/focus_windows_gui_audit.ps1` uses UI Automation `SetFocus` on the search
+field of the exact executable/report-path pair for that audit. It verifies
+foreground ownership and records `input-focus.json`; ambiguity stops the focus
+attempt. Both temporary tasks are removed in the runner's `finally`. Keyboard
+and pointer operations retain their foreground guards. No new test framework,
+additional installation, persistent task or Windows focus policy is required.
+
+Two apparent input failures were test-driver issues. The forward-history check
+compared mixed fixture-path separators with a normalized Windows path; both
+expected paths are now normalized before input testing. Pointer tracing showed
+that `SetCursorPos` positioned and pressed on the correct divider but did not
+deliver captured movement events to WinUI on this VM. The driver now sends
+absolute `SendInput` mouse moves across virtual-desktop coordinates. Recorded
+routed events and before/after pane sizes confirm actual dragging. The native
+pane implementation needed no further changes in this follow-up.
+
+Current evidence is [gui.json](evidence/gui.json) for the ordinary workflow,
+[gui-input.json](evidence/gui-input.json) for desktop input and
+[input-focus.json](evidence/input-focus.json) for activation. The input report
+includes display scale and structured pointer diagnostics. These checks do not
+establish human-input, Narrator/high-contrast, folder-picker, multiple-DPI,
+multiple-monitor or clean-machine acceptance. Large source assignment remains
+above the optional 50 ms goal; disabling undo storage is not a measured general
+latency improvement.
 
 No Windows full public-corpus/damage sweep, direct cross-OS full-JSON comparison,
 multi-DPI/accessibility checks, installer/signing or clean-machine validation has
@@ -194,6 +238,8 @@ checkpoint's [Linux CI passed](https://github.com/macsplit/lumencode/actions/run
 The startup-fix checkpoint's [Linux CI also passed](https://github.com/macsplit/lumencode/actions/runs/39047973149).
 The responsiveness checkpoint
 [also passed Linux CI](https://github.com/macsplit/lumencode/actions/runs/39052767320).
+The source preview checkpoint
+[passed Linux CI](https://github.com/macsplit/lumencode/actions/runs/39053867371).
 Windows CI has not been added. Do not interpret unrun checks as successful.
 
 ## Implementation included
@@ -209,7 +255,7 @@ Windows CI has not been added. Do not interpret unrun checks as successful.
   dependency/route/link/notice presentation, navigation history, refresh,
   Explorer/default-editor integration, copyable/selectable read-only preview,
   resize dividers and keyboard shortcuts. The programmatic GUI workflow passes;
-  optional OS input checks are prepared but blocked by foreground focus;
+  OS keyboard/pointer checks pass with automatic UI Automation focus;
   accessibility still needs testing.
 - `apps/windows/LumenCode.CoreChecks`: executable adapter/integration checks.
 - Windows-specific helper executable discovery in the public Qt controller;
@@ -237,13 +283,13 @@ Windows via `ssh windows`:
   `C:\Users\leeha\lumencode\build-windows\package\LumenCode.Windows.exe`.
 - Earlier verified relocation (startup checkpoint):
   `C:\Users\leeha\lumencode\build-windows\fresh verified package`.
+- Input-tested package with spaces: `C:\Users\leeha\lumencode\build-windows\input-verified package`.
 - Earlier responsiveness relocation: `C:\Users\leeha\lumencode\build-windows\latency-after package`.
-- Current raw GUI output: `build-windows/reports/preview-package`; blocked input
-  attempt: `build-windows/reports/desktop-input`; earlier responsiveness outputs:
-  `build-windows/reports/latency-after` and `build-windows/reports/latency-final`; normal launch: `reports/normal-launch.json`.
+- Current raw GUI outputs: `build-windows/reports/input-package` (ordinary) and
+  `build-windows/reports/input-package-desktop` (OS input); normal launch: `reports/normal-launch.json`.
   The old `startup-error.txt` in a reused audit folder may be historical; use the
-  newest `gui.json` result and file timestamps. The default GUI workflow passes;
-  the separate desktop-input attempt is explicitly blocked.
+  newest `gui.json` result and file timestamps. Current ordinary and desktop-input
+  workflows pass; the older blocked attempt is historical.
 
 Installed for this work: VS 2022 C++ tools 14.44.35207 and CMake component,
 Python 3.13.15, a dedicated Python venv with aqtinstall 3.3.0/CMake 4.4.4/Ninja
@@ -264,9 +310,9 @@ was tested successfully; no SSH configuration changes were made by this work.
 2. Continue profiling large-preview text assignment and rendered/input latency.
    Small-file source display is decoupled from analysis; the shared engine is
    unchanged. Stage timings in the GUI report are diagnostic, not frame timings.
-3. Retry `-DesktopInput` with the audit window foreground on an unlocked desktop.
-   Verify folder dialogs, accessibility and multiple DPIs separately. Source
-   colouring is implemented; large previews intentionally use plain text.
+3. Test folder dialogs, accessibility, high contrast, multiple DPIs/monitors and
+   ordinary human input. The OS-injected keyboard/pane suite is now verified;
+   keep `-DesktopInput` available for regressions. Large previews use plain text.
 4. Add Windows CI, cross-OS corpus comparisons and clean-machine/installer
    validation. Same-VM fresh-folder publication has passed; a machine with no
    developer/runtime setup has not yet been tested.

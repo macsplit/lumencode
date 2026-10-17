@@ -1,0 +1,442 @@
+{
+  "passed": true,
+  "desktopInput": true,
+  "displayScale": 1.25,
+  "checks": [
+    {
+      "name": "Project tree populated",
+      "passed": true
+    },
+    {
+      "name": "Dark theme",
+      "passed": true
+    },
+    {
+      "name": "Real engine analysis visible",
+      "passed": true
+    },
+    {
+      "name": "Source preview populated",
+      "passed": true
+    },
+    {
+      "name": "Source read-only",
+      "passed": true
+    },
+    {
+      "name": "Source viewer does not retain file undo history",
+      "passed": true
+    },
+    {
+      "name": "Project index built",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.js",
+      "passed": true
+    },
+    {
+      "name": "Selected main.js",
+      "passed": true
+    },
+    {
+      "name": "Selected alias.js",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected main.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected alias.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected broken.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.php",
+      "passed": true
+    },
+    {
+      "name": "Selected Broken.php",
+      "passed": true
+    },
+    {
+      "name": "Selected App.swift",
+      "passed": true
+    },
+    {
+      "name": "Selected sample.py",
+      "passed": true
+    },
+    {
+      "name": "Selected broken.py",
+      "passed": true
+    },
+    {
+      "name": "Rapid navigation keeps latest analysis",
+      "passed": true
+    },
+    {
+      "name": "Rapid navigation keeps latest preview",
+      "passed": true
+    },
+    {
+      "name": "Revisit uses analysis cache",
+      "passed": true
+    },
+    {
+      "name": "Source available while engine analysis is pending",
+      "passed": true
+    },
+    {
+      "name": "Large file exposes all 2000 engine symbols",
+      "passed": true
+    },
+    {
+      "name": "Large source preview complete and read-only",
+      "passed": true
+    },
+    {
+      "name": "RTF preserves Unicode, braces, backslashes and CRLF text",
+      "passed": true
+    },
+    {
+      "name": "Dark palette keyword colour",
+      "passed": true
+    },
+    {
+      "name": "URL inside string retains string colour",
+      "passed": true
+    },
+    {
+      "name": "Keyword inside comment retains comment colour",
+      "passed": true
+    },
+    {
+      "name": "Line navigation handles CRLF and astral Unicode",
+      "passed": true
+    },
+    {
+      "name": "Preview round trip .py",
+      "passed": true
+    },
+    {
+      "name": "Preview round trip .swift",
+      "passed": true
+    },
+    {
+      "name": "Preview round trip .json",
+      "passed": true
+    },
+    {
+      "name": "Preview round trip .txt",
+      "passed": true
+    },
+    {
+      "name": "Ctrl+F focuses project search",
+      "passed": true
+    },
+    {
+      "name": "Keyboard typing reaches engine search",
+      "passed": true
+    },
+    {
+      "name": "Keyboard clears search and restores files",
+      "passed": true
+    },
+    {
+      "name": "Tab leaves search for another control",
+      "passed": true
+    },
+    {
+      "name": "Alt+Left navigates back",
+      "passed": true
+    },
+    {
+      "name": "Alt+Right navigates forward",
+      "passed": true
+    },
+    {
+      "name": "Source preview receives keyboard focus",
+      "passed": true
+    },
+    {
+      "name": "Read-only source rejects typing and Undo",
+      "passed": true
+    },
+    {
+      "name": "Keyboard selects source text",
+      "passed": true
+    },
+    {
+      "name": "Project divider resizes with Right arrow",
+      "passed": true
+    },
+    {
+      "name": "Vertical divider ignores perpendicular arrows",
+      "passed": true
+    },
+    {
+      "name": "Overview divider resizes with Right arrow",
+      "passed": true
+    },
+    {
+      "name": "Preview divider resizes with Up arrow",
+      "passed": true
+    },
+    {
+      "name": "Horizontal divider ignores perpendicular arrows",
+      "passed": true
+    },
+    {
+      "name": "Pointer drag resizes project pane",
+      "passed": true
+    },
+    {
+      "name": "Pointer press focuses divider",
+      "passed": true
+    },
+    {
+      "name": "Pointer drag resizes overview pane",
+      "passed": true
+    },
+    {
+      "name": "Pointer drag resizes preview pane",
+      "passed": true
+    },
+    {
+      "name": "Symbol details and calls",
+      "passed": true
+    },
+    {
+      "name": "Navigation history",
+      "passed": true
+    },
+    {
+      "name": "Engine search results: 6 search results",
+      "passed": true
+    },
+    {
+      "name": "Clearing search restores tree",
+      "passed": true
+    },
+    {
+      "name": "Clearing search restores status",
+      "passed": true
+    },
+    {
+      "name": "Selectable source text",
+      "passed": true
+    },
+    {
+      "name": "Minimum pane dimensions",
+      "passed": true
+    },
+    {
+      "name": "Minimum rows fit without clipping",
+      "passed": true
+    }
+  ],
+  "timings": [
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\helper.js",
+      "elapsedMs": 14.4935,
+      "stages": {
+        "CacheHit": true,
+        "PreviewReadyMs": 13.4362,
+        "AnalysisReadyMs": 13.5166,
+        "UiApplyMs": 1.9507999999999992,
+        "CompletedMs": 14.3006
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\main.js",
+      "elapsedMs": 111.7667,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 5.1476,
+        "AnalysisReadyMs": 110.5335,
+        "UiApplyMs": 1.8299999999999983,
+        "CompletedMs": 111.5682
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\alias.js",
+      "elapsedMs": 108.5967,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 15.0546,
+        "AnalysisReadyMs": 107.5578,
+        "UiApplyMs": 2.829800000000006,
+        "CompletedMs": 108.3982
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\helper.ts",
+      "elapsedMs": 132.8218,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 13.2627,
+        "AnalysisReadyMs": 130.3475,
+        "UiApplyMs": 6.2730999999999995,
+        "CompletedMs": 132.5306
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\main.ts",
+      "elapsedMs": 122.7341,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 19.7115,
+        "AnalysisReadyMs": 121.7146,
+        "UiApplyMs": 2.327600000000004,
+        "CompletedMs": 122.511
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\alias.ts",
+      "elapsedMs": 96.3083,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 3.8396,
+        "AnalysisReadyMs": 94.9376,
+        "UiApplyMs": 1.6051999999999964,
+        "CompletedMs": 96.0061
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_recovery\\broken.ts",
+      "elapsedMs": 143.6889,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 9.2922,
+        "AnalysisReadyMs": 139.2442,
+        "UiApplyMs": 7.68119999999999,
+        "CompletedMs": 143.3193
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\php_basic\\helper.php",
+      "elapsedMs": 170.1093,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 57.3164,
+        "AnalysisReadyMs": 167.7835,
+        "UiApplyMs": 4.590599999999995,
+        "CompletedMs": 169.7791
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\php_recovery\\Broken.php",
+      "elapsedMs": 94.9866,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 9.502,
+        "AnalysisReadyMs": 91.6832,
+        "UiApplyMs": 4.683600000000013,
+        "CompletedMs": 94.6743
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\swift_basic\\App.swift",
+      "elapsedMs": 98.9009,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 9.6836,
+        "AnalysisReadyMs": 97.7003,
+        "UiApplyMs": 3.1785999999999888,
+        "CompletedMs": 98.5857
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\python_basic\\sample.py",
+      "elapsedMs": 163.3127,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 56.5964,
+        "AnalysisReadyMs": 160.7963,
+        "UiApplyMs": 4.8233000000000175,
+        "CompletedMs": 162.9747
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\python_recovery\\broken.py",
+      "elapsedMs": 138.2468,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 10.33,
+        "AnalysisReadyMs": 136.4711,
+        "UiApplyMs": 4.4894999999999925,
+        "CompletedMs": 137.9183
+      }
+    },
+    {
+      "operation": "select-large",
+      "symbols": 2000,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 155.2382,
+        "AnalysisReadyMs": 737.4682,
+        "UiApplyMs": 121.97569999999996,
+        "CompletedMs": 749.0737
+      }
+    }
+  ],
+  "inputDiagnostics": [
+    {
+      "operation": "project-pane-drag",
+      "before": 306.3999938964844,
+      "after": 338.3999938964844,
+      "coordinates": "root 1137.5999755859375x698.4000244140625, scale 1.25, center 309.6,248, client 201,230, screen 588,540",
+      "events": [
+        "moved 309.6,248 left=False",
+        "pressed 309.6,248 left=True",
+        "root pressed 309.6,248 source=Border",
+        "moved 317.6,248 left=True",
+        "moved 325.6,248 left=True",
+        "moved 333.6,248 left=True",
+        "moved 341.6,248 left=True",
+        "moved 341.6,248 left=False"
+      ]
+    },
+    {
+      "operation": "overview-pane-drag",
+      "before": 425.6000061035156,
+      "after": 457.6000061035156,
+      "coordinates": "root 1137.5999755859375x698.4000244140625, scale 1.25, center 773.60004,248, client 201,230, screen 1168,540"
+    },
+    {
+      "operation": "preview-pane-drag",
+      "before": 220,
+      "after": 252,
+      "coordinates": "root 1137.5999755859375x698.4000244140625, scale 1.25, center 568.8,447.2, client 201,230, screen 912,789"
+    }
+  ],
+  "failure": null,
+  "heartbeat": {
+    "nominalIntervalMs": 16,
+    "samples": 143,
+    "maxGapMs": 139.9813,
+    "p95GapMs": 81.73129999999992
+  },
+  "limitations": "Programmatic workflows plus foreground-guarded OS-injected keyboard/pointer checks on this VM. Not human-input, accessibility, multiple-DPI or clean-machine acceptance."
+}

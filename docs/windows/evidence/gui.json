@@ -1,6 +1,7 @@
 {
   "passed": true,
   "desktopInput": false,
+  "displayScale": 1.25,
   "checks": [
     {
       "name": "Project tree populated",
@@ -20,6 +21,10 @@
     },
     {
       "name": "Source read-only",
+      "passed": true
+    },
+    {
+      "name": "Source viewer does not retain file undo history",
       "passed": true
     },
     {
@@ -171,145 +176,145 @@
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\js_commonjs\\helper.js",
-      "elapsedMs": 14.298,
+      "elapsedMs": 24.1069,
       "stages": {
         "CacheHit": true,
-        "PreviewReadyMs": 13.4707,
-        "AnalysisReadyMs": 13.537,
-        "UiApplyMs": 1.8268000000000004,
-        "CompletedMs": 14.1504
+        "PreviewReadyMs": 22.9013,
+        "AnalysisReadyMs": 23.0171,
+        "UiApplyMs": 3.0885999999999996,
+        "CompletedMs": 23.8868
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\js_commonjs\\main.js",
-      "elapsedMs": 114.1727,
+      "elapsedMs": 111.4514,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 4.9499,
-        "AnalysisReadyMs": 112.5489,
-        "UiApplyMs": 2.0675000000000097,
-        "CompletedMs": 113.8926
+        "PreviewReadyMs": 8.2478,
+        "AnalysisReadyMs": 109.5157,
+        "UiApplyMs": 2.2908000000000044,
+        "CompletedMs": 111.2021
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\js_commonjs\\alias.js",
-      "elapsedMs": 131.8834,
+      "elapsedMs": 118.8078,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 6.7872,
-        "AnalysisReadyMs": 130.7847,
-        "UiApplyMs": 2.906499999999994,
-        "CompletedMs": 131.6441
+        "PreviewReadyMs": 7.0133,
+        "AnalysisReadyMs": 117.7439,
+        "UiApplyMs": 2.990099999999998,
+        "CompletedMs": 118.5785
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\ts_module\\helper.ts",
-      "elapsedMs": 120.0727,
+      "elapsedMs": 149.2267,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 13.963,
-        "AnalysisReadyMs": 118.0577,
-        "UiApplyMs": 5.984200000000001,
-        "CompletedMs": 119.7545
+        "PreviewReadyMs": 18.4955,
+        "AnalysisReadyMs": 147.0607,
+        "UiApplyMs": 3.1888999999999896,
+        "CompletedMs": 148.9821
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\ts_module\\main.ts",
-      "elapsedMs": 122.6293,
+      "elapsedMs": 123.9126,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 14.429,
-        "AnalysisReadyMs": 121.5887,
-        "UiApplyMs": 1.4986999999999995,
-        "CompletedMs": 122.3547
+        "PreviewReadyMs": 13.9922,
+        "AnalysisReadyMs": 122.7381,
+        "UiApplyMs": 2.1174000000000035,
+        "CompletedMs": 123.6187
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\ts_module\\alias.ts",
-      "elapsedMs": 108.5005,
+      "elapsedMs": 115.2602,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 5.6765,
-        "AnalysisReadyMs": 107.1168,
-        "UiApplyMs": 2.2035000000000053,
-        "CompletedMs": 108.1794
+        "PreviewReadyMs": 6.9031,
+        "AnalysisReadyMs": 114.0395,
+        "UiApplyMs": 3.3623000000000047,
+        "CompletedMs": 114.9582
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\ts_recovery\\broken.ts",
-      "elapsedMs": 133.457,
+      "elapsedMs": 125.0509,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 9.8413,
-        "AnalysisReadyMs": 128.8111,
-        "UiApplyMs": 7.7420999999999935,
-        "CompletedMs": 133.161
+        "PreviewReadyMs": 8.2931,
+        "AnalysisReadyMs": 119.3358,
+        "UiApplyMs": 8.3737,
+        "CompletedMs": 124.7432
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\php_basic\\helper.php",
-      "elapsedMs": 156.947,
+      "elapsedMs": 148.0231,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 52.6548,
-        "AnalysisReadyMs": 155.0206,
-        "UiApplyMs": 4.197199999999981,
-        "CompletedMs": 156.6533
+        "PreviewReadyMs": 52.7084,
+        "AnalysisReadyMs": 146.3841,
+        "UiApplyMs": 3.5471999999999753,
+        "CompletedMs": 147.7078
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\php_recovery\\Broken.php",
-      "elapsedMs": 113.9108,
+      "elapsedMs": 112.0042,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 9.0859,
-        "AnalysisReadyMs": 112.5751,
-        "UiApplyMs": 3.8936000000000064,
-        "CompletedMs": 113.7034
+        "PreviewReadyMs": 6.0654,
+        "AnalysisReadyMs": 110.7099,
+        "UiApplyMs": 2.5792,
+        "CompletedMs": 111.7642
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\swift_basic\\App.swift",
-      "elapsedMs": 112.1198,
+      "elapsedMs": 95.8136,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 9.0096,
-        "AnalysisReadyMs": 110.9793,
-        "UiApplyMs": 3.1417,
-        "CompletedMs": 111.8756
+        "PreviewReadyMs": 5.5693,
+        "AnalysisReadyMs": 94.3109,
+        "UiApplyMs": 2.421500000000009,
+        "CompletedMs": 95.4437
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\python_basic\\sample.py",
-      "elapsedMs": 175.2955,
+      "elapsedMs": 185.4075,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 71.0715,
-        "AnalysisReadyMs": 173.1911,
-        "UiApplyMs": 4.977499999999992,
-        "CompletedMs": 174.9456
+        "PreviewReadyMs": 81.4466,
+        "AnalysisReadyMs": 183.1011,
+        "UiApplyMs": 5.167000000000002,
+        "CompletedMs": 185.0158
       }
     },
     {
       "operation": "select",
       "path": "tests\\fixtures\\baseline\\python_recovery\\broken.py",
-      "elapsedMs": 114.7128,
+      "elapsedMs": 101.3931,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 8.3606,
-        "AnalysisReadyMs": 113.0209,
-        "UiApplyMs": 3.94019999999999,
-        "CompletedMs": 114.4151
+        "PreviewReadyMs": 8.5544,
+        "AnalysisReadyMs": 99.6408,
+        "UiApplyMs": 4.367900000000006,
+        "CompletedMs": 101.0711
       }
     },
     {
@@ -317,19 +322,20 @@
       "symbols": 2000,
       "stages": {
         "CacheHit": false,
-        "PreviewReadyMs": 150.4171,
-        "AnalysisReadyMs": 704.1587,
-        "UiApplyMs": 123.1119000000001,
-        "CompletedMs": 716.3388
+        "PreviewReadyMs": 175.1963,
+        "AnalysisReadyMs": 698.8713,
+        "UiApplyMs": 118.3334000000001,
+        "CompletedMs": 712.1387
       }
     }
   ],
+  "inputDiagnostics": [],
   "failure": null,
   "heartbeat": {
     "nominalIntervalMs": 16,
     "samples": 79,
-    "maxGapMs": 164.4390000000003,
-    "p95GapMs": 96.19360000000006
+    "maxGapMs": 159.33780000000024,
+    "p95GapMs": 100.23659999999973
   },
   "limitations": "Programmatic workflows and text/colour checks. Desktop input was not requested; not mouse/keyboard, accessibility, multiple-DPI or clean-machine acceptance."
 }

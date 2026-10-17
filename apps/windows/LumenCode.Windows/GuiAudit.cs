@@ -19,6 +19,7 @@ public sealed partial class MainWindow
         Directory.CreateDirectory(output);
         var checks = new List<object>();
         var timings = new List<object>();
+        var inputDiagnostics = new List<object>();
         var gaps = new List<double>();
         var timer = new Microsoft.UI.Xaml.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
         var clock = Stopwatch.StartNew(); double previous = clock.Elapsed.TotalMilliseconds;
@@ -40,6 +41,7 @@ public sealed partial class MainWindow
             Check("Real engine analysis visible", Payload.Symbols(analysis).Any(s => s.Text("name") == "wrapper"));
             Check("Source preview populated", previewText.Contains("function"));
             Check("Source read-only", Code.IsReadOnly);
+            Check("Source viewer does not retain file undo history", !Code.Document.CanUndo());
             var deadline = DateTime.UtcNow.AddMinutes(2);
             while (!indexReady && DateTime.UtcNow < deadline) await Task.Delay(50);
             Check("Project index built", indexReady);
@@ -83,7 +85,7 @@ public sealed partial class MainWindow
             finally { File.Delete(largeFile); cache.Remove(largeFile); }
             CheckPreviewFormatting(Check);
             await SelectFileAsync(new(file));
-            if (args.Contains("--desktop-input")) await CheckDesktopInputAsync(file, files[^1], Check);
+            if (args.Contains("--desktop-input")) await CheckDesktopInputAsync(file, files[^1], Check, inputDiagnostics);
             var wrapper = Payload.Symbols(analysis).First(s => s.Text("name") == "wrapper");
             Inspect(DisplayItem.From(wrapper, "Symbols"));
             Check("Symbol details and calls", DetailTitle.Text == "wrapper" && wrapper.Items("calls").Any(s => s.Text("name") == "helper"));
@@ -116,7 +118,7 @@ public sealed partial class MainWindow
             timer.Stop();
             var sorted = gaps.Order().ToArray();
             bool desktopInput = args.Contains("--desktop-input");
-            await File.WriteAllTextAsync(Path.Combine(output, "gui.json"), JsonSerializer.Serialize(new { passed = failure is null, desktopInput, checks, timings, failure, heartbeat = new { nominalIntervalMs = 16, samples = gaps.Count, maxGapMs = gaps.DefaultIfEmpty().Max(), p95GapMs = sorted.Length > 0 ? sorted[Math.Min(sorted.Length - 1, (int)(sorted.Length * .95))] : 0 }, limitations = desktopInput ? "Programmatic workflows plus foreground-guarded OS-injected keyboard/pointer checks on this VM. Not human-input, accessibility, multiple-DPI or clean-machine acceptance." : "Programmatic workflows and text/colour checks. Desktop input was not requested; not mouse/keyboard, accessibility, multiple-DPI or clean-machine acceptance." }, new JsonSerializerOptions { WriteIndented = true }));
+            await File.WriteAllTextAsync(Path.Combine(output, "gui.json"), JsonSerializer.Serialize(new { passed = failure is null, desktopInput, displayScale = Root.XamlRoot.RasterizationScale, checks, timings, inputDiagnostics, failure, heartbeat = new { nominalIntervalMs = 16, samples = gaps.Count, maxGapMs = gaps.DefaultIfEmpty().Max(), p95GapMs = sorted.Length > 0 ? sorted[Math.Min(sorted.Length - 1, (int)(sorted.Length * .95))] : 0 }, limitations = desktopInput ? "Programmatic workflows plus foreground-guarded OS-injected keyboard/pointer checks on this VM. Not human-input, accessibility, multiple-DPI or clean-machine acceptance." : "Programmatic workflows and text/colour checks. Desktop input was not requested; not mouse/keyboard, accessibility, multiple-DPI or clean-machine acceptance." }, new JsonSerializerOptions { WriteIndented = true }));
             projectRequest.Cancel(); selectionRequest.Cancel(); searchRequest.Cancel();
             Application.Current.Exit();
         }
@@ -151,8 +153,10 @@ public sealed partial class MainWindow
         }
     }
 
-    private async Task CheckDesktopInputAsync(string file, string other, Action<string, bool> check)
+    private async Task CheckDesktopInputAsync(string file, string other, Action<string, bool> check, List<object> inputDiagnostics)
     {
+        file = Path.GetFullPath(file);
+        other = Path.GetFullPath(other);
         Activate();
         using var input = new GuiInput(WinRT.Interop.WindowNative.GetWindowHandle(this));
         await input.WaitForForegroundAsync();
@@ -176,7 +180,17 @@ public sealed partial class MainWindow
         await input.KeysAsync(0x12, 0x27); // Alt+Right
         deadline = DateTime.UtcNow.AddSeconds(10);
         while ((pending > 0 || selectedPath != other) && DateTime.UtcNow < deadline) await Task.Delay(20);
-        check("Alt+Right navigates forward", selectedPath == other);
+        check("Alt+Right navigates forward", selectedPath == other && analysis.Text("path").Replace('/', '\\').Equals(other.Replace('/', '\\'), StringComparison.OrdinalIgnoreCase));
+        Code.Focus(FocusState.Keyboard);
+        check("Source preview receives keyboard focus", ReferenceEquals(Microsoft.UI.Xaml.Input.FocusManager.GetFocusedElement(Root.XamlRoot), Code));
+        Code.Document.GetText(Microsoft.UI.Text.TextGetOptions.None, out string beforeTyping);
+        await input.TextAsync("must not edit source");
+        await input.KeysAsync(0x11, 0x5a); // Ctrl+Z
+        Code.Document.GetText(Microsoft.UI.Text.TextGetOptions.None, out string afterTyping);
+        check("Read-only source rejects typing and Undo", Code.IsReadOnly && beforeTyping == afterTyping && !Code.Document.CanUndo());
+        await input.KeysAsync(0x11, 0x41); // Ctrl+A
+        Code.Document.Selection.GetText(Microsoft.UI.Text.TextGetOptions.None, out string keyboardSelection);
+        check("Keyboard selects source text", keyboardSelection.TrimEnd('\r', '\n') == beforeTyping.TrimEnd('\r', '\n'));
         double filesWidth = FilesColumn.ActualWidth, previewHeight = PreviewRow.ActualHeight;
         FilesDivider.Focus(FocusState.Keyboard);
         await input.KeysAsync(0x27); // Right
@@ -195,14 +209,21 @@ public sealed partial class MainWindow
         await input.KeysAsync(0x27);
         check("Horizontal divider ignores perpendicular arrows", Math.Abs(PreviewRow.ActualHeight - resized) < 1);
         filesWidth = FilesColumn.ActualWidth;
+        var pointerTrace = new List<string>();
+        Root.AddHandler(Microsoft.UI.Xaml.UIElement.PointerPressedEvent, new Microsoft.UI.Xaml.Input.PointerEventHandler((_, e) => pointerTrace.Add("root pressed " + e.GetCurrentPoint(Root).Position + " source=" + e.OriginalSource.GetType().Name)), true);
+        FilesDivider.AddHandler(Microsoft.UI.Xaml.UIElement.PointerPressedEvent, new Microsoft.UI.Xaml.Input.PointerEventHandler((_, e) => pointerTrace.Add("pressed " + e.GetCurrentPoint(Root).Position + " left=" + e.GetCurrentPoint(Root).Properties.IsLeftButtonPressed)), true);
+        FilesDivider.AddHandler(Microsoft.UI.Xaml.UIElement.PointerMovedEvent, new Microsoft.UI.Xaml.Input.PointerEventHandler((_, e) => pointerTrace.Add("moved " + e.GetCurrentPoint(Root).Position + " left=" + e.GetCurrentPoint(Root).Properties.IsLeftButtonPressed)), true);
         await input.DragAsync(FilesDivider, Root, 32, 0);
+        inputDiagnostics.Add(new { operation = "project-pane-drag", before = filesWidth, after = FilesColumn.ActualWidth, coordinates = input.LastDrag, events = pointerTrace.ToArray() });
         check("Pointer drag resizes project pane", FilesColumn.ActualWidth > filesWidth + 16);
         check("Pointer press focuses divider", ReferenceEquals(Microsoft.UI.Xaml.Input.FocusManager.GetFocusedElement(Root.XamlRoot), FilesDivider));
         overviewBefore = OverviewColumn.ActualWidth;
         await input.DragAsync(OverviewDivider, Root, 32, 0);
+        inputDiagnostics.Add(new { operation = "overview-pane-drag", before = overviewBefore, after = OverviewColumn.ActualWidth, coordinates = input.LastDrag });
         check("Pointer drag resizes overview pane", OverviewColumn.ActualWidth > overviewBefore + 16);
         previewHeight = PreviewRow.ActualHeight;
         await input.DragAsync(PreviewDivider, Root, 0, -32);
+        inputDiagnostics.Add(new { operation = "preview-pane-drag", before = previewHeight, after = PreviewRow.ActualHeight, coordinates = input.LastDrag });
         check("Pointer drag resizes preview pane", PreviewRow.ActualHeight > previewHeight + 16);
         // Restore the default layout before normal/minimum screenshots.
         FilesColumn.Width = new GridLength(290);

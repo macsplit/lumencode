@@ -30,6 +30,9 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        // This is a source viewer. Retaining undo copies of every navigated file
+        // wastes memory and adds work to large document replacements.
+        Code.Document.UndoLimit = 0;
         Title = "LumenCode";
         AppWindow.Resize(new global::Windows.Graphics.SizeInt32(1440, 920));
         AppWindow.Changed += (_, args) =>

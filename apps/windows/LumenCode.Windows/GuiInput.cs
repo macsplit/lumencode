@@ -8,6 +8,7 @@ internal sealed class GuiInput : IDisposable
 {
     private readonly nint window;
     private readonly Point savedCursor;
+    public string LastDrag { get; private set; } = "";
     public GuiInput(nint window)
     {
         this.window = window;
@@ -47,9 +48,10 @@ internal sealed class GuiInput : IDisposable
         if (!ClientToScreen(window, ref origin)) throw new InvalidOperationException("Cannot locate audit window.");
         double scale = root.XamlRoot.RasterizationScale;
         int x = origin.X + (int)Math.Round(center.X * scale), y = origin.Y + (int)Math.Round(center.Y * scale);
+        LastDrag = $"root {root.ActualWidth}x{root.ActualHeight}, scale {scale}, center {center}, client {origin.X},{origin.Y}, screen {x},{y}";
         if (GetAncestor(WindowFromPoint(new Point { X = x, Y = y }), 2) != window)
             throw new InvalidOperationException("Audit pointer target is outside its own window; input stopped.");
-        if (!SetCursorPos(x, y)) throw new InvalidOperationException("Cannot position audit pointer.");
+        MovePointer(x, y);
         await Task.Delay(50);
         RequireForeground();
         Send([new Input { Type = 0, Data = new Union { Mouse = new Mouse { Flags = 2 } } }]);
@@ -58,12 +60,24 @@ internal sealed class GuiInput : IDisposable
             for (int step = 1; step <= 4; step++)
             {
                 RequireForeground();
-                SetCursorPos(x + (int)(dx * scale * step / 4), y + (int)(dy * scale * step / 4));
+                MovePointer(x + (int)(dx * scale * step / 4), y + (int)(dy * scale * step / 4));
                 await Task.Delay(30);
             }
         }
         finally { Send([new Input { Type = 0, Data = new Union { Mouse = new Mouse { Flags = 4 } } }]); }
         await Task.Delay(100);
+    }
+    private static void MovePointer(int x, int y)
+    {
+        int left = GetSystemMetrics(76), top = GetSystemMetrics(77);
+        int width = GetSystemMetrics(78), height = GetSystemMetrics(79);
+        if (width <= 1 || height <= 1) throw new InvalidOperationException("Interactive desktop bounds unavailable.");
+        // Cursor repositioning alone did not deliver captured WinUI moves on
+        // the VM. Send actual absolute mouse input over the virtual desktop.
+        Send([new Input { Type = 0, Data = new Union { Mouse = new Mouse {
+            X = (int)Math.Round((x - left) * 65535.0 / (width - 1)),
+            Y = (int)Math.Round((y - top) * 65535.0 / (height - 1)), Flags = 0xC001
+        } } }]);
     }
     private static Input Key(ushort key, ushort scan, uint flags) => new() { Type = 1, Data = new Union { Keyboard = new Keyboard { Key = key, Scan = scan, Flags = flags | (key is >= 0x21 and <= 0x2e ? 1u : 0u) } } };
     private static void Send(Input[] inputs)
@@ -85,4 +99,5 @@ internal sealed class GuiInput : IDisposable
     [DllImport("user32.dll")] private static extern bool ClientToScreen(nint window, ref Point point);
     [DllImport("user32.dll")] private static extern nint WindowFromPoint(Point point);
     [DllImport("user32.dll")] private static extern nint GetAncestor(nint window, uint flags);
+    [DllImport("user32.dll")] private static extern int GetSystemMetrics(int index);
 }
