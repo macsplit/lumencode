@@ -40,7 +40,7 @@
         const label = paused ? 'Start slideshow' : 'Pause slideshow';
         playback.setAttribute('aria-label', label);
         playback.title = label;
-        playback.textContent = paused ? '▶' : 'Ⅱ';
+        playback.dataset.paused = String(paused);
         schedule();
     };
     playback.addEventListener('click', () => { paused = !paused; updatePlayback(); });
