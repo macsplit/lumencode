@@ -6,6 +6,9 @@ in `engine/src/`; all compiled grammars live in root `third_party/`.
 
 The library keeps Qt Core/Concurrent internally. Qt presentation/controllers stay
 in `apps/qt/`; Swift models, scheduling and presentation stay in `apps/macos/`.
+The experimental [browser target](../apps/web/README.md) uses Qt 6 Core and a
+single Web Worker instead of native subprocesses/Concurrent; analysis remains in
+this same library. Native builds continue to use Qt 5 Core/Concurrent.
 The JSON helper in `engine/helper/main.cpp` handles transport only. Its own
 `--index-facts` command supports the index's self-launched worker processes.
 

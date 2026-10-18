@@ -2771,7 +2771,9 @@ static QVariantList applySnippetCallRelations(const QVariantList &symbols)
             const QString ownerKey = symbolKey(symbol);
             const QString ownerKind = symbol.value(QStringLiteral("kind")).toString();
             if (!ownerKey.isEmpty() && canOwnCallRelations(ownerKind)) {
-                const QSet<QString> relationNames = scriptCallNamesFromSnippet(symbol.value(QStringLiteral("snippet")).toString());
+                QStringList relationNames = scriptCallNamesFromSnippet(symbol.value(QStringLiteral("snippet")).toString()).values();
+                // QSet iteration differs across Qt versions/architectures.
+                relationNames.sort();
                 for (const QString &targetName : relationNames) {
                     const QStringList candidateKeys = keysByName.value(targetName);
                     if (candidateKeys.isEmpty()) {
@@ -14770,7 +14772,7 @@ void SymbolParser::enrichCssAnalysisWithHtmlUsage(QVariantMap &result, const QSt
     const QList<WebLinks::HtmlPage> pages = WebLinks::pagesReferencingAsset(path, QStringLiteral("stylesheet"));
     QSet<QString> seenScripts;
     QMap<QString, QVariantMap> ownIndex;
-    QHash<QString, QVariantMap> scriptApplied; // class -> first JS use
+    QMap<QString, QVariantMap> scriptApplied; // class -> first JS use, stable output order
     for (const WebLinks::HtmlPage &page : pages) {
         int line = 1;
         QString snippet;

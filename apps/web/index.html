@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#12171e">
+  <title>LumenCode · Browser prototype</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header>
+    <div><h1>LumenCode <span>Browser prototype</span></h1>
+      <p>Explore a local project. Analysis stays on this device.</p></div>
+    <div id="offline" role="status">Preparing offline files…</div>
+  </header>
+  <nav aria-label="Project controls">
+    <button id="open" disabled>Open folder</button>
+    <button id="import" disabled>Import folder</button>
+    <input id="folder-input" type="file" webkitdirectory multiple hidden>
+    <button id="demo" disabled>Try example</button>
+    <button id="refresh" disabled>Refresh</button>
+    <button id="index" disabled>Build relationships</button>
+    <button id="cancel" disabled>Cancel</button>
+    <label class="search">Find symbol <input id="search" type="search" disabled placeholder="Build relationships first"></label>
+  </nav>
+  <div class="status"><strong id="project-name">No project selected</strong>
+    <span id="status" role="status">Loading shared analysis engine…</span></div>
+  <main>
+    <aside aria-label="Project files"><h2>Files <span id="file-count"></span></h2><div id="files"></div></aside>
+    <section class="analysis" aria-label="Analysis">
+      <h2 id="selected-name">Your project, locally</h2>
+      <p id="summary">Open a folder or try the example to inspect symbols and source using the shared LumenCode engine.</p>
+      <div id="search-results"></div>
+      <div id="symbols"></div>
+      <details><summary>Source</summary><pre id="source"></pre></details>
+      <details><summary>Complete engine result</summary><pre id="result"></pre></details>
+    </section>
+  </main>
+  <footer>Initial technical demonstrator · Read-only folder access · No source uploads.
+    Imported folders are snapshots; import again to see changes. Indexes are held for this session.</footer>
+</body>
+</html>

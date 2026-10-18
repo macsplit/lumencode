@@ -1,5 +1,8 @@
 #include "projectindex.h"
 #include "httpclients.h"
+#ifdef __EMSCRIPTEN__
+#include "symbolparser.h"
+#endif
 
 #include <QCryptographicHash>
 #include <QDateTime>
@@ -13,11 +16,13 @@
 #include <QJsonObject>
 #include <QMutex>
 #include <QMutexLocker>
+#ifndef __EMSCRIPTEN__
 #include <QProcess>
+#include <QtConcurrent/QtConcurrentMap>
+#endif
 #include <QRegularExpression>
 #include <QSet>
 #include <QStandardPaths>
-#include <QtConcurrent/QtConcurrentMap>
 
 namespace ProjectIndex {
 
@@ -1077,6 +1082,16 @@ void saveCache(const QString &cachePath, const QString &root, const QString &fin
 QHash<QString, QVariantMap> runHelperBatch(const QString &helperPath, const QStringList &paths)
 {
     QHash<QString, QVariantMap> produced;
+#ifdef __EMSCRIPTEN__
+    // The browser worker is the execution boundary; analysis stays canonical.
+    Q_UNUSED(helperPath);
+    SymbolParser parser;
+    for (const QString &path : paths) {
+        const QFileInfo info(path);
+        produced.insert(path, factsToVariant(factsFromAnalysis(
+            parser.parseFile(path), info.size(), info.lastModified().toMSecsSinceEpoch())));
+    }
+#else
     QProcess helper;
     helper.start(helperPath, {QStringLiteral("--index-facts")});
     if (!helper.waitForStarted(5000)) {
@@ -1103,6 +1118,7 @@ QHash<QString, QVariantMap> runHelperBatch(const QString &helperPath, const QStr
         const QVariantMap facts = document.object().toVariantMap();
         produced.insert(facts.value(QStringLiteral("path")).toString(), facts);
     }
+#endif
     return produced;
 }
 
@@ -1182,7 +1198,13 @@ SnapshotPtr build(const BuildOptions &options)
             options.progress(done, paths.size());
         }
     };
+#ifdef __EMSCRIPTEN__
+    for (const QStringList &batch : batches) {
+        runBatch(batch);
+    }
+#else
     QtConcurrent::blockingMap(batches, runBatch);
+#endif
     if (!stale.isEmpty() && !(options.cancel && options.cancel->load())) {
         saveCache(cachePath, snapshot->root, fingerprint, snapshot->files);
     }

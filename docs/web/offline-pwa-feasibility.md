@@ -2,9 +2,10 @@
 
 Assessment date: 18 October 2026.
 
-Status: future roadmap proposal. Source inspection and browser documentation
-review are complete; no WebAssembly build, browser engine prototype or performance
-measurement has been completed. This document does not commit to a release date.
+Status: original feasibility assessment and future direction. Work began on
+18 October 2026; see [prototype status and evidence](offline-pwa-status.md) for
+implemented functionality and remaining gates. The assessment below records the
+proposed approach; it does not commit to a release date.
 
 ## Intended experience
 
