@@ -1,5 +1,5 @@
 {
-  "status": "prepared; signing and notarization pending",
+  "status": "signed and notarized; distribution ZIP verified; not published",
   "architectures": {
     "Contents/MacOS/LumenCode": "x86_64 arm64",
     "Contents/Resources/EngineRuntime/bin/lumencode-engine": "x86_64 arm64",

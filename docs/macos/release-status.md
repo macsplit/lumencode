@@ -1,6 +1,6 @@
 # macOS distribution progress — 18 October 2026
 
-A universal Release application is prepared with both Intel and Apple Silicon
+A universal Release application is signed and notarized with both Intel and Apple Silicon
 slices in the app, engine helper and both bundled Qt libraries. All slices target
 macOS 14. The private Qt Base 5.15.19 build removes the six incompatible Homebrew
 transitive libraries, leaving only Core and Concurrent beside the helper. No
@@ -30,11 +30,23 @@ required fixing the existing `otool -L` dependency reader: architecture headings
 must not be interpreted as imported libraries. Minimum-OS manifests now retain
 the highest requirement across slices.
 
-The user's Developer ID signing probe succeeds after fixing the private-key
-partition rule. The assistant's execution context still cannot access the login
-Keychain, so final signing/notarization may need to run from the user's local
-Terminal. No notarized macOS download has been published, and no store submission
-has been made. The website remains unchanged by this work.
+The user ran the final signing/notarization stages in a local Terminal because
+that execution context could access the login Keychain. Apple accepted submission
+`067ad32b-9922-40c6-9b06-489e4da4afac`. The ticket is stapled and validated.
+
+The final ZIP was extracted into a fresh directory with spaces. Its signature,
+stapled ticket and Gatekeeper check pass (`Notarized Developer ID`). Both extracted
+application slices launch without diagnostics. See the
+[notarization evidence](evidence/notarization.json).
+
+- ZIP: `LumenCode-macOS-universal-0.1.0.zip`.
+- SHA256: `ec53628804d4055500ddb120455efd600aa44f563af6a7b974dd6413fcf05c85`.
+- Application source revision: `247b1babec5b3569efa55e550827490d94a1bfef`;
+  built from a clean worktree.
+
+The notarized ZIP and reports are preserved in the validation directory on
+Kubuntu. No download has been published and no store submission has been made.
+The website remains unchanged by this work.
 
 The prepared version is 0.1.0, build 20261018. Build tools refuse existing output
 paths, keep credentials in Keychain, sign nested code explicitly, check the
