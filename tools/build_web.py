@@ -10,8 +10,8 @@ import shutil
 import subprocess
 
 ROOT = Path(__file__).resolve().parent.parent
-ASSETS = ('index.html', 'app.js', 'worker.js', 'style.css', 'manifest.webmanifest',
-          'icon.svg', 'engine.js', 'engine.wasm')
+ASSETS = ('index.html', 'app.js', 'worker.js', 'storage.js', 'style.css', 'manifest.webmanifest',
+          'icon.svg', 'engine.js', 'engine.wasm', 'engine-version.js')
 
 
 def main():
@@ -43,8 +43,11 @@ def main():
                         '-DQT_HOST_PATH=' + str(args.qt_host.resolve())], env=env, check=True)
         subprocess.run(['cmake', '--build', str(build), '--parallel', str(args.parallel)], env=env, check=True)
     web = build / 'web'
+    engine_version = hashlib.sha256((web / 'engine.wasm').read_bytes() +
+                                    (web / 'engine.js').read_bytes()).hexdigest()
+    (web / 'engine-version.js').write_text('globalThis.LUMENCODE_ENGINE_VERSION = ' + json.dumps(engine_version) + ';\n')
     for name in ASSETS:
-        if name.startswith('engine.'):
+        if name.startswith('engine.') or name == 'engine-version.js':
             if not (web / name).is_file():
                 raise SystemExit('Compile the engine before staging assets')
         else:

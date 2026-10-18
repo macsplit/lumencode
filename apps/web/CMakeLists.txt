@@ -12,7 +12,7 @@ target_link_options(lumencode-web-engine PRIVATE
     -sINITIAL_MEMORY=67108864 -sMAXIMUM_MEMORY=2147483648
     "-sEXPORTED_RUNTIME_METHODS=['FS']"
     -lworkerfs.js)
-foreach(asset index.html app.js worker.js style.css sw.js manifest.webmanifest icon.svg)
+foreach(asset index.html app.js worker.js storage.js style.css sw.js manifest.webmanifest icon.svg)
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${asset}"
         "${CMAKE_BINARY_DIR}/web/${asset}" COPYONLY)
 endforeach()

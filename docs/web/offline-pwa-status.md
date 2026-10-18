@@ -22,6 +22,16 @@ Cancellation/timeouts restart the worker. All essential assets are precached,
 with a cache version derived from asset hashes and a storage-persistence result
 shown to the user.
 
+Derived index facts now persist in IndexedDB, keyed by the compiled engine version,
+project identity and a whole-project manifest. Recent granted folder handles also
+persist, with permission checked on reopening. Imports require reselection and
+verify contents before cache reuse; folder handles use the native-style size/mtime
+metadata check. An unchanged project automatically rebuilds its relationships from
+saved facts on reopening. Changed project/engine inputs invalidate the snapshot
+conservatively, including changed neighbouring files and package metadata. At most
+three index snapshots and eight recent folders are retained. Storage failure falls
+back to session analysis; a clear-saved-state control is available.
+
 ## Evidence and scope
 
 Chromium/Playwright checks run against the actual WebAssembly engine on Kubuntu
@@ -103,8 +113,43 @@ the same-sized scan in 14.6 seconds and captured the live progress display.
 Raw traces/screenshots are under `monorepo-progress/`, `monorepo-webkit/`,
 `progress-ui/` and `progress-fixtures/` in the durable browser evidence directory.
 
-The original user stall still needs their project/browser or a reproduction.
-Longer scans now expose the current file/phase instead of remaining opaque.
+The generated Brotli-data recovery case is now tracked in
+[GitHub issue #13](https://github.com/macsplit/lumencode/issues/13) and deferred at
+the user's request. Longer scans expose the current file/phase instead of
+remaining opaque. No Brotli-specific recovery change or exclusion was introduced.
+
+### Persistent-cache milestone
+
+The canonical engine still produces and consumes the facts cache; browser storage
+adds durability without a separate language or relationship implementation.
+The 102-file complete JSON comparisons and three selected indexed comparisons
+continue to pass. The full lifecycle test now also reopens a remembered OPFS folder
+and restores its relationships after browser/server shutdown and offline restart.
+The native operating-system folder permission dialog remains an interactive check.
+
+Cache-specific checks pass in Chromium and Playwright WebKit: reuse after worker
+and page restarts, edits with identical size/mtime on imports, changed neighbours,
+added/deleted files, simulated engine-version changes, denied storage, index retention
+limits and clearing saved state. Recent-folder handle retention is tested in
+Chromium; WebKit coverage targets imports and derived facts. See [Chromium evidence](evidence/offline-pwa-cache-chromium.json),
+[WebKit evidence](evidence/offline-pwa-cache-webkit.json) and
+[full lifecycle/parity evidence](evidence/offline-pwa-persistence-fixtures.json).
+
+A real 590-file project took **14.9 seconds** for its first relationship build.
+After a full browser restart offline, reimport, content verification and automatic
+relationship restoration took **2.25 seconds**, with all **590 files reused** and
+**1,988 relationships**. The cached index step itself took about **0.3 seconds**.
+See [project restoration evidence](evidence/offline-pwa-project-restoration.json).
+
+The earlier comparison on one frozen 590-file snapshot measured native parallel
+cold indexing at 5.3 seconds, sequential native facts at 12.1 seconds, and one-worker
+browser cold indexing at 14.5 seconds. Both cached rebuilds were about 0.23 seconds.
+Preloading browser files into memory changed cold indexing to 14.2 seconds but
+added 0.92 seconds of preparation, versus 0.07 seconds for file-backed mounting.
+These diagnostic samples support prioritizing scheduling, parallelism and durable
+caches; they are not universal WebAssembly overhead or speedup guarantees. Native
+and browser runs also use different Qt versions and execution/transport paths.
+See the [recorded comparison](evidence/offline-pwa-performance-comparison.json).
 
 ### Next steps
 
@@ -113,12 +158,13 @@ Longer scans now expose the current file/phase instead of remaining opaque.
 2. Extend complete parity comparisons to representative public repositories,
    damaged source and project-wide indexed results. Investigate path case,
    symlinks and dependencies outside the granted root explicitly.
-3. Measure larger-project enumeration, cold/warm index time, interaction latency
-   and memory. The test's observed WebAssembly linear-memory capacity is not peak
-   total browser memory. Improve progress and scheduling from those measurements.
-4. Add persisted recent-folder handles and indexes with versioned invalidation;
-   test permission reconnection, interrupted updates, denied persistence and cache
-   loss. Add native-browser/platform checks beyond Linux Chromium.
+3. Improve cold-index scheduling and parallelism while preserving shared facts and
+   graph logic. Retain responsiveness and memory measurements; observed WebAssembly
+   linear-memory capacity is not peak total browser memory. The generated-data
+   issue remains deferred separately.
+4. Extend cache validation to native permission reconnection, interrupted updates,
+   quota pressure and cache loss. Consider fine-grained invalidation and broader
+   native-browser/platform checks. Public-hosted app update UX remains future work.
 5. Decide the scope and UI tooling for a fuller browser application once those
    gates are satisfied. Packaging/public preview and distribution remain separate
    work; native releases and the public website have not been changed.

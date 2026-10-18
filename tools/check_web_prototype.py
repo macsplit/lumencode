@@ -162,6 +162,8 @@ def main():
             page.wait_for_function("document.getElementById('result').textContent.includes('nextVersionX') && !document.getElementById('refresh').disabled")
             assert 'firstVersion' not in page.locator('#result').inner_text()
             report['directory_handle_enumeration_refresh'] = 'Real OPFS handle through test-supplied picker; OS permission dialog not tested'
+            page.locator('#index').click()
+            page.wait_for_function("!document.getElementById('search').disabled")
 
             # Use the actual directory-import control and its File objects.
             fixture_root = ROOT / 'tests/fixtures/baseline'
@@ -266,6 +268,11 @@ def main():
             page.on('pageerror', lambda error: report['errors'].append(str(error)))
             page.goto(url)
             page.wait_for_function("!document.getElementById('demo').disabled", timeout=90000)
+            page.wait_for_function("document.querySelectorAll('#recent option').length > 1")
+            page.locator('#recent').select_option(label='handle-test')
+            page.wait_for_function("!document.getElementById('search').disabled", timeout=30000)
+            assert '1 reused' in page.locator('#status').inner_text()
+            report['recent_folder_and_index_survive_offline_browser_restart'] = True
             page.evaluate(HARNESS)
             page.evaluate('workerReady')
             fresh_name = 'offline_' + str(time.time_ns())

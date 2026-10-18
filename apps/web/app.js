@@ -6,6 +6,30 @@ const MAX_FILES = 20000;
 let worker, sequence = 0, revision = 0, busy = false, indexed = false, directory, selected, currentFiles = [];
 let pending = new Map();
 let indexActivity, indexTimer, readyNotice = '';
+let recentProjects = [], currentProjectKey;
+
+async function loadRecentProjects() {
+  try { recentProjects = (await LumenCodeStorage.projects()).sort((a, b) => b.opened - a.opened); }
+  catch (_) { recentProjects = []; }
+  const select = $('recent');
+  select.replaceChildren(new Option('Recent folders…', ''));
+  for (const project of recentProjects) select.append(new Option(project.name, project.id));
+  select.hidden = !recentProjects.length;
+  controls();
+}
+async function rememberDirectory(handle) {
+  let id;
+  for (const project of recentProjects) {
+    try { if (await handle.isSameEntry(project.handle)) { id = project.id; break; } }
+    catch (_) { /* Moved or inaccessible recent entry. */ }
+  }
+  id ||= crypto.randomUUID();
+  try {
+    await LumenCodeStorage.saveProject({id, name: handle.name, handle, opened: Date.now()});
+    await loadRecentProjects();
+  } catch (_) { /* File access still works when browser storage is unavailable. */ }
+  return `folder:${id}`;
+}
 
 function stopIndexProgress() {
   clearInterval(indexTimer); indexTimer = undefined; indexActivity = undefined;
@@ -30,8 +54,9 @@ function renderIndexProgress() {
 function noteIndexProgress(data) {
   // Progress messages belong to the one index request running in this worker.
   for (const request of pending.values()) {
-    if (request.operation === 'index') request.touch();
+    if (request.operation === (data.operation || 'index')) request.touch();
   }
+  if (data.operation === 'mount') status(`Checking saved project · ${data.done} / ${data.total}`);
   if (!indexActivity) return;
   const changed = data.path !== indexActivity.path || data.phase !== indexActivity.phase;
   Object.assign(indexActivity, data);
@@ -42,6 +67,8 @@ function status(text) { if ($('status').textContent !== text) $('status').textCo
 function controls() {
   for (const id of ['open', 'import', 'demo']) $(id).disabled = busy;
   $('open').hidden = !('showDirectoryPicker' in window);
+  $('recent').disabled = busy;
+  $('clear-saved').disabled = busy;
   $('refresh').disabled = busy || !directory;
   $('index').disabled = busy || !currentFiles.length;
   $('cancel').disabled = !busy;
@@ -141,7 +168,7 @@ async function enumerate(handle, prefix = '', output = [], token = revision) {
   }
   return output;
 }
-async function mount(files, name) {
+async function mount(files, name, {projectKey, verifyContents = false} = {}) {
   status(`Opening ${files.length} local files…`);
   // New worker clears path/mtime caches as well as the previous graph.
   // Recreate it only for subsequent mounts; no cached source survives a refresh.
@@ -153,7 +180,7 @@ async function mount(files, name) {
   indexed = false; selected = undefined;
   $('search-results').replaceChildren(); $('symbols').replaceChildren();
   $('result').textContent = ''; $('source').textContent = '';
-  const reply = await rpc('mount', {files});
+  const reply = await rpc('mount', {files, projectKey, verifyContents});
   currentFiles = reply.result.paths;
   $('project-name').textContent = name;
   $('file-count').textContent = `(${currentFiles.length})`;
@@ -169,6 +196,7 @@ async function mount(files, name) {
   $('files').replaceChildren(fragment);
   status(`${currentFiles.length} analysable files · ${Math.round(reply.elapsedMs)} ms to mount and list`);
   if (currentFiles.length) await analyse(currentFiles[0].slice('/project/'.length));
+  if (reply.result.cacheRestored) await buildRelationships();
 }
 function renderSymbols(symbols, parent) {
   for (const symbol of symbols || []) {
@@ -207,8 +235,21 @@ async function analyse(path) {
 $('open').onclick = () => task(async () => {
   // Must be called directly from this click to retain user activation.
   directory = await window.showDirectoryPicker({mode: 'read'});
+  currentProjectKey = await rememberDirectory(directory);
   status('Reading folder entries…');
-  await mount(await enumerate(directory), directory.name);
+  await mount(await enumerate(directory), directory.name, {projectKey: currentProjectKey});
+});
+$('recent').onchange = () => task(async () => {
+  const project = recentProjects.find(item => item.id === $('recent').value);
+  $('recent').value = '';
+  if (!project) return;
+  const handle = project.handle;
+  if (await handle.queryPermission({mode: 'read'}) !== 'granted' &&
+      await handle.requestPermission({mode: 'read'}) !== 'granted') throw new Error('Read access was not granted.');
+  directory = handle;
+  currentProjectKey = await rememberDirectory(handle);
+  status('Reading folder entries…');
+  await mount(await enumerate(handle), handle.name, {projectKey: currentProjectKey});
 });
 $('import').onclick = () => $('folder-input').click();
 $('folder-input').onchange = () => task(async () => {
@@ -218,14 +259,15 @@ $('folder-input').onchange = () => task(async () => {
   const root = files[0].webkitRelativePath.split('/')[0];
   const entries = files.map(file => ({path: file.webkitRelativePath.slice(root.length + 1), file})).filter(item => accepted(item.path));
   if (entries.length > MAX_FILES) throw new Error(`Project exceeds the prototype limit of ${MAX_FILES} files.`);
-  await mount(entries, `${root} (imported snapshot)`);
+  currentProjectKey = `import:${root}`;
+  await mount(entries, `${root} (imported snapshot)`, {projectKey: currentProjectKey, verifyContents: true});
   $('folder-input').value = '';
 });
 $('refresh').onclick = () => task(async () => {
   if (await directory.queryPermission({mode: 'read'}) !== 'granted' &&
       await directory.requestPermission({mode: 'read'}) !== 'granted') throw new Error('Read access was not granted.');
   status('Refreshing folder entries…');
-  await mount(await enumerate(directory), directory.name);
+  await mount(await enumerate(directory), directory.name, {projectKey: currentProjectKey});
 });
 $('demo').onclick = () => task(async () => {
   directory = undefined;
@@ -236,7 +278,7 @@ $('demo').onclick = () => task(async () => {
   };
   await mount(Object.entries(sources).map(([path, text]) => ({path, file: new File([text], path, {lastModified: 1700000000000})})), 'Example project');
 });
-$('index').onclick = () => task(async () => {
+async function buildRelationships() {
   const now = performance.now();
   indexActivity = {phase: 'discovering', path: '', done: 0, total: 0, started: now, fileStarted: now};
   $('index-details').hidden = false;
@@ -245,8 +287,16 @@ $('index').onclick = () => task(async () => {
     const reply = await rpc('index'); indexed = true;
     stopIndexProgress();
     if (selected) await analyse(selected);
-    status(`${reply.result.files} files · ${reply.result.crossFileEdges} cross-file relationships · ${(reply.elapsedMs / 1000).toFixed(1)}s index`);
+    status(`${reply.result.files} files · ${reply.result.reusedFromCache} reused · ${reply.result.crossFileEdges} relationships · ${(reply.elapsedMs / 1000).toFixed(1)}s${reply.cacheStatus === 'unavailable' ? ' · browser could not save the index' : ''}`);
   } finally { stopIndexProgress(); }
+}
+$('index').onclick = () => task(buildRelationships);
+$('clear-saved').onclick = () => task(async () => {
+  await LumenCodeStorage.clear();
+  await rpc('forget-cache');
+  currentProjectKey = undefined;
+  await loadRecentProjects();
+  status('Saved indexes and recent folders cleared. The current project remains open.');
 });
 $('search').onkeydown = event => {
   if (event.key === 'Enter') task(async () => {
@@ -273,4 +323,4 @@ async function prepareOffline() {
     $('offline').textContent = persistent ? 'Ready for offline use · persistent storage granted' : 'Ready for offline use · browser storage may be evicted';
   } catch (error) { $('offline').textContent = `Offline setup incomplete: ${error.message}`; }
 }
-busy = true; controls(); startWorker(); prepareOffline();
+busy = true; controls(); startWorker(); prepareOffline(); loadRecentProjects();

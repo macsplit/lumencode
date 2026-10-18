@@ -1,0 +1,23 @@
+{
+  "scope": "Single exploratory measurement on one frozen 590-file monorepo snapshot; same Linux host; not a universal WASM slowdown estimate",
+  "files": 590,
+  "browser": {
+    "cold_ms": 14546.29999999702,
+    "warm_ms": 229.5,
+    "file_backed_mount_ms": 66.3999999910593,
+    "memory_preloaded_cold_ms": 14196.09999999404,
+    "memory_preloaded_mount_ms": 923.9000000059605
+  },
+  "native": {
+    "parallel_cold_ms": 5325.506686000153,
+    "cached_ms": 223.14981000090484,
+    "sequential_facts_ms": 12072.308328002691,
+    "sequential_files": 590
+  },
+  "limits": [
+    "Native Qt 5 and browser Qt 6 differ",
+    "Sequential facts and complete index are different execution/transport paths",
+    "Browser warm measurement before this milestone uses an in-session cache",
+    "MEMFS preloads bytes; WORKERFS remains the UI default"
+  ]
+}

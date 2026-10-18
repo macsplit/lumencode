@@ -16,6 +16,8 @@ a replacement for the native applications.
   times without eagerly copying every file's contents into WebAssembly memory.
 - Service-worker precaching of the entire app and engine for offline startup.
   Cache versions derive from asset hashes; the UI reports storage persistence.
+- Browser-local persistence of canonical index facts and recent granted folders.
+  An unchanged project restores relationships automatically when reopened.
 
 The small interface and worker are plain JavaScript/HTML/CSS to keep the first
 prototype independent of a frontend framework. A TypeScript/component-tooling
@@ -67,6 +69,17 @@ Open `http://localhost:8765/` in desktop Chrome or Edge. Choose **Open folder**
 and grant read access, or choose **Try example**. **Build relationships** enables
 cross-file results and symbol search. Press Enter in search to query the index.
 **Import folder** creates a snapshot; import again to see external changes.
+Granted folders appear under **Recent folders**; the browser may ask for permission
+again when reopening. Imported folders must be selected again. Unchanged imports
+also reuse saved facts after their contents have been verified.
+
+The cache retains up to three index snapshots and eight recent folder handles.
+An engine-version or project change invalidates the saved snapshot. Folder handles
+use identity plus the complete path/size/mtime manifest; imports additionally hash
+contents because they lack a stable directory identity. As with the native cache,
+deliberately preserving size and mtime after editing a granted folder can evade
+metadata invalidation. **Clear saved projects** removes this app's saved facts and
+recent entries; it does not change source files or revoke browser permissions.
 
 Wait for **Ready for offline use** before disconnecting. Browser-private caches
 and permissions belong to that browser profile and origin, including its port.
@@ -107,12 +120,30 @@ the browser, stops the origin server, relaunches the same profile offline and
 analyses newly generated source. The operating-system folder picker and its
 permission dialog are **not** covered by the injected-picker test.
 
+Persistent-cache checks cover worker/page restarts, changed neighbours, edits with
+unchanged size/mtime on imports, added/deleted files, simulated engine-version
+changes, denied storage, bounded retention and clearing saved state:
+
+```sh
+python tools/check_web_cache.py \
+  --web-root /home/user/Code/Coding/lumencode-wasm-build/web \
+  --output /tmp/lumencode-cache-validation
+```
+
+Add `--browser webkit` for an installed Playwright WebKit build. The full prototype
+checker also reopens a remembered OPFS folder and its saved relationships after a
+complete browser restart with the origin server stopped and networking disabled.
+
 ## Current limits and next work
 
-- Directory handles and indexes are session-only; reopening projects is manual.
+- Browser storage can be denied or evicted. Analysis remains available in-session
+  when saved-index storage fails; the completion message reports that limitation.
 - The UI bounds folder enumeration to 20,000 files after exclusions. The shared
   engine retains its own indexed file-size and language selection rules.
-- No filesystem watcher, background indexing, persistent index or editable source.
+- No filesystem watcher, parallel worker pool, background cold indexing or editable source.
+- Invalidation is conservative: any change in the selected project's manifest
+  discards the saved snapshot, including changed auxiliary/dependency files.
+  Fine-grained incremental invalidation remains future work.
 - Indexing shows phase, completed count, current file and elapsed time.
   The 120-second watchdog measures time without progress, rather than total
   build duration. Cancellation/stall recovery restarts the worker and discards
@@ -142,3 +173,9 @@ another browser-engine check, not a substitute for Safari on a physical Mac.
 Full progress traces and a stalled scan's last active file are saved in the
 output directory. The profiler's own default observation limit is 300 seconds;
 it can be adjusted with `--timeout` and is separate from the UI inactivity watchdog.
+
+`--warm` repeats the index using its in-session cache. `--native-helper /path/to/lumencode-engine`
+also measures native cold/warm indexing and sequential fact extraction over the
+same candidate paths. `--filesystem memory` is an explicit diagnostic that
+preloads all selected bytes; the normal UI remains file-backed. Include mount time
+when interpreting that comparison, and keep the selected source tree frozen.

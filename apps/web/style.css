@@ -7,11 +7,12 @@ h1 span { font-size: .8rem; font-weight: 400; color: #a5b7cd; margin-left: .7rem
 header p { margin: .3rem 0 0; color: #a5b7cd; }
 #offline { font-size: .8rem; color: #a5b7cd; max-width: 24rem; }
 nav { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; padding: .8rem 1.6rem; background: #19212b; }
-button, input { font: inherit; border: 1px solid #43526a; background: #202c3b; color: inherit; border-radius: 5px; padding: .4rem .75rem; }
+button, input, select { font: inherit; border: 1px solid #43526a; background: #202c3b; color: inherit; border-radius: 5px; padding: .4rem .75rem; }
 button { cursor: pointer; }
 button:hover:enabled { background: #2a3b50; }
-button:disabled, input:disabled { opacity: .45; cursor: default; }
-button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid #80baff; outline-offset: 2px; }
+button:disabled, input:disabled, select:disabled { opacity: .45; cursor: default; }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid #80baff; outline-offset: 2px; }
+select { max-width: min(16rem, 100%); }
 .search { margin-left: auto; font-size: .85rem; }
 .search input { margin-left: .4rem; max-width: 13rem; }
 .status { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; padding: .6rem 1.6rem; font-size: .85rem; border-bottom: 1px solid #303b49; }
@@ -37,4 +38,5 @@ details { margin-top: 1.1rem; }
 summary { cursor: pointer; color: #9dc5f3; }
 pre { background: #0d1219; padding: 1rem; border-radius: 5px; font: 12px/1.6 ui-monospace, monospace; overflow: auto; max-height: 65vh; }
 footer { padding: 1rem 1.6rem; color: #91a4bb; font-size: .8rem; border-top: 1px solid #303b49; }
+footer button { margin-left: .6rem; font-size: .8rem; }
 @media(max-width: 720px) { header { align-items: flex-start; flex-direction: column; } nav, header, .status { padding-inline: 1rem; } .search { margin-left: 0; } main { grid-template-columns: 1fr; } aside { max-height: 30vh; border-right: 0; border-bottom: 1px solid #303b49; } .analysis { padding: 1rem; } }
