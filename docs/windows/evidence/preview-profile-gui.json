@@ -1,0 +1,849 @@
+{
+  "passed": true,
+  "desktopInput": true,
+  "displayScale": 1.25,
+  "checks": [
+    {
+      "name": "Project tree populated",
+      "passed": true
+    },
+    {
+      "name": "Dark theme",
+      "passed": true
+    },
+    {
+      "name": "Real engine analysis visible",
+      "passed": true
+    },
+    {
+      "name": "Source preview populated",
+      "passed": true
+    },
+    {
+      "name": "Source read-only",
+      "passed": true
+    },
+    {
+      "name": "Source viewer does not retain file undo history",
+      "passed": true
+    },
+    {
+      "name": "Project index built",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.js",
+      "passed": true
+    },
+    {
+      "name": "Selected main.js",
+      "passed": true
+    },
+    {
+      "name": "Selected alias.js",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected main.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected alias.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected broken.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.php",
+      "passed": true
+    },
+    {
+      "name": "Selected Broken.php",
+      "passed": true
+    },
+    {
+      "name": "Selected App.swift",
+      "passed": true
+    },
+    {
+      "name": "Selected sample.py",
+      "passed": true
+    },
+    {
+      "name": "Selected broken.py",
+      "passed": true
+    },
+    {
+      "name": "Rapid navigation keeps latest analysis",
+      "passed": true
+    },
+    {
+      "name": "Rapid navigation keeps latest preview",
+      "passed": true
+    },
+    {
+      "name": "Revisit uses analysis cache",
+      "passed": true
+    },
+    {
+      "name": "Source available while engine analysis is pending",
+      "passed": true
+    },
+    {
+      "name": "Large file exposes all 2000 engine symbols",
+      "passed": true
+    },
+    {
+      "name": "Large source preview complete and read-only",
+      "passed": true
+    },
+    {
+      "name": "RTF preserves Unicode, braces, backslashes and CRLF text",
+      "passed": true
+    },
+    {
+      "name": "Dark palette keyword colour",
+      "passed": true
+    },
+    {
+      "name": "URL inside string retains string colour",
+      "passed": true
+    },
+    {
+      "name": "Keyword inside comment retains comment colour",
+      "passed": true
+    },
+    {
+      "name": "Line navigation handles CRLF and astral Unicode",
+      "passed": true
+    },
+    {
+      "name": "Preview round trip .py",
+      "passed": true
+    },
+    {
+      "name": "Preview round trip .swift",
+      "passed": true
+    },
+    {
+      "name": "Preview round trip .json",
+      "passed": true
+    },
+    {
+      "name": "Preview round trip .txt",
+      "passed": true
+    },
+    {
+      "name": "Large preview has bounded pages and complete copy source",
+      "passed": true
+    },
+    {
+      "name": "Line navigation opens later page with CRLF and Unicode",
+      "passed": true
+    },
+    {
+      "name": "Previous source page restores beginning",
+      "passed": true
+    },
+    {
+      "name": "Last source page disables Next",
+      "passed": true
+    },
+    {
+      "name": "Pending page cannot overwrite a newer selection",
+      "passed": true
+    },
+    {
+      "name": "Profile coloured round trip 0",
+      "passed": true
+    },
+    {
+      "name": "Profile coloured read-only 0",
+      "passed": true
+    },
+    {
+      "name": "Profile coloured round trip 1",
+      "passed": true
+    },
+    {
+      "name": "Profile coloured read-only 1",
+      "passed": true
+    },
+    {
+      "name": "Profile coloured round trip 2",
+      "passed": true
+    },
+    {
+      "name": "Profile coloured read-only 2",
+      "passed": true
+    },
+    {
+      "name": "Profile coloured page 1",
+      "passed": true
+    },
+    {
+      "name": "Profile coloured page 2",
+      "passed": true
+    },
+    {
+      "name": "Profile coloured page 3",
+      "passed": true
+    },
+    {
+      "name": "Profile coloured page 4",
+      "passed": true
+    },
+    {
+      "name": "Profile coloured line navigation",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k round trip 0",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k read-only 0",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k round trip 1",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k read-only 1",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k round trip 2",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k read-only 2",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k page 1",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k page 2",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k page 3",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k page 4",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k page 5",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k page 6",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k page 7",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k page 8",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k page 9",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k page 10",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k page 11",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k page 12",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k page 13",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k page 14",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k page 15",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k page 16",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-128k line navigation",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k round trip 0",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k read-only 0",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k round trip 1",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k read-only 1",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k round trip 2",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k read-only 2",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 1",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 2",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 3",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 4",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 5",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 6",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 7",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 8",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 9",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 10",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 11",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 12",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 13",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 14",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 15",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 16",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 17",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 18",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 19",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 20",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 21",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 22",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 23",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 24",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 25",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 26",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 27",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 28",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 29",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 30",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 31",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 32",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k page 33",
+      "passed": true
+    },
+    {
+      "name": "Profile plain-256k line navigation",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line round trip 0",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line read-only 0",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line round trip 1",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line read-only 1",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line round trip 2",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line read-only 2",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line page 1",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line page 2",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line page 3",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line page 4",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line page 5",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line page 6",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line page 7",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line page 8",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line page 9",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line page 10",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line page 11",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line page 12",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line page 13",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line page 14",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line page 15",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line page 16",
+      "passed": true
+    },
+    {
+      "name": "Profile long-line line navigation",
+      "passed": true
+    },
+    {
+      "name": "Ctrl\u002BF focuses project search",
+      "passed": true
+    },
+    {
+      "name": "Keyboard typing reaches engine search",
+      "passed": true
+    },
+    {
+      "name": "Keyboard clears search and restores files",
+      "passed": true
+    },
+    {
+      "name": "Tab leaves search for another control",
+      "passed": true
+    },
+    {
+      "name": "Alt\u002BLeft navigates back",
+      "passed": true
+    },
+    {
+      "name": "Alt\u002BRight navigates forward",
+      "passed": true
+    },
+    {
+      "name": "Source preview receives keyboard focus",
+      "passed": true
+    },
+    {
+      "name": "Read-only source rejects typing and Undo",
+      "passed": true
+    },
+    {
+      "name": "Keyboard selects source text",
+      "passed": true
+    },
+    {
+      "name": "Project divider resizes with Right arrow",
+      "passed": true
+    },
+    {
+      "name": "Vertical divider ignores perpendicular arrows",
+      "passed": true
+    },
+    {
+      "name": "Overview divider resizes with Right arrow",
+      "passed": true
+    },
+    {
+      "name": "Preview divider resizes with Up arrow",
+      "passed": true
+    },
+    {
+      "name": "Horizontal divider ignores perpendicular arrows",
+      "passed": true
+    },
+    {
+      "name": "Pointer drag resizes project pane",
+      "passed": true
+    },
+    {
+      "name": "Pointer press focuses divider",
+      "passed": true
+    },
+    {
+      "name": "Pointer drag resizes overview pane",
+      "passed": true
+    },
+    {
+      "name": "Pointer drag resizes preview pane",
+      "passed": true
+    },
+    {
+      "name": "Symbol details and calls",
+      "passed": true
+    },
+    {
+      "name": "Navigation history",
+      "passed": true
+    },
+    {
+      "name": "Engine search results: 6 search results",
+      "passed": true
+    },
+    {
+      "name": "Clearing search restores tree",
+      "passed": true
+    },
+    {
+      "name": "Clearing search restores status",
+      "passed": true
+    },
+    {
+      "name": "Selectable source text",
+      "passed": true
+    },
+    {
+      "name": "Minimum pane dimensions",
+      "passed": true
+    },
+    {
+      "name": "Minimum rows fit without clipping",
+      "passed": true
+    }
+  ],
+  "timings": [
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\helper.js",
+      "elapsedMs": 15.4926,
+      "stages": {
+        "CacheHit": true,
+        "PreviewReadyMs": 14.654,
+        "AnalysisReadyMs": 14.7186,
+        "UiApplyMs": 2.001100000000001,
+        "CompletedMs": 15.3271
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\main.js",
+      "elapsedMs": 118.7409,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 8.0668,
+        "AnalysisReadyMs": 117.3664,
+        "UiApplyMs": 3.8456000000000046,
+        "CompletedMs": 118.5554
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\alias.js",
+      "elapsedMs": 111.4657,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 4.7249,
+        "AnalysisReadyMs": 110.4827,
+        "UiApplyMs": 2.2301000000000073,
+        "CompletedMs": 111.285
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\helper.ts",
+      "elapsedMs": 238.6942,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 16.9445,
+        "AnalysisReadyMs": 237.1302,
+        "UiApplyMs": 2.5276999999999816,
+        "CompletedMs": 238.4777
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\main.ts",
+      "elapsedMs": 105.2911,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 3.8401,
+        "AnalysisReadyMs": 104.3424,
+        "UiApplyMs": 1.3425000000000011,
+        "CompletedMs": 105.0878
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\alias.ts",
+      "elapsedMs": 131.9943,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 4.6359,
+        "AnalysisReadyMs": 130.8534,
+        "UiApplyMs": 2.3840000000000146,
+        "CompletedMs": 131.7766
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_recovery\\broken.ts",
+      "elapsedMs": 103.2774,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 5.5408,
+        "AnalysisReadyMs": 100.3586,
+        "UiApplyMs": 4.305199999999999,
+        "CompletedMs": 103.0827
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\php_basic\\helper.php",
+      "elapsedMs": 167.8677,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 46.1213,
+        "AnalysisReadyMs": 165.7751,
+        "UiApplyMs": 3.7913999999999817,
+        "CompletedMs": 167.5636
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\php_recovery\\Broken.php",
+      "elapsedMs": 115.1331,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 8.8831,
+        "AnalysisReadyMs": 113.4186,
+        "UiApplyMs": 4.189899999999994,
+        "CompletedMs": 114.8324
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\swift_basic\\App.swift",
+      "elapsedMs": 116.5131,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 8.9512,
+        "AnalysisReadyMs": 114.7305,
+        "UiApplyMs": 3.397299999999987,
+        "CompletedMs": 116.1291
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\python_basic\\sample.py",
+      "elapsedMs": 186.1831,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 81.0782,
+        "AnalysisReadyMs": 184.8114,
+        "UiApplyMs": 3.919099999999986,
+        "CompletedMs": 185.893
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\python_recovery\\broken.py",
+      "elapsedMs": 101.2751,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 7.9619,
+        "AnalysisReadyMs": 99.5015,
+        "UiApplyMs": 3.798500000000004,
+        "CompletedMs": 100.9582
+      }
+    },
+    {
+      "operation": "select-large",
+      "symbols": 2000,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 72.096,
+        "AnalysisReadyMs": 606.46,
+        "UiApplyMs": 32.52040000000011,
+        "CompletedMs": 617.8132
+      }
+    }
+  ],
+  "inputDiagnostics": [
+    {
+      "operation": "project-pane-drag",
+      "before": 306.3999938964844,
+      "after": 338.3999938964844,
+      "coordinates": "root 1137.5999755859375x698.4000244140625, scale 1.25, center 309.6,248, client 41,70, screen 428,380",
+      "events": [
+        "moved 309.6,248 left=False",
+        "pressed 309.6,248 left=True",
+        "root pressed 309.6,248 source=Border",
+        "moved 317.6,248 left=True",
+        "moved 325.6,248 left=True",
+        "moved 333.6,248 left=True",
+        "moved 341.6,248 left=True"
+      ]
+    },
+    {
+      "operation": "overview-pane-drag",
+      "before": 425.6000061035156,
+      "after": 457.6000061035156,
+      "coordinates": "root 1137.5999755859375x698.4000244140625, scale 1.25, center 773.60004,248, client 41,70, screen 1008,380"
+    },
+    {
+      "operation": "preview-pane-drag",
+      "before": 220,
+      "after": 252,
+      "coordinates": "root 1137.5999755859375x698.4000244140625, scale 1.25, center 568.8,447.2, client 41,70, screen 752,629"
+    }
+  ],
+  "failure": null,
+  "heartbeat": {
+    "nominalIntervalMs": 16,
+    "samples": 318,
+    "maxGapMs": 1566.2466000000022,
+    "p95GapMs": 745.6023999999998
+  },
+  "limitations": "Programmatic workflows plus foreground-guarded OS-injected keyboard/pointer checks on this VM. Not human-input, accessibility, multiple-DPI or clean-machine acceptance."
+}

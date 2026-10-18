@@ -1,0 +1,11 @@
+{
+  "macBefore": 109,
+  "macAfter": 109,
+  "windowsAfter": 109,
+  "newMacFailures": [],
+  "macRetentionRegressions": [],
+  "macMeanRetention": 0.9614678899082568,
+  "windowsMeanRetention": 0.9614678899082568,
+  "windowsFailures": 0,
+  "limitations": "Existing fixture damage probe, not full public-corpus damage acceptance; pre-existing retention losses remain."
+}

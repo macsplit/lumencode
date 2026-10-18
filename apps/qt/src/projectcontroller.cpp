@@ -44,6 +44,15 @@ const TSLanguage *tree_sitter_c_sharp(void);
 
 namespace {
 
+QString cliHelperPath()
+{
+#ifdef Q_OS_WIN
+    return QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("lumencode-cli.exe"));
+#else
+    return QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("lumencode-cli"));
+#endif
+}
+
 constexpr qint64 kMaxPreviewBytes = 256 * 1024;
 constexpr int kHelperStartTimeoutMs = 3000;
 constexpr int kHelperSelectedFileTimeoutMs = 15000;
@@ -299,7 +308,7 @@ QVariantMap parseAnalysisViaHelper(const QString &targetPath, int finishTimeoutM
                                                             info.fileName().isEmpty() ? targetPath : info.fileName(),
                                                             QString());
 
-    const QString helperPath = QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("lumencode-cli"));
+    const QString helperPath = cliHelperPath();
     if (!QFileInfo::exists(helperPath)) {
         fallback.insert(QStringLiteral("summary"), QStringLiteral("Analysis unavailable: parser helper not found"));
         appendAnalysisNotice(fallback, QStringLiteral("error"),
@@ -1554,7 +1563,7 @@ void ProjectController::startIndexBuild()
 {
     cancelIndexBuild();
     m_indexSnapshot.reset();
-    const QString helperPath = QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("lumencode-cli"));
+    const QString helperPath = cliHelperPath();
     if (m_indexMode == IndexMode::Off || !qEnvironmentVariableIsEmpty("LUMENCODE_NO_INDEX") || !QFileInfo::exists(helperPath)) {
         m_indexStatus = {{QStringLiteral("state"), QStringLiteral("off")}};
         emit indexStatusChanged();

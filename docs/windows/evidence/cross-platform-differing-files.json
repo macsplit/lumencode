@@ -1,0 +1,21 @@
+[
+  "Alamofire/Tests/AuthenticationInterceptorTests.swift",
+  "Alamofire/Tests/DataStreamTests.swift",
+  "Alamofire/Tests/LeaksTests.swift",
+  "Alamofire/Tests/MultipartFormDataTests.swift",
+  "Alamofire/Tests/RequestTests.swift",
+  "Alamofire/Tests/RetryPolicyTests.swift",
+  "Alamofire/Tests/ServerTrustEvaluatorTests.swift",
+  "Alamofire/Tests/TLSEvaluationTests.swift",
+  "Alamofire/Tests/TestHelpers.swift",
+  "CodeIgniter/system/core/Hooks.php",
+  "CodeIgniter/tests/mocks/database/db.php",
+  "cJSON/tests/unity/test/spec/generate_module_existing_file_spec.rb",
+  "cJSON/tests/unity/test/tests/test_generate_test_runner.rb",
+  "okio/okio-wasifilesystem/src/wasmWasiMain/kotlin/okio/WasiFileSystem.kt",
+  "okio/okio-wasifilesystem/src/wasmWasiMain/kotlin/okio/internal/ErrnoException.kt",
+  "okio/okio/src/commonMain/kotlin/okio/internal/FileSystem.kt",
+  "okio/okio/src/commonMain/kotlin/okio/internal/RealBufferedSource.kt",
+  "okio/okio/src/jvmMain/kotlin/okio/internal/ResourceFileSystem.kt",
+  "okio/okio/src/zlibMain/kotlin/okio/internal/ZipFiles.kt"
+]

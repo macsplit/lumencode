@@ -57,7 +57,7 @@ SKIP_LANGUAGES = {"json", "html", "css", "unknown"}
 def dump(path: Path) -> dict | None:
     try:
         proc = subprocess.run([str(CLI_PATH), "--dump-file", str(path)], stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE, text=True, timeout=20, check=False)
+                              stderr=subprocess.PIPE, text=True, encoding="utf-8", timeout=20, check=False)
     except subprocess.TimeoutExpired:
         return None
     if proc.returncode != 0:
@@ -132,7 +132,7 @@ def probe_file(path: Path, rng_seed: int) -> list[dict]:
     level, units = units_for(symbols)
     if level == "none":
         return []
-    text = path.read_text(errors="replace")
+    text = path.read_text(encoding="utf-8", errors="replace")
     lines = text.split("\n")
     picked = pick_target(units, len(lines), rng)
     if not picked:
@@ -159,7 +159,7 @@ def probe_file(path: Path, rng_seed: int) -> list[dict]:
                 indent = mutated[line_no - 1][: len(mutated[line_no - 1]) - len(mutated[line_no - 1].lstrip())]
                 mutated.insert(line_no - 1, indent + payload)
             copy = workdir / path.name
-            copy.write_text("\n".join(mutated))
+            copy.write_text("\n".join(mutated), encoding="utf-8", newline="\n")
             damaged = dump(copy)
             if damaged is None:
                 results.append({"file": str(path), "language": language, "mutation": mutation, "level": level,

@@ -3,7 +3,6 @@
 #include "weblinks.h"
 
 #include <QDir>
-#include <QElapsedTimer>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -835,12 +834,11 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
 {
     constexpr int kMaxBlankedLines = 12;
     constexpr int kMaxCandidatesPerRound = 10;
-    // Deterministic budget (parse attempts), so results do not depend on
-    // machine load; the time cap is only a safety net for pathological input.
+    // Bound repair by parse attempts, not elapsed time: a partial greedy search
+    // chosen at a wall-clock cutoff produces different facts on slower hosts.
     // Each trial re-parses the whole file, so large files get fewer trials
     // (80 up to ~48 KB, down to 8 for ~480 KB and above).
     const int kMaxTrialParses = qBound(8, static_cast<int>(80LL * 48 * 1024 / qMax<qsizetype>(1, original.size())), 80);
-    constexpr qint64 kBudgetMs = 1500;
     int trialParses = 0;
 
     AstRepairResult result;
@@ -856,8 +854,6 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
         return result;
     }
 
-    QElapsedTimer timer;
-    timer.start();
     const QVector<int> starts = lineStartOffsets(original);
     const QSet<int> suspectRows = textuallySuspectRows(original, starts);
     const QList<AstInsertion> insertions = closerInsertionCandidates(original, starts);
@@ -890,7 +886,7 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
         return ordered;
     };
 
-    while (!current.isClean() && blanked.size() < kMaxBlankedLines && timer.elapsed() < kBudgetMs
+    while (!current.isClean() && blanked.size() < kMaxBlankedLines
            && trialParses < kMaxTrialParses) {
         QList<int> bestRows;
         AstErrorScore bestScore = current;
@@ -912,9 +908,10 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
                 if (trial == result.source) {
                     continue;
                 }
-                if (++trialParses > kMaxTrialParses) {
+                if (trialParses >= kMaxTrialParses) {
                     return;
                 }
+                ++trialParses;
                 AstRepairCandidates trialCandidates;
                 const AstErrorScore trialScore = scoreAstSource(parser, trial, &trialCandidates);
                 // Textual suspects must be decisive (a clean parse); a partial
@@ -928,16 +925,13 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
                     bestCandidates = trialCandidates;
                     bestSource = trial;
                 }
-                if (timer.elapsed() >= kBudgetMs) {
-                    return;
-                }
             }
         };
 
         // A lost closer (indentation drop past an open block): writing the
         // closers back counts only if the file then parses cleanly.
         for (const AstInsertion &insertion : insertions) {
-            if (insertionTrialsUsed >= kMaxInsertionTrials || !bestRows.isEmpty()) {
+            if (insertionTrialsUsed >= kMaxInsertionTrials || trialParses >= kMaxTrialParses || !bestRows.isEmpty()) {
                 break;
             }
             if (insertedRows.contains(insertion.row) || blanked.contains(insertion.row)) {
@@ -963,7 +957,7 @@ static AstRepairResult repairSourceForAst(const QByteArray &original, TSLanguage
                 trials.append({trial, insertion.openRow});
             }
             for (const auto &trial : std::as_const(trials)) {
-                if (insertionTrialsUsed >= kMaxInsertionTrials) {
+                if (insertionTrialsUsed >= kMaxInsertionTrials || trialParses >= kMaxTrialParses) {
                     break;
                 }
                 ++insertionTrialsUsed;
@@ -4077,6 +4071,30 @@ static QString resolvePhpIncludePath(const QString &filePath, const QString &lit
         }
     }
     return {};
+}
+
+// Source identifiers are case-sensitive even when the host filesystem is not.
+// Check only components below the known source root, preserving caller spelling
+// of drive/home paths and avoiding a platform-specific resolver branch.
+static QString caseExactSourceFile(const QString &sourceRoot, const QString &relative)
+{
+    const QString candidate = QDir(sourceRoot).filePath(relative);
+    if (!QFileInfo(candidate).isFile()) {
+        return {};
+    }
+    const QStringList parts = relative.split(QLatin1Char('/'), Qt::SkipEmptyParts);
+    QDir directory(sourceRoot);
+    for (int index = 0; index < parts.size(); ++index) {
+        const bool last = index + 1 == parts.size();
+        const QDir::Filters filter = (last ? QDir::Files : QDir::Dirs) | QDir::Hidden | QDir::NoDotAndDotDot;
+        if (!directory.entryList(filter, QDir::NoSort).contains(parts.at(index), Qt::CaseSensitive)) {
+            return {};
+        }
+        if (!last && !directory.cd(parts.at(index))) {
+            return {};
+        }
+    }
+    return QFileInfo(candidate).absoluteFilePath();
 }
 
 // Java imports resolved to source files: `package a.b;` gives the source
@@ -12041,9 +12059,9 @@ QVariantMap SymbolParser::parseKotlin(const QString &path, const QString &text) 
             for (int length = parts.size(); length > 0 && resolved.isEmpty() && length >= parts.size() - 1; --length) {
                 for (const QString &root : std::as_const(sourceRoots)) {
                     for (const QString &suffix : {QStringLiteral(".kt"), QStringLiteral(".java")}) {
-                        const QString candidate = root + QLatin1Char('/') + parts.mid(0, length).join(QLatin1Char('/')) + suffix;
-                        if (resolved.isEmpty() && QFileInfo(candidate).isFile()) {
-                            resolved = QFileInfo(candidate).absoluteFilePath();
+                        const QString relative = parts.mid(0, length).join(QLatin1Char('/')) + suffix;
+                        if (resolved.isEmpty()) {
+                            resolved = caseExactSourceFile(root, relative);
                         }
                     }
                 }
@@ -12683,7 +12701,9 @@ QVariantMap SymbolParser::parseRuby(const QString &path, const QString &text) co
         const QString target = match.captured(2);
         QString resolved;
         auto tryPath = [&](const QString &candidate) {
-            const QString withSuffix = candidate.endsWith(QStringLiteral(".rb")) ? candidate : candidate + QStringLiteral(".rb");
+            // Normalize before probing: Windows collapses a nonexistent
+            // "lib/.." itself, while POSIX requires that directory to exist.
+            const QString withSuffix = QDir::cleanPath(candidate.endsWith(QStringLiteral(".rb")) ? candidate : candidate + QStringLiteral(".rb"));
             if (resolved.isEmpty() && QFileInfo(withSuffix).isFile()) {
                 resolved = QFileInfo(withSuffix).absoluteFilePath();
             }

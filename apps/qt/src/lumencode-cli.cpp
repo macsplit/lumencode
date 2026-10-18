@@ -215,6 +215,7 @@ int main(int argc, char *argv[])
 
     if (parser.isSet(indexFactsOption)) {
         QTextStream qin(stdin);
+        qin.setCodec("UTF-8");
         SymbolParser symbolParser;
         while (true) {
             const QString line = qin.readLine();
@@ -524,6 +525,7 @@ int main(int argc, char *argv[])
 
     if (parser.isSet(interactiveOption)) {
         QTextStream qin(stdin);
+        qin.setCodec("UTF-8");
         while (true) {
             const QString line = qin.readLine();
             if (line.isNull()) {

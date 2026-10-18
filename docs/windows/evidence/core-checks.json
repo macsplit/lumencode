@@ -1,0 +1,37 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "name": "Unicode and quoted arguments preserved",
+      "passed": true
+    },
+    {
+      "name": "Invalid JSON rejected",
+      "passed": true
+    },
+    {
+      "name": "Nonzero exit rejected",
+      "passed": true
+    },
+    {
+      "name": "Output bounded",
+      "passed": true
+    },
+    {
+      "name": "Timeout terminates helper",
+      "passed": true
+    },
+    {
+      "name": "Missing engine reported",
+      "passed": true
+    },
+    {
+      "name": "Cancellation terminates worker descendants",
+      "passed": true
+    },
+    {
+      "name": "Shared engine Unicode CRLF indexing",
+      "passed": true
+    }
+  ]
+}

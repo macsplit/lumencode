@@ -1,0 +1,267 @@
+{
+  "passed": false,
+  "normalization": "Only absolute snapshot-root path prefixes/separators; no fields or array ordering discarded",
+  "comparisons": [
+    {
+      "reference": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "actual": "Linux-6.8.0-142-generic-x86_64-with-glibc2.39",
+      "files": 19,
+      "excludedFromReference": [],
+      "excludedFromActual": [],
+      "missingFiles": [],
+      "differentInputs": [],
+      "failures": [],
+      "differences": [
+        {
+          "file": "Alamofire/Tests/AuthenticationInterceptorTests.swift",
+          "fields": [
+            "$.analysisConfidence: value differs",
+            "$.analysisDamagedLines: array length differs",
+            "$.analysisNotices[0].message: value differs",
+            "$.analysisSourceMode: value differs",
+            "$.dependencies[0].confidence: value differs",
+            "$.dependencies[0].sourceMode: value differs",
+            "$.dependencies[1].confidence: value differs",
+            "$.dependencies[1].sourceMode: value differs",
+            "$.dependencies[2].confidence: value differs",
+            "$.dependencies[2].sourceMode: value differs",
+            "$.symbols[0].calledBy[0].confidence: value differs",
+            "$.symbols[0].calledBy[1].confidence: value differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        },
+        {
+          "file": "CodeIgniter/system/core/Hooks.php",
+          "fields": [
+            "$.dependencies[1].path: value differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        },
+        {
+          "file": "CodeIgniter/tests/mocks/database/db.php",
+          "fields": [
+            "$.dependencies[0].path: value differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        },
+        {
+          "file": "okio/okio-wasifilesystem/src/wasmWasiMain/kotlin/okio/WasiFileSystem.kt",
+          "fields": [
+            "$.dependencies[11].bindings: missing key",
+            "$.dependencies[11].path: value differs",
+            "$.dependencies[13].bindings: missing key",
+            "$.dependencies[13].path: value differs",
+            "$.dependencies[21].bindings: missing key",
+            "$.dependencies[21].path: value differs",
+            "$.dependencies[37].bindings: missing key",
+            "$.dependencies[37].path: value differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        },
+        {
+          "file": "okio/okio-wasifilesystem/src/wasmWasiMain/kotlin/okio/internal/ErrnoException.kt",
+          "fields": [
+            "$.dependencies[2].bindings: missing key",
+            "$.dependencies[2].path: value differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        },
+        {
+          "file": "okio/okio/src/commonMain/kotlin/okio/internal/FileSystem.kt",
+          "fields": [
+            "$.dependencies[6].bindings: missing key",
+            "$.dependencies[6].path: value differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        },
+        {
+          "file": "okio/okio/src/commonMain/kotlin/okio/internal/RealBufferedSource.kt",
+          "fields": [
+            "$.dependencies[10].bindings: missing key",
+            "$.dependencies[10].path: value differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        },
+        {
+          "file": "okio/okio/src/jvmMain/kotlin/okio/internal/ResourceFileSystem.kt",
+          "fields": [
+            "$.dependencies[14].bindings: missing key",
+            "$.dependencies[14].path: value differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        },
+        {
+          "file": "okio/okio/src/zlibMain/kotlin/okio/internal/ZipFiles.kt",
+          "fields": [
+            "$.dependencies[6].bindings: missing key",
+            "$.dependencies[6].path: value differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        }
+      ],
+      "languages": {
+        "swift": 9,
+        "php": 2,
+        "ruby": 2,
+        "kotlin": 6
+      },
+      "modes": {
+        "recovered": 4,
+        "ast": 7,
+        "heuristic": 8
+      }
+    },
+    {
+      "reference": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "actual": "Windows-11-10.0.26200-SP0",
+      "files": 19,
+      "excludedFromReference": [],
+      "excludedFromActual": [],
+      "missingFiles": [],
+      "differentInputs": [],
+      "failures": [],
+      "differences": [
+        {
+          "file": "Alamofire/Tests/DataStreamTests.swift",
+          "fields": [
+            "$.analysisDamagedLines[0]: value differs",
+            "$.analysisDamagedLines[1]: value differs",
+            "$.analysisNotices[0].message: value differs",
+            "$.summary: value differs",
+            "$.symbols: array length differs",
+            "$.symbols[0].callSites: missing key",
+            "$.symbols[0].parameters: missing key",
+            "$.symbols[0].returns: missing key",
+            "$.symbols[0].signatureSource: missing key",
+            "$.symbols[0].kind: value differs",
+            "$.symbols[0].line: value differs",
+            "$.symbols[0].members: array length differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        },
+        {
+          "file": "Alamofire/Tests/LeaksTests.swift",
+          "fields": [
+            "$.symbols[0].members[0].callSites[3].qualifier: value differs",
+            "$.symbols[1].members[0].callSites[3].qualifier: value differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        },
+        {
+          "file": "Alamofire/Tests/MultipartFormDataTests.swift",
+          "fields": [
+            "$.symbols[3].members[5].callSites[3].line: value differs",
+            "$.symbols[3].members[5].callSites[3].name: value differs",
+            "$.symbols[3].members[5].callSites[4].qualifier: missing key",
+            "$.symbols[3].members[5].callSites[4].line: value differs",
+            "$.symbols[3].members[5].callSites[4].name: value differs",
+            "$.symbols[3].members[5].callSites[5].line: value differs",
+            "$.symbols[3].members[5].callSites[5].name: value differs",
+            "$.symbols[3].members[5].callSites[6].qualifier: missing key",
+            "$.symbols[3].members[5].callSites[6].line: value differs",
+            "$.symbols[3].members[5].callSites[6].name: value differs",
+            "$.symbols[3].members[5].callSites[7].line: value differs",
+            "$.symbols[3].members[5].callSites[7].name: value differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        },
+        {
+          "file": "Alamofire/Tests/RequestTests.swift",
+          "fields": [
+            "$.symbols[0].members[6].callSites: array length differs",
+            "$.symbols[0].members[6].callSites[3].qualifier: missing key",
+            "$.symbols[0].members[6].callSites[3].line: value differs",
+            "$.symbols[0].members[6].callSites[3].name: value differs",
+            "$.symbols[0].members[6].callSites[4].qualifier: missing key",
+            "$.symbols[0].members[6].callSites[4].line: value differs",
+            "$.symbols[0].members[6].callSites[4].name: value differs",
+            "$.symbols[0].members[6].callSites[5].line: value differs",
+            "$.symbols[0].members[6].callSites[5].name: value differs",
+            "$.symbols[0].members[6].callSites[6].qualifier: missing key",
+            "$.symbols[0].members[6].callSites[6].name: value differs",
+            "$.symbols[0].members[6].callSites[7].name: value differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        },
+        {
+          "file": "Alamofire/Tests/RetryPolicyTests.swift",
+          "fields": [
+            "$.moduleCallSites[1].qualifier: value differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        },
+        {
+          "file": "Alamofire/Tests/ServerTrustEvaluatorTests.swift",
+          "fields": [
+            "$.symbols[0].members[12].callSites: array length differs",
+            "$.symbols[0].members[12].callSites[1].name: value differs",
+            "$.symbols[0].members[12].callSites[2].line: value differs",
+            "$.symbols[0].members[12].callSites[2].name: value differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        },
+        {
+          "file": "Alamofire/Tests/TLSEvaluationTests.swift",
+          "fields": [
+            "$.analysisDamagedLines[0]: value differs",
+            "$.analysisDamagedLines[1]: value differs",
+            "$.analysisNotices[0].message: value differs",
+            "$.summary: value differs",
+            "$.symbols: array length differs",
+            "$.symbols[0].members[4].callSites: array length differs",
+            "$.symbols[0].members[4].callSites[1].name: value differs",
+            "$.symbols[0].members[4].callSites[2].line: value differs",
+            "$.symbols[0].members[4].callSites[2].name: value differs",
+            "$.symbols[1].kind: value differs",
+            "$.symbols[1].line: value differs",
+            "$.symbols[1].members: array length differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        },
+        {
+          "file": "Alamofire/Tests/TestHelpers.swift",
+          "fields": [
+            "$.moduleCallSites: array length differs",
+            "$.moduleCallSites[8].line: value differs",
+            "$.moduleCallSites[8].name: value differs",
+            "$.moduleCallSites[9].qualifier: missing key",
+            "$.moduleCallSites[9].line: value differs",
+            "$.moduleCallSites[9].name: value differs",
+            "$.moduleCallSites[10].qualifier: missing key",
+            "$.moduleCallSites[10].line: value differs",
+            "$.moduleCallSites[10].name: value differs",
+            "$.moduleCallSites[11].line: value differs",
+            "$.moduleCallSites[11].name: value differs",
+            "$.moduleCallSites[12].qualifier: missing key"
+          ],
+          "sameValuesAfterSortingArrays": false
+        },
+        {
+          "file": "cJSON/tests/unity/test/spec/generate_module_existing_file_spec.rb",
+          "fields": [
+            "$.dependencies[0].path: value differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        },
+        {
+          "file": "cJSON/tests/unity/test/tests/test_generate_test_runner.rb",
+          "fields": [
+            "$.dependencies[0].path: value differs"
+          ],
+          "sameValuesAfterSortingArrays": false
+        }
+      ],
+      "languages": {
+        "swift": 9,
+        "php": 2,
+        "ruby": 2,
+        "kotlin": 6
+      },
+      "modes": {
+        "ast": 8,
+        "recovered": 3,
+        "heuristic": 8
+      }
+    }
+  ]
+}

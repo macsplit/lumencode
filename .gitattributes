@@ -1,0 +1,6 @@
+# Provenance checks and parser fixtures require the original bytes on every OS.
+third_party/** -text
+tests/fixtures/** -text
+engine/** text eol=lf
+apps/windows/** text eol=lf
+tools/*windows* text eol=lf

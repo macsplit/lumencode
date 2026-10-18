@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>LumenCode.Windows</RootNamespace>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
+    <ProjectReference Include="../LumenCode.Core/LumenCode.Core.csproj" />
+  </ItemGroup>
+  <!-- Unpackaged WinUI publish currently omits the application's PRI/XBF assets.
+       Include them in the publish graph so direct dotnet publish works too.
+       https://github.com/microsoft/WindowsAppSDK/issues/6720 -->
+  <Target Name="PublishApplicationXamlResources" AfterTargets="ComputeFilesToPublish">
+    <Error Condition="!Exists('$(TargetDir)$(AssemblyName).pri')" Text="The application PRI resource index was not built." />
+    <ItemGroup>
+      <_ApplicationXamlResource Include="$(TargetDir)$(AssemblyName).pri;$(TargetDir)**\*.xbf" />
+      <ResolvedFileToPublish Include="@(_ApplicationXamlResource)" Exclude="@(ResolvedFileToPublish)">
+        <RelativePath>%(_ApplicationXamlResource.RecursiveDir)%(_ApplicationXamlResource.Filename)%(_ApplicationXamlResource.Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+</Project>

@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "issues": [],
+  "checked_files": 20,
+  "native_build_commit": "4d164034b992a7818b54c8ce30d831c6c875c850",
+  "limitations": "File/resource and source provenance gate; GUI startup, rendering and input are separate checks."
+}

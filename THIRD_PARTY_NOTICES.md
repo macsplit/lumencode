@@ -104,6 +104,10 @@ LumenCode vendors parser sources directly in `third_party/` so the application c
 - License: MIT
 - License file retained at: `third_party/tree-sitter-swift/LICENSE`
 - Migration input hashes: `third_party/provenance.json`
+- Local portability patch: the Swift external scanner's operator-suppression
+  masks use explicitly 64-bit constants for token 32. This removes undefined
+  shifts on MSVC/other C compilers without changing grammar tables or language
+  policy. Original and patched hashes are recorded in `third_party/provenance.json`.
 
 ## Additional Upstream Notices
 

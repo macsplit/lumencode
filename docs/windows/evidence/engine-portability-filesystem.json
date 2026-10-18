@@ -1,0 +1,59 @@
+[
+  {
+    "platform": "darwin",
+    "probes": [
+      {
+        "source": "CodeIgniter/system/core/Hooks.php",
+        "caseVariant": "CodeIgniter/system/core/hooks.php",
+        "sourceExists": true,
+        "caseVariantExists": true,
+        "sameFile": true
+      },
+      {
+        "source": "CodeIgniter/tests/mocks/database/db.php",
+        "caseVariant": "CodeIgniter/tests/mocks/database/DB.php",
+        "sourceExists": true,
+        "caseVariantExists": true,
+        "sameFile": true
+      }
+    ]
+  },
+  {
+    "platform": "linux",
+    "probes": [
+      {
+        "source": "CodeIgniter/system/core/Hooks.php",
+        "caseVariant": "CodeIgniter/system/core/hooks.php",
+        "sourceExists": true,
+        "caseVariantExists": false,
+        "sameFile": false
+      },
+      {
+        "source": "CodeIgniter/tests/mocks/database/db.php",
+        "caseVariant": "CodeIgniter/tests/mocks/database/DB.php",
+        "sourceExists": true,
+        "caseVariantExists": false,
+        "sameFile": false
+      }
+    ]
+  },
+  {
+    "platform": "win32",
+    "probes": [
+      {
+        "source": "CodeIgniter/system/core/Hooks.php",
+        "caseVariant": "CodeIgniter/system/core/hooks.php",
+        "sourceExists": true,
+        "caseVariantExists": true,
+        "sameFile": true
+      },
+      {
+        "source": "CodeIgniter/tests/mocks/database/db.php",
+        "caseVariant": "CodeIgniter/tests/mocks/database/DB.php",
+        "sourceExists": true,
+        "caseVariantExists": true,
+        "sameFile": true
+      }
+    ]
+  }
+]

@@ -1,0 +1,29 @@
+[
+  {
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "file": "lumencode-portability-full-mac.json.gz",
+    "sha256": "67d6a3bd1b02a62a3b57fd735e43b2490d9c5d80b97875a1dfd40f24e0031d00",
+    "files": 6297,
+    "errors": 0,
+    "slowestFile": "Alamofire/Tests/AuthenticationInterceptorTests.swift",
+    "slowestMs": 1742.6199578912929
+  },
+  {
+    "platform": "Linux-6.8.0-142-generic-x86_64-with-glibc2.39",
+    "file": "lumencode-portability-full-linux.json.gz",
+    "sha256": "1a94397a4b6df71166c9d43bc4e0635b8c1e408caec1183abfe10cefb827ad81",
+    "files": 6297,
+    "errors": 0,
+    "slowestFile": "Alamofire/Tests/AuthenticationInterceptorTests.swift",
+    "slowestMs": 1408.523005004099
+  },
+  {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "file": "lumencode-portability-full-windows.json.gz",
+    "sha256": "f1b526527e84a4f9dbafebb3f43cab06a4621079010b27dc6b4a6ccff341d026",
+    "files": 6297,
+    "errors": 0,
+    "slowestFile": "Alamofire/Tests/AuthenticationInterceptorTests.swift",
+    "slowestMs": 4607.0929999999635
+  }
+]

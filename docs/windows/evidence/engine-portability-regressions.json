@@ -1,0 +1,74 @@
+{
+  "fixtures": {
+    "mac-qt": {
+      "cases": 104,
+      "cases_passed": 104,
+      "assertions": 638,
+      "assertions_passed": 638,
+      "unique_invocations": 102,
+      "errors": 0
+    },
+    "linux-qt": {
+      "cases": 104,
+      "cases_passed": 104,
+      "assertions": 638,
+      "assertions_passed": 638,
+      "unique_invocations": 102,
+      "errors": 0
+    },
+    "windows-qt": {
+      "cases": 104,
+      "cases_passed": 104,
+      "assertions": 638,
+      "assertions_passed": 638,
+      "unique_invocations": 102,
+      "errors": 0
+    },
+    "mac-swift": {
+      "cases": 104,
+      "cases_passed": 104,
+      "assertions": 638,
+      "assertions_passed": 638,
+      "unique_invocations": 102,
+      "errors": 0
+    }
+  },
+  "contracts": {
+    "mac-qt": {
+      "files": 102,
+      "contract_issues": [],
+      "compared_to_original": true,
+      "qt_hash_seed": 0,
+      "differing_files": []
+    },
+    "linux-qt": {
+      "files": 102,
+      "contract_issues": [],
+      "compared_to_original": true,
+      "qt_hash_seed": 0,
+      "differing_files": []
+    },
+    "windows-qt": {
+      "files": 102,
+      "contract_issues": [],
+      "compared_to_original": true,
+      "qt_hash_seed": 0,
+      "differing_files": []
+    },
+    "mac-swift": {
+      "files": 102,
+      "contract_issues": [],
+      "compared_to_original": true,
+      "qt_hash_seed": 0,
+      "differing_files": []
+    }
+  },
+  "swiftIntegration": {
+    "tests": 9,
+    "failures": 0
+  },
+  "windowsGuiInput": {
+    "checks": 67,
+    "passed": true
+  }
+}

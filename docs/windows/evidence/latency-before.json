@@ -1,0 +1,263 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "name": "Project tree populated",
+      "passed": true
+    },
+    {
+      "name": "Dark theme",
+      "passed": true
+    },
+    {
+      "name": "Real engine analysis visible",
+      "passed": true
+    },
+    {
+      "name": "Source preview populated",
+      "passed": true
+    },
+    {
+      "name": "Source read-only",
+      "passed": true
+    },
+    {
+      "name": "Project index built",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.js",
+      "passed": true
+    },
+    {
+      "name": "Selected main.js",
+      "passed": true
+    },
+    {
+      "name": "Selected alias.js",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected main.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected alias.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected broken.ts",
+      "passed": true
+    },
+    {
+      "name": "Selected helper.php",
+      "passed": true
+    },
+    {
+      "name": "Selected Broken.php",
+      "passed": true
+    },
+    {
+      "name": "Selected App.swift",
+      "passed": true
+    },
+    {
+      "name": "Selected sample.py",
+      "passed": true
+    },
+    {
+      "name": "Selected broken.py",
+      "passed": true
+    },
+    {
+      "name": "Symbol details and calls",
+      "passed": true
+    },
+    {
+      "name": "Navigation history",
+      "passed": true
+    },
+    {
+      "name": "Engine search results: 6 search results",
+      "passed": true
+    },
+    {
+      "name": "Clearing search restores tree",
+      "passed": true
+    },
+    {
+      "name": "Clearing search restores status",
+      "passed": true
+    },
+    {
+      "name": "Selectable source text",
+      "passed": true
+    },
+    {
+      "name": "Minimum pane dimensions",
+      "passed": true
+    },
+    {
+      "name": "Minimum rows fit without clipping",
+      "passed": true
+    }
+  ],
+  "timings": [
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\helper.js",
+      "elapsedMs": 20.4279,
+      "stages": {
+        "CacheHit": true,
+        "PreviewReadyMs": 20.0861,
+        "AnalysisReadyMs": 11.5973,
+        "UiApplyMs": 8.6815,
+        "CompletedMs": 20.2789
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\main.js",
+      "elapsedMs": 99.5275,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 99.1725,
+        "AnalysisReadyMs": 92.4615,
+        "UiApplyMs": 6.924300000000002,
+        "CompletedMs": 99.3861
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\js_commonjs\\alias.js",
+      "elapsedMs": 135.0077,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 134.31,
+        "AnalysisReadyMs": 119.3009,
+        "UiApplyMs": 15.446900000000014,
+        "CompletedMs": 134.748
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\helper.ts",
+      "elapsedMs": 137.7486,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 137.1503,
+        "AnalysisReadyMs": 130.4925,
+        "UiApplyMs": 7.017499999999984,
+        "CompletedMs": 137.5102
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\main.ts",
+      "elapsedMs": 147.1726,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 146.3894,
+        "AnalysisReadyMs": 140.7094,
+        "UiApplyMs": 6.176500000000004,
+        "CompletedMs": 146.8861
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_module\\alias.ts",
+      "elapsedMs": 138.3983,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 137.8806,
+        "AnalysisReadyMs": 134.337,
+        "UiApplyMs": 3.8166000000000224,
+        "CompletedMs": 138.1537
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\ts_recovery\\broken.ts",
+      "elapsedMs": 136.6563,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 130.3865,
+        "AnalysisReadyMs": 119.7868,
+        "UiApplyMs": 16.572100000000006,
+        "CompletedMs": 136.359
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\php_basic\\helper.php",
+      "elapsedMs": 120.2247,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 119.7225,
+        "AnalysisReadyMs": 112.0199,
+        "UiApplyMs": 8.0124,
+        "CompletedMs": 120.0324
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\php_recovery\\Broken.php",
+      "elapsedMs": 213.1823,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 212.1655,
+        "AnalysisReadyMs": 202.3913,
+        "UiApplyMs": 10.472399999999993,
+        "CompletedMs": 212.864
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\swift_basic\\App.swift",
+      "elapsedMs": 136.1274,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 135.1496,
+        "AnalysisReadyMs": 126.9674,
+        "UiApplyMs": 8.708500000000015,
+        "CompletedMs": 135.6762
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\python_basic\\sample.py",
+      "elapsedMs": 123.7661,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 122.7942,
+        "AnalysisReadyMs": 116.4748,
+        "UiApplyMs": 7.116299999999995,
+        "CompletedMs": 123.5913
+      }
+    },
+    {
+      "operation": "select",
+      "path": "tests\\fixtures\\baseline\\python_recovery\\broken.py",
+      "elapsedMs": 135.0556,
+      "stages": {
+        "CacheHit": false,
+        "PreviewReadyMs": 133.6362,
+        "AnalysisReadyMs": 119.9103,
+        "UiApplyMs": 14.736899999999991,
+        "CompletedMs": 134.6475
+      }
+    }
+  ],
+  "failure": null,
+  "heartbeat": {
+    "nominalIntervalMs": 16,
+    "samples": 65,
+    "maxGapMs": 155.11849999999998,
+    "p95GapMs": 101.40269999999987
+  },
+  "limitations": "Programmatic workflow checks on this VM, not mouse/keyboard, accessibility, multiple-DPI or clean-machine acceptance."
+}

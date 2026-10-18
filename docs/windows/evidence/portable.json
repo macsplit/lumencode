@@ -1,0 +1,10 @@
+{
+    "passed":  true,
+    "archiveSha256":  "424daa204d874c0c198ed39b717189d364723b14b34ccdc392d99f818eae9961",
+    "filesVerified":  565,
+    "sourceCommit":  "9d685425eb2552e042c043d427f3b9270c68118a",
+    "sourceWorktreeDirty":  true,
+    "guiChecks":  47,
+    "executableSignature":  "NotSigned",
+    "limitations":  "Fresh extraction and child process without developer discovery paths on the existing VM. Installed system components remain; not clean-machine, installer, signing or SmartScreen acceptance."
+}
