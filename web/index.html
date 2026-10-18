@@ -3,63 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Explore local source trees, symbols and code relationships with LumenCode. Open source, with native Linux, macOS and Windows interfaces sharing one analysis engine.">
     <title>LumenCode - Structural Code Explorer</title>
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20261018">
 </head>
 <body>
     <div class="container">
         <header>
             <h1>LumenCode</h1>
             <p class="tagline">Structural code explorer for local source trees</p>
+            <p class="platforms">Linux · macOS · Windows <span class="beta">Beta</span></p>
         </header>
 
         <main>
-            <section class="screenshot">
-                <img src="screenshot.png" alt="LumenCode Screenshot">
+            <section class="screenshots" aria-label="Application screenshots">
+                <figure class="screenshot">
+                    <a href="screenshot-linux.png"><img src="screenshot-linux.png" alt="LumenCode on Linux, showing the project tree, symbols and source details" width="1680" height="952" fetchpriority="high"></a>
+                    <figcaption>Linux · Qt / Kirigami</figcaption>
+                </figure>
+                <div class="platform-gallery">
+                    <figure class="screenshot">
+                        <a href="screenshot-macos.png"><img src="screenshot-macos.png" alt="The native macOS beta exploring a JavaScript file" width="2480" height="1424" loading="lazy"></a>
+                        <figcaption>macOS · SwiftUI beta</figcaption>
+                    </figure>
+                    <figure class="screenshot">
+                        <a href="screenshot-windows.png"><img src="screenshot-windows.png" alt="The native Windows beta showing symbols and a syntax-coloured source preview" width="1422" height="873" loading="lazy"></a>
+                        <figcaption>Windows · WinUI beta</figcaption>
+                    </figure>
+                </div>
             </section>
 
             <section class="about">
-                <h2>About</h2>
-                <p>LumenCode is a developer tool that focuses on code shape rather than freeform text editing. It reads a filesystem tree, extracts symbols from supported source files, and allows you to drill from folders to files to symbols to member details.</p>
-                <p>It is intentionally filesystem-aware, parser-assisted, and non-editing.</p>
+                <h2>Explore the shape of your code</h2>
+                <p>LumenCode reads a local source tree and lets you drill from folders to files, symbols and member details. Browse declarations, inspect syntax-coloured source snippets, and follow relationships across files.</p>
+                <p>It is a code explorer rather than an editor. The Linux, macOS and Windows interfaces share the same parser-assisted analysis engine, including its language heuristics and recovery for incomplete code.</p>
             </section>
 
             <section class="specs">
-                <h2>Technical Specifications</h2>
-                <ul>
-                    <li><strong>Languages:</strong> PHP, JS, TS, TSX, QML, CSS, HTML, JSON, Python, C/C++, Java, C#, Rust, Swift, and Objective-C.</li>
-                    <li><strong>Parsers:</strong> Tree-sitter integration for most major languages.</li>
-                    <li><strong>Features:</strong> Denser three-pane explorer, syntax-colored snippets, cross-file relation analysis, and crash-isolated background analysis.</li>
-                </ul>
+                <h2>Language support</h2>
+                <p>Explore projects in PHP, JavaScript, TypeScript, TSX, QML, CSS, HTML, JSON, Python, C/C++, Java, C#, Rust, Swift, Objective-C and more. Support combines Tree-sitter parsers with language-specific heuristics; the available detail varies by language.</p>
             </section>
 
             <section class="install">
-                <h2>Installation</h2>
-                <p>LumenCode is available as a Flatpak repository with one-click URL install, as a standalone bundle, or can be built from source.</p>
-                
+                <h2>Try LumenCode</h2>
+                <p>LumenCode is open source and in active beta development.</p>
                 <div class="install-options">
                     <div class="option">
-                        <h3>Flatpak</h3>
-                        <p>Install from the hosted Flatpak repository:</p>
-                        <p><a href="app.lumencode.LumenCode.flatpakref" class="download-button">Install LumenCode via Flatpak</a></p>
+                        <h3>Linux</h3>
+                        <p>Install the x86_64 build from our hosted Flatpak repository:</p>
+                        <p><a href="app.lumencode.LumenCode.flatpakref" class="download-button">Install Linux beta</a></p>
 <pre><code>flatpak install --user --from https://lumencode.app/app.lumencode.LumenCode.flatpakref</code></pre>
-                        <p><small>Repository: <a href="lumencode.flatpakrepo">lumencode.flatpakrepo</a></small></p>
-                        <p><small>Bundle fallback: <a href="app.lumencode.LumenCode.flatpak">app.lumencode.LumenCode.flatpak</a></small></p>
-                        <p><small>ID: <code>app.lumencode.LumenCode</code></small></p>
+                        <p class="small">Already installed? Run <code>flatpak update app.lumencode.LumenCode</code>.</p>
+                        <p class="small"><a href="lumencode.flatpakrepo">Repository file</a> · <a href="app.lumencode.LumenCode.flatpak">Standalone bundle</a></p>
                     </div>
                     <div class="option">
-                        <h3>From Source</h3>
-<pre><code>git clone https://github.com/macsplit/lumencode.git
-cd lumencode
-cmake -S . -B build
-cmake --build build</code></pre>
+                        <h3>macOS &amp; Windows</h3>
+                        <p>Native SwiftUI and WinUI versions are working betas. Signed downloads and App Store / Microsoft Store releases are not available yet.</p>
+                        <p>For now, build from source using the platform instructions:</p>
+                        <p><a href="https://github.com/macsplit/lumencode/tree/main/apps/macos">macOS build instructions</a><br>
+                        <a href="https://github.com/macsplit/lumencode/tree/main/apps/windows">Windows build instructions</a></p>
                     </div>
                 </div>
             </section>
 
             <section class="source">
-                <p>Source code is available on <a href="https://github.com/macsplit/lumencode">GitHub</a>.</p>
+                <p><a href="https://github.com/macsplit/lumencode">Source code &amp; documentation</a> · <a href="https://github.com/macsplit/lumencode/issues">Report an issue</a></p>
             </section>
         </main>
 

@@ -18,6 +18,9 @@ parser.add_argument('--output', type=Path, required=True)
 parser.add_argument('--palette', type=Path, default=Path.home() / '.config/kdeglobals')
 parser.add_argument('roots', nargs='*', type=Path)
 args = parser.parse_args()
+for executable in ('lumencode-gui-smoke', 'lumencode-cli'):
+    if not (args.build.resolve() / 'bin' / executable).is_file():
+        parser.error(f'Missing {executable}; build both lumencode-gui-smoke and lumencode-cli first')
 if not args.palette.is_file():
     parser.error('No KDE palette found; supply --palette /path/to/kdeglobals')
 output = args.output.resolve()
