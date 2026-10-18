@@ -140,7 +140,14 @@ complete browser restart with the origin server stopped and networking disabled.
   when saved-index storage fails; the completion message reports that limitation.
 - The UI bounds folder enumeration to 20,000 files after exclusions. The shared
   engine retains its own indexed file-size and language selection rules.
-- No filesystem watcher, parallel worker pool, background cold indexing or editable source.
+- Cold indexing uses up to four independent parser workers, bounded by reported
+  CPU concurrency. Projects with fewer than 128 stale files use one worker to avoid
+  startup overhead. Cached rebuilds do not start parser workers. Every worker maps
+  the same read-only files, preserving cross-file import resolution; the coordinator
+  alone builds the canonical graph and saves its facts cache.
+- Each parser has its own WebAssembly memory. This trades additional memory for
+  shorter cold scans; it does not require shared memory or special isolation headers.
+- No filesystem watcher, automatic background cold indexing or editable source.
 - Invalidation is conservative: any change in the selected project's manifest
   discards the saved snapshot, including changed auxiliary/dependency files.
   Fine-grained incremental invalidation remains future work.
@@ -179,3 +186,19 @@ also measures native cold/warm indexing and sequential fact extraction over the
 same candidate paths. `--filesystem memory` is an explicit diagnostic that
 preloads all selected bytes; the normal UI remains file-backed. Include mount time
 when interpreting that comparison, and keep the selected source tree frozen.
+
+`--workers 1`, `--workers 2` and `--workers 4` select reproducible parser counts
+for cold-index comparisons. The default follows the UI policy. Reported aggregate
+linear-memory capacity is an upper-bound diagnostic across module heaps, not total
+browser memory or a sampled peak RSS measurement.
+
+To compare complete indexed fixture JSON with one, two and four parsers, including
+pool failure, cancellation, recovery and cached rebuilds:
+
+```sh
+python tools/check_web_parallel.py \
+  --web-root /home/user/Code/Coding/lumencode-wasm-build/web \
+  --output /tmp/lumencode-parallel-validation
+```
+
+Add `--browser webkit` for the second browser engine.

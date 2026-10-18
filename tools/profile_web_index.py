@@ -36,6 +36,7 @@ def main():
     parser.add_argument('--browser', choices=('chromium', 'webkit'), default='chromium')
     parser.add_argument('--filesystem', choices=('workerfs', 'memory'), default='workerfs',
                         help='Memory mode preloads all selected bytes for an I/O diagnostic; not the UI default')
+    parser.add_argument('--workers', type=int, choices=(1, 2, 3, 4), default=None)
     parser.add_argument('--warm', action='store_true', help='Repeat indexing with the in-session facts cache')
     parser.add_argument('--native-helper', type=Path, help='Also measure native cold/warm indexing and sequential facts')
     parser.add_argument('--timeout', type=float, default=300)
@@ -45,7 +46,7 @@ def main():
         functools.partial(Quiet, directory=str(args.web_root.resolve())))
     threading.Thread(target=server.serve_forever, daemon=True).start()
     report = {'project': str(args.project.resolve()), 'browser': args.browser,
-              'filesystem': args.filesystem, 'completed': False}
+              'filesystem': args.filesystem, 'workers': args.workers, 'completed': False}
     try:
         with sync_playwright() as p:
             browser = (p.chromium.launch(executable_path=args.chromium, headless=True, args=['--no-sandbox'])
@@ -67,7 +68,7 @@ def main():
               return {selectedFiles: files.length, candidates: result.result.paths.length,
                 paths: result.result.paths, elapsedMs: result.elapsedMs};
             }""", args.filesystem)
-            page.evaluate("""() => {
+            page.evaluate("""workers => {
               window.profileIndex = () => {
               window.events = []; window.indexResult = null; window.indexError = null;
               window.heartbeat = {ticks: 0, maxGap: 0, last: performance.now()};
@@ -75,14 +76,14 @@ def main():
                 const now = performance.now(); heartbeat.maxGap = Math.max(heartbeat.maxGap, now-heartbeat.last);
                 heartbeat.last = now; heartbeat.ticks++;
               }, 10);
-              testRequest('index').then(result => {indexResult = result; clearInterval(heartbeatTimer);})
+              testRequest('index', workers == null ? {} : {workers}).then(result => {indexResult = result; clearInterval(heartbeatTimer);})
                 .catch(error => {indexError = String(error); clearInterval(heartbeatTimer);});
               };
               testWorker.addEventListener('message', ({data}) => {
                 if (data.type === 'progress') events.push({...data, at: performance.now()});
               });
               profileIndex();
-            }""")
+            }""", args.workers)
             report.update(observe_index(page, args.timeout))
             report['completed'] = bool(report['result']) and not report['error']
             if report['completed'] and args.warm:

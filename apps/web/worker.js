@@ -97,7 +97,7 @@ self.onmessage = async ({data}) => {
           cacheStatus = cacheRestored ? 'restored' : 'cold';
         } catch (_) { cacheStatus = 'unavailable'; }
       }
-      result = JSON.parse(engine.request(JSON.stringify({operation: 'candidates', root: '/project'})));
+      result = data.parserOnly ? {} : JSON.parse(engine.request(JSON.stringify({operation: 'candidates', root: '/project'})));
       result.cacheRestored = cacheRestored;
     } else if (operation === 'forget-cache') {
       persistentCacheKey = null;

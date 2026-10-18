@@ -12,13 +12,13 @@
 The browser worker maps granted/imported `File` objects into read-only WORKERFS,
 retains paths and modification times, and invokes the shared parser and project
 index. The web-specific adaptation replaces native helper subprocesses and Qt
-Concurrent batching with in-worker analysis; facts, recovery and graph matching
+Concurrent batching with independently scheduled worker analysis; facts, recovery and graph matching
 remain canonical. A new worker on refresh clears static path/mtime caches.
 
 The minimal dark interface supports folder selection/import, an example project,
 symbols and source, project relationships and search. No framework was needed to
 prove the engine boundary. Source text is rendered as text rather than HTML.
-Cancellation/timeouts restart the worker. All essential assets are precached,
+Cancellation/timeouts terminate the coordinator and every parser worker. All essential assets are precached,
 with a cache version derived from asset hashes and a storage-persistence result
 shown to the user.
 
@@ -151,6 +151,56 @@ caches; they are not universal WebAssembly overhead or speedup guarantees. Nativ
 and browser runs also use different Qt versions and execution/transport paths.
 See the [recorded comparison](evidence/offline-pwa-performance-comparison.json).
 
+### Parallel indexing milestone
+
+Cold file extraction now runs across a bounded pool of independent workers. Every
+worker uses the same compiled engine and mounts the complete read-only project so
+neighbour/import resolution retains its context. JavaScript schedules files; the
+canonical C++ parser produces facts, and the canonical project index consumes them,
+constructs relationships and saves the cache. Native helper execution remains the
+default when supplied facts are absent. A shared planning function applies exactly
+the same cache validity rules before extraction and during the final build.
+
+The automatic pool uses at most four parsers, leaves one reported CPU available,
+and starts only for at least 128 stale candidates. Smaller projects and fully
+cached builds stay on the coordinator. Larger files start first to reduce the long
+tail. The client owns every worker directly: cancellation, restart and parser
+failure terminate the entire pool; failed extraction does not publish a partial
+index. No shared memory, pthread build or isolation headers are required.
+
+[Complete indexed comparisons](evidence/offline-pwa-parallel-validation.json) pass
+for all **122 candidate fixture files** with one, two and four parsers in Chromium
+and Playwright WebKit on Linux. Comparisons retain complete arrays and values,
+without sorting in the test. They exposed hash-dependent incoming-call and tied
+HTTP-route ordering; shared graph traversal and tied route results now use stable
+ordering on every platform. Cache reuse after a worker restart, injected parser
+failure, whole-pool cancellation and recovery also pass in both engines.
+[Lifecycle regression evidence](evidence/offline-pwa-parallel-lifecycle.json)
+retains the 102-file native/browser comparisons, three selected native indexed
+comparisons, offline restart, saved-folder reopening and progress watchdog checks.
+The rebuilt Linux native helper passes all 102 analysis contracts. A visible
+590-file interface check selected four workers automatically, finished in about
+five seconds, saved its facts and had no horizontal overflow at 1440 × 900.
+
+Sequential measurements on the same frozen 590-file project and host:
+
+| Parser workers | Cold index | Cached rebuild | Aggregate WASM capacity |
+| --- | ---: | ---: | ---: |
+| 1 | 14.83 s | 0.37 s | 92 MiB |
+| 2 | 8.64 s | 0.43 s | 233 MiB |
+| 4 | 5.11 s | 0.42 s | 361 MiB |
+
+All runs reported zero failed files, 6,708 definitions, 27,293 call sites and
+1,988 cross-file relationships. These single-run Chromium diagnostics show about
+**2.9× faster cold indexing**; they are not universal performance promises.
+Playwright WebKit on Linux completed the same four-parser scan in **5.79 seconds**
+with a **0.62-second** cached rebuild. The main-thread 10 ms heartbeat's largest
+observed gap in Chromium was 56 ms in the four-parser
+run. Capacity sums include each parser's largest observed heap plus the
+coordinator heap; they are not sampled peak RSS or total browser memory. Children
+are terminated before final graph construction. See the
+[recorded performance comparison](evidence/offline-pwa-parallel-performance.json).
+
 ### Next steps
 
 1. Try the actual Open folder permission flow interactively in desktop Chrome
@@ -158,10 +208,10 @@ See the [recorded comparison](evidence/offline-pwa-performance-comparison.json).
 2. Extend complete parity comparisons to representative public repositories,
    damaged source and project-wide indexed results. Investigate path case,
    symlinks and dependencies outside the granted root explicitly.
-3. Improve cold-index scheduling and parallelism while preserving shared facts and
-   graph logic. Retain responsiveness and memory measurements; observed WebAssembly
-   linear-memory capacity is not peak total browser memory. The generated-data
-   issue remains deferred separately.
+3. Broaden scheduling measurements on lower-memory hardware and representative
+   projects before tuning the pool limit/cutoff further. Preserve shared facts and
+   graph logic. Observed WebAssembly capacity is not total browser memory. The
+   generated-data issue remains deferred separately.
 4. Extend cache validation to native permission reconnection, interrupted updates,
    quota pressure and cache loss. Consider fine-grained invalidation and broader
    native-browser/platform checks. Public-hosted app update UX remains future work.

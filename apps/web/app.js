@@ -93,7 +93,7 @@ function rpc(operation, extra = {}) {
   });
 }
 function startWorker() {
-  const instance = worker = new Worker('worker.js');
+  const instance = worker = new LumenCodeWorker();
   worker.onmessage = ({data}) => {
     if (instance !== worker) return;
     if (data.type === 'ready') {

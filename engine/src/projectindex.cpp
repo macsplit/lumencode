@@ -4,6 +4,8 @@
 #include "symbolparser.h"
 #endif
 
+#include <algorithm>
+#include <tuple>
 #include <QCryptographicHash>
 #include <QDateTime>
 #include <QDir>
@@ -1124,6 +1126,48 @@ QHash<QString, QVariantMap> runHelperBatch(const QString &helperPath, const QStr
 
 } // namespace
 
+namespace {
+QStringList prepareFiles(const BuildOptions &options, const std::shared_ptr<Snapshot> &snapshot,
+                         const QString &cachePath, QStringList &paths, int &reused)
+{
+    paths = candidateFiles(snapshot->root, options.maxFiles);
+    for (const QString &extraRoot : options.alsoRoots) {
+        if (paths.size() >= options.maxFiles) {
+            break;
+        }
+        paths += candidateFiles(QFileInfo(extraRoot).absoluteFilePath(), options.maxFiles - paths.size());
+    }
+    paths.removeDuplicates();
+    const QString fingerprint = helperFingerprint(options.helperPath);
+    const QHash<QString, CacheEntry> cache = loadCache(cachePath, snapshot->root, fingerprint);
+    QStringList stale;
+    reused = 0;
+    for (const QString &path : paths) {
+        const QFileInfo info(path);
+        const auto cached = cache.constFind(path);
+        if (cached != cache.constEnd() && cached->size == info.size()
+            && cached->modified == info.lastModified().toMSecsSinceEpoch()) {
+            snapshot->files.insert(path, factsFromVariant(cached->facts));
+            ++reused;
+        } else {
+            stale.append(path);
+        }
+    }
+
+    return stale;
+}
+} // namespace
+
+QStringList pendingFiles(const BuildOptions &options)
+{
+    auto snapshot = std::make_shared<Snapshot>();
+    snapshot->root = QFileInfo(options.root).absoluteFilePath();
+    const QString cachePath = options.cachePath.isEmpty() ? defaultCachePath(snapshot->root) : options.cachePath;
+    QStringList paths;
+    int reused = 0;
+    return prepareFiles(options, snapshot, cachePath, paths, reused);
+}
+
 SnapshotPtr build(const BuildOptions &options)
 {
     const auto activity = [&](const QString &phase, const QString &path, int done, int total) {
@@ -1136,29 +1180,10 @@ SnapshotPtr build(const BuildOptions &options)
     snapshot->root = QFileInfo(options.root).absoluteFilePath();
     const QString cachePath = options.cachePath.isEmpty() ? defaultCachePath(snapshot->root) : options.cachePath;
 
-    QStringList paths = candidateFiles(snapshot->root, options.maxFiles);
-    for (const QString &extraRoot : options.alsoRoots) {
-        if (paths.size() >= options.maxFiles) {
-            break;
-        }
-        paths += candidateFiles(QFileInfo(extraRoot).absoluteFilePath(), options.maxFiles - paths.size());
-    }
-    paths.removeDuplicates();
-    const QString fingerprint = helperFingerprint(options.helperPath);
-    const QHash<QString, CacheEntry> cache = loadCache(cachePath, snapshot->root, fingerprint);
-    QStringList stale;
+    QStringList paths;
     int reused = 0;
-    for (const QString &path : paths) {
-        const QFileInfo info(path);
-        const auto cached = cache.constFind(path);
-        if (cached != cache.constEnd() && cached->size == info.size()
-            && cached->modified == info.lastModified().toMSecsSinceEpoch()) {
-            snapshot->files.insert(path, factsFromVariant(cached->facts));
-            ++reused;
-        } else {
-            stale.append(path);
-        }
-    }
+    const QStringList stale = prepareFiles(options, snapshot, cachePath, paths, reused);
+    const QString fingerprint = helperFingerprint(options.helperPath);
 
     // Stale files: helper batches in parallel; crashes are retried per file.
     QList<QStringList> batches;
@@ -1176,7 +1201,18 @@ SnapshotPtr build(const BuildOptions &options)
             QMutexLocker locker(&mutex);
             activity(QStringLiteral("analysing"), batch.isEmpty() ? QString() : batch.first(), done, paths.size());
         }
-        QHash<QString, QVariantMap> produced = runHelperBatch(options.helperPath, batch);
+        QHash<QString, QVariantMap> produced;
+        QStringList missing;
+        for (const QString &path : batch) {
+            const auto supplied = options.suppliedFacts.constFind(path);
+            if (supplied != options.suppliedFacts.constEnd()) produced.insert(path, supplied.value());
+            else missing.append(path);
+        }
+        if (!missing.isEmpty()) {
+            const auto extracted = runHelperBatch(options.helperPath, missing);
+            for (auto it = extracted.cbegin(); it != extracted.cend(); ++it)
+                produced.insert(it.key(), it.value());
+        }
         for (const QString &path : batch) {
             if (!produced.contains(path) && batch.size() > 1) {
                 const QHash<QString, QVariantMap> single = runHelperBatch(options.helperPath, {path});
@@ -1218,9 +1254,14 @@ SnapshotPtr build(const BuildOptions &options)
         saveCache(cachePath, snapshot->root, fingerprint, snapshot->files);
     }
 
+    // Stable traversal keeps relation arrays independent of hash seeds and
+    // extraction completion order, on native and browser builds alike.
+    QStringList orderedPaths = snapshot->files.keys();
+    orderedPaths.sort();
     // Definitions and the edge graph.
     activity(QStringLiteral("definitions"), {}, 0, snapshot->files.size());
-    for (auto it = snapshot->files.cbegin(); it != snapshot->files.cend(); ++it) {
+    for (const QString &path : orderedPaths) {
+        const auto it = snapshot->files.constFind(path);
         for (const Definition &definition : it->definitions) {
             snapshot->definitionsByName.insert(definition.name, snapshot->allDefinitions.size());
             snapshot->allDefinitions.append(definition);
@@ -1245,7 +1286,8 @@ SnapshotPtr build(const BuildOptions &options)
     int sites = 0;
     int unresolved = 0;
     int linked = 0;
-    for (auto it = snapshot->files.cbegin(); it != snapshot->files.cend(); ++it) {
+    for (const QString &path : orderedPaths) {
+        const auto it = snapshot->files.constFind(path);
         activity(QStringLiteral("linking"), it.key(), linked++, snapshot->files.size());
         for (const CallSite &site : it->callSites) {
             ++sites;
@@ -1267,7 +1309,8 @@ SnapshotPtr build(const BuildOptions &options)
 
     activity(QStringLiteral("routes"), {}, 0, snapshot->files.size());
     // Router files mounted under a prefix (Express app.use('/api', router)).
-    for (auto it = snapshot->files.cbegin(); it != snapshot->files.cend(); ++it) {
+    for (const QString &path : orderedPaths) {
+        const auto it = snapshot->files.constFind(path);
         for (const QVariant &entry : it->routes) {
             const QVariantMap route = entry.toMap();
             const QString router = route.value(QStringLiteral("mounts")).toString();
@@ -1284,7 +1327,8 @@ SnapshotPtr build(const BuildOptions &options)
 
     int httpCalls = 0;
     int routed = 0;
-    for (auto it = snapshot->files.cbegin(); it != snapshot->files.cend(); ++it) {
+    for (const QString &path : orderedPaths) {
+        const auto it = snapshot->files.constFind(path);
         activity(QStringLiteral("routes"), it.key(), routed++, snapshot->files.size());
         for (const QVariant &call : it->httpCalls) {
             ++httpCalls;
@@ -1450,6 +1494,11 @@ QVector<Edge> resolveHttpCall(const Snapshot &snapshot, const QString &fromPath,
         edge.confidence = bestScore == 2 ? QStringLiteral("medium") : QStringLiteral("low");
         result.append(edge);
     }
+    // Hash iteration differs between engine instances. Preserve every equally
+    // good match, but present them in a stable order on every platform.
+    std::sort(result.begin(), result.end(), [](const Edge &a, const Edge &b) {
+        return std::tie(a.to.path, a.to.line, a.to.name) < std::tie(b.to.path, b.to.line, b.to.name);
+    });
     return result;
 }
 

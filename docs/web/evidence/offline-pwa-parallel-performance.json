@@ -1,0 +1,474 @@
+{
+  "method": "Sequential browser runs on one frozen project snapshot on Kubuntu; one diagnostic sample per configuration. Mount time excluded. No simultaneous benchmark runs.",
+  "host_logical_cpus": 32,
+  "host_memory_gib": 62,
+  "filesystem": "workerfs",
+  "memory_scope": "Sum of each parser largest observed WASM capacity plus final coordinator capacity; not sampled peak RSS or total browser memory.",
+  "results": {
+    "1": {
+      "browser": "chromium",
+      "workers": 1,
+      "completed": true,
+      "result": {
+        "id": 2,
+        "result": {
+          "analysed": 590,
+          "buildMs": 14801,
+          "cachePath": "/cache/project-index.json",
+          "callSites": 27293,
+          "crossFileEdges": 1988,
+          "declarationsPaired": 395,
+          "definitions": 6708,
+          "edgesByEvidence": {
+            "import": 917,
+            "package": 41,
+            "qualifier": 56,
+            "qualifier-project": 1,
+            "unique-name": 973
+          },
+          "edgesByLanguage": {
+            "cpp": 773,
+            "csharp": 49,
+            "go": 2,
+            "java": 3,
+            "kotlin": 4,
+            "objc": 1,
+            "php": 6,
+            "python": 25,
+            "ruby": 1,
+            "rust": 199,
+            "script": 565,
+            "scss": 2,
+            "shell": 5,
+            "swift": 91,
+            "ts": 257,
+            "vbnet": 5
+          },
+          "failed": 0,
+          "files": 590,
+          "httpCalls": 7,
+          "httpEdges": 8,
+          "reusedFromCache": 0,
+          "unresolvedCallSites": 25305
+        },
+        "cacheStatus": "session",
+        "elapsedMs": 14832.199999988079,
+        "linearMemoryBytes": 96665600,
+        "parserWorkers": 1,
+        "aggregateLinearMemoryCapacityBytes": 96665600
+      },
+      "heartbeat": {
+        "ticks": 1481,
+        "maxGap": 23.600000008940697,
+        "last": 15629.29999999702
+      },
+      "wall_seconds": 15.291886389997671,
+      "warm": {
+        "result": {
+          "id": 3,
+          "result": {
+            "analysed": 0,
+            "buildMs": 208,
+            "cachePath": "/cache/project-index.json",
+            "callSites": 27293,
+            "crossFileEdges": 1988,
+            "declarationsPaired": 395,
+            "definitions": 6708,
+            "edgesByEvidence": {
+              "import": 917,
+              "package": 41,
+              "qualifier": 56,
+              "qualifier-project": 1,
+              "unique-name": 973
+            },
+            "edgesByLanguage": {
+              "cpp": 773,
+              "csharp": 49,
+              "go": 2,
+              "java": 3,
+              "kotlin": 4,
+              "objc": 1,
+              "php": 6,
+              "python": 25,
+              "ruby": 1,
+              "rust": 199,
+              "script": 565,
+              "scss": 2,
+              "shell": 5,
+              "swift": 91,
+              "ts": 257,
+              "vbnet": 5
+            },
+            "failed": 0,
+            "files": 590,
+            "httpCalls": 7,
+            "httpEdges": 8,
+            "reusedFromCache": 590,
+            "unresolvedCallSites": 25305
+          },
+          "cacheStatus": "session",
+          "elapsedMs": 371.29999999701977,
+          "linearMemoryBytes": 96665600,
+          "parserWorkers": 1,
+          "aggregateLinearMemoryCapacityBytes": 96665600
+        },
+        "heartbeat": {
+          "ticks": 37,
+          "maxGap": 11.299999997019768,
+          "last": 16474.79999999702
+        },
+        "wall_seconds": 1.1691028740024194
+      },
+      "candidates": 590
+    },
+    "2": {
+      "browser": "chromium",
+      "workers": 2,
+      "completed": true,
+      "result": {
+        "id": 2,
+        "result": {
+          "analysed": 590,
+          "buildMs": 441,
+          "cachePath": "/cache/project-index.json",
+          "callSites": 27293,
+          "crossFileEdges": 1988,
+          "declarationsPaired": 395,
+          "definitions": 6708,
+          "edgesByEvidence": {
+            "import": 917,
+            "package": 41,
+            "qualifier": 56,
+            "qualifier-project": 1,
+            "unique-name": 973
+          },
+          "edgesByLanguage": {
+            "cpp": 773,
+            "csharp": 49,
+            "go": 2,
+            "java": 3,
+            "kotlin": 4,
+            "objc": 1,
+            "php": 6,
+            "python": 25,
+            "ruby": 1,
+            "rust": 199,
+            "script": 565,
+            "scss": 2,
+            "shell": 5,
+            "swift": 91,
+            "ts": 257,
+            "vbnet": 5
+          },
+          "failed": 0,
+          "files": 590,
+          "httpCalls": 7,
+          "httpEdges": 8,
+          "reusedFromCache": 0,
+          "unresolvedCallSites": 25305
+        },
+        "cacheStatus": "session",
+        "elapsedMs": 8641.800000011921,
+        "linearMemoryBytes": 96665600,
+        "parserWorkers": 2,
+        "aggregateLinearMemoryCapacityBytes": 244318208
+      },
+      "heartbeat": {
+        "ticks": 860,
+        "maxGap": 41.20000000298023,
+        "last": 9445.59999999404
+      },
+      "wall_seconds": 9.345473202003632,
+      "warm": {
+        "result": {
+          "id": 3,
+          "result": {
+            "analysed": 0,
+            "buildMs": 238,
+            "cachePath": "/cache/project-index.json",
+            "callSites": 27293,
+            "crossFileEdges": 1988,
+            "declarationsPaired": 395,
+            "definitions": 6708,
+            "edgesByEvidence": {
+              "import": 917,
+              "package": 41,
+              "qualifier": 56,
+              "qualifier-project": 1,
+              "unique-name": 973
+            },
+            "edgesByLanguage": {
+              "cpp": 773,
+              "csharp": 49,
+              "go": 2,
+              "java": 3,
+              "kotlin": 4,
+              "objc": 1,
+              "php": 6,
+              "python": 25,
+              "ruby": 1,
+              "rust": 199,
+              "script": 565,
+              "scss": 2,
+              "shell": 5,
+              "swift": 91,
+              "ts": 257,
+              "vbnet": 5
+            },
+            "failed": 0,
+            "files": 590,
+            "httpCalls": 7,
+            "httpEdges": 8,
+            "reusedFromCache": 590,
+            "unresolvedCallSites": 25305
+          },
+          "cacheStatus": "session",
+          "elapsedMs": 432,
+          "linearMemoryBytes": 96665600,
+          "parserWorkers": 1,
+          "aggregateLinearMemoryCapacityBytes": 96665600
+        },
+        "heartbeat": {
+          "ticks": 43,
+          "maxGap": 10.5,
+          "last": 10585.39999999106
+        },
+        "wall_seconds": 1.1497979429987026
+      },
+      "candidates": 590
+    },
+    "4": {
+      "browser": "chromium",
+      "workers": 4,
+      "completed": true,
+      "result": {
+        "id": 2,
+        "result": {
+          "analysed": 590,
+          "buildMs": 448,
+          "cachePath": "/cache/project-index.json",
+          "callSites": 27293,
+          "crossFileEdges": 1988,
+          "declarationsPaired": 395,
+          "definitions": 6708,
+          "edgesByEvidence": {
+            "import": 917,
+            "package": 41,
+            "qualifier": 56,
+            "qualifier-project": 1,
+            "unique-name": 973
+          },
+          "edgesByLanguage": {
+            "cpp": 773,
+            "csharp": 49,
+            "go": 2,
+            "java": 3,
+            "kotlin": 4,
+            "objc": 1,
+            "php": 6,
+            "python": 25,
+            "ruby": 1,
+            "rust": 199,
+            "script": 565,
+            "scss": 2,
+            "shell": 5,
+            "swift": 91,
+            "ts": 257,
+            "vbnet": 5
+          },
+          "failed": 0,
+          "files": 590,
+          "httpCalls": 7,
+          "httpEdges": 8,
+          "reusedFromCache": 0,
+          "unresolvedCallSites": 25305
+        },
+        "cacheStatus": "session",
+        "elapsedMs": 5110.100000008941,
+        "linearMemoryBytes": 96665600,
+        "parserWorkers": 4,
+        "aggregateLinearMemoryCapacityBytes": 378535936
+      },
+      "heartbeat": {
+        "ticks": 505,
+        "maxGap": 55.599999994039536,
+        "last": 5891.600000008941
+      },
+      "wall_seconds": 6.326328144001309,
+      "warm": {
+        "result": {
+          "id": 3,
+          "result": {
+            "analysed": 0,
+            "buildMs": 236,
+            "cachePath": "/cache/project-index.json",
+            "callSites": 27293,
+            "crossFileEdges": 1988,
+            "declarationsPaired": 395,
+            "definitions": 6708,
+            "edgesByEvidence": {
+              "import": 917,
+              "package": 41,
+              "qualifier": 56,
+              "qualifier-project": 1,
+              "unique-name": 973
+            },
+            "edgesByLanguage": {
+              "cpp": 773,
+              "csharp": 49,
+              "go": 2,
+              "java": 3,
+              "kotlin": 4,
+              "objc": 1,
+              "php": 6,
+              "python": 25,
+              "ruby": 1,
+              "rust": 199,
+              "script": 565,
+              "scss": 2,
+              "shell": 5,
+              "swift": 91,
+              "ts": 257,
+              "vbnet": 5
+            },
+            "failed": 0,
+            "files": 590,
+            "httpCalls": 7,
+            "httpEdges": 8,
+            "reusedFromCache": 590,
+            "unresolvedCallSites": 25305
+          },
+          "cacheStatus": "session",
+          "elapsedMs": 421.8999999910593,
+          "linearMemoryBytes": 96665600,
+          "parserWorkers": 1,
+          "aggregateLinearMemoryCapacityBytes": 96665600
+        },
+        "heartbeat": {
+          "ticks": 42,
+          "maxGap": 10.100000008940697,
+          "last": 7530.100000008941
+        },
+        "wall_seconds": 1.14879978299723
+      },
+      "candidates": 590
+    },
+    "webkit": {
+      "browser": "webkit",
+      "workers": 4,
+      "completed": true,
+      "result": {
+        "id": 2,
+        "result": {
+          "analysed": 590,
+          "buildMs": 773,
+          "cachePath": "/cache/project-index.json",
+          "callSites": 27293,
+          "crossFileEdges": 1988,
+          "declarationsPaired": 395,
+          "definitions": 6708,
+          "edgesByEvidence": {
+            "import": 917,
+            "package": 41,
+            "qualifier": 56,
+            "qualifier-project": 1,
+            "unique-name": 973
+          },
+          "edgesByLanguage": {
+            "cpp": 773,
+            "csharp": 49,
+            "go": 2,
+            "java": 3,
+            "kotlin": 4,
+            "objc": 1,
+            "php": 6,
+            "python": 25,
+            "ruby": 1,
+            "rust": 199,
+            "script": 565,
+            "scss": 2,
+            "shell": 5,
+            "swift": 91,
+            "ts": 257,
+            "vbnet": 5
+          },
+          "failed": 0,
+          "files": 590,
+          "httpCalls": 7,
+          "httpEdges": 8,
+          "reusedFromCache": 0,
+          "unresolvedCallSites": 25305
+        },
+        "cacheStatus": "session",
+        "elapsedMs": 5785,
+        "linearMemoryBytes": 115998720,
+        "parserWorkers": 4,
+        "aggregateLinearMemoryCapacityBytes": 397869056
+      },
+      "heartbeat": {
+        "ticks": 456,
+        "maxGap": 157,
+        "last": 6597
+      },
+      "wall_seconds": 6.276716826003394,
+      "warm": {
+        "result": {
+          "id": 3,
+          "result": {
+            "analysed": 0,
+            "buildMs": 337,
+            "cachePath": "/cache/project-index.json",
+            "callSites": 27293,
+            "crossFileEdges": 1988,
+            "declarationsPaired": 395,
+            "definitions": 6708,
+            "edgesByEvidence": {
+              "import": 917,
+              "package": 41,
+              "qualifier": 56,
+              "qualifier-project": 1,
+              "unique-name": 973
+            },
+            "edgesByLanguage": {
+              "cpp": 773,
+              "csharp": 49,
+              "go": 2,
+              "java": 3,
+              "kotlin": 4,
+              "objc": 1,
+              "php": 6,
+              "python": 25,
+              "ruby": 1,
+              "rust": 199,
+              "script": 565,
+              "scss": 2,
+              "shell": 5,
+              "swift": 91,
+              "ts": 257,
+              "vbnet": 5
+            },
+            "failed": 0,
+            "files": 590,
+            "httpCalls": 7,
+            "httpEdges": 8,
+            "reusedFromCache": 590,
+            "unresolvedCallSites": 25305
+          },
+          "cacheStatus": "session",
+          "elapsedMs": 615,
+          "linearMemoryBytes": 115998720,
+          "parserWorkers": 1,
+          "aggregateLinearMemoryCapacityBytes": 115998720
+        },
+        "heartbeat": {
+          "ticks": 52,
+          "maxGap": 12,
+          "last": 7709
+        },
+        "wall_seconds": 1.1210331820038846
+      },
+      "candidates": 590
+    }
+  },
+  "chromium_speedup_4_over_1": 2.902526369339568
+}

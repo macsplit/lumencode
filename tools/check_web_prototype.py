@@ -27,19 +27,13 @@ class Quiet(http.server.SimpleHTTPRequestHandler):
 def check_index_watchdog(browser, url):
     """Virtual time: continued progress beyond two minutes vs a stalled worker."""
     page = browser.new_page()
-    page.add_init_script("""(() => {
-      const NativeWorker = window.Worker;
-      window.Worker = class extends NativeWorker {
-        constructor(...args) { super(...args); window.lastPrototypeWorker = this; }
-      };
-    })()""")
     page.goto(url)
     page.wait_for_function("!document.getElementById('demo').disabled", timeout=90000)
     page.locator('#demo').click()
     page.wait_for_function("!document.getElementById('index').disabled")
     page.clock.install()
     page.evaluate("""() => {
-      const instance = lastPrototypeWorker;
+      const instance = worker;
       const post = instance.postMessage.bind(instance);
       instance.postMessage = data => {
         if (data.operation !== 'index') post(data);
@@ -66,7 +60,7 @@ def check_index_watchdog(browser, url):
 
 
 HARNESS = """() => {
-  window.testWorker = new Worker('worker.js');
+  window.testWorker = new LumenCodeWorker();
   let id = 0;
   window.progressEvents = [];
   const pending = new Map();

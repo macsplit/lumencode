@@ -3,6 +3,8 @@
 #include "projectindex.h"
 #include "agentqueries.h"
 #include <QCoreApplication>
+#include <QFileInfo>
+#include <QDateTime>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <emscripten/bind.h>
@@ -34,7 +36,12 @@ std::string request(const std::string &json)
             result = ProjectIndex::augmentAnalysis(result, snapshot);
     } else if (operation == "candidates") {
         result.insert("paths", ProjectIndex::candidateFiles(input.value("root").toString(), 20000));
-    } else if (operation == "index") {
+    } else if (operation == "facts") {
+        SymbolParser parser;
+        const QFileInfo info(path);
+        result = ProjectIndex::factsToVariant(ProjectIndex::factsFromAnalysis(
+            parser.parseFile(path), info.size(), info.lastModified().toMSecsSinceEpoch()));
+    } else if (operation == "index" || operation == "index-plan") {
         ProjectIndex::BuildOptions options;
         options.root = input.value("root").toString();
         options.helperPath = "wasm-shared-engine-v1";
@@ -43,8 +50,15 @@ std::string request(const std::string &json)
         options.activity = [](const QString &phase, const QString &path, int done, int total) {
             reportIndexActivity(phase.toUtf8().constData(), path.toUtf8().constData(), done, total);
         };
-        snapshot = ProjectIndex::build(options);
-        result = snapshot->stats;
+        if (operation == "index-plan") {
+            result.insert("paths", ProjectIndex::pendingFiles(options));
+        } else {
+            const QVariantMap supplied = input.value("facts").toMap();
+            for (auto it = supplied.cbegin(); it != supplied.cend(); ++it)
+                options.suppliedFacts.insert(it.key(), it.value().toMap());
+            snapshot = ProjectIndex::build(options);
+            result = snapshot->stats;
+        }
     } else if (operation == "search") {
         if (!snapshot) return R"({"error":"Build the project index first"})";
         result.insert("results", AgentQueries::searchSymbols(snapshot,

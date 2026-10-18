@@ -127,6 +127,9 @@ struct BuildOptions
     QString cachePath; // empty: default under the user cache dir
     int maxFiles = 20000;
     int batchSize = 150;
+    // Optional canonical facts produced by an external scheduler. Missing files
+    // still use the normal helper; graph construction and caching stay shared.
+    QHash<QString, QVariantMap> suppliedFacts;
     std::function<void(int done, int total)> progress;
     // Optional scheduling diagnostics; callbacks may run on batch threads.
     std::function<void(const QString &phase, const QString &path, int done, int total)> activity;
@@ -135,6 +138,9 @@ struct BuildOptions
 
 // Build (or refresh from cache) the index for a project root.
 SnapshotPtr build(const BuildOptions &options);
+
+// Files requiring extraction, using exactly the same cache rules as build().
+QStringList pendingFiles(const BuildOptions &options);
 
 // Candidate files under a root (supported languages, skipping dependency and
 // build folders).
