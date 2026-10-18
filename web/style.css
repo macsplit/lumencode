@@ -226,3 +226,12 @@ a:focus-visible {
         min-height: 0;
     }
 }
+
+.native-downloads h3:not(:first-child) {
+    margin-top: 2rem;
+}
+
+.release-info {
+    color: #b8c2d0;
+    font-size: 0.9rem;
+}
