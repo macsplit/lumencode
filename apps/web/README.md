@@ -337,3 +337,11 @@ python tools/check_web_project_responsiveness.py \
 Timings are diagnostic. The heartbeat includes automated import and UI work;
 reported aggregate WASM capacity is not peak browser memory. Neither checker
 modifies project source.
+
+Add `--profile` to the responsiveness checker to capture a Chrome timeline,
+worker readiness, long tasks and timed app/worker calls. The raw timeline can be
+large; keep it outside the repository. `--profile --first-clone-control` additionally
+sends the fresh imported files to a plain worker before the engine, distinguishing
+first-transfer cost from WASM work. This control deliberately warms those file
+objects; compare its first transfer and subsequent engine transfer separately.
+Instrumentation is test-only and adds overhead.

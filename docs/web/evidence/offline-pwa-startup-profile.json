@@ -1,0 +1,661 @@
+{
+  "date": "2026-10-18",
+  "baseline_revision": "cf69a91e",
+  "platform": "Kubuntu/Linux, headless Chromium",
+  "application_code_changed": false,
+  "scope": "1264 files, 155 MB, 590 candidates; browser directory-import control, not native OS folder picker",
+  "conclusion": "Main-thread pause is in bulk file-input delivery and first File-object transfer, before parser-worker creation. Plain worker reproduces first-transfer cost without WASM.",
+  "limitations": [
+    "Timeline instrumentation adds overhead.",
+    "File-input delivery includes Playwright automation; native OS folder access was not profiled.",
+    "Initial and parser WASM startup times are separate from the largest main-thread task."
+  ],
+  "runs": [
+    {
+      "name": "startup-profile-1",
+      "passed": true,
+      "initialEngineReadyMs": 238.5,
+      "engineWorkers": [
+        {
+          "id": 0,
+          "url": "worker.js",
+          "created": 90.79999999981374,
+          "ready": 223.5
+        },
+        {
+          "id": 2,
+          "url": "worker.js",
+          "created": 2285,
+          "ready": 2444.5999999996275
+        },
+        {
+          "id": 3,
+          "url": "worker.js",
+          "created": 2288.5,
+          "ready": 2512.2999999998137
+        },
+        {
+          "id": 4,
+          "url": "worker.js",
+          "created": 2290.5,
+          "ready": 2491.0999999996275
+        },
+        {
+          "id": 5,
+          "url": "worker.js",
+          "created": 2292.4000000003725,
+          "ready": 2535.9000000003725
+        },
+        {
+          "id": 6,
+          "url": "worker.js",
+          "created": 2371.5999999996275,
+          "ready": 2546.7000000001863
+        },
+        {
+          "id": 7,
+          "url": "worker.js",
+          "created": 7774.299999999814,
+          "ready": 8106.700000000186
+        }
+      ],
+      "coldIndexMs": 5103.799999999814,
+      "maxColdTimerGapMs": 458.09999999962747,
+      "longestTasks": [
+        {
+          "startMs": 386.46799999981374,
+          "durationMs": 425.161,
+          "blockingPostMessages": [
+            {
+              "label": "postMessage mount",
+              "start": 581.7999999998137,
+              "end": 811.0999999996275,
+              "worker": 0,
+              "files": 1264,
+              "facts": null,
+              "durationMs": 229.29999999981374
+            }
+          ],
+          "traceChildren": [
+            {
+              "name": "SimpleWatcher::OnHandleReady",
+              "durationMs": 425.156,
+              "function": null
+            },
+            {
+              "name": "Receive mojo reply",
+              "durationMs": 424.981,
+              "function": null
+            },
+            {
+              "name": "EventDispatch",
+              "durationMs": 239.879,
+              "function": null
+            },
+            {
+              "name": "v8.callFunction",
+              "durationMs": 239.841,
+              "function": null
+            },
+            {
+              "name": "FunctionCall",
+              "durationMs": 239.834,
+              "function": "$.onchange"
+            }
+          ]
+        },
+        {
+          "startMs": 7609.007999999813,
+          "durationMs": 372.873,
+          "blockingPostMessages": [
+            {
+              "label": "postMessage mount",
+              "start": 7776.5,
+              "end": 7981.5,
+              "worker": 7,
+              "files": 1264,
+              "facts": null,
+              "durationMs": 205.0
+            }
+          ],
+          "traceChildren": [
+            {
+              "name": "SimpleWatcher::OnHandleReady",
+              "durationMs": 372.867,
+              "function": null
+            },
+            {
+              "name": "Receive mojo reply",
+              "durationMs": 372.688,
+              "function": null
+            },
+            {
+              "name": "EventDispatch",
+              "durationMs": 213.905,
+              "function": null
+            },
+            {
+              "name": "v8.callFunction",
+              "durationMs": 213.868,
+              "function": null
+            },
+            {
+              "name": "FunctionCall",
+              "durationMs": 213.861,
+              "function": "$.onchange"
+            }
+          ]
+        },
+        {
+          "startMs": 19.247999999813736,
+          "durationMs": 63.462,
+          "blockingPostMessages": [],
+          "traceChildren": [
+            {
+              "name": "Layout",
+              "durationMs": 59.879,
+              "function": null
+            },
+            {
+              "name": "Paint",
+              "durationMs": 1.321,
+              "function": null
+            },
+            {
+              "name": "UpdateLayoutTree",
+              "durationMs": 1.248,
+              "function": null
+            },
+            {
+              "name": "PrePaint",
+              "durationMs": 0.344,
+              "function": null
+            },
+            {
+              "name": "Layerize",
+              "durationMs": 0.124,
+              "function": null
+            }
+          ]
+        },
+        {
+          "startMs": 2190.8959999998137,
+          "durationMs": 52.234,
+          "blockingPostMessages": [],
+          "traceChildren": [
+            {
+              "name": "HandlePostMessage",
+              "durationMs": 52.216,
+              "function": null
+            },
+            {
+              "name": "v8.callFunction",
+              "durationMs": 52.043,
+              "function": null
+            },
+            {
+              "name": "Layout",
+              "durationMs": 34.974,
+              "function": null
+            },
+            {
+              "name": "UpdateLayoutTree",
+              "durationMs": 2.999,
+              "function": null
+            },
+            {
+              "name": "v8.callFunction",
+              "durationMs": 0.121,
+              "function": null
+            }
+          ]
+        }
+      ],
+      "firstMountTransfers": [
+        {
+          "label": "postMessage mount",
+          "start": 581.7999999998137,
+          "end": 811.0999999996275,
+          "worker": 0,
+          "files": 1264,
+          "facts": null,
+          "durationMs": 229.29999999981374
+        },
+        {
+          "label": "postMessage mount",
+          "start": 2285.2999999998137,
+          "end": 2288.5,
+          "worker": 2,
+          "files": 1264,
+          "facts": null,
+          "durationMs": 3.2000000001862645
+        }
+      ],
+      "freshPlainWorkerControl": null,
+      "alreadyTransferredPlainWorkerControl": null,
+      "rawTrace": "/home/user/Code/Coding/lumencode-validation-20261018-pwa/startup-profile-1/chromium-trace.json"
+    },
+    {
+      "name": "startup-profile-control",
+      "passed": true,
+      "initialEngineReadyMs": 259,
+      "engineWorkers": [
+        {
+          "id": 0,
+          "url": "worker.js",
+          "created": 104.5,
+          "ready": 243.20000000018626
+        },
+        {
+          "id": 2,
+          "url": "worker.js",
+          "created": 2483.7999999998137,
+          "ready": 2662.7999999998137
+        },
+        {
+          "id": 3,
+          "url": "worker.js",
+          "created": 2486.2000000001863,
+          "ready": 2714.100000000559
+        },
+        {
+          "id": 4,
+          "url": "worker.js",
+          "created": 2487.7999999998137,
+          "ready": 2699.4000000003725
+        },
+        {
+          "id": 5,
+          "url": "worker.js",
+          "created": 2489.2000000001863,
+          "ready": 2744
+        },
+        {
+          "id": 6,
+          "url": "worker.js",
+          "created": 2558.7000000001863,
+          "ready": 2763.9000000003725
+        },
+        {
+          "id": 7,
+          "url": "worker.js",
+          "created": 7895.700000000186,
+          "ready": 8212.100000000559
+        }
+      ],
+      "coldIndexMs": 5074,
+      "maxColdTimerGapMs": 421.09999999962747,
+      "longestTasks": [
+        {
+          "startMs": 410.71200000037254,
+          "durationMs": 398.179,
+          "blockingPostMessages": [
+            {
+              "label": "postMessage mount",
+              "start": 614.1000000005588,
+              "end": 808.6000000005588,
+              "worker": 0,
+              "files": 1264,
+              "facts": null,
+              "durationMs": 194.5
+            }
+          ],
+          "traceChildren": [
+            {
+              "name": "SimpleWatcher::OnHandleReady",
+              "durationMs": 398.171,
+              "function": null
+            },
+            {
+              "name": "Receive mojo reply",
+              "durationMs": 397.991,
+              "function": null
+            },
+            {
+              "name": "EventDispatch",
+              "durationMs": 203.511,
+              "function": null
+            },
+            {
+              "name": "v8.callFunction",
+              "durationMs": 203.474,
+              "function": null
+            },
+            {
+              "name": "FunctionCall",
+              "durationMs": 203.467,
+              "function": "$.onchange"
+            }
+          ]
+        },
+        {
+          "startMs": 7755.789000000373,
+          "durationMs": 324.741,
+          "blockingPostMessages": [
+            {
+              "label": "postMessage mount",
+              "start": 7898.600000000559,
+              "end": 8079.9000000003725,
+              "worker": 7,
+              "files": 1264,
+              "facts": null,
+              "durationMs": 181.29999999981374
+            }
+          ],
+          "traceChildren": [
+            {
+              "name": "SimpleWatcher::OnHandleReady",
+              "durationMs": 324.733,
+              "function": null
+            },
+            {
+              "name": "Receive mojo reply",
+              "durationMs": 324.589,
+              "function": null
+            },
+            {
+              "name": "EventDispatch",
+              "durationMs": 190.196,
+              "function": null
+            },
+            {
+              "name": "v8.callFunction",
+              "durationMs": 190.151,
+              "function": null
+            },
+            {
+              "name": "FunctionCall",
+              "durationMs": 190.142,
+              "function": "$.onchange"
+            }
+          ]
+        },
+        {
+          "startMs": 22.06300000037253,
+          "durationMs": 74.606,
+          "blockingPostMessages": [],
+          "traceChildren": [
+            {
+              "name": "Layout",
+              "durationMs": 70.623,
+              "function": null
+            },
+            {
+              "name": "UpdateLayoutTree",
+              "durationMs": 1.753,
+              "function": null
+            },
+            {
+              "name": "Paint",
+              "durationMs": 1.19,
+              "function": null
+            },
+            {
+              "name": "PrePaint",
+              "durationMs": 0.314,
+              "function": null
+            },
+            {
+              "name": "Layerize",
+              "durationMs": 0.166,
+              "function": null
+            }
+          ]
+        }
+      ],
+      "firstMountTransfers": [
+        {
+          "label": "postMessage mount",
+          "start": 614.1000000005588,
+          "end": 808.6000000005588,
+          "worker": 0,
+          "files": 1264,
+          "facts": null,
+          "durationMs": 194.5
+        },
+        {
+          "label": "postMessage mount",
+          "start": 2484,
+          "end": 2486.2000000001863,
+          "worker": 2,
+          "files": 1264,
+          "facts": null,
+          "durationMs": 2.2000000001862645
+        }
+      ],
+      "freshPlainWorkerControl": null,
+      "alreadyTransferredPlainWorkerControl": {
+        "files": 1264,
+        "synchronousMs": 2.400000000372529,
+        "roundTripMs": 4.1000000005587935,
+        "wasm": false
+      },
+      "rawTrace": "/home/user/Code/Coding/lumencode-validation-20261018-pwa/startup-profile-control/chromium-trace.json"
+    },
+    {
+      "name": "startup-profile-fresh-control",
+      "passed": true,
+      "initialEngineReadyMs": 213.79999999981374,
+      "engineWorkers": [
+        {
+          "id": 0,
+          "url": "worker.js",
+          "created": 91.8999999994412,
+          "ready": 209.5
+        },
+        {
+          "id": 3,
+          "url": "worker.js",
+          "created": 2322.7999999998137,
+          "ready": 2525
+        },
+        {
+          "id": 4,
+          "url": "worker.js",
+          "created": 2324.699999999255,
+          "ready": 2555.699999999255
+        },
+        {
+          "id": 5,
+          "url": "worker.js",
+          "created": 2325.899999999441,
+          "ready": 2490.399999999441
+        },
+        {
+          "id": 6,
+          "url": "worker.js",
+          "created": 2327.5999999996275,
+          "ready": 2579
+        },
+        {
+          "id": 7,
+          "url": "worker.js",
+          "created": 2415.7999999998137,
+          "ready": 2595.399999999441
+        },
+        {
+          "id": 8,
+          "url": "worker.js",
+          "created": 7817.799999999814,
+          "ready": 8184.199999999255
+        }
+      ],
+      "coldIndexMs": 5099.9000000003725,
+      "maxColdTimerGapMs": 405.09999999962747,
+      "longestTasks": [
+        {
+          "startMs": 7655.789999999627,
+          "durationMs": 392.826,
+          "blockingPostMessages": [
+            {
+              "label": "postMessage mount",
+              "start": 7820.399999999441,
+              "end": 8048,
+              "worker": 8,
+              "files": 1264,
+              "facts": null,
+              "durationMs": 227.6000000005588
+            }
+          ],
+          "traceChildren": [
+            {
+              "name": "SimpleWatcher::OnHandleReady",
+              "durationMs": 392.817,
+              "function": null
+            },
+            {
+              "name": "Receive mojo reply",
+              "durationMs": 392.624,
+              "function": null
+            },
+            {
+              "name": "EventDispatch",
+              "durationMs": 235.866,
+              "function": null
+            },
+            {
+              "name": "v8.callFunction",
+              "durationMs": 235.823,
+              "function": null
+            },
+            {
+              "name": "FunctionCall",
+              "durationMs": 235.815,
+              "function": "$.onchange"
+            }
+          ]
+        },
+        {
+          "startMs": 366.5489999996275,
+          "durationMs": 378.024,
+          "blockingPostMessages": [],
+          "traceChildren": [
+            {
+              "name": "SimpleWatcher::OnHandleReady",
+              "durationMs": 378.018,
+              "function": null
+            },
+            {
+              "name": "Receive mojo reply",
+              "durationMs": 377.846,
+              "function": null
+            },
+            {
+              "name": "EventDispatch",
+              "durationMs": 202.546,
+              "function": null
+            },
+            {
+              "name": "v8.callFunction",
+              "durationMs": 202.508,
+              "function": null
+            },
+            {
+              "name": "FunctionCall",
+              "durationMs": 202.502,
+              "function": "$.onchange"
+            }
+          ]
+        },
+        {
+          "startMs": 20.786999999627472,
+          "durationMs": 64.825,
+          "blockingPostMessages": [],
+          "traceChildren": [
+            {
+              "name": "Layout",
+              "durationMs": 61.907,
+              "function": null
+            },
+            {
+              "name": "UpdateLayoutTree",
+              "durationMs": 1.125,
+              "function": null
+            },
+            {
+              "name": "Paint",
+              "durationMs": 1.006,
+              "function": null
+            },
+            {
+              "name": "PrePaint",
+              "durationMs": 0.252,
+              "function": null
+            },
+            {
+              "name": "Layerize",
+              "durationMs": 0.126,
+              "function": null
+            }
+          ]
+        },
+        {
+          "startMs": 2231.5329999996275,
+          "durationMs": 52.878,
+          "blockingPostMessages": [],
+          "traceChildren": [
+            {
+              "name": "HandlePostMessage",
+              "durationMs": 52.864,
+              "function": null
+            },
+            {
+              "name": "v8.callFunction",
+              "durationMs": 52.723,
+              "function": null
+            },
+            {
+              "name": "Layout",
+              "durationMs": 34.941,
+              "function": null
+            },
+            {
+              "name": "UpdateLayoutTree",
+              "durationMs": 2.834,
+              "function": null
+            },
+            {
+              "name": "v8.callFunction",
+              "durationMs": 0.105,
+              "function": null
+            }
+          ]
+        }
+      ],
+      "firstMountTransfers": [
+        {
+          "label": "postMessage mount",
+          "start": 742,
+          "end": 744.0999999996275,
+          "worker": 0,
+          "files": 1264,
+          "facts": null,
+          "durationMs": 2.099999999627471
+        },
+        {
+          "label": "postMessage mount",
+          "start": 2323,
+          "end": 2324.699999999255,
+          "worker": 3,
+          "files": 1264,
+          "facts": null,
+          "durationMs": 1.699999999254942
+        }
+      ],
+      "freshPlainWorkerControl": {
+        "files": 1264,
+        "start": 552.2999999998137,
+        "end": 742,
+        "synchronousMs": 189.70000000018626,
+        "wasm": false
+      },
+      "alreadyTransferredPlainWorkerControl": {
+        "files": 1264,
+        "synchronousMs": 2.5,
+        "roundTripMs": 4,
+        "wasm": false
+      },
+      "rawTrace": "/home/user/Code/Coding/lumencode-validation-20261018-pwa/startup-profile-fresh-control/chromium-trace.json"
+    }
+  ]
+}

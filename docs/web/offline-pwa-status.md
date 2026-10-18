@@ -386,9 +386,36 @@ this is not browser peak RSS.
 
 The 10 ms heartbeat recorded a **376 ms maximum gap across the complete cold
 import/index interval**. That includes automated file import, tree rendering and
-other UI work; it does not isolate a parsing stall. Profile this initial pause
-before adding more scheduling complexity. These are single diagnostic timings on
+other UI work; it does not isolate a parsing stall. The follow-up profiling below attributes the largest pause to bulk import
+and first-use file transfer; no scheduling change is indicated by these results. These are single diagnostic timings on
 Kubuntu, not performance guarantees or low-memory-device acceptance.
 
 [Real-project evidence](evidence/offline-pwa-real-projects.json) ·
 [Reproduction commands](../../apps/web/README.md#real-project-comparisons)
+
+### Import-pause attribution (18 October 2026)
+
+Follow-up headless Chromium timeline runs on Kubuntu separate the initial WASM
+instance, parser-worker creation, and main-thread tasks. The initial engine was
+ready about **0.24 seconds** after navigation. The largest task occurred later,
+during imported-folder delivery, **before the extra parser workers were created**.
+The two unaltered import runs recorded **398–425 ms** main-thread tasks, including
+**195–229 ms** synchronously posting 1,264 fresh `File` objects to the worker.
+Much of the remainder lies in Chromium's file-input delivery path, which includes
+the automated input injection; it is not an isolated app-script timing.
+
+A controlled run sent the exact fresh import payload to a **plain worker with no
+WASM first**: that transfer took **190 ms**, then forwarding the same objects to
+the engine took **2 ms**. Sending already-transferred files to a plain worker
+later also took **2–3 ms**. This identifies first-use file transfer as the costly
+part of the mount message. WASM loading does take time in workers, but it does not
+account for the largest measured main-thread pause in these runs.
+
+The evidence supports treating this as a brief bulk-import cost for this large
+input. No engine/loading/scheduling change was made. The native OS folder-picker
+path and lower-memory hardware have not been profiled by this experiment.
+
+The responsiveness checker now offers optional `--profile` tracing and an
+explicit `--first-clone-control` experiment. Both are test-only; raw timelines
+remain in the Linux validation directory.
+[Compact timing evidence](evidence/offline-pwa-startup-profile.json).
