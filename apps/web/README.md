@@ -239,8 +239,7 @@ python tools/check_web_workspace.py \
 
 Use `--browser webkit` for Playwright WebKit. Native OS picker prompts and native
 Safari still require platform-specific acceptance checks. The project tree now
-includes auxiliary files; syntax colouring and richer search filters remain future
-interface work.
+includes auxiliary files. Richer search filters remain future interface work.
 
 Background-browsing tests hold real parser-worker requests at the browser transport
 boundary, then verify inspection, auxiliary previews, selection preservation,
@@ -257,3 +256,44 @@ Add `--browser webkit` for the second browser engine. With a sufficiently large
 completes while an actual single-parser index is still running. The optional
 inspection module's observed capacity is included in transport memory diagnostics;
 these values remain WebAssembly capacities rather than total browser memory.
+
+### Offline syntax highlighting
+
+Whole-file previews, signatures and inspector excerpts use the locally bundled
+Prism 1.30.0 grammars. This affects display only: language extraction, ASTs,
+fallbacks and relationships continue to come from the shared engine. Canonical
+engine labels select grammars, with extension overrides for JSX/TSX and similar
+formats and extension fallback for auxiliary text. There is no language guessing,
+CDN, runtime download or HTML insertion.
+
+Tokenisation runs in a separate lightweight worker. Source appears immediately;
+colouring arrives asynchronously without changing the selected line, source page
+or scroll. A complete bounded source is tokenised before rendering 160-line
+pages, preserving multiline comment/string context across pages. Two recent
+requests are cached, including during background relationship refreshes. Copy
+source still copies the original text and line endings.
+
+Limits: 524,288 UTF-16 code units per input, 100,000 coalesced token fragments,
+8,000 fragments rendered per source page or excerpt, and a 1.5-second worker
+deadline. Unknown, oversized, overly dense, failed or timed-out inputs retain
+plain text; worker failure does not prevent navigation or future highlighting.
+Project reset terminates this worker and clears its cache. These limits are
+presentation safeguards, independent of parser and file-preview limits.
+
+```sh
+python tools/check_web_syntax.py \
+  --web-root /home/user/Code/Coding/lumencode-wasm-build/web \
+  --output /tmp/lumencode-syntax-validation
+```
+
+Add `--browser webkit` for the second browser engine. Checks cover representative
+languages, exact text/line endings, multiline page context, literal HTML safety,
+stale requests, scroll preservation, input/token bounds and worker timeout/recovery.
+The complete prototype check also verifies highlighting after a browser restart
+with its HTTP server stopped and the browser offline.
+
+To rebuild the vendored bundle, check out Prism tag `v1.30.0` in a separate clean
+directory and run `python3 tools/build_prism_bundle.py --source /path/to/prism`.
+The tool verifies the pinned revision, resolves grammar order with upstream's
+build helper, retains the MIT license and records SHA-256 provenance. Node is
+needed only for rebuilding this bundle, not for building/running LumenCode.

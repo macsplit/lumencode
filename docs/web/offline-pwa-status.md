@@ -318,10 +318,26 @@ so it survives `/tmp` cleanup.
 4. Extend cache validation to native permission reconnection, interrupted updates,
    quota pressure and cache loss. Consider fine-grained invalidation and broader
    native-browser/platform checks. Public-hosted app update UX remains future work.
-5. Extend the four-pane workspace with syntax colouring, richer search filters
+5. Extend the four-pane workspace with richer search filters
    and broader keyboard/accessibility acceptance. Packaging,
    public preview and distribution remain separate work; native releases and the
    public website have not been changed.
 
 [Build/run/test instructions](../../apps/web/README.md) ·
 [Original feasibility and decision gates](offline-pwa-feasibility.md)
+
+### Offline syntax highlighting (18 October 2026)
+
+Whole-file previews, signatures and inspector excerpts now use a pinned local
+Prism 1.30.0 bundle with its MIT license and source hashes. The display grammars
+are independent of the canonical shared engine; no extraction, AST, fallback or
+relationship rules changed. A separate bounded worker paints safe text spans
+asynchronously, retaining multiline context across source pages, original copy
+text, focused lines and scroll. Slow, unknown, oversized and dense inputs remain
+readable as plain text. Assets are precached for offline use.
+
+[Syntax validation](evidence/offline-pwa-syntax.json) records Chromium and
+Playwright WebKit checks plus workspace/background-index and offline regression
+results. Native Safari and OS folder-permission prompts still need manual
+acceptance. See the [browser README](../../apps/web/README.md#offline-syntax-highlighting)
+for limits, tests and the reproducible vendoring command.

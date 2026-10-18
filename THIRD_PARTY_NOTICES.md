@@ -123,3 +123,12 @@ Those upstream notice files remain in place as part of the vendored source.
 - No external Tree-sitter runtime package is required at build time or run time
 - Current AST-backed parsing is wired for JavaScript, TypeScript, TSX, PHP, CSS, Python, Rust, Java, and C#
 - HTML quick-link extraction remains heuristic for now, even though the official HTML grammar is also vendored and documented here
+
+## Prism (browser syntax highlighting)
+
+- Upstream: https://github.com/PrismJS/prism, version 1.30.0
+- License: MIT; retained in `apps/web/prism-LICENSE.txt`
+- Unmodified core and selected grammars: `apps/web/prism-vendor.js`
+- Revision and input/output SHA-256 hashes: `apps/web/prism-provenance.json`
+- Rebuild with `python3 tools/build_prism_bundle.py --source <clean Prism v1.30.0 checkout>`.
+- Used only for display, independently of the shared engine's parsing and language policy.

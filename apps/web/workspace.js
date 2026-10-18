@@ -13,6 +13,7 @@ globalThis.Workspace = (() => {
   let actions, analysis, path = '', sourceLines = [], page = 0, focusLine = 0;
   let selection, paths = new Set(), history = [], historyPosition = -1, sourceText = '';
   const pageSize = 160;
+  let syntaxLines = null, syntaxText, syntaxLanguage, syntaxGeneration = 0;
   function activatePane(name) {
     get('workspace').dataset.pane = name;
     for (const tab of document.querySelectorAll('[data-pane][role=tab]')) {
@@ -55,10 +56,16 @@ globalThis.Workspace = (() => {
   function renderSource() {
     const start = page * pageSize, end = Math.min(sourceLines.length, start + pageSize);
     const fragment = document.createDocumentFragment();
+    let tokenBudget = 8000;
     for (let index = start; index < end; index++) {
       const row = node('span', null, `source-line${index + 1 === focusLine ? ' selected' : ''}`);
       row.dataset.line = index + 1;
-      row.append(node('span', String(index + 1), 'line-number'), document.createTextNode(sourceLines[index] + '\n'));
+      row.append(node('span', String(index + 1), 'line-number'));
+      const parts = syntaxLines?.[index];
+      const colour = parts && parts.length <= tokenBudget;
+      if (colour) tokenBudget -= parts.length;
+      row.append(colour ? Syntax.fragment(parts) : document.createTextNode(sourceLines[index]));
+      row.append(document.createTextNode('\n'));
       fragment.append(row);
     }
     get('source').replaceChildren(fragment);
@@ -127,7 +134,8 @@ globalThis.Workspace = (() => {
       const returns = item.returns || (item.signature?.returnType ? [{text:item.signature.returnType}] : []);
       if (parameters.length || returns.length) {
         const signature = `${item.name || label(item)}(${parameters.map(p => p.name + (p.type ? `: ${p.type}` : '')).join(', ')})`;
-        parent.append(node('pre', signature, 'signature'));
+        const preview = node('pre', signature, 'signature'); parent.append(preview);
+        Syntax.paint(preview, signature, item.sourceLanguage || analysis.language, path);
       }
       if (parameters.length) {
         const dl = node('dl'); section('Parameters', parent).append(dl);
@@ -147,7 +155,10 @@ globalThis.Workspace = (() => {
         open.onclick = () => navigate(destination, item.line, item.name);
         section('Location', parent).append(open);
       }
-      if (item.snippet) section('Excerpt', parent).append(node('pre', item.snippet, 'signature'));
+      if (item.snippet) {
+        const preview = node('pre', item.snippet, 'signature'); section('Excerpt', parent).append(preview);
+        Syntax.paint(preview, item.snippet, item.sourceLanguage || analysis.language, path);
+      }
     }
     for (const button of get('symbols').querySelectorAll('.symbol-button')) button.setAttribute('aria-current', String(button._item === item));
     showSource(item.line || 0);
@@ -194,6 +205,17 @@ globalThis.Workspace = (() => {
   }
   function show(result, text, filename, focus = {}) {
     analysis = result; path = filename; sourceText = text; sourceLines = result.previewUnavailable ? [] : text.split(/\r\n|\n|\r/);
+    const grammar = Syntax.language(result.language, filename);
+    if (syntaxText !== text || syntaxLanguage !== grammar) {
+      syntaxText = text; syntaxLanguage = grammar; syntaxLines = null;
+      const generation = ++syntaxGeneration;
+      Syntax.highlight(text, result.language, filename).then(highlighted => {
+        if (!highlighted || generation !== syntaxGeneration) return;
+        syntaxLines = highlighted.lines;
+        const source = get('source'), top = source.scrollTop, left = source.scrollLeft;
+        renderSource(); source.scrollTop = top; source.scrollLeft = left;
+      });
+    }
     get('selected-name').textContent = filename;
     get('summary').textContent = `${result.summary || result.language || 'Source'} · ${result.language || ''}`;
     get('result').textContent = JSON.stringify(result, null, 2);
@@ -248,6 +270,7 @@ globalThis.Workspace = (() => {
     activatePane(saved.pane);
   }
   function reset() {
+    Syntax.reset(); syntaxLines = null; syntaxText = undefined; syntaxLanguage = undefined; syntaxGeneration++;
     analysis = undefined; selection = undefined; path = ''; sourceText = ''; sourceLines = []; page = 0;
     history = []; historyPosition = -1; paths.clear();
     get('inspector').replaceChildren(node('p','Select a file or symbol to see its details.','empty'));

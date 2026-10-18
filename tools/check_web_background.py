@@ -95,7 +95,7 @@ def main():
               const Native = Worker;
               window.gate = {hold:true,waiting:[],live:new Set()};
               window.Worker = class extends Native {
-                constructor(...args) { super(...args); gate.live.add(this); }
+                constructor(...args) { super(...args); if (String(args[0]) === 'worker.js') gate.live.add(this); }
                 terminate() { gate.live.delete(this); super.terminate(); }
                 postMessage(data) {
                   if (gate.hold && data.operation === 'facts') { gate.waiting.push([this,data]); return; }

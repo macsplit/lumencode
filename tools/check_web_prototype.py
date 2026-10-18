@@ -300,6 +300,14 @@ def main():
             }""", fresh_name)
             assert any(symbol['name'] == fresh_name for symbol in result['symbols'])
             report['offline_browser_restart_new_source'] = True
+            coloured = page.evaluate("""async name => {
+              const text = `export function ${name}() { return 42; }`;
+              Workspace.show({language:'script',fileName:'fresh.js',symbols:[]},text,'fresh.js');
+              return !!(await Syntax.highlight(text,'script','fresh.js'));
+            }""", fresh_name)
+            assert coloured
+            page.wait_for_function("document.querySelector('#source .syntax-keyword')")
+            report['offline_browser_restart_syntax_highlighting'] = True
             report['network_get_only_same_origin'] = all(method == 'GET' and address.startswith(url) for method, address in network)
             assert report['network_get_only_same_origin']
             context.close()
