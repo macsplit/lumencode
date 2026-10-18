@@ -54,7 +54,7 @@ def check_index_watchdog(browser, url):
     page.clock.fast_forward(90000)
     assert page.locator('#index-details').is_visible()
     assert page.locator('#cancel').is_enabled()
-    assert 'slow.js' in page.locator('#status').inner_text()
+    assert 'slow.js' in page.locator('#index-message').inner_text()
     # No further progress: the watchdog must eventually terminate this request.
     page.clock.fast_forward(120001)
     page.wait_for_function("!document.getElementById('demo').disabled", timeout=30000)

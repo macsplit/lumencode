@@ -117,3 +117,7 @@ kbd { font:10px system-ui,sans-serif; color:var(--muted); margin-left:16px; }
 .status { align-items:center; }
 #cancel { padding:1px 7px; font-size:11px; }
 @media(max-width:800px) { .project-menu { font-size:11px; } #offline { display:none; } }
+
+#index-message { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1; }
+#index-time { flex-shrink:0; }
+@media(max-width:800px) { #index-time { font-size:10px; max-width:40%; } }

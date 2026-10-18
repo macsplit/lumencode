@@ -253,6 +253,52 @@ retains native/browser JSON parity, real OPFS-handle open/refresh, saved-folder
 reopening offline, progress-aware timeout and cancellation/recovery. OS picker
 permission prompts remain a separate interactive check.
 
+### Background browsing and auxiliary files
+
+File navigation, source inspection, project switching and folder refresh remain
+available while the relationship index builds. Progress has its own row, separate
+from the currently inspected file's status. A lazy inspection worker runs the same
+WASM parser independently of the coordinator, including when the coordinator is
+occupied by a single-parser build. The inspection module has no graph; completed
+relationships come from the coordinator and update the current view in place.
+Symbol selection, source page and horizontal/vertical scroll, pane scroll and the
+active compact-screen pane are preserved without adding a history entry.
+
+Project generations prevent old background completions from restoring a replaced
+project. Switching projects/cancelling clears pending requests and terminates the
+coordinator, parser pool and optional inspection worker. Inspection workers are
+also released after indexing and outstanding inspections finish. Clearing saved
+state remains disabled during indexing to avoid racing a cache write.
+
+The project tree now includes all selected files after the existing directory
+exclusions, while canonical candidates alone contribute to relationships. Other
+files support read-only UTF-8 and BOM-marked UTF-16 previews up to 5 MiB. Text
+inspection still invokes the canonical parser, preserving CSS symbols and
+JSON/package metadata even though those files are not index candidates. Unknown
+text is presented as a plain preview. Binary,
+oversized and unsupported-encoding files show explicit messages. Projects containing
+only auxiliary files are browsable. No language extraction, recovery, graph rules
+or C++ engine source changed for this milestone.
+
+[Background validation](evidence/offline-pwa-background-browsing.json) covers
+Chromium and Playwright WebKit on Linux: inspection while real facts requests are
+held at the transport boundary, auxiliary previews, unchanged indexed candidate
+count, preserved selection/source/pane position and history, worker release,
+project replacement, cancellation and auxiliary-only projects. The test contains
+no production timing hooks. The Chromium run also indexed the frozen **590-file**
+project with one parser: inspection completed in **168 ms** while the real index
+continued for **14.5 seconds**. The optional inspection module's observed capacity
+was **64 MiB**, released afterward. These are diagnostic samples; aggregate WASM
+capacity includes the optional inspection module and is not peak RSS/browser memory.
+
+The complete indexed 122-file one/two/four-parser comparison still passes, as do
+102-file native/browser parity, selected indexed comparisons, offline restart,
+remembered folders, progress watchdog and existing pane interactions. See
+[lifecycle evidence](evidence/offline-pwa-background-lifecycle.json). Browser test
+tooling now lives in the persistent
+`/home/user/Code/Coding/lumencode-wasm-tools/browser-venv/` directory on Kubuntu,
+so it survives `/tmp` cleanup.
+
 ### Next steps
 
 1. Try the actual Open folder permission flow interactively in desktop Chrome
@@ -267,8 +313,8 @@ permission prompts remain a separate interactive check.
 4. Extend cache validation to native permission reconnection, interrupted updates,
    quota pressure and cache loss. Consider fine-grained invalidation and broader
    native-browser/platform checks. Public-hosted app update UX remains future work.
-5. Extend the four-pane workspace with auxiliary-file browsing, syntax colouring,
-   richer search filters and broader keyboard/accessibility acceptance. Packaging,
+5. Extend the four-pane workspace with syntax colouring, richer search filters
+   and broader keyboard/accessibility acceptance. Packaging,
    public preview and distribution remain separate work; native releases and the
    public website have not been changed.
 
