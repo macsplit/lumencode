@@ -12,6 +12,8 @@ class LumenCodeWorker extends EventTarget {
     this.sequence = 0;
     this.closed = false;
     this.files = [];
+    this.indexing = false;
+    this.viewer = null;
     this.coordinator.onmessage = event => {
       const {data} = event;
       const pending = this.pending.get(data.id);
@@ -39,9 +41,67 @@ class LumenCodeWorker extends EventTarget {
   postMessage(data) {
     if (this.closed) return;
     if (data.operation === 'mount') this.files = data.files;
+    if (this.indexing && ['analyse', 'read'].includes(data.operation)) {
+      this.view(data).then(response => this.emit({...response, id:data.id}))
+        .catch(error => this.emit({id:data.id,error:String(error)}));
+      return;
+    }
     if (data.operation !== 'index') { this.coordinator.postMessage(data); return; }
-    this.index(data).then(result => this.emit({...result, id: data.id}))
-      .catch(error => this.emit({id: data.id, error: String(error)}));
+    this.indexing = true;
+    this.index(data).then(result => {
+      const inspectionMemory = this.viewer?.memory || 0;
+      this.indexing = false;
+      this.emit({...result,id:data.id,inspectionLinearMemoryCapacityBytes:inspectionMemory,
+        aggregateLinearMemoryCapacityBytes:(result.aggregateLinearMemoryCapacityBytes || 0) + inspectionMemory});
+    })
+      .catch(error => { this.indexing = false; this.emit({id:data.id,error:String(error)}); })
+      .finally(() => { this.indexing = false; this.releaseViewer(); });
+  }
+  async view(data) {
+    if (!this.viewer) {
+      const worker = new Worker('worker.js');
+      const viewer = this.viewer = {worker, pending:new Map(), sequence:0, users:0};
+      worker.onmessage = ({data: response}) => {
+        viewer.memory = Math.max(viewer.memory || 0,response.linearMemoryBytes || 0);
+        if (response.type === 'fatal') {
+          for (const {reject} of viewer.pending.values()) reject(new Error(response.error));
+          viewer.pending.clear();
+        }
+        const pending = viewer.pending.get(response.id);
+        if (pending) {
+          viewer.pending.delete(response.id);
+          response.error ? pending.reject(new Error(response.error)) : pending.resolve(response);
+        }
+      };
+      worker.onerror = event => {
+        for (const {reject} of viewer.pending.values()) reject(new Error(event.message));
+        viewer.pending.clear();
+      };
+      viewer.request = (operation, extra = {}) => new Promise((resolve, reject) => {
+        const id = ++viewer.sequence;
+        viewer.pending.set(id, {resolve,reject});
+        worker.postMessage({...extra,id,operation});
+      });
+      viewer.ready = viewer.request('mount', {files:this.files,parserOnly:true});
+    }
+    const viewer = this.viewer;
+    viewer.users++;
+    try {
+      await viewer.ready;
+      if (this.closed) throw new Error('Project closed');
+      // This worker has no graph. The UI refreshes the current view with indexed
+      // relationships once the coordinator finishes, preserving view position.
+      return await viewer.request(data.operation, {...data,indexed:false});
+    } finally {
+      viewer.users--; this.releaseViewer();
+    }
+  }
+  releaseViewer(force = false) {
+    const viewer = this.viewer;
+    if (!viewer || (!force && (this.indexing || viewer.users))) return;
+    viewer.worker.terminate();
+    for (const {reject} of viewer.pending.values()) reject(new Error('Project closed'));
+    viewer.pending.clear(); this.viewer = null;
   }
   async index(data) {
     const begin = performance.now();
@@ -110,6 +170,7 @@ class LumenCodeWorker extends EventTarget {
   terminate() {
     this.closed = true;
     this.stopChildren();
+    this.releaseViewer(true);
     this.coordinator.terminate();
     for (const {reject} of this.pending.values()) reject(new Error('Indexing cancelled'));
     this.pending.clear();

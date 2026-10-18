@@ -17,7 +17,7 @@ remain canonical. A new worker on refresh clears static path/mtime caches.
 
 The dark interface now follows the desktop four-pane layout: project tree, file
 overview, inspector and bottom source preview. It supports folder selection/import,
-an example project, symbols and source, project relationships and search. Workspace
+symbols and source, project relationships and search. Workspace
 presentation remains separate from the engine and worker scheduler. Source text is rendered as text rather than HTML.
 Cancellation/timeouts terminate the coordinator and every parser worker. All essential assets are precached,
 with a cache version derived from asset hashes and a storage-persistence result
@@ -243,8 +243,13 @@ remain visible during work. Folder opening lives in the header's Project menu an
 in the empty project pane, with Ctrl/Cmd+O as a shortcut. The same Open action uses
 the import picker where direct folder access is unavailable. Refreshing an imported
 snapshot prompts for reimport. Back/Forward now sit in the project-pane heading;
-recent folders, example, saved-state controls and diagnostics live in the Project
+recent folders, saved-state controls and diagnostics live in the Project
 menu. The installed app name is simply LumenCode.
+
+The built-in example project and its Project-menu action have been removed.
+Browser tests create local fixture folders and import them through the production
+folder control; there is no example/test project generator in shipped app code.
+
 
 [Automatic-workflow evidence](evidence/offline-pwa-automatic-workflow.json) covers
 Chromium/WebKit workspace interactions, empty-state folder import, menu/shortcut
@@ -252,6 +257,52 @@ opening and automatic indexing. [Lifecycle regression evidence](evidence/offline
 retains native/browser JSON parity, real OPFS-handle open/refresh, saved-folder
 reopening offline, progress-aware timeout and cancellation/recovery. OS picker
 permission prompts remain a separate interactive check.
+
+### Background browsing and auxiliary files
+
+File navigation, source inspection, project switching and folder refresh remain
+available while the relationship index builds. Progress has its own row, separate
+from the currently inspected file's status. A lazy inspection worker runs the same
+WASM parser independently of the coordinator, including when the coordinator is
+occupied by a single-parser build. The inspection module has no graph; completed
+relationships come from the coordinator and update the current view in place.
+Symbol selection, source page and horizontal/vertical scroll, pane scroll and the
+active compact-screen pane are preserved without adding a history entry.
+
+Project generations prevent old background completions from restoring a replaced
+project. Switching projects/cancelling clears pending requests and terminates the
+coordinator, parser pool and optional inspection worker. Inspection workers are
+also released after indexing and outstanding inspections finish. Clearing saved
+state remains disabled during indexing to avoid racing a cache write.
+
+The project tree now includes all selected files after the existing directory
+exclusions, while canonical candidates alone contribute to relationships. Other
+files support read-only UTF-8 and BOM-marked UTF-16 previews up to 5 MiB. Text
+inspection still invokes the canonical parser, preserving CSS symbols and
+JSON/package metadata even though those files are not index candidates. Unknown
+text is presented as a plain preview. Binary,
+oversized and unsupported-encoding files show explicit messages. Projects containing
+only auxiliary files are browsable. No language extraction, recovery, graph rules
+or C++ engine source changed for this milestone.
+
+[Background validation](evidence/offline-pwa-background-browsing.json) covers
+Chromium and Playwright WebKit on Linux: inspection while real facts requests are
+held at the transport boundary, auxiliary previews, unchanged indexed candidate
+count, preserved selection/source/pane position and history, worker release,
+project replacement, cancellation and auxiliary-only projects. The test contains
+no production timing hooks. The Chromium run also indexed the frozen **590-file**
+project with one parser: inspection completed in **168 ms** while the real index
+continued for **14.5 seconds**. The optional inspection module's observed capacity
+was **64 MiB**, released afterward. These are diagnostic samples; aggregate WASM
+capacity includes the optional inspection module and is not peak RSS/browser memory.
+
+The complete indexed 122-file one/two/four-parser comparison still passes, as do
+102-file native/browser parity, selected indexed comparisons, offline restart,
+remembered folders, progress watchdog and existing pane interactions. See
+[lifecycle evidence](evidence/offline-pwa-background-lifecycle.json). Browser test
+tooling now lives in the persistent
+`/home/user/Code/Coding/lumencode-wasm-tools/browser-venv/` directory on Kubuntu,
+so it survives `/tmp` cleanup.
 
 ### Next steps
 
@@ -267,10 +318,26 @@ permission prompts remain a separate interactive check.
 4. Extend cache validation to native permission reconnection, interrupted updates,
    quota pressure and cache loss. Consider fine-grained invalidation and broader
    native-browser/platform checks. Public-hosted app update UX remains future work.
-5. Extend the four-pane workspace with auxiliary-file browsing, syntax colouring,
-   richer search filters and broader keyboard/accessibility acceptance. Packaging,
+5. Extend the four-pane workspace with richer search filters
+   and broader keyboard/accessibility acceptance. Packaging,
    public preview and distribution remain separate work; native releases and the
    public website have not been changed.
 
 [Build/run/test instructions](../../apps/web/README.md) ·
 [Original feasibility and decision gates](offline-pwa-feasibility.md)
+
+### Offline syntax highlighting (18 October 2026)
+
+Whole-file previews, signatures and inspector excerpts now use a pinned local
+Prism 1.30.0 bundle with its MIT license and source hashes. The display grammars
+are independent of the canonical shared engine; no extraction, AST, fallback or
+relationship rules changed. A separate bounded worker paints safe text spans
+asynchronously, retaining multiline context across source pages, original copy
+text, focused lines and scroll. Slow, unknown, oversized and dense inputs remain
+readable as plain text. Assets are precached for offline use.
+
+[Syntax validation](evidence/offline-pwa-syntax.json) records Chromium and
+Playwright WebKit checks plus workspace/background-index and offline regression
+results. Native Safari and OS folder-permission prompts still need manual
+acceptance. See the [browser README](../../apps/web/README.md#offline-syntax-highlighting)
+for limits, tests and the reproducible vendoring command.

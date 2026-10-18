@@ -11,8 +11,9 @@ globalThis.Workspace = (() => {
   const relative = path => typeof path === 'string' && path.startsWith('/project/') ? path.slice(9) : '';
   const label = item => item.name || item.label || item.target || item.method && `${item.method} ${item.path}` || item.path || item.text || 'Item';
   let actions, analysis, path = '', sourceLines = [], page = 0, focusLine = 0;
-  let paths = new Set(), history = [], historyPosition = -1, sourceText = '';
+  let selection, paths = new Set(), history = [], historyPosition = -1, sourceText = '';
   const pageSize = 160;
+  let syntaxLines = null, syntaxText, syntaxLanguage, syntaxGeneration = 0;
   function activatePane(name) {
     get('workspace').dataset.pane = name;
     for (const tab of document.querySelectorAll('[data-pane][role=tab]')) {
@@ -55,10 +56,16 @@ globalThis.Workspace = (() => {
   function renderSource() {
     const start = page * pageSize, end = Math.min(sourceLines.length, start + pageSize);
     const fragment = document.createDocumentFragment();
+    let tokenBudget = 8000;
     for (let index = start; index < end; index++) {
       const row = node('span', null, `source-line${index + 1 === focusLine ? ' selected' : ''}`);
       row.dataset.line = index + 1;
-      row.append(node('span', String(index + 1), 'line-number'), document.createTextNode(sourceLines[index] + '\n'));
+      row.append(node('span', String(index + 1), 'line-number'));
+      const parts = syntaxLines?.[index];
+      const colour = parts && parts.length <= tokenBudget;
+      if (colour) tokenBudget -= parts.length;
+      row.append(colour ? Syntax.fragment(parts) : document.createTextNode(sourceLines[index]));
+      row.append(document.createTextNode('\n'));
       fragment.append(row);
     }
     get('source').replaceChildren(fragment);
@@ -66,7 +73,7 @@ globalThis.Workspace = (() => {
     get('source-position').textContent = sourceLines.length ? `${start + 1}–${end} / ${sourceLines.length}` : '';
     get('source-previous').disabled = page === 0;
     get('source-next').disabled = end >= sourceLines.length;
-    get('copy-source').disabled = !path;
+    get('copy-source').disabled = !path || Boolean(analysis?.previewUnavailable);
   }
   function section(title, parent) {
     const container = node('section', null, 'detail-section');
@@ -100,13 +107,14 @@ globalThis.Workspace = (() => {
   }
   function inspect(item, kind = 'Symbol', record = true) {
     if (!analysis) return;
+    selection = {item,kind};
     const parent = get('inspector'); parent.replaceChildren();
     parent.append(node('div', kind === 'File' ? analysis.language || 'File' : item.kind || kind, 'inspector-kind'));
     parent.append(node('h3', kind === 'File' ? analysis.fileName || path : label(item)));
     parent.append(node('p', [item.detail, item.line ? `${path} · line ${item.line}` : path].filter(Boolean).join(' · '), 'inspector-subtitle'));
     if (kind === 'File') {
-      const info = section('Analysis', parent);
-      info.append(node('p', `${analysis.analysisSourceMode || 'analysis'} · ${analysis.analysisConfidence || 'unknown'} confidence`));
+      const info = section(analysis.previewOnly ? 'Preview' : 'Analysis', parent);
+      info.append(node('p', analysis.previewOnly ? analysis.summary : `${analysis.analysisSourceMode || 'analysis'} · ${analysis.analysisConfidence || 'unknown'} confidence`));
       for (const notice of analysis.analysisNotices || []) info.append(node('p', describe(notice)));
       links('Dependencies', analysis.dependencies, parent);
       links('Routes', analysis.routes, parent);
@@ -126,7 +134,8 @@ globalThis.Workspace = (() => {
       const returns = item.returns || (item.signature?.returnType ? [{text:item.signature.returnType}] : []);
       if (parameters.length || returns.length) {
         const signature = `${item.name || label(item)}(${parameters.map(p => p.name + (p.type ? `: ${p.type}` : '')).join(', ')})`;
-        parent.append(node('pre', signature, 'signature'));
+        const preview = node('pre', signature, 'signature'); parent.append(preview);
+        Syntax.paint(preview, signature, item.sourceLanguage || analysis.language, path);
       }
       if (parameters.length) {
         const dl = node('dl'); section('Parameters', parent).append(dl);
@@ -146,7 +155,10 @@ globalThis.Workspace = (() => {
         open.onclick = () => navigate(destination, item.line, item.name);
         section('Location', parent).append(open);
       }
-      if (item.snippet) section('Excerpt', parent).append(node('pre', item.snippet, 'signature'));
+      if (item.snippet) {
+        const preview = node('pre', item.snippet, 'signature'); section('Excerpt', parent).append(preview);
+        Syntax.paint(preview, item.snippet, item.sourceLanguage || analysis.language, path);
+      }
     }
     for (const button of get('symbols').querySelectorAll('.symbol-button')) button.setAttribute('aria-current', String(button._item === item));
     showSource(item.line || 0);
@@ -192,12 +204,23 @@ globalThis.Workspace = (() => {
     get('files').replaceChildren(); render(root, get('files'));
   }
   function show(result, text, filename, focus = {}) {
-    analysis = result; path = filename; sourceText = text; sourceLines = text.split(/\r\n|\n|\r/);
+    analysis = result; path = filename; sourceText = text; sourceLines = result.previewUnavailable ? [] : text.split(/\r\n|\n|\r/);
+    const grammar = Syntax.language(result.language, filename);
+    if (syntaxText !== text || syntaxLanguage !== grammar) {
+      syntaxText = text; syntaxLanguage = grammar; syntaxLines = null;
+      const generation = ++syntaxGeneration;
+      Syntax.highlight(text, result.language, filename).then(highlighted => {
+        if (!highlighted || generation !== syntaxGeneration) return;
+        syntaxLines = highlighted.lines;
+        const source = get('source'), top = source.scrollTop, left = source.scrollLeft;
+        renderSource(); source.scrollTop = top; source.scrollLeft = left;
+      });
+    }
     get('selected-name').textContent = filename;
     get('summary').textContent = `${result.summary || result.language || 'Source'} · ${result.language || ''}`;
     get('result').textContent = JSON.stringify(result, null, 2);
     get('symbols').replaceChildren(); renderSymbols(result.symbols, get('symbols'));
-    if (!result.symbols?.length) get('symbols').append(node('p', 'No symbols found in this file.', 'empty'));
+    if (!result.symbols?.length) get('symbols').append(node('p', result.previewOnly ? 'This file is available as a text preview; it is not indexed.' : 'No symbols found in this file.', 'empty'));
     const sections = get('file-sections'); sections.replaceChildren();
     for (const [field, title] of [['dependencies','Dependencies'],['routes','Routes'],['quickLinks','Quick links'],['relatedFiles','Related files']]) {
       if (!result[field]?.length) continue;
@@ -214,7 +237,7 @@ globalThis.Workspace = (() => {
       const active = button.dataset.path === filename; button.setAttribute('aria-current', String(active));
       if (active) { let parent = button.parentElement; while (parent && parent !== get('files')) { if (parent.tagName === 'DETAILS') parent.open = true; parent = parent.parentElement; } }
     }
-    const notices = result.analysisNotices || [];
+    const notices = result.previewUnavailable ? [result.summary] : result.analysisNotices || [];
     get('source-notice').hidden = !notices.length;
     get('source-notice').textContent = notices.map(describe).join(' · ');
     const symbol = findSymbol(result.symbols, focus.line, focus.name);
@@ -222,8 +245,33 @@ globalThis.Workspace = (() => {
     get('inspect-file').disabled = false;
     activatePane('overview');
   }
+  function update(result) {
+    if (!analysis || analysis.previewOnly || result.path !== analysis.path) return;
+    const previous = selection;
+    const saved = {page,focusLine,pane:get('workspace').dataset.pane,
+      source:get('source').scrollTop,sourceLeft:get('source').scrollLeft,
+      overview:document.querySelector('.overview-content').scrollTop,
+      inspector:document.querySelector('.inspector-content').scrollTop};
+    const identity = item => JSON.stringify([item.name,item.line,item.kind,item.target,item.path]);
+    const find = items => {
+      for (const item of items || []) {
+        if (identity(item) === identity(previous?.item || {})) return item;
+        const member = find(item.members); if (member) return member;
+      }
+    };
+    const current = previous?.kind === 'File' ? result : find(result.symbols) ||
+      find(result.dependencies) || find(result.routes) || find(result.quickLinks) || find(result.relatedFiles) || previous?.item;
+    show(result,sourceText,path,{record:false});
+    if (current) inspect(current,previous.kind,false);
+    page = saved.page; focusLine = saved.focusLine; renderSource();
+    get('source').scrollTop = saved.source; get('source').scrollLeft = saved.sourceLeft;
+    document.querySelector('.overview-content').scrollTop = saved.overview;
+    document.querySelector('.inspector-content').scrollTop = saved.inspector;
+    activatePane(saved.pane);
+  }
   function reset() {
-    analysis = undefined; path = ''; sourceText = ''; sourceLines = []; page = 0;
+    Syntax.reset(); syntaxLines = null; syntaxText = undefined; syntaxLanguage = undefined; syntaxGeneration++;
+    analysis = undefined; selection = undefined; path = ''; sourceText = ''; sourceLines = []; page = 0;
     history = []; historyPosition = -1; paths.clear();
     get('inspector').replaceChildren(node('p','Select a file or symbol to see its details.','empty'));
     get('file-sections').replaceChildren(); get('source-notice').hidden = true;
@@ -304,5 +352,5 @@ globalThis.Workspace = (() => {
       };
     }
   }
-  return {setup,files,show,reset,controls:historyControls,navigate,activatePane};
+  return {setup,files,show,update,reset,previewOnly:() => Boolean(analysis?.previewOnly),controls:historyControls,navigate,activatePane};
 })();

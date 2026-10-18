@@ -40,6 +40,7 @@ def main():
             page.wait_for_function("!document.getElementById('import').disabled", timeout=90000)
             assert page.locator('nav').count() == 0
             assert page.locator('#index').count() == 0
+            assert page.locator('#demo').count() == 0
             assert page.locator('#choose-project').is_visible()
             with page.expect_file_chooser() as chosen:
                 page.locator('#choose-project').click()

@@ -1,6 +1,6 @@
 // The build script replaces this marker with a hash of the complete asset set.
 const CACHE = 'lumencode-prototype-__ASSET_VERSION__';
-const ASSETS = ['.', 'index.html', 'app.js', 'worker.js', 'worker-client.js', 'workspace.js', 'storage.js', 'style.css',
+const ASSETS = ['.', 'index.html', 'app.js', 'worker.js', 'worker-client.js', 'workspace.js', 'syntax.js', 'syntax-worker.js', 'prism-vendor.js', 'prism-LICENSE.txt', 'prism-provenance.json', 'storage.js', 'style.css',
   'manifest.webmanifest', 'icon.svg', 'engine.js', 'engine.wasm', 'engine-version.js'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));

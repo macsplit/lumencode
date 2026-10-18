@@ -5,6 +5,8 @@ const skipped = new Set(['node_modules', 'dist', 'build', 'coverage', 'vendor',
 const MAX_FILES = 20000;
 let worker, sequence = 0, revision = 0, busy = false, indexed = false, directory, selected, currentFiles = [];
 let pending = new Map();
+let indexing = false, projectGeneration = 0, indexRefreshPending = false, refreshing;
+let analysisFiles = new Set(), sourceFiles = new Map();
 let indexActivity, indexTimer, readyNotice = '';
 let recentProjects = [], currentProjectKey;
 
@@ -42,7 +44,7 @@ function renderIndexProgress() {
     saving: 'Saving analysis facts', definitions: 'Collecting definitions',
     declarations: 'Matching declarations', linking: 'Resolving calls',
     routes: 'Matching HTTP routes', complete: 'Finishing relationships'};
-  status(`${labels[phase] || 'Building relationships'}${total ? ` · ${done} / ${total}` : ''}${path ? ` · ${path.replace(/^\/project\//, '')}` : ''}`);
+  $('index-message').textContent = `${labels[phase] || 'Building relationships'}${total ? ` · ${done} / ${total}` : ''}${path ? ` · ${path.replace(/^\/project\//, '')}` : ''}`;
   const progress = $('index-progress');
   if (total) { progress.max = total; progress.value = done; }
   else progress.removeAttribute('value');
@@ -65,16 +67,16 @@ function noteIndexProgress(data) {
 
 function status(text) { if ($('status').textContent !== text) $('status').textContent = text; }
 function controls() {
-  for (const id of ['open', 'import', 'demo', 'choose-project']) $(id).disabled = busy;
+  for (const id of ['open', 'import', 'choose-project']) $(id).disabled = busy;
   $('import').hidden = !('showDirectoryPicker' in window);
   $('project-empty').hidden = Boolean(currentFiles.length);
   $('workspace').setAttribute('aria-busy', String(busy));
   $('recent').disabled = busy;
-  $('clear-saved').disabled = busy;
+  $('clear-saved').disabled = busy || indexing;
   $('refresh').disabled = busy || (!directory && !currentFiles.length);
   $('refresh').textContent = directory ? 'Refresh project' : 'Import folder again…';
-  $('cancel').disabled = !busy;
-  $('cancel').hidden = !busy;
+  $('cancel').disabled = !busy && !indexing;
+  $('cancel').hidden = !busy && !indexing;
   $('search').disabled = busy || !currentFiles.length;
   $('search').dataset.indexed = String(indexed);
   Workspace.controls();
@@ -134,7 +136,8 @@ function startWorker() {
 function restart(message) {
   stopIndexProgress();
   readyNotice = message;
-  revision++;
+  revision++; projectGeneration++; indexing = false; indexRefreshPending = false;
+  analysisFiles.clear(); sourceFiles.clear();
   worker.terminate();
   for (const task of pending.values()) { clearTimeout(task.timeout); task.reject(new Error('Operation cancelled')); }
   pending.clear();
@@ -154,7 +157,7 @@ async function task(action) {
   busy = true; controls();
   try { return await action(); }
   catch (error) { if (token === revision && error.name !== 'AbortError') status(error.message); return false; }
-  finally { if (token === revision) { busy = false; controls(); } }
+  finally { if (token === revision) { busy = false; controls(); refreshIndexedView(); } }
 }
 function accepted(path) {
   return !path.split('/').slice(0, -1).some(part => skipped.has(part) || part.startsWith('.'));
@@ -176,11 +179,15 @@ async function enumerate(handle, prefix = '', output = [], token = revision) {
   return output;
 }
 async function mount(files, name, {projectKey, verifyContents = false} = {}) {
+  const project = ++projectGeneration;
+  indexing = false; indexRefreshPending = false; stopIndexProgress();
   status(`Opening ${files.length} local files…`);
   // New worker clears path/mtime caches as well as the previous graph.
   // Recreate it only for subsequent mounts; no cached source survives a refresh.
   if (currentFiles.length) {
     worker.terminate();
+    for (const request of pending.values()) { clearTimeout(request.timeout); request.reject(new Error('Project changed')); }
+    pending.clear();
     startWorker();
     busy = true;
   }
@@ -190,22 +197,64 @@ async function mount(files, name, {projectKey, verifyContents = false} = {}) {
   $('search-results').replaceChildren(); $('symbols').replaceChildren();
   $('result').textContent = ''; $('source').textContent = '';
   const reply = await rpc('mount', {files, projectKey, verifyContents});
-  currentFiles = reply.result.paths;
+  analysisFiles = new Set(reply.result.paths);
+  sourceFiles = new Map(files.map(({path,file}) => [path,file]));
+  currentFiles = [...sourceFiles.keys()].sort().map(path => `/project/${path}`);
   $('project-name').textContent = name;
   $('file-count').textContent = `(${currentFiles.length})`;
   Workspace.files(currentFiles);
-  status(`${currentFiles.length} analysable files · ${Math.round(reply.elapsedMs)} ms to mount and list`);
-  if (currentFiles.length) await analyse(currentFiles[0].slice('/project/'.length));
-  if (currentFiles.length) await buildRelationships();
+  if (currentFiles.length) await analyse((reply.result.paths[0] || currentFiles[0]).slice('/project/'.length));
+  if (analysisFiles.size) void buildRelationships(project);
+  else status(`${currentFiles.length} files · Ready`);
+}
+async function readPreview(file, indexedCandidate = false) {
+  if (!file) throw new Error('This file is no longer available. Refresh the project.');
+  if (file.size > 5 * 1024 * 1024) return {text:'',unavailable:true,message:'Preview unavailable for files larger than 5 MiB.'};
+  const sample = new Uint8Array(await file.slice(0,8192).arrayBuffer());
+  const utf16 = sample[0] === 255 && sample[1] === 254 ? 'utf-16le' : sample[0] === 254 && sample[1] === 255 ? 'utf-16be' : null;
+  if (!indexedCandidate && !utf16 && sample.includes(0)) return {text:'',unavailable:true,message:'Binary file · No text preview.'};
+  try {
+    return {text:new TextDecoder(utf16 || 'utf-8', {fatal:!indexedCandidate}).decode(await file.arrayBuffer())};
+  } catch (_) { return {text:'',unavailable:true,message:'Text encoding is not supported by this preview.'}; }
 }
 async function analyse(path, focus = {}) {
-  status(`Analysing ${path}…`);
-  const {result, elapsedMs} = await rpc('analyse', {path, indexed});
-  const source = await rpc('read', {path});
+  const project = projectGeneration, withIndex = indexed;
+  status(`Opening ${path}…`);
+  const source = await readPreview(sourceFiles.get(path),analysisFiles.has(`/project/${path}`));
+  let result, elapsedMs = 0;
+  if (!source.unavailable) {
+    const reply = await rpc('analyse', {path, indexed:withIndex});
+    result = reply.result; elapsedMs = reply.elapsedMs;
+    if (!analysisFiles.has(`/project/${path}`) && result.language === 'text') {
+      result = {...result,previewOnly:true,summary:'Text preview · Not part of the relationship index'};
+    }
+  } else {
+    result = {path:`/project/${path}`,fileName:path.split('/').at(-1),language:'Text',symbols:[],
+      previewOnly:true,previewUnavailable:Boolean(source.unavailable),
+      summary:source.message || 'Text preview · Not part of the relationship index'};
+  }
+  if (project !== projectGeneration) return false;
   selected = path;
-  Workspace.show(result, source.result.text, path, focus);
-  status(`${result.language || 'Source'} · ${Math.round(elapsedMs)} ms analysis${indexed ? ' · relationships included' : ''}`);
+  Workspace.show(result, source.text, path, focus);
+  if (!withIndex && indexed && !result.previewOnly) indexRefreshPending = true;
+  status(result.previewOnly ? result.summary : `${result.language || 'Source'} · ${Math.round(elapsedMs)} ms analysis${withIndex ? ' · relationships included' : ''}`);
   return result;
+}
+async function refreshIndexedView() {
+  if (!indexRefreshPending || busy || !selected || refreshing?.project === projectGeneration) return;
+  if (Workspace.previewOnly()) { indexRefreshPending = false; return; }
+  indexRefreshPending = false;
+  const job = refreshing = {project:projectGeneration,path:selected};
+  try {
+    const {result} = await rpc('analyse', {path:job.path,indexed:true});
+    if (job.project !== projectGeneration) return;
+    if (!busy && selected === job.path) Workspace.update(result);
+    else indexRefreshPending = true;
+  } catch (error) { if (job.project === projectGeneration) status(error.message); }
+  finally {
+    if (refreshing === job) refreshing = null;
+    if (indexRefreshPending && !busy) queueMicrotask(refreshIndexedView);
+  }
 }
 $('open').onclick = () => {
   if (!('showDirectoryPicker' in window)) { $('folder-input').click(); return; }
@@ -252,26 +301,24 @@ $('refresh').onclick = () => {
     await mount(await enumerate(directory), directory.name, {projectKey: currentProjectKey});
   });
 };
-$('demo').onclick = () => task(async () => {
-  directory = undefined;
-  const sources = {
-    'greeting.js': 'export function greeting(name) { return `Hello, ${name}`; }\n',
-    'main.js': 'import { greeting } from "./greeting.js";\nexport function run() { return greeting("world"); }\n',
-    'index.html': '<!doctype html>\n<html><body><button id="greet" onclick="run()">Greet</button><script src="main.js"></script></body></html>\n',
-  };
-  await mount(Object.entries(sources).map(([path, text]) => ({path, file: new File([text], path, {lastModified: 1700000000000})})), 'Example project');
-});
-async function buildRelationships() {
+async function buildRelationships(project) {
+  indexing = true; controls();
   const now = performance.now();
   indexActivity = {phase: 'discovering', path: '', done: 0, total: 0, started: now, fileStarted: now};
   $('index-details').hidden = false;
   renderIndexProgress(); indexTimer = setInterval(renderIndexProgress, 250);
   try {
-    const reply = await rpc('index'); indexed = true;
-    stopIndexProgress();
-    if (selected) await analyse(selected);
-    status(`${reply.result.files} files · ${reply.result.reusedFromCache} reused · ${reply.result.crossFileEdges} relationships · ${(reply.elapsedMs / 1000).toFixed(1)}s${reply.cacheStatus === 'unavailable' ? ' · browser could not save the index' : ''}`);
-  } finally { stopIndexProgress(); }
+    const reply = await rpc('index');
+    if (project !== projectGeneration) return;
+    indexed = true; indexRefreshPending = true;
+    status(`${reply.result.files} indexed files · ${reply.result.reusedFromCache} reused · ${reply.result.crossFileEdges} relationships${reply.cacheStatus === 'unavailable' ? ' · browser could not save the index' : ''}`);
+  } catch (error) {
+    if (project === projectGeneration) status(`Relationships unavailable: ${error.message}. Refresh the project to retry.`);
+  } finally {
+    if (project === projectGeneration) {
+      indexing = false; stopIndexProgress(); controls(); refreshIndexedView();
+    }
+  }
 }
 $('clear-saved').onclick = () => task(async () => {
   await LumenCodeStorage.clear();

@@ -9,7 +9,7 @@ a replacement for the native applications.
 - Shared C++ analysis and all vendored grammars compiled into one WebAssembly module.
 - Analysis and project indexing in a dedicated worker, using the same recovery,
   heuristics, facts and graph construction as native consumers.
-- Read-only folder selection, a directory-import fallback, example project,
+- Read-only folder selection, a directory-import fallback,
   source/symbol inspection, relationships and symbol search.
 - Desktop-style project tree, file overview, inspector and bottom source preview.
   Select symbols/members for details, parameters, returns, calls and callers;
@@ -18,6 +18,10 @@ a replacement for the native applications.
   Source is numbered, line-focused and paged in 160-line blocks, with full-source
   copying. Ctrl/Cmd+F focuses search; files are searchable before indexing and
   canonical symbol search becomes available after automatic indexing.
+- File and symbol inspection stays available while indexing runs. Relationships
+  update in place afterward, preserving the current selection and source position.
+  A separate inspection worker starts only if needed during a build and is then
+  released. Project replacement/cancellation terminates all workers.
 - Refresh of a granted directory; a fresh worker clears source/path caches.
 - File-backed WORKERFS mapping preserves relative hierarchy and modification
   times without eagerly copying every file's contents into WebAssembly memory.
@@ -34,8 +38,8 @@ decision remains open for a fuller interface.
 
 Open a folder from the empty project pane, the **Project** menu, or Ctrl/Cmd+O.
 Where direct folder access is unavailable, the same action opens the folder-import
-picker. The Project menu also contains recent folders, refresh/reimport, an example
-and saved-state controls. Relationship indexing starts automatically on opening,
+picker. The Project menu also contains recent folders, refresh/reimport and
+saved-state controls. Relationship indexing starts automatically on opening,
 importing, refreshing or reopening a project; cached facts are reused as before.
 Progress and Cancel appear during work. Back/Forward sit in the project pane.
 
@@ -154,8 +158,12 @@ complete browser restart with the origin server stopped and networking disabled.
 
 - Browser storage can be denied or evicted. Analysis remains available in-session
   when saved-index storage fails; the completion message reports that limitation.
-- The UI bounds folder enumeration to 20,000 files after exclusions. The shared
-  engine retains its own indexed file-size and language selection rules.
+- The project tree includes all granted/imported files after directory exclusions,
+  bounded to 20,000 entries. The shared engine alone chooses index candidates.
+  Auxiliary files have read-only previews for UTF-8 and BOM-marked UTF-16 up to
+  5 MiB. The shared parser still supplies supported CSS/JSON/package details,
+  independently of whether a file is indexed. Binary, oversized and unsupported-encoding files show an explanatory
+  message. Auxiliary previews do not enter the relationship index.
 - Cold indexing uses up to four independent parser workers, bounded by reported
   CPU concurrency. Projects with fewer than 128 stale files use one worker to avoid
   startup overhead. Cached rebuilds do not start parser workers. Every worker maps
@@ -163,7 +171,7 @@ complete browser restart with the origin server stopped and networking disabled.
   alone builds the canonical graph and saves its facts cache.
 - Each parser has its own WebAssembly memory. This trades additional memory for
   shorter cold scans; it does not require shared memory or special isolation headers.
-- No filesystem watcher, automatic background cold indexing or editable source.
+- No filesystem watcher or editable source.
 - Invalidation is conservative: any change in the selected project's manifest
   discards the saved snapshot, including changed auxiliary/dependency files.
   Fine-grained incremental invalidation remains future work.
@@ -230,6 +238,62 @@ python tools/check_web_workspace.py \
 ```
 
 Use `--browser webkit` for Playwright WebKit. Native OS picker prompts and native
-Safari still require platform-specific acceptance checks. The project tree lists
-the engine's supported candidate files; auxiliary-file browsing, syntax colouring
-and richer search filters remain future interface work.
+Safari still require platform-specific acceptance checks. The project tree now
+includes auxiliary files. Richer search filters remain future interface work.
+
+Background-browsing tests hold real parser-worker requests at the browser transport
+boundary, then verify inspection, auxiliary previews, selection preservation,
+worker cleanup, project replacement and cancellation:
+
+```sh
+python tools/check_web_background.py \
+  --web-root /home/user/Code/Coding/lumencode-wasm-build/web \
+  --output /tmp/lumencode-background-validation
+```
+
+Add `--browser webkit` for the second browser engine. With a sufficiently large
+`--real-project /path/to/project`, the checker additionally verifies inspection
+completes while an actual single-parser index is still running. The optional
+inspection module's observed capacity is included in transport memory diagnostics;
+these values remain WebAssembly capacities rather than total browser memory.
+
+### Offline syntax highlighting
+
+Whole-file previews, signatures and inspector excerpts use the locally bundled
+Prism 1.30.0 grammars. This affects display only: language extraction, ASTs,
+fallbacks and relationships continue to come from the shared engine. Canonical
+engine labels select grammars, with extension overrides for JSX/TSX and similar
+formats and extension fallback for auxiliary text. There is no language guessing,
+CDN, runtime download or HTML insertion.
+
+Tokenisation runs in a separate lightweight worker. Source appears immediately;
+colouring arrives asynchronously without changing the selected line, source page
+or scroll. A complete bounded source is tokenised before rendering 160-line
+pages, preserving multiline comment/string context across pages. Two recent
+requests are cached, including during background relationship refreshes. Copy
+source still copies the original text and line endings.
+
+Limits: 524,288 UTF-16 code units per input, 100,000 coalesced token fragments,
+8,000 fragments rendered per source page or excerpt, and a 1.5-second worker
+deadline. Unknown, oversized, overly dense, failed or timed-out inputs retain
+plain text; worker failure does not prevent navigation or future highlighting.
+Project reset terminates this worker and clears its cache. These limits are
+presentation safeguards, independent of parser and file-preview limits.
+
+```sh
+python tools/check_web_syntax.py \
+  --web-root /home/user/Code/Coding/lumencode-wasm-build/web \
+  --output /tmp/lumencode-syntax-validation
+```
+
+Add `--browser webkit` for the second browser engine. Checks cover representative
+languages, exact text/line endings, multiline page context, literal HTML safety,
+stale requests, scroll preservation, input/token bounds and worker timeout/recovery.
+The complete prototype check also verifies highlighting after a browser restart
+with its HTTP server stopped and the browser offline.
+
+To rebuild the vendored bundle, check out Prism tag `v1.30.0` in a separate clean
+directory and run `python3 tools/build_prism_bundle.py --source /path/to/prism`.
+The tool verifies the pinned revision, resolves grammar order with upstream's
+build helper, retains the MIT license and records SHA-256 provenance. Node is
+needed only for rebuilding this bundle, not for building/running LumenCode.

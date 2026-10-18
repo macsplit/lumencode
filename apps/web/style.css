@@ -117,3 +117,17 @@ kbd { font:10px system-ui,sans-serif; color:var(--muted); margin-left:16px; }
 .status { align-items:center; }
 #cancel { padding:1px 7px; font-size:11px; }
 @media(max-width:800px) { .project-menu { font-size:11px; } #offline { display:none; } }
+
+#index-message { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1; }
+#index-time { flex-shrink:0; }
+@media(max-width:800px) { #index-time { font-size:10px; max-width:40%; } }
+
+/* Colour only: tokenisation never changes source geometry or selection. */
+.syntax-comment, .syntax-prolog, .syntax-doctype { color:#94a3b8; }
+.syntax-keyword, .syntax-atrule, .syntax-selector { color:#c4a5f3; }
+.syntax-string, .syntax-char, .syntax-attr-value, .syntax-template-string { color:#a9d18e; }
+.syntax-number, .syntax-boolean, .syntax-constant { color:#e8b783; }
+.syntax-function, .syntax-class-name, .syntax-builtin { color:#8ecdf2; }
+.syntax-property, .syntax-attr-name, .syntax-variable { color:#e4c694; }
+.syntax-tag, .syntax-regex, .syntax-symbol { color:#f0a4b2; }
+.syntax-operator, .syntax-punctuation { color:#c0ccd9; }
