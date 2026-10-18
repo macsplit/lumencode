@@ -1,6 +1,6 @@
 id: app.lumencode.LumenCode
 runtime: org.kde.Platform
-runtime-version: '5.15-21.08'
+runtime-version: '5.15-25.08'
 sdk: org.kde.Sdk
 command: lumencode
 finish-args:

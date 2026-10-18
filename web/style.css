@@ -171,3 +171,58 @@ footer {
     color: var(--footer-text);
     font-size: 0.8rem;
 }
+
+.platforms, figcaption, .small {
+    color: #b8c2d0;
+    font-size: 0.9rem;
+}
+
+.beta {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.05rem 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+}
+
+figure {
+    margin: 0;
+    min-width: 0;
+}
+
+figcaption {
+    margin-top: 0.45rem;
+}
+
+.screenshot img {
+    display: block;
+    height: auto;
+}
+
+.platform-gallery {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.platform-gallery a {
+    display: flex;
+    align-items: center;
+    min-height: 13rem;
+}
+
+a:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 4px;
+}
+
+@media (max-width: 540px) {
+    .platform-gallery {
+        grid-template-columns: 1fr;
+    }
+
+    .platform-gallery a {
+        min-height: 0;
+    }
+}
