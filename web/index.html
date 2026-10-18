@@ -6,15 +6,15 @@
     <meta name="description" content="Explore local source trees, symbols and code relationships with LumenCode. Open source, with native Linux, macOS and Windows interfaces sharing one analysis engine.">
     <title>LumenCode - Structural Code Explorer</title>
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="style.css?v=0.1.0-gallery">
-    <script src="gallery.js?v=0.1.0-gallery" defer></script>
+    <link rel="stylesheet" href="style.css?v=0.1.0-compact">
+    <script src="gallery.js?v=0.1.0-compact" defer></script>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>LumenCode</h1>
             <p class="tagline">Structural code explorer for local source trees</p>
-            <p class="platforms">Linux · macOS · Windows <span class="status-badge">Beta</span></p>
+            <p class="platforms">Linux · macOS · Windows</p>
         </header>
 
         <main>
@@ -46,9 +46,8 @@
                     </figure>
                 </div>
                 <div class="gallery-controls" hidden>
-                    <button type="button" data-direction="-1" aria-label="Previous screenshot" aria-controls="gallery-slides">← <span>Previous</span></button>
-                    <span class="gallery-status" aria-live="polite" aria-atomic="true">1 / 6</span>
-                    <button type="button" data-direction="1" aria-label="Next screenshot" aria-controls="gallery-slides"><span>Next</span> →</button>
+                    <div class="gallery-dots" role="group" aria-label="Choose screenshot"></div>
+                    <button type="button" class="gallery-playback" aria-label="Pause slideshow" title="Pause slideshow">Ⅱ</button>
                 </div>
                 <p class="gallery-hint">Select an image to view it full size.</p>
             </section>

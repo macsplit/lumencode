@@ -1,121 +1,42 @@
 # LumenCode
 
-LumenCode is a structural code explorer with a Qt/Kirigami interface and a native
-SwiftUI macOS interface. Both use the same C++ analysis sources, Tree-sitter
-grammars, recovery/fallback rules, signatures, project relationships and search.
-Both products are in beta.
+LumenCode is a structural code explorer for Linux, macOS and Windows. Browse
+local source trees, inspect symbols and source, and follow relationships across
+files. All three native apps share the same analysis engine and language support.
 
-This is an ordinary monorepo: clone once, install the platform dependencies and
-use the native build tools. No submodules, recursive clone or source-sync step is
-needed. The former Swift repository's main history is imported under `apps/macos`.
+<img src="web/screenshot-macos.png" alt="LumenCode exploring JavaScript symbols and related files on macOS" width="760">
 
-| Directory | Purpose |
-| --- | --- |
-| `engine/` | Shared Qt Core/Concurrent analysis library and JSON helper |
-| `third_party/` | Checked-in Tree-sitter runtime/grammars and provenance |
-| `apps/qt/` | Qt/Kirigami application and original public CLI/controller |
-| `apps/macos/` | Swift package, native application and Xcode project |
-| `apps/windows/` | Initial C#/WinUI 3 frontend and process adapter (development checkpoint) |
-| `tests/fixtures/baseline/` | Shared language/recovery/relationship contracts |
-| `tools/` | Validation, runtime packaging, corpus and agent tools |
-| `docs/` | Engine, Qt, macOS and migration documentation |
+## Downloads
 
-Windows development is tracked separately in the
-[checkpoint and resume notes](docs/windows/status.md), with
-[build instructions](apps/windows/README.md). Its shared-engine checks and initial
-GUI smoke pass, and the native application can be run from the published folder.
-It remains an early frontend with presentation and performance work outstanding.
+Version **0.1.0** is available from [lumencode.app](https://lumencode.app/) and
+[GitHub Releases](https://github.com/macsplit/lumencode/releases/tag/v0.1.0).
 
-## Linux Qt application and public CLI
+| Platform | Download | Install |
+| --- | --- | --- |
+| Linux x86_64 | Signed Flatpak | Use the website's Flatpak install link for repository updates, or download the standalone bundle. |
+| macOS Intel / Apple Silicon | Universal ZIP, macOS 14+ | Extract and drag LumenCode to Applications. Developer ID signed and notarized by Apple. |
+| Windows x64 | Portable ZIP, Windows 10 2004+ | Extract the entire ZIP and run `LumenCode.Windows.exe`. Unsigned; Windows may warn or block it under some security policies. |
 
-Requires CMake 3.20+, a C/C++ compiler, Qt 5.15 Core/Concurrent/Widgets/Quick/
-QuickControls2, ECM and KDE Frameworks 5 Kirigami2/CoreAddons. Install the matching
-QML runtime modules too. No Tree-sitter generator or npm setup is needed.
+See the [release notes](docs/releases/0.1.0.md) for checksums, package provenance,
+validation and remaining platform testing.
 
-```sh
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel 4
-./build/bin/lumencode
-./build/bin/lumencode-cli --dump-file /absolute/path/to/source.swift
-```
+## Explore your code
 
-For the original public CLI without KDE/QML:
+- Browse folders, files, types and members in a local source tree.
+- Inspect syntax-coloured source and follow calls, dependencies and links across files.
+- Search files and symbols, including projects with incomplete source.
 
-```sh
-cmake -S . -B build-cli -DLUMENCODE_CLI_ONLY=ON -DCMAKE_BUILD_TYPE=Release
-cmake --build build-cli --parallel 4
-```
+Language support includes PHP, JavaScript, TypeScript, TSX, QML, CSS, HTML, JSON,
+Python, C/C++, Java, C#, Rust, Swift and Objective-C. Available detail varies by
+language. See more [screenshots](https://lumencode.app/) and the
+[user guide](docs/qt/end-user-guide.md).
 
-The public CLI retains its existing interactive and agent commands and its
-Widgets dependency. A helper-only build needs just Qt Core/Concurrent:
+## Development
 
-```sh
-cmake -S . -B build-helper -DLUMENCODE_BUILD_QT_APP=OFF -DLUMENCODE_BUILD_CLI=OFF
-cmake --build build-helper --target lumencode-engine --parallel 4
-```
+Clone this repository once to work on any platform; no submodules are needed.
+See [building and verification](docs/building.md), the [shared engine guide](engine/README.md)
+and the [documentation index](docs/README.md). Further clean-machine testing and
+GUI refinements are ongoing; current validation limits are in the
+[release notes](docs/releases/0.1.0.md#validation-and-limits).
 
-## Native macOS application and Swift CLI
-
-Requires Xcode/Swift 6, CMake and Qt 5.15 Core/Concurrent. Select a Qt installation
-with `QT5_PREFIX` or `tools/build_engine.py --qt /path/to/qt5`. The existing
-Homebrew setup uses `/opt/homebrew/opt/qt@5`.
-
-From the repository root:
-
-```sh
-python3 tools/build_engine.py
-swift build --package-path apps/macos
-swift test --package-path apps/macos
-```
-
-Open `apps/macos/lumencode-swift.xcodeproj` and select the shared `lumencode-swift`
-scheme, or build directly:
-
-```sh
-xcodebuild -project apps/macos/lumencode-swift.xcodeproj \
-  -scheme lumencode-swift -configuration Debug \
-  -destination 'platform=macOS,arch=arm64' build
-```
-
-Xcode builds the same helper and embeds its private runtime. SwiftPM uses the
-runtime built by `tools/build_engine.py`; an independent CLI distribution must
-carry `EngineRuntime` beside its executable. A packaged app uses its embedded
-runtime and never searches for another checkout.
-
-For universal Intel/Apple Silicon downloads, use the private macOS 14 Qt kit and
-the staged Developer ID signing/notarization workflow in the
-[macOS distribution guide](docs/macos/distribution.md).
-
-## Verification
-
-```sh
-python3 tools/verify_consolidation.py
-python3 tools/verify_engine_contract.py --cli build/bin/lumencode-cli --output /tmp/contracts.json
-python3 tools/parity_audit.py --interface qt --cli build/bin/lumencode-cli --output /tmp/parity.json
-cmake --build build --target lumencode-gui-smoke
-QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software \
-  ./build/bin/lumencode-gui-smoke tests/fixtures/baseline
-```
-
-The macOS rendered/native audit is `tools/run_gui_audit.py --run`; pass `--build`
-the Swift build directory. It requires a graphical desktop session. Corpus and
-damage comparisons are described in [the engine guide](engine/README.md).
-
-## Beta status and documentation
-
-Consolidation preserves the accepted beta behaviour. Type-link/diagnostic UI work,
-filesystem refresh completeness and the 50 ms GUI responsiveness target remain
-development work. The current Mac's bundled transitive libraries also prevent
-claiming macOS 14 compatibility despite the executable deployment target; use the
-explicit `tools/verify_runtime.py --target-macos 14.0` gate before shipping there.
-
-- [Shared engine and provenance](engine/README.md)
-- [Documentation index](docs/README.md)
-- [Migration plan](docs/migration/plan.md)
-- [Migration status and evidence](docs/migration/status.md)
-- [Existing macOS beta assessment](docs/macos/follow-up-2026-10-17.md)
-- [Third-party notices](THIRD_PARTY_NOTICES.md)
-
-The public CLI, `tools/agent/` entry points, desktop/bundle identities and web
-download assets retain their existing names. Repository consolidation does not
-deploy the website, install agent hooks or publish a release.
+[Report an issue](https://github.com/macsplit/lumencode/issues) · [GPLv3 license](LICENSE)

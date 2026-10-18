@@ -1,12 +1,14 @@
 # Native Windows frontend
 
-The initial Windows frontend uses C#/WinUI 3 on .NET 10. It consumes the same
+The native Windows frontend uses C#/WinUI 3 on .NET 10. It consumes the same
 C++17/Qt 5 analysis engine and vendored grammars as Linux and macOS. There is no
 C# parser, fallback implementation or independent language heuristic layer.
 
-This is an initial development checkpoint. Read
-[current progress and resume instructions](../../docs/windows/status.md) before
-continuing. It is not yet a claim of full Windows product parity.
+Version 0.1.0 is available as an unsigned, self-contained portable ZIP from
+[lumencode.app](https://lumencode.app/) and [GitHub Releases](https://github.com/macsplit/lumencode/releases/tag/v0.1.0).
+Extract the entire archive and run `LumenCode.Windows.exe`. See
+[release validation and limitations](../../docs/releases/0.1.0.md) and the
+[development evidence](../../docs/windows/status.md).
 
 ## Build and run
 

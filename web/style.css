@@ -177,14 +177,6 @@ footer {
     font-size: 0.9rem;
 }
 
-.status-badge {
-    display: inline-block;
-    margin-left: 0.4rem;
-    padding: 0.05rem 0.5rem;
-    border: 1px solid var(--border-color);
-    border-radius: 1rem;
-}
-
 figure {
     margin: 0;
     min-width: 0;
@@ -215,7 +207,7 @@ button:focus-visible, a:focus-visible {
 .screenshot a {
     display: flex;
     align-items: center;
-    aspect-ratio: 16 / 10;
+    aspect-ratio: 16 / 9;
     background: #14171c;
     border: 1px solid var(--border-color);
     border-radius: 8px;
@@ -233,32 +225,53 @@ button:focus-visible, a:focus-visible {
     margin-top: 0;
 }
 
-.gallery-controls {
+.screenshots {
+    max-width: min(640px, 68vh);
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 2rem;
+}
+
+.gallery-controls, .gallery-dots {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-top: 1rem;
+    justify-content: center;
+}
+
+.gallery-controls {
+    margin-top: 0.4rem;
 }
 
 .gallery-controls button {
+    display: grid;
+    place-items: center;
+    width: 32px;
     min-height: 44px;
-    padding: 0.4rem 0.85rem;
-    color: var(--text-color);
-    background: var(--secondary-bg);
-    border: 1px solid var(--border-color);
+    padding: 0;
+    border: 0;
     border-radius: 6px;
-    font: inherit;
-    cursor: pointer;
-}
-
-.gallery-controls button:hover {
-    border-color: var(--accent-color);
-}
-
-.gallery-status {
+    background: transparent;
     color: #b8c2d0;
-    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    font: inherit;
+}
+
+.gallery-dot::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #667180;
+}
+
+.gallery-dot[aria-current="true"]::before,
+.gallery-dot:hover::before {
+    background: var(--accent-color);
+}
+
+.gallery-controls .gallery-playback {
+    margin-left: 0.4rem;
+    font-size: 0.85rem;
 }
 
 .gallery-hint {

@@ -1,15 +1,17 @@
 # LumenCode documentation
 
 The interfaces consume the shared engine in this repository. Start with the root
-[build instructions](../README.md) and [engine guide](../engine/README.md).
+[build instructions](building.md) and [engine guide](../engine/README.md).
 
+- [0.1.0 downloads, validation and limitations](releases/0.1.0.md)
+- [Website and download deployment](web/deployment.md)
 - [Consolidation plan](migration/plan.md)
 - [Consolidation status and evidence](migration/status.md)
 - [Qt user guide](qt/end-user-guide.md)
 - [Qt developer guide](qt/developer-guide.md)
 - [macOS architecture](macos/architecture-guide.md)
 - [macOS beta assessment](macos/follow-up-2026-10-17.md)
-- [Windows development checkpoint and resume instructions](windows/status.md)
+- [Windows development status and evidence](windows/status.md)
 - [Windows feasibility investigation](windows/feasibility.md)
 
 Dated audit reports preserve their original paths, measurements and context.
