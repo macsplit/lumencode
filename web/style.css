@@ -226,7 +226,7 @@ button:focus-visible, a:focus-visible {
 }
 
 .screenshots {
-    max-width: min(640px, 68vh);
+    max-width: 800px;
     margin-left: auto;
     margin-right: auto;
     margin-bottom: 2rem;
@@ -294,4 +294,43 @@ button:focus-visible, a:focus-visible {
 .release-info {
     color: #b8c2d0;
     font-size: 0.9rem;
+}
+
+.playback-icon {
+    display: block;
+    width: 10px;
+    height: 12px;
+}
+
+.playback-icon::before {
+    content: '';
+    display: block;
+    width: 3px;
+    height: 12px;
+    background: currentColor;
+    box-shadow: 7px 0 currentColor;
+}
+
+.gallery-playback[data-paused="true"] .playback-icon::before {
+    width: 0;
+    height: 0;
+    background: transparent;
+    box-shadow: none;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    border-left: 10px solid currentColor;
+}
+
+header h1 {
+    margin-top: 0;
+    margin-bottom: 0.25rem;
+    line-height: 1.2;
+}
+
+header .tagline, header .platforms {
+    margin: 0.5rem 0;
+}
+
+header {
+    margin-bottom: 1.25rem;
 }

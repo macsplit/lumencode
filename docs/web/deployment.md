@@ -17,7 +17,7 @@ The compact six-image carousel uses plain HTML, CSS and `gallery.js`, without
 external dependencies. Dots and arrow keys select slides; autoplay advances every
 10 seconds, with a pause control. Hover, keyboard focus and hidden tabs suspend
 autoplay; reduced-motion preferences disable it by default. Images are capped
-at 640px and scale down on shorter screens, with links to their original
+at 800px and scale down with the viewport, with links to their original
 resolution. Without JavaScript, all images remain visible.
 
 ## Flatpak refresh
