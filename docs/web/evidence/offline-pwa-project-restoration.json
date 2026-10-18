@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "cold_index_seconds": 14.882749961994705,
+  "cold_status": "590 files \u00b7 0 reused \u00b7 1988 relationships \u00b7 14.8s",
+  "offline_reimport_and_restore_seconds": 2.249849403000553,
+  "warm_status": "590 files \u00b7 590 reused \u00b7 1988 relationships \u00b7 0.3s"
+}

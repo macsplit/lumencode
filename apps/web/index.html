@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#12171e">
+  <title>LumenCode</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="storage.js" defer></script>
+  <script src="worker-client.js" defer></script>
+  <script src="workspace.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header>
+    <div class="brand"><img src="icon.svg" alt="" width="26" height="26"><h1>LumenCode</h1><span class="platform">Local workspace</span></div>
+    <details id="project-menu" class="project-menu">
+      <summary>Project</summary>
+      <div class="project-menu-content">
+        <button id="open" disabled>Open folder… <kbd>⌘ / Ctrl O</kbd></button>
+        <button id="import" disabled>Import folder snapshot…</button>
+        <input id="folder-input" type="file" webkitdirectory multiple hidden>
+        <select id="recent" aria-label="Reopen a recent folder" hidden><option value="">Recent folders…</option></select>
+        <button id="refresh" disabled>Refresh project</button>
+        <button id="demo" disabled>Open example</button>
+        <hr>
+        <button id="clear-saved">Clear saved projects</button>
+        <details class="diagnostics"><summary>Diagnostics</summary><pre id="result"></pre></details>
+      </div>
+    </details>
+    <div id="offline" role="status">Preparing offline access…</div>
+  </header>
+  <div class="status"><strong id="project-name">No project selected</strong>
+    <span id="status" role="status">Starting…</span><button id="cancel" hidden disabled>Cancel</button></div>
+  <div id="index-details" hidden>
+    <progress id="index-progress" aria-label="Current relationship build phase"></progress>
+    <span id="index-time"></span>
+  </div>
+  <div class="pane-tabs" role="tablist" aria-label="Workspace panes">
+    <button role="tab" data-pane="project" aria-controls="project-pane" tabindex="0" aria-selected="true">Project</button>
+    <button role="tab" data-pane="overview" aria-controls="overview-pane" tabindex="-1" aria-selected="false">Overview</button>
+    <button role="tab" data-pane="inspector" aria-controls="inspector-pane" tabindex="-1" aria-selected="false">Inspector</button>
+    <button role="tab" data-pane="preview" aria-controls="preview-pane" tabindex="-1" aria-selected="false">Source</button>
+  </div>
+  <main id="workspace" data-pane="project">
+    <aside id="project-pane" class="pane project-pane" aria-label="Project files">
+      <div class="pane-heading"><h2>Project <span id="file-count"></span></h2>
+        <div class="history-actions"><button id="back" aria-label="Back" title="Back (Alt+Left)" disabled>←</button>
+          <button id="forward" aria-label="Forward" title="Forward (Alt+Right)" disabled>→</button></div>
+      </div>
+      <div class="project-search"><label class="sr-only" for="search">Search files and symbols</label>
+        <input id="search" type="search" placeholder="Search files and symbols" autocomplete="off">
+      </div>
+      <div id="search-results" aria-label="Search results" hidden></div>
+      <div id="project-empty"><button id="choose-project" disabled>Open folder…</button><p>Choose a project to explore.</p></div>
+      <div id="files" class="pane-scroll"></div>
+    </aside>
+    <div class="splitter vertical" id="project-divider" role="separator" aria-label="Resize project pane" aria-orientation="vertical" tabindex="0"></div>
+    <section id="overview-pane" class="pane overview-pane" aria-label="File overview">
+      <div class="pane-heading"><h2>Overview</h2><button id="inspect-file" disabled>File details</button></div>
+      <div class="pane-scroll overview-content">
+        <h3 id="selected-name">Explore your code</h3>
+        <p id="summary">Open a project folder or try the example.</p>
+        <div id="symbols"></div>
+        <div id="file-sections"></div>
+      </div>
+    </section>
+    <div class="splitter vertical" id="overview-divider" role="separator" aria-label="Resize overview pane" aria-orientation="vertical" tabindex="0"></div>
+    <section id="inspector-pane" class="pane inspector-pane" aria-label="Inspector">
+      <div class="pane-heading"><h2>Inspector</h2></div>
+      <div class="pane-scroll inspector-content">
+        <div id="inspector"><p class="empty">Select a file or symbol to see its details.</p></div>
+      </div>
+    </section>
+    <div class="splitter horizontal" id="source-divider" role="separator" aria-label="Resize source preview" aria-orientation="horizontal" tabindex="0"></div>
+    <section id="preview-pane" class="pane preview-pane" aria-label="Source preview">
+      <div class="pane-heading"><h2 id="preview-title">Source preview</h2>
+        <div class="preview-actions"><button id="source-previous" aria-label="Previous source page" disabled>Previous</button>
+          <span id="source-position"></span><button id="source-next" aria-label="Next source page" disabled>Next</button>
+          <button id="copy-source" disabled>Copy</button></div>
+      </div>
+      <div id="source-notice" role="status" hidden></div>
+      <pre id="source" tabindex="0" aria-label="Source code"></pre>
+    </section>
+  </main>
+  <footer><span>Local analysis · Read-only</span></footer>
+</body>
+</html>

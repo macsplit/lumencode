@@ -1,0 +1,83 @@
+{
+  "chromium": {
+    "browser": "chromium",
+    "passed": true,
+    "four_panes_visible": true,
+    "file_search_before_index": true,
+    "symbol_inspector_parameters_and_cross_file_navigation": true,
+    "back_forward_restore_symbol_and_file": true,
+    "pointer_and_keyboard_resize": true,
+    "bounded_source_paging_and_focused_line": true,
+    "source_html_rendered_as_text": true,
+    "mobile_all_panes_accessible_without_overflow": true,
+    "pane_size_survives_reload": true,
+    "page_errors": []
+  },
+  "webkit": {
+    "browser": "webkit",
+    "passed": true,
+    "four_panes_visible": true,
+    "file_search_before_index": true,
+    "symbol_inspector_parameters_and_cross_file_navigation": true,
+    "back_forward_restore_symbol_and_file": true,
+    "pointer_and_keyboard_resize": true,
+    "bounded_source_paging_and_focused_line": true,
+    "source_html_rendered_as_text": true,
+    "mobile_all_panes_accessible_without_overflow": true,
+    "pane_size_survives_reload": true,
+    "page_errors": []
+  },
+  "project": {
+    "elapsed_seconds": 5.026135185005842,
+    "status": "cpp \u00b7 207 ms analysis \u00b7 relationships included",
+    "reply": {
+      "id": 4,
+      "result": {
+        "analysed": 590,
+        "buildMs": 447,
+        "cachePath": "/cache/project-index.json",
+        "callSites": 27293,
+        "crossFileEdges": 1988,
+        "declarationsPaired": 395,
+        "definitions": 6708,
+        "edgesByEvidence": {
+          "import": 917,
+          "package": 41,
+          "qualifier": 56,
+          "qualifier-project": 1,
+          "unique-name": 973
+        },
+        "edgesByLanguage": {
+          "cpp": 773,
+          "csharp": 49,
+          "go": 2,
+          "java": 3,
+          "kotlin": 4,
+          "objc": 1,
+          "php": 6,
+          "python": 25,
+          "ruby": 1,
+          "rust": 199,
+          "script": 565,
+          "scss": 2,
+          "shell": 5,
+          "swift": 91,
+          "ts": 257,
+          "vbnet": 5
+        },
+        "failed": 0,
+        "files": 590,
+        "httpCalls": 7,
+        "httpEdges": 8,
+        "reusedFromCache": 0,
+        "unresolvedCallSites": 25305
+      },
+      "cacheStatus": "saved",
+      "elapsedMs": 4970.5,
+      "linearMemoryBytes": 96665600,
+      "parserWorkers": 4,
+      "aggregateLinearMemoryCapacityBytes": 378535936
+    },
+    "horizontal_overflow": false
+  }
+}

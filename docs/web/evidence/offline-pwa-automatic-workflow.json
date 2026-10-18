@@ -1,0 +1,51 @@
+{
+  "chromium": {
+    "browser": "chromium",
+    "passed": true,
+    "four_panes_visible": true,
+    "empty_state_open_uses_folder_import_fallback": true,
+    "project_menu_and_open_shortcut": true,
+    "automatic_relationship_build_and_file_search": true,
+    "symbol_inspector_parameters_and_cross_file_navigation": true,
+    "back_forward_restore_symbol_and_file": true,
+    "pointer_and_keyboard_resize": true,
+    "bounded_source_paging_and_focused_line": true,
+    "source_html_rendered_as_text": true,
+    "mobile_all_panes_accessible_without_overflow": true,
+    "pane_size_survives_reload": true,
+    "page_errors": []
+  },
+  "webkit": {
+    "browser": "webkit",
+    "passed": true,
+    "four_panes_visible": true,
+    "empty_state_open_uses_folder_import_fallback": true,
+    "project_menu_and_open_shortcut": true,
+    "automatic_relationship_build_and_file_search": true,
+    "symbol_inspector_parameters_and_cross_file_navigation": true,
+    "back_forward_restore_symbol_and_file": true,
+    "pointer_and_keyboard_resize": true,
+    "bounded_source_paging_and_focused_line": true,
+    "source_html_rendered_as_text": true,
+    "mobile_all_panes_accessible_without_overflow": true,
+    "pane_size_survives_reload": true,
+    "page_errors": []
+  },
+  "cache": {
+    "passed": true,
+    "browser": "chromium",
+    "worker_restart_reuses_complete_facts": true,
+    "same_metadata_changed_contents_invalidates_import": true,
+    "added_deleted_files_invalidate": true,
+    "page_reload_reuses_facts": true,
+    "simulated_engine_upgrade_invalidates": true,
+    "retention_bounds": {
+      "index_snapshots": 3,
+      "recent_folders": 8
+    },
+    "storage_denied_still_analyses": true,
+    "clear_saved_projects_removes_indexes": true,
+    "cold_ms": 93.70000000298023,
+    "warm_ms": 3.5
+  }
+}

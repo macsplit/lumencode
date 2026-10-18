@@ -1,4 +1,10 @@
-find_package(Qt5 5.15 REQUIRED COMPONENTS Core Concurrent)
+if(LUMENCODE_BUILD_WEB)
+    find_package(Qt6 6.8 REQUIRED COMPONENTS Core)
+    set(LUMENCODE_ENGINE_QT Qt6::Core)
+else()
+    find_package(Qt5 5.15 REQUIRED COMPONENTS Core Concurrent)
+    set(LUMENCODE_ENGINE_QT Qt5::Core Qt5::Concurrent)
+endif()
 
 add_library(vendor-tree-sitter STATIC
     ${PROJECT_SOURCE_DIR}/third_party/tree-sitter/lib/src/lib.c
@@ -161,7 +167,7 @@ add_library(lumencode-analysis STATIC
 )
 add_library(LumenCode::Analysis ALIAS lumencode-analysis)
 target_include_directories(lumencode-analysis PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
-target_link_libraries(lumencode-analysis PUBLIC Qt5::Core Qt5::Concurrent PRIVATE
+target_link_libraries(lumencode-analysis PUBLIC ${LUMENCODE_ENGINE_QT} PRIVATE
     vendor-tree-sitter
     vendor-tree-sitter-javascript
     vendor-tree-sitter-typescript

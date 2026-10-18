@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "browser": "webkit",
+  "worker_restart_reuses_complete_facts": true,
+  "same_metadata_changed_contents_invalidates_import": true,
+  "added_deleted_files_invalidate": true,
+  "page_reload_reuses_facts": true,
+  "simulated_engine_upgrade_invalidates": true,
+  "recent_folder_scope": "Handle retention is tested in Chromium; WebKit coverage targets imported files and derived indexes",
+  "retention_bounds": {
+    "index_snapshots": 3,
+    "recent_folders": null
+  },
+  "storage_denied_still_analyses": true,
+  "clear_saved_projects_removes_indexes": true,
+  "cold_ms": 14,
+  "warm_ms": 5
+}
