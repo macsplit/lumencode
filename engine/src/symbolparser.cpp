@@ -9455,7 +9455,9 @@ QVariantMap SymbolParser::parseScriptLikeTreeSitter(const QString &path, const Q
                 const QVariantMap symbol = entry.toMap();
                 const QString ownerKey = symbolKey(symbol);
                 if (!ownerKey.isEmpty()) {
-                    const QSet<QString> relationNames = scriptCallNamesFromSnippet(symbol.value(QStringLiteral("snippet")).toString());
+                    QStringList relationNames = scriptCallNamesFromSnippet(symbol.value(QStringLiteral("snippet")).toString()).values();
+                    // Match the shared snippet pass across Qt versions and hash seeds.
+                    relationNames.sort();
                     for (const QString &targetName : relationNames) {
                         const QStringList candidateKeys = keysByName.value(targetName);
                         if (candidateKeys.isEmpty()) {
@@ -13429,7 +13431,9 @@ QVariantMap SymbolParser::parseScriptLike(const QString &path, const QString &te
                 const QVariantMap symbol = entry.toMap();
                 const QString ownerKey = symbolKey(symbol);
                 if (!ownerKey.isEmpty()) {
-                    const QSet<QString> relationNames = scriptCallNamesFromSnippet(symbol.value(QStringLiteral("snippet")).toString());
+                    QStringList relationNames = scriptCallNamesFromSnippet(symbol.value(QStringLiteral("snippet")).toString()).values();
+                    // Match the shared snippet pass across Qt versions and hash seeds.
+                    relationNames.sort();
                     for (const QString &targetName : relationNames) {
                         const QStringList candidateKeys = keysByName.value(targetName);
                         if (candidateKeys.isEmpty()) {

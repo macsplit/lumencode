@@ -2646,6 +2646,24 @@
           "../auto/helper.rb"
         ]
       }
+    },
+    {
+      "name": "js_nested_test_suite_call_order",
+      "root": "tests/fixtures/baseline/js_relation_order",
+      "file": "calls.js",
+      "expectations": [
+        {
+          "kind": "test suite",
+          "name": "with inflate option",
+          "calls_order": [
+            "before",
+            "createApp"
+          ]
+        }
+      ],
+      "file_expectations": {
+        "analysis_source_mode": "ast"
+      }
     }
   ]
 }

@@ -372,7 +372,8 @@ The strict checker still returns nonzero for these differences. A separate
 diagnostic compares root display labels and permutations of only `calls` and
 `calledBy`, preserving their full contents and duplicates, to classify the
 differences. That diagnostic does not turn the strict check green. Shared-engine
-ordering and browser root labels are minor follow-ups; no parser, heuristic,
+ordering was subsequently corrected below; browser root labels remain a cosmetic
+follow-up; no parser, heuristic,
 relationship or UI production code was changed for this investigation. The
 copyright false positive remains deferred in issue #15.
 
@@ -419,3 +420,28 @@ The responsiveness checker now offers optional `--profile` tracing and an
 explicit `--first-clone-control` experiment. Both are test-only; raw timelines
 remain in the Linux validation directory.
 [Compact timing evidence](evidence/offline-pwa-startup-profile.json).
+
+### Deterministic supplemental call order (18 October 2026)
+
+Both JavaScript/TypeScript snippet-supplement passes now sort their call-name
+sets before adding relations, matching the existing shared snippet pass. This
+removes Qt-version/architecture/hash-seed dependence in the AST and fallback
+paths. Existing AST traversal order, extracted targets and heuristics are retained.
+
+A reduced nested-test-suite fixture reproduced reversed `before`/`createApp`
+relations with Qt hash seeds 2 and 42 before the fix. All four tested seeds
+(0, 1, 2, 42) now agree. The existing fixture audit gained an exact `calls_order`
+expectation, which runs in regular Linux/Windows CI without a separate test job.
+
+Validation: **105 native fixture cases / 641 assertions**, **103 complete native
+CLI/helper contracts**, **103 native/browser file comparisons**, and the browser
+index/offline lifecycle all pass. The focused fixture also matches native JSON
+exactly in headless WebKit before and after indexing. All **149 Express files**
+were compared individually and indexed; native/browser relation order now matches.
+Saved before/after browser payloads confirm unchanged complete analysis contents
+when comparing call-relation permutations. Six files acquire sorted lists,
+including all five previously divergent files. The remaining **148 strict JSON
+differences** are solely selected-root display labels (`express` versus `project`).
+
+[Ordering evidence](evidence/offline-pwa-relation-order.json). The copyright
+false positive in issue #15 remains deferred.

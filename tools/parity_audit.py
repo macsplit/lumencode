@@ -36,6 +36,8 @@ def evaluate(case, analysis):
         for key in ("calls", "calledBy"):
             if key in expected:
                 check(label + " " + key, [x["name"] for x in symbol.get(key, [])], expected[key], subset=True)
+        if "calls_order" in expected:
+            check(label + " calls order", [x["name"] for x in symbol.get("calls", [])], expected["calls_order"])
         if "callSites" in expected:
             check(label + " callSites", symbol.get("callSites", []), expected["callSites"], subset=True)
         signature = symbol.get("signature") or {}

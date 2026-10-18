@@ -1,0 +1,346 @@
+{
+  "date": "2026-10-18",
+  "method": "Shared engine sorting of supplemental script call names; existing AST order retained",
+  "before_hash_seeds": {
+    "0": [
+      "before",
+      "createApp"
+    ],
+    "1": [
+      "before",
+      "createApp"
+    ],
+    "2": [
+      "createApp",
+      "before"
+    ],
+    "42": [
+      "createApp",
+      "before"
+    ]
+  },
+  "after_hash_seeds": [
+    {
+      "seed": 0,
+      "calls": [
+        "before",
+        "createApp"
+      ]
+    },
+    {
+      "seed": 1,
+      "calls": [
+        "before",
+        "createApp"
+      ]
+    },
+    {
+      "seed": 2,
+      "calls": [
+        "before",
+        "createApp"
+      ]
+    },
+    {
+      "seed": 42,
+      "calls": [
+        "before",
+        "createApp"
+      ]
+    }
+  ],
+  "native_parity_summary": {
+    "cases": 105,
+    "cases_passed": 105,
+    "assertions": 641,
+    "assertions_passed": 641,
+    "unique_invocations": 103,
+    "errors": 0
+  },
+  "native_contract": {
+    "files": 103,
+    "contract_issues": [],
+    "compared_to_original": true,
+    "qt_hash_seed": 0,
+    "differing_files": []
+  },
+  "express": {
+    "files_compared": 149,
+    "stages": [
+      "file",
+      "indexed"
+    ],
+    "remaining_strict_differences": 148,
+    "remaining_difference_kind": "root display label",
+    "ordering_differences": 0,
+    "analysis_contents_unchanged": true,
+    "changed_files": {
+      "browser-file.json": [
+        "test/express.json.js",
+        "test/express.raw.js",
+        "test/express.static.js",
+        "test/express.text.js",
+        "test/express.urlencoded.js",
+        "test/support/tmpl.js"
+      ],
+      "browser-indexed.json": [
+        "test/express.json.js",
+        "test/express.raw.js",
+        "test/express.static.js",
+        "test/express.text.js",
+        "test/express.urlencoded.js",
+        "test/support/tmpl.js"
+      ]
+    }
+  },
+  "browser_lifecycle": {
+    "passed": true,
+    "errors": [],
+    "differences": [],
+    "timings_ms": {
+      "worker_initialization": 106,
+      "cpp_basic/sample.cpp": 2.8999999994412065,
+      "cpp_classes/legacy.c": 3,
+      "cpp_classes/shape.cpp": 4.400000000372529,
+      "cpp_classes/shape.h": 4.900000000372529,
+      "cpp_macros/widget.h": 3.800000000745058,
+      "cross_file/cpp/geometry.cpp": 3,
+      "cross_file/cpp/geometry.h": 2.699999999254942,
+      "cross_file/cpp/report.cpp": 1.7000000001862645,
+      "cross_file/csharp/Guard.cs": 1.5,
+      "cross_file/csharp/OrderService.cs": 1.7999999998137355,
+      "cross_file/fullstack_express/public/app.js": 9.700000000186265,
+      "cross_file/fullstack_flask/app.py": 3,
+      "cross_file/fullstack_flask/static/main.js": 4.1000000005587935,
+      "cross_file/go/service.go": 1.2000000001862645,
+      "cross_file/go/store.go": 1.7000000001862645,
+      "cross_file/java/Billing.java": 3.7999999998137355,
+      "cross_file/java/Invoice.java": 2.2999999998137355,
+      "cross_file/java_pkg/src/main/java/com/shop/util/Money.java": 2.6000000005587935,
+      "cross_file/java_pkg/src/test/java/com/shop/MoneyTest.java": 3.3999999994412065,
+      "cross_file/objc/Basket.m": 10.5,
+      "cross_file/objc/PriceFormatter.m": 2.2000000001862645,
+      "cross_file/php/Mailer.php": 2.800000000745058,
+      "cross_file/php/Signup.php": 3.2000000001862645,
+      "cross_file/php_composer/src/Http/CheckoutController.php": 5,
+      "cross_file/python/checkout.py": 2.800000000745058,
+      "cross_file/python/pricing.py": 2.2000000001862645,
+      "cross_file/python_pkg/shop/cart.py": 3,
+      "cross_file/python_pkg/shop/payments/gateway.py": 1.800000000745058,
+      "cross_file/python_pkg/tests/test_cart.py": 3.099999999627471,
+      "cross_file/rust/src/main.rs": 2.599999999627471,
+      "cross_file/rust/src/parser.rs": 2.699999999254942,
+      "cross_file/shell/install.sh": 1.7999999998137355,
+      "cross_file/shell/lib.sh": 1.3999999994412065,
+      "cross_file/swift/Formatter.swift": 4.2000000001862645,
+      "cross_file/swift/Receipt.swift": 2,
+      "cross_file/vbnet/OrderForm.vb": 1.8999999994412065,
+      "cross_file/vbnet/TaxRules.vb": 1.699999999254942,
+      "csharp_basic/Sample.cs": 2.6000000005587935,
+      "csharp_recovery/Broken.cs": 4,
+      "go_basic/server.go": 2.900000000372529,
+      "html_css/index.html": 4,
+      "html_css/styles.css": 7.7999999998137355,
+      "html_css_has/index.html": 4.199999999254942,
+      "html_css_pseudos/index.html": 9.400000000372529,
+      "html_script/app.js": 5.5,
+      "java_basic/Sample.java": 3.1000000005587935,
+      "java_recovery/Broken.java": 6.6000000005587935,
+      "java_routes/TodoController.java": 4.2999999998137355,
+      "java_routes/UserResource.java": 3.400000000372529,
+      "js_commonjs/alias.js": 3.599999999627471,
+      "js_commonjs/helper.js": 3.099999999627471,
+      "js_commonjs/main.js": 2.7000000001862645,
+      "js_relation_order/calls.js": 3.3999999994412065,
+      "js_shapes/cart.js": 3.199999999254942,
+      "js_shapes/cart.test.js": 3,
+      "js_shapes/index.ts": 2.7000000001862645,
+      "js_shapes/page.js": 2.900000000372529,
+      "json_package/package.json": 1.599999999627471,
+      "kotlin_basic/src/main/kotlin/com/shop/Model.kt": 5.900000000372529,
+      "kotlin_basic/src/main/kotlin/com/shop/Routes.kt": 1.5,
+      "kotlin_case/src/main/kotlin/com/example/consumer/Consumer.kt": 1.2000000001862645,
+      "objc_basic/Cache.m": 1.599999999627471,
+      "objc_basic/Sample.m": 0.7999999998137355,
+      "php_basic/helper.php": 1.5,
+      "php_config/app.php": 2,
+      "php_links/public/index.php": 4.5,
+      "php_links/public/js/site.js": 5.599999999627471,
+      "php_recovery/Broken.php": 4.3999999994412065,
+      "python_basic/sample.py": 2.599999999627471,
+      "python_recovery/broken.py": 5.099999999627471,
+      "python_returns/returns.py": 3.7000000001862645,
+      "qml_basic/Sample.qml": 2.400000000372529,
+      "ruby_basic/app.rb": 1.7999999998137355,
+      "ruby_basic/lib/pricing.rb": 3.2999999998137355,
+      "ruby_relative/spec/probe.rb": 1.199999999254942,
+      "rust_basic/main.rs": 2.800000000745058,
+      "rust_recovery/broken.rs": 3.7000000001862645,
+      "scss_basic/_mixins.scss": 1.400000000372529,
+      "scss_basic/main.scss": 2.5,
+      "shell_basic/deploy.sh": 2.7999999998137355,
+      "sql_tsql/broken.sql": 2.2999999998137355,
+      "sql_tsql/defaults.sql": 0.8999999994412065,
+      "sql_tsql/schema.sql": 2.1000000005587935,
+      "swift_basic/App.swift": 1.199999999254942,
+      "swift_recovery_brace/Cart.swift": 3,
+      "swift_signatures/Greeter.swift": 1.900000000372529,
+      "swift_try/Calls.swift": 1.2999999998137355,
+      "ts_module/alias.ts": 2.2000000001862645,
+      "ts_module/helper.ts": 2.1000000005587935,
+      "ts_module/main.ts": 1.900000000372529,
+      "ts_recovery/broken.ts": 4,
+      "ts_test_recovery/missing.test.ts": 3.6000000005587935,
+      "ts_test_recovery/suite.test.ts": 4.2000000001862645,
+      "vbnet_basic/Broken.vb": 1.099999999627471,
+      "vbnet_basic/Inventory.vb": 2.1000000005587935,
+      "vbnet_basic/OrdersController.vb": 1.2999999998137355,
+      "vbnet_multiline_string/ReportBuilder.vb": 1.6000000005587935,
+      "web_app/css/style.css": 4.800000000745058,
+      "web_app/index.html": 6.1000000005587935,
+      "web_app/js/app.js": 5,
+      "webforms_basic/Default.aspx": 4.2000000001862645,
+      "webforms_basic/Default.aspx.cs": 1.400000000372529,
+      "webforms_basic/Legacy.ascx": 2,
+      "index": 209
+    },
+    "ui_import_index_search": true,
+    "index_watchdog": {
+      "continued_progress_over_120s": true,
+      "stalled_worker_restarted": true,
+      "clock": "virtual; no performance claim"
+    },
+    "directory_handle_enumeration_refresh": "Real OPFS handle through test-supplied picker; OS permission dialog not tested",
+    "folder_import_files": 134,
+    "file_comparisons": 103,
+    "path_traversal_rejected": true,
+    "browser_index": {
+      "analysed": 123,
+      "buildMs": 202,
+      "cachePath": "/cache/project-index.json",
+      "callSites": 231,
+      "crossFileEdges": 41,
+      "declarationsPaired": 6,
+      "definitions": 288,
+      "edgesByEvidence": {
+        "import": 22,
+        "package": 5,
+        "qualifier": 7,
+        "qualifier-project": 1,
+        "unique-name": 6
+      },
+      "edgesByLanguage": {
+        "cpp": 2,
+        "csharp": 1,
+        "go": 2,
+        "java": 3,
+        "kotlin": 3,
+        "objc": 1,
+        "php": 5,
+        "python": 7,
+        "ruby": 1,
+        "rust": 2,
+        "script": 4,
+        "scss": 2,
+        "shell": 1,
+        "swift": 1,
+        "ts": 2,
+        "vbnet": 4
+      },
+      "failed": 0,
+      "files": 123,
+      "httpCalls": 7,
+      "httpEdges": 8,
+      "reusedFromCache": 0,
+      "unresolvedCallSites": 190
+    },
+    "index_progress_events": 378,
+    "index_progress_phases": [
+      "discovering",
+      "analysing",
+      "saving",
+      "definitions",
+      "declarations",
+      "linking",
+      "routes",
+      "complete"
+    ],
+    "ui_heartbeat_during_index": 20,
+    "ui_max_timer_gap_ms_during_index": 13,
+    "maximum_observed_linear_memory_bytes": 67108864,
+    "indexed_comparisons": [
+      "js_commonjs/main.js",
+      "ts_module/main.ts",
+      "swift_try/Calls.swift"
+    ],
+    "cancel_and_worker_recovery": true,
+    "recent_folder_and_index_survive_offline_browser_restart": true,
+    "offline_browser_restart_new_source": true,
+    "offline_browser_restart_syntax_highlighting": true,
+    "network_get_only_same_origin": true
+  },
+  "webkit": {
+    "passed": true,
+    "browser": "webkit",
+    "method": "Complete JSON; physical root prefix normalization only",
+    "projects": [
+      {
+        "name": "js_relation_order",
+        "files_compared": 1,
+        "languages": {
+          "script": 1
+        },
+        "modes": {
+          "ast": 1
+        },
+        "native_index": {
+          "analysed": 1,
+          "buildMs": 9,
+          "cachePath": "/home/user/Code/Coding/lumencode-validation-20261018-pwa/relation-order-webkit/js_relation_order/native-index.json",
+          "callSites": 6,
+          "crossFileEdges": 0,
+          "declarationsPaired": 0,
+          "definitions": 1,
+          "edgesByEvidence": {},
+          "edgesByLanguage": {},
+          "failed": 0,
+          "files": 1,
+          "httpCalls": 0,
+          "httpEdges": 0,
+          "reusedFromCache": 0,
+          "unresolvedCallSites": 6
+        },
+        "browser_index": {
+          "analysed": 1,
+          "buildMs": 8,
+          "cachePath": "/cache/project-index.json",
+          "callSites": 6,
+          "crossFileEdges": 0,
+          "declarationsPaired": 0,
+          "definitions": 1,
+          "edgesByEvidence": {},
+          "edgesByLanguage": {},
+          "failed": 0,
+          "files": 1,
+          "httpCalls": 0,
+          "httpEdges": 0,
+          "reusedFromCache": 0,
+          "unresolvedCallSites": 6
+        },
+        "browser_index_ms": 10,
+        "heartbeat_ticks": 0,
+        "max_timer_gap_ms": 10,
+        "parser_workers": 1,
+        "candidate_source_sha256": "aac332a785f821791e893070e7cca2822476591142a470e83e2c7e9c53149ecd"
+      }
+    ],
+    "corpus_samples": [],
+    "differences": [],
+    "errors": [],
+    "native_helper_sha256": "fae9216974b3d58fa8a3262a73091c03622defeb80e0450b7752e52a51718ca9",
+    "wasm_sha256": "9a0f37528e5f44b18eeacaf11aef208cdc918e5fcc3edfbdaa903f288b9db065",
+    "repository_revision": "d74f9a7405882d032dd71f270d626bdf05801b95",
+    "browser_version": "27.2",
+    "content_equivalent": true
+  }
+}
