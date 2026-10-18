@@ -33,23 +33,39 @@ def main():
                        if args.browser == 'chromium' else p.webkit.launch())
             context = browser.new_context(viewport={'width':1440, 'height':950}, service_workers='block')
             page = context.new_page()
+            page.add_init_script("delete window.showDirectoryPicker")
             errors = []
             page.on('pageerror', lambda error: errors.append(str(error)))
             page.goto(f'http://127.0.0.1:{server.server_port}/')
             page.wait_for_function("!document.getElementById('import').disabled", timeout=90000)
-            page.locator('#folder-input').set_input_files(str(fixture.parent))
-            page.wait_for_function("!document.getElementById('index').disabled")
+            assert page.locator('nav').count() == 0
+            assert page.locator('#index').count() == 0
+            assert page.locator('#choose-project').is_visible()
+            with page.expect_file_chooser() as chosen:
+                page.locator('#choose-project').click()
+            chosen.value.set_files(str(fixture.parent))
+            page.wait_for_function("!document.getElementById('choose-project').disabled")
             for pane in ('.project-pane','.overview-pane','.inspector-pane','.preview-pane'):
                 assert page.locator(pane).is_visible(), pane
             report['four_panes_visible'] = True
+            report['empty_state_open_uses_folder_import_fallback'] = True
+            page.locator('#project-menu > summary').click()
+            assert page.locator('#open').is_visible()
+            assert page.locator('#refresh').inner_text() == 'Import folder again…'
+            page.locator('#project-menu > summary').press('Escape')
+            assert not page.locator('#open').is_visible()
+            with page.expect_file_chooser() as shortcut:
+                page.keyboard.press('Control+o')
+            shortcut.value.set_files(str(fixture.parent))
+            page.wait_for_function("!document.getElementById('choose-project').disabled")
+            report['project_menu_and_open_shortcut'] = True
             page.locator('#search').fill('main')
-            page.wait_for_function("document.querySelectorAll('#search-results button').length === 1")
-            page.locator('#search-results button').click()
+            page.wait_for_function("document.querySelectorAll('#search-results button').length >= 1")
+            page.locator('#search-results button').first.click()
             page.wait_for_function("document.getElementById('selected-name').textContent === 'src/main.js'")
             page.locator('#search').press('Escape')
             page.wait_for_function("!document.getElementById('files').hidden")
-            report['file_search_before_index'] = True
-            page.locator('#index').click()
+            report['automatic_relationship_build_and_file_search'] = True
             page.wait_for_function("document.getElementById('search').dataset.indexed === 'true' && !document.getElementById('search').disabled")
             page.locator('.symbol-button', has_text='run').click()
             assert page.locator('#inspector h3').inner_text() == 'run'
@@ -82,11 +98,11 @@ def main():
             page.locator('#source-divider').focus(); page.locator('#source-divider').press('ArrowUp')
             assert page.locator('.preview-pane').bounding_box()['height'] >= source_before + 19
             page.set_viewport_size({'width':900,'height':950})
-            assert not page.evaluate('document.documentElement.scrollWidth > innerWidth')
+            page.wait_for_function('document.documentElement.scrollWidth <= innerWidth')
             page.set_viewport_size({'width':1440,'height':950})
             report['pointer_and_keyboard_resize'] = True
             page.locator('#files button[data-path="src/long.js"]').click()
-            page.wait_for_function("document.getElementById('selected-name').textContent === 'src/long.js' && !document.getElementById('index').disabled")
+            page.wait_for_function("document.getElementById('selected-name').textContent === 'src/long.js' && !document.getElementById('choose-project').disabled")
             assert page.locator('#source .source-line').count() == 160
             assert page.locator('#source img').count() == 0
             page.locator('#source-next').click()

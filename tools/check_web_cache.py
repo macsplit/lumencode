@@ -163,6 +163,7 @@ def main():
             report['storage_denied_still_analyses'] = True
             Assets.deny_storage = False
             worker(page)
+            page.locator('#project-menu > summary').click()
             page.locator('#clear-saved').click()
             page.wait_for_function("document.getElementById('status').textContent.startsWith('Saved indexes')")
             assert page.evaluate('LumenCodeStorage.projects()') == []

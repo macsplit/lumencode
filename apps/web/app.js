@@ -65,13 +65,16 @@ function noteIndexProgress(data) {
 
 function status(text) { if ($('status').textContent !== text) $('status').textContent = text; }
 function controls() {
-  for (const id of ['open', 'import', 'demo']) $(id).disabled = busy;
-  $('open').hidden = !('showDirectoryPicker' in window);
+  for (const id of ['open', 'import', 'demo', 'choose-project']) $(id).disabled = busy;
+  $('import').hidden = !('showDirectoryPicker' in window);
+  $('project-empty').hidden = Boolean(currentFiles.length);
+  $('workspace').setAttribute('aria-busy', String(busy));
   $('recent').disabled = busy;
   $('clear-saved').disabled = busy;
-  $('refresh').disabled = busy || !directory;
-  $('index').disabled = busy || !currentFiles.length;
+  $('refresh').disabled = busy || (!directory && !currentFiles.length);
+  $('refresh').textContent = directory ? 'Refresh project' : 'Import folder again…';
   $('cancel').disabled = !busy;
+  $('cancel').hidden = !busy;
   $('search').disabled = busy || !currentFiles.length;
   $('search').dataset.indexed = String(indexed);
   Workspace.controls();
@@ -101,7 +104,7 @@ function startWorker() {
     if (data.type === 'ready') {
       if (!pending.size) {
         busy = false;
-        status(readyNotice || `Engine ready · ${Math.round(data.initializationMs)} ms initialization`);
+        status(readyNotice || 'Open a folder to explore your code.');
         readyNotice = '';
         controls();
       }
@@ -163,7 +166,7 @@ async function enumerate(handle, prefix = '', output = [], token = revision) {
     if (entry.kind === 'directory') {
       if (accepted(`${path}/file`)) await enumerate(entry, `${path}/`, output, token);
     } else if (accepted(path)) {
-      if (output.length >= MAX_FILES) throw new Error(`Project exceeds the prototype limit of ${MAX_FILES} files.`);
+      if (output.length >= MAX_FILES) throw new Error(`Project exceeds the current limit of ${MAX_FILES} files.`);
       const file = await entry.getFile();
       if (token !== revision) throw new DOMException('Operation cancelled', 'AbortError');
       // WORKERFS retains File handles; it does not eagerly read their bytes.
@@ -193,7 +196,7 @@ async function mount(files, name, {projectKey, verifyContents = false} = {}) {
   Workspace.files(currentFiles);
   status(`${currentFiles.length} analysable files · ${Math.round(reply.elapsedMs)} ms to mount and list`);
   if (currentFiles.length) await analyse(currentFiles[0].slice('/project/'.length));
-  if (reply.result.cacheRestored) await buildRelationships();
+  if (currentFiles.length) await buildRelationships();
 }
 async function analyse(path, focus = {}) {
   status(`Analysing ${path}…`);
@@ -204,13 +207,18 @@ async function analyse(path, focus = {}) {
   status(`${result.language || 'Source'} · ${Math.round(elapsedMs)} ms analysis${indexed ? ' · relationships included' : ''}`);
   return result;
 }
-$('open').onclick = () => task(async () => {
-  // Must be called directly from this click to retain user activation.
-  directory = await window.showDirectoryPicker({mode: 'read'});
-  currentProjectKey = await rememberDirectory(directory);
-  status('Reading folder entries…');
-  await mount(await enumerate(directory), directory.name, {projectKey: currentProjectKey});
-});
+$('open').onclick = () => {
+  if (!('showDirectoryPicker' in window)) { $('folder-input').click(); return; }
+  return task(async () => {
+    // Invoke the picker directly from the user's action to retain activation.
+    const handle = await window.showDirectoryPicker({mode: 'read'});
+    directory = handle;
+    currentProjectKey = await rememberDirectory(handle);
+    status('Reading folder entries…');
+    await mount(await enumerate(handle), handle.name, {projectKey: currentProjectKey});
+  });
+};
+$('choose-project').onclick = () => $('open').click();
 $('recent').onchange = () => task(async () => {
   const project = recentProjects.find(item => item.id === $('recent').value);
   $('recent').value = '';
@@ -230,17 +238,20 @@ $('folder-input').onchange = () => task(async () => {
   directory = undefined;
   const root = files[0].webkitRelativePath.split('/')[0];
   const entries = files.map(file => ({path: file.webkitRelativePath.slice(root.length + 1), file})).filter(item => accepted(item.path));
-  if (entries.length > MAX_FILES) throw new Error(`Project exceeds the prototype limit of ${MAX_FILES} files.`);
+  if (entries.length > MAX_FILES) throw new Error(`Project exceeds the current limit of ${MAX_FILES} files.`);
   currentProjectKey = `import:${root}`;
-  await mount(entries, `${root} (imported snapshot)`, {projectKey: currentProjectKey, verifyContents: true});
+  await mount(entries, root, {projectKey: currentProjectKey, verifyContents: true});
   $('folder-input').value = '';
 });
-$('refresh').onclick = () => task(async () => {
-  if (await directory.queryPermission({mode: 'read'}) !== 'granted' &&
-      await directory.requestPermission({mode: 'read'}) !== 'granted') throw new Error('Read access was not granted.');
-  status('Refreshing folder entries…');
-  await mount(await enumerate(directory), directory.name, {projectKey: currentProjectKey});
-});
+$('refresh').onclick = () => {
+  if (!directory) { $('folder-input').click(); return; }
+  return task(async () => {
+    if (await directory.queryPermission({mode: 'read'}) !== 'granted' &&
+        await directory.requestPermission({mode: 'read'}) !== 'granted') throw new Error('Read access was not granted.');
+    status('Refreshing folder entries…');
+    await mount(await enumerate(directory), directory.name, {projectKey: currentProjectKey});
+  });
+};
 $('demo').onclick = () => task(async () => {
   directory = undefined;
   const sources = {
@@ -262,7 +273,6 @@ async function buildRelationships() {
     status(`${reply.result.files} files · ${reply.result.reusedFromCache} reused · ${reply.result.crossFileEdges} relationships · ${(reply.elapsedMs / 1000).toFixed(1)}s${reply.cacheStatus === 'unavailable' ? ' · browser could not save the index' : ''}`);
   } finally { stopIndexProgress(); }
 }
-$('index').onclick = () => task(buildRelationships);
 $('clear-saved').onclick = () => task(async () => {
   await LumenCodeStorage.clear();
   await rpc('forget-cache');
@@ -312,15 +322,32 @@ $('search').onkeydown = event => {
 };
 Workspace.setup({available: () => !busy, status,
   open: (path, focus) => task(() => analyse(path, focus))});
-$('cancel').onclick = () => restart('Cancelled. Restarting engine…');
+$('cancel').onclick = () => restart('Cancelled. Open or refresh a project to retry.');
+const projectMenu = $('project-menu');
+projectMenu.addEventListener('click', event => {
+  if (event.target.closest('button')) projectMenu.open = false;
+});
+$('recent').addEventListener('change', () => { projectMenu.open = false; });
+document.addEventListener('pointerdown', event => {
+  if (!projectMenu.contains(event.target)) projectMenu.open = false;
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && projectMenu.open) {
+    projectMenu.open = false; projectMenu.querySelector('summary').focus();
+  }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'o') {
+    event.preventDefault(); if (!busy) $('open').click();
+  }
+});
 
 async function prepareOffline() {
-  if (!('serviceWorker' in navigator)) { $('offline').textContent = 'Offline caching unavailable in this browser'; return; }
+  if (!('serviceWorker' in navigator)) { $('offline').textContent = 'Offline access unavailable'; return; }
   try {
     await navigator.serviceWorker.register('sw.js', {scope: './'});
     await navigator.serviceWorker.ready;
     const persistent = await navigator.storage.persist();
-    $('offline').textContent = persistent ? 'Ready for offline use · persistent storage granted' : 'Ready for offline use · browser storage may be evicted';
+    $('offline').textContent = 'Available offline';
+    $('offline').title = persistent ? 'Offline files saved with persistent storage.' : 'Offline files saved. This browser may clear storage.';
   } catch (error) { $('offline').textContent = `Offline setup incomplete: ${error.message}`; }
 }
 busy = true; controls(); startWorker(); prepareOffline(); loadRecentProjects();

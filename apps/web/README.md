@@ -17,7 +17,7 @@ a replacement for the native applications.
 - Pointer/keyboard-resizable panes with saved sizes; compact-screen pane tabs.
   Source is numbered, line-focused and paged in 160-line blocks, with full-source
   copying. Ctrl/Cmd+F focuses search; files are searchable before indexing and
-  canonical symbol search becomes available after building relationships.
+  canonical symbol search becomes available after automatic indexing.
 - Refresh of a granted directory; a fresh worker clears source/path caches.
 - File-backed WORKERFS mapping preserves relative hierarchy and modification
   times without eagerly copying every file's contents into WebAssembly memory.
@@ -29,6 +29,15 @@ a replacement for the native applications.
 The interface and worker remain plain JavaScript/HTML/CSS, with workspace
 presentation separated from analysis and worker scheduling. A TypeScript/component-tooling
 decision remains open for a fuller interface.
+
+## Project controls
+
+Open a folder from the empty project pane, the **Project** menu, or Ctrl/Cmd+O.
+Where direct folder access is unavailable, the same action opens the folder-import
+picker. The Project menu also contains recent folders, refresh/reimport, an example
+and saved-state controls. Relationship indexing starts automatically on opening,
+importing, refreshing or reopening a project; cached facts are reused as before.
+Progress and Cancel appear during work. Back/Forward sit in the project pane.
 
 ## Toolchain setup
 

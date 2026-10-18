@@ -24,14 +24,18 @@ class Quiet(http.server.SimpleHTTPRequestHandler):
         pass
 
 
+def project_action(page, action):
+    """Open a real Project menu command, respecting its native disclosure."""
+    if not page.locator('#project-menu').get_attribute('open') == '':
+        page.locator('#project-menu > summary').click()
+    page.locator('#' + action).click()
+
+
 def check_index_watchdog(browser, url):
     """Virtual time: continued progress beyond two minutes vs a stalled worker."""
     page = browser.new_page()
     page.goto(url)
     page.wait_for_function("!document.getElementById('demo').disabled", timeout=90000)
-    page.locator('#demo').click()
-    page.wait_for_function("!document.getElementById('index').disabled")
-    page.clock.install()
     page.evaluate("""() => {
       const instance = worker;
       const post = instance.postMessage.bind(instance);
@@ -42,7 +46,9 @@ def check_index_watchdog(browser, url):
         data: {type: 'progress', phase, path: '/project/slow.js', done: 1, total: 10}
       }));
     }""")
-    page.locator('#index').click()
+    page.clock.install()
+    project_action(page, 'demo')
+    page.wait_for_function("!document.getElementById('index-details').hidden")
     page.clock.fast_forward(90000)
     page.evaluate("emitProgress('analysing')")
     page.clock.fast_forward(90000)
@@ -118,9 +124,8 @@ def main():
             page.on('request', lambda request: network.append((request.method, request.url)))
             page.goto(url)
             page.wait_for_function("!document.getElementById('demo').disabled", timeout=90000)
-            page.locator('#demo').click()
+            project_action(page, 'demo')
             page.wait_for_function("document.getElementById('result').textContent.length > 2", timeout=30000)
-            page.locator('#index').click()
             page.wait_for_function("document.getElementById('search').dataset.indexed === 'true' && !document.getElementById('search').disabled", timeout=30000)
             page.locator('#search').fill('greeting')
             page.locator('#search').press('Enter')
@@ -145,24 +150,23 @@ def main():
                 return dir;
               };
             }""")
-            page.locator('#open').click()
+            project_action(page, 'open')
             page.wait_for_function("document.getElementById('result').textContent.includes('firstVersion') && !document.getElementById('refresh').disabled")
             page.evaluate("""async () => {
               const file = await testDirectory.getFileHandle('handle.js');
               const stream = await file.createWritable();
               await stream.write('export function nextVersionX() { return 2; }'); await stream.close();
             }""")
-            page.locator('#refresh').click()
+            project_action(page, 'refresh')
             page.wait_for_function("document.getElementById('result').textContent.includes('nextVersionX') && !document.getElementById('refresh').disabled")
             assert 'firstVersion' not in page.locator('#result').inner_text()
             report['directory_handle_enumeration_refresh'] = 'Real OPFS handle through test-supplied picker; OS permission dialog not tested'
-            page.locator('#index').click()
             page.wait_for_function("document.getElementById('search').dataset.indexed === 'true' && !document.getElementById('search').disabled")
 
             # Use the actual directory-import control and its File objects.
             fixture_root = ROOT / 'tests/fixtures/baseline'
             page.locator('#folder-input').set_input_files(str(fixture_root))
-            page.wait_for_function("document.getElementById('project-name').textContent.includes('baseline') && !document.getElementById('index').disabled", timeout=30000)
+            page.wait_for_function("document.getElementById('project-name').textContent.includes('baseline') && !document.getElementById('choose-project').disabled", timeout=30000)
             report['folder_import_files'] = page.locator('#files button').count()
             page.evaluate(HARNESS)
             ready = page.evaluate('workerReady')
@@ -240,16 +244,19 @@ def main():
 
             # Cancel immediately after dispatch: stale worker replies must not
             # restore the old project, and a new operation must still succeed.
-            page.evaluate("document.getElementById('index').click(); document.getElementById('cancel').click()")
+            page.evaluate("""() => {
+              document.getElementById('demo').click();
+              document.getElementById('cancel').click();
+            }""")
             page.wait_for_function("!document.getElementById('demo').disabled && document.querySelectorAll('#files button').length === 0")
-            page.locator('#demo').click()
-            page.wait_for_function("document.getElementById('project-name').textContent === 'Example project' && !document.getElementById('index').disabled")
+            project_action(page, 'demo')
+            page.wait_for_function("document.getElementById('project-name').textContent === 'Example project' && !document.getElementById('choose-project').disabled")
             report['cancel_and_worker_recovery'] = True
 
             page.set_viewport_size({'width': 390, 'height': 844})
             assert not page.evaluate('document.documentElement.scrollWidth > innerWidth')
             page.screenshot(path=str(args.output / 'mobile.png'), full_page=True)
-            page.wait_for_function("document.getElementById('offline').textContent.startsWith('Ready for offline use')", timeout=60000)
+            page.wait_for_function("document.getElementById('offline').textContent.startsWith('Available offline')", timeout=60000)
             context.close()
 
             # Close the browser, stop the HTTP origin, reopen the same profile
@@ -263,6 +270,7 @@ def main():
             page.goto(url)
             page.wait_for_function("!document.getElementById('demo').disabled", timeout=90000)
             page.wait_for_function("document.querySelectorAll('#recent option').length > 1")
+            page.locator('#project-menu > summary').click()
             page.locator('#recent').select_option(label='handle-test')
             page.wait_for_function("document.getElementById('search').dataset.indexed === 'true' && !document.getElementById('search').disabled", timeout=30000)
             assert '1 reused' in page.locator('#status').inner_text()

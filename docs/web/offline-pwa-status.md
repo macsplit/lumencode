@@ -234,6 +234,25 @@ retain native/browser JSON parity, indexed comparisons, offline restart, saved
 folders and cancellation/watchdog recovery. Native Safari and the actual OS folder
 permission prompts remain separate acceptance work.
 
+### Automatic project workflow
+
+The prototype toolbar and manual relationship-build action have been removed.
+Opening/importing, refreshing and reopening recent projects automatically build
+relationships, reusing the same cached facts and worker pool. Progress and Cancel
+remain visible during work. Folder opening lives in the header's Project menu and
+in the empty project pane, with Ctrl/Cmd+O as a shortcut. The same Open action uses
+the import picker where direct folder access is unavailable. Refreshing an imported
+snapshot prompts for reimport. Back/Forward now sit in the project-pane heading;
+recent folders, example, saved-state controls and diagnostics live in the Project
+menu. The installed app name is simply LumenCode.
+
+[Automatic-workflow evidence](evidence/offline-pwa-automatic-workflow.json) covers
+Chromium/WebKit workspace interactions, empty-state folder import, menu/shortcut
+opening and automatic indexing. [Lifecycle regression evidence](evidence/offline-pwa-automatic-lifecycle.json)
+retains native/browser JSON parity, real OPFS-handle open/refresh, saved-folder
+reopening offline, progress-aware timeout and cancellation/recovery. OS picker
+permission prompts remain a separate interactive check.
+
 ### Next steps
 
 1. Try the actual Open folder permission flow interactively in desktop Chrome
