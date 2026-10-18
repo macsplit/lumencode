@@ -24,12 +24,55 @@ class Quiet(http.server.SimpleHTTPRequestHandler):
         pass
 
 
+def check_index_watchdog(browser, url):
+    """Virtual time: continued progress beyond two minutes vs a stalled worker."""
+    page = browser.new_page()
+    page.add_init_script("""(() => {
+      const NativeWorker = window.Worker;
+      window.Worker = class extends NativeWorker {
+        constructor(...args) { super(...args); window.lastPrototypeWorker = this; }
+      };
+    })()""")
+    page.goto(url)
+    page.wait_for_function("!document.getElementById('demo').disabled", timeout=90000)
+    page.locator('#demo').click()
+    page.wait_for_function("!document.getElementById('index').disabled")
+    page.clock.install()
+    page.evaluate("""() => {
+      const instance = lastPrototypeWorker;
+      const post = instance.postMessage.bind(instance);
+      instance.postMessage = data => {
+        if (data.operation !== 'index') post(data);
+      };
+      window.emitProgress = phase => instance.dispatchEvent(new MessageEvent('message', {
+        data: {type: 'progress', phase, path: '/project/slow.js', done: 1, total: 10}
+      }));
+    }""")
+    page.locator('#index').click()
+    page.clock.fast_forward(90000)
+    page.evaluate("emitProgress('analysing')")
+    page.clock.fast_forward(90000)
+    assert page.locator('#index-details').is_visible()
+    assert page.locator('#cancel').is_enabled()
+    assert 'slow.js' in page.locator('#status').inner_text()
+    # No further progress: the watchdog must eventually terminate this request.
+    page.clock.fast_forward(120001)
+    page.wait_for_function("!document.getElementById('demo').disabled", timeout=30000)
+    assert 'No engine progress for 120 seconds' in page.locator('#status').inner_text()
+    assert not page.locator('#index-details').is_visible()
+    page.close()
+    return {'continued_progress_over_120s': True, 'stalled_worker_restarted': True,
+            'clock': 'virtual; no performance claim'}
+
+
 HARNESS = """() => {
   window.testWorker = new Worker('worker.js');
   let id = 0;
+  window.progressEvents = [];
   const pending = new Map();
   window.workerReady = new Promise((resolve, reject) => {
     testWorker.onmessage = ({data}) => {
+      if (data.type === 'progress') progressEvents.push(data);
       if (data.type === 'ready') resolve(data);
       if (data.type === 'fatal') reject(new Error(data.error));
       if (data.id && pending.has(data.id)) {
@@ -91,6 +134,7 @@ def main():
             page.screenshot(path=str(args.output / 'desktop.png'), full_page=True)
             assert not page.evaluate('document.documentElement.scrollWidth > innerWidth')
             report['ui_demo_index_search'] = True
+            report['index_watchdog'] = check_index_watchdog(context, url)
 
             # Exercise the production folder-handle enumeration and refresh path
             # using a real OPFS directory handle supplied by a test-only picker.
@@ -173,6 +217,10 @@ def main():
             }""")
             index = indexed_run['reply']
             report['browser_index'] = index['result']
+            report['index_progress_events'] = page.evaluate('progressEvents.length')
+            report['index_progress_phases'] = page.evaluate('[...new Set(progressEvents.map(event => event.phase))]')
+            assert report['index_progress_events'] > 0
+            assert {'analysing', 'linking', 'complete'} <= set(report['index_progress_phases'])
             report['timings_ms']['index'] = index['elapsedMs']
             report['ui_heartbeat_during_index'] = indexed_run['ticks']
             report['ui_max_timer_gap_ms_during_index'] = indexed_run['maxGap']

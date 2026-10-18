@@ -16,6 +16,9 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px 
 .search input { margin-left: .4rem; max-width: 13rem; }
 .status { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; padding: .6rem 1.6rem; font-size: .85rem; border-bottom: 1px solid #303b49; }
 #status { color: #b2c3d8; }
+#status { overflow-wrap: anywhere; min-width: 0; }
+#index-details:not([hidden]) { display: flex; align-items: center; gap: 1rem; padding: .6rem 1.6rem; background: #19212b; font-size: .85rem; }
+#index-progress { width: min(240px, 40vw); accent-color: #80baff; }
 main { display: grid; grid-template-columns: minmax(220px, 27%) minmax(0, 1fr); min-height: 60vh; }
 aside { padding: 1rem; border-right: 1px solid #303b49; max-height: 75vh; overflow: auto; }
 h2 { font-size: 1rem; margin: 0 0 .8rem; }

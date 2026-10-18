@@ -5,8 +5,40 @@ const skipped = new Set(['node_modules', 'dist', 'build', 'coverage', 'vendor',
 const MAX_FILES = 20000;
 let worker, sequence = 0, revision = 0, busy = false, indexed = false, directory, selected, currentFiles = [];
 let pending = new Map();
+let indexActivity, indexTimer, readyNotice = '';
 
-function status(text) { $('status').textContent = text; }
+function stopIndexProgress() {
+  clearInterval(indexTimer); indexTimer = undefined; indexActivity = undefined;
+  $('index-details').hidden = true;
+}
+function renderIndexProgress() {
+  if (!indexActivity) return;
+  const {phase, path, done, total, started, fileStarted} = indexActivity;
+  const labels = {discovering: 'Listing project files', analysing: 'Analysing files',
+    saving: 'Saving analysis facts', definitions: 'Collecting definitions',
+    declarations: 'Matching declarations', linking: 'Resolving calls',
+    routes: 'Matching HTTP routes', complete: 'Finishing relationships'};
+  status(`${labels[phase] || 'Building relationships'}${total ? ` · ${done} / ${total}` : ''}${path ? ` · ${path.replace(/^\/project\//, '')}` : ''}`);
+  const progress = $('index-progress');
+  if (total) { progress.max = total; progress.value = done; }
+  else progress.removeAttribute('value');
+  const now = performance.now();
+  const seconds = Math.floor((now - started) / 1000);
+  const fileSeconds = Math.floor((now - fileStarted) / 1000);
+  $('index-time').textContent = `${seconds}s elapsed${path && fileSeconds >= 5 ? ` · current file ${fileSeconds}s` : ''} · Cancel stops the build`;
+}
+function noteIndexProgress(data) {
+  // Progress messages belong to the one index request running in this worker.
+  for (const request of pending.values()) {
+    if (request.operation === 'index') request.touch();
+  }
+  if (!indexActivity) return;
+  const changed = data.path !== indexActivity.path || data.phase !== indexActivity.phase;
+  Object.assign(indexActivity, data);
+  if (changed) indexActivity.fileStarted = performance.now();
+}
+
+function status(text) { if ($('status').textContent !== text) $('status').textContent = text; }
 function controls() {
   for (const id of ['open', 'import', 'demo']) $(id).disabled = busy;
   $('open').hidden = !('showDirectoryPicker' in window);
@@ -20,22 +52,32 @@ function controls() {
 function rpc(operation, extra = {}) {
   return new Promise((resolve, reject) => {
     const id = ++sequence;
-    const timeout = setTimeout(() => {
-      restart('Engine operation timed out; choose or refresh the project to retry.');
-    }, 120000);
-    pending.set(id, {resolve, reject, timeout});
+    const request = {resolve, reject, operation, timeout: undefined, touch() {
+      clearTimeout(this.timeout);
+      this.timeout = setTimeout(() => {
+        const activity = indexActivity;
+        const location = activity?.path ? ` at ${activity.path.replace(/^\/project\//, '')}` : '';
+        restart(`No engine progress for 120 seconds${location}. Choose or refresh the project to retry.`);
+      }, 120000);
+    }};
+    request.touch();
+    pending.set(id, request);
     worker.postMessage({id, operation, ...extra});
   });
 }
 function startWorker() {
-  worker = new Worker('worker.js');
+  const instance = worker = new Worker('worker.js');
   worker.onmessage = ({data}) => {
+    if (instance !== worker) return;
     if (data.type === 'ready') {
       if (!pending.size) {
         busy = false;
-        status(`Engine ready · ${Math.round(data.initializationMs)} ms initialization`);
+        status(readyNotice || `Engine ready · ${Math.round(data.initializationMs)} ms initialization`);
+        readyNotice = '';
         controls();
       }
+    } else if (data.type === 'progress') {
+      noteIndexProgress(data);
     } else if (data.type === 'fatal') {
       status(`Engine unavailable: ${data.error}`);
       $('cancel').disabled = true;
@@ -48,6 +90,7 @@ function startWorker() {
     } else if (data.type === 'diagnostic') console.warn(data.message);
   };
   worker.onerror = event => {
+    if (instance !== worker) return;
     status(`Engine worker failed: ${event.message}. Reload the app to retry.`);
     for (const task of pending.values()) { clearTimeout(task.timeout); task.reject(new Error(event.message)); }
     pending.clear();
@@ -57,6 +100,8 @@ function startWorker() {
   };
 }
 function restart(message) {
+  stopIndexProgress();
+  readyNotice = message;
   revision++;
   worker.terminate();
   for (const task of pending.values()) { clearTimeout(task.timeout); task.reject(new Error('Operation cancelled')); }
@@ -74,7 +119,7 @@ async function task(action) {
   const token = revision;
   busy = true; controls();
   try { await action(); }
-  catch (error) { if (error.name !== 'AbortError') status(error.message); }
+  catch (error) { if (token === revision && error.name !== 'AbortError') status(error.message); }
   finally { if (token === revision) { busy = false; controls(); } }
 }
 function accepted(path) {
@@ -192,10 +237,16 @@ $('demo').onclick = () => task(async () => {
   await mount(Object.entries(sources).map(([path, text]) => ({path, file: new File([text], path, {lastModified: 1700000000000})})), 'Example project');
 });
 $('index').onclick = () => task(async () => {
-  status('Building project relationships…');
-  const reply = await rpc('index'); indexed = true;
-  if (selected) await analyse(selected);
-  status(`${reply.result.files} files · ${reply.result.crossFileEdges} cross-file relationships · ${Math.round(reply.elapsedMs)} ms index`);
+  const now = performance.now();
+  indexActivity = {phase: 'discovering', path: '', done: 0, total: 0, started: now, fileStarted: now};
+  $('index-details').hidden = false;
+  renderIndexProgress(); indexTimer = setInterval(renderIndexProgress, 250);
+  try {
+    const reply = await rpc('index'); indexed = true;
+    stopIndexProgress();
+    if (selected) await analyse(selected);
+    status(`${reply.result.files} files · ${reply.result.crossFileEdges} cross-file relationships · ${(reply.elapsedMs / 1000).toFixed(1)}s index`);
+  } finally { stopIndexProgress(); }
 });
 $('search').onkeydown = event => {
   if (event.key === 'Enter') task(async () => {

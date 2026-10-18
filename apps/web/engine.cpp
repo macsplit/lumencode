@@ -6,6 +6,11 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <emscripten/bind.h>
+#include <emscripten.h>
+
+EM_JS(void, reportIndexActivity, (const char *phase, const char *path, int done, int total), {
+    postMessage({type: 'progress', phase: UTF8ToString(phase), path: UTF8ToString(path), done: done, total: total});
+});
 
 namespace {
 ProjectIndex::SnapshotPtr snapshot;
@@ -34,6 +39,10 @@ std::string request(const std::string &json)
         options.root = input.value("root").toString();
         options.helperPath = "wasm-shared-engine-v1";
         options.cachePath = "/cache/project-index.json";
+        options.batchSize = 1;
+        options.activity = [](const QString &phase, const QString &path, int done, int total) {
+            reportIndexActivity(phase.toUtf8().constData(), path.toUtf8().constData(), done, total);
+        };
         snapshot = ProjectIndex::build(options);
         result = snapshot->stats;
     } else if (operation == "search") {

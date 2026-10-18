@@ -128,6 +128,8 @@ struct BuildOptions
     int maxFiles = 20000;
     int batchSize = 150;
     std::function<void(int done, int total)> progress;
+    // Optional scheduling diagnostics; callbacks may run on batch threads.
+    std::function<void(const QString &phase, const QString &path, int done, int total)> activity;
     const std::atomic_bool *cancel = nullptr;
 };
 

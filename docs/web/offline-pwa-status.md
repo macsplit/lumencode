@@ -73,6 +73,41 @@ Durable development artifacts on Kubuntu:
 
 ## Resume here
 
+### Relationship build follow-up
+
+A user reported an apparently endless relationship build. The exact folder and
+browser were not established during this follow-up, so its original cause is
+not claimed as reproduced. Inspection identified two concrete problems: no live
+progress display, and an unconditional two-minute operation timeout that could
+discard an otherwise progressing large scan.
+
+The browser now uses single-file analysis batches and an optional shared-engine
+activity callback. The interface shows phase, file/count and elapsed time through
+analysis, declaration matching, call resolution and route matching. The watchdog
+is reset by actual engine progress; 120 seconds without progress triggers a
+visible stalled-worker message. Cancellation also preserves its message after
+worker restart. No parsing or relationship heuristics changed.
+
+[Regression evidence](evidence/offline-pwa-progress-fixtures.json) retains full
+102-file and three indexed comparisons, offline restart and worker recovery.
+Virtual-clock checks verify both progress beyond two minutes and restart after
+silence; these checks make no performance claim.
+
+[Larger-project measurements](evidence/offline-pwa-project-progress.json) cover
+590 indexed source files from the monorepo, including vendored parser sources:
+Chromium completed in 15.1 seconds and Playwright WebKit on Linux in 14.9 seconds,
+with zero failed files. Observed WebAssembly memory capacity was about 92 MiB.
+The snapshots changed slightly between runs, so this is not a cross-browser
+complete-result parity comparison. A separate visible-interface test completed
+the same-sized scan in 14.6 seconds and captured the live progress display.
+Raw traces/screenshots are under `monorepo-progress/`, `monorepo-webkit/`,
+`progress-ui/` and `progress-fixtures/` in the durable browser evidence directory.
+
+The original user stall still needs their project/browser or a reproduction.
+Longer scans now expose the current file/phase instead of remaining opaque.
+
+### Next steps
+
 1. Try the actual Open folder permission flow interactively in desktop Chrome
    and Edge; check denial/revocation and refresh after external edits/deletions.
 2. Extend complete parity comparisons to representative public repositories,

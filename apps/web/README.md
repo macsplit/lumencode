@@ -113,8 +113,10 @@ permission dialog are **not** covered by the injected-picker test.
 - The UI bounds folder enumeration to 20,000 files after exclusions. The shared
   engine retains its own indexed file-size and language selection rules.
 - No filesystem watcher, background indexing, persistent index or editable source.
-- Cancellation/timeout terminates and restarts the worker, discarding session
-  analysis. Indexing currently reports completion rather than per-file progress.
+- Indexing shows phase, completed count, current file and elapsed time.
+  The 120-second watchdog measures time without progress, rather than total
+  build duration. Cancellation/stall recovery restarts the worker and discards
+  session analysis; choose or refresh the project to retry.
 - Case-sensitive virtual paths and missing symlink semantics need broader parity
   coverage, especially for projects from case-insensitive host filesystems.
 - The fixture measurements are not large-project memory/performance guarantees.
@@ -126,3 +128,17 @@ permission dialog are **not** covered by the injected-picker test.
 
 See the [feasibility roadmap](../../docs/web/offline-pwa-feasibility.md) and
 [prototype status](../../docs/web/offline-pwa-status.md).
+
+To profile a larger real project with per-file/phase diagnostics:
+
+```sh
+python tools/profile_web_index.py \
+  --web-root /home/user/Code/Coding/lumencode-wasm-build/web \
+  --project /path/to/project --output /tmp/lumencode-project-profile
+```
+
+Use `--browser webkit` to run an installed Playwright WebKit build. This provides
+another browser-engine check, not a substitute for Safari on a physical Mac.
+Full progress traces and a stalled scan's last active file are saved in the
+output directory. The profiler's own default observation limit is 300 seconds;
+it can be adjusted with `--timeout` and is separate from the UI inactivity watchdog.

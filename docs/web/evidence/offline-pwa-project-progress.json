@@ -1,0 +1,71 @@
+{
+  "scope": "LumenCode checkout; selected source snapshot changed slightly between runs; timings are diagnostic, not cross-browser JSON parity",
+  "runs": [
+    {
+      "browser": "Chromium",
+      "completed": true,
+      "selected_files": 1262,
+      "indexed_files": 590,
+      "failed": 0,
+      "index_ms": 15108.40000000596,
+      "linear_memory_capacity_bytes": 96665600,
+      "main_thread_timer_max_gap_ms": 30.400000005960464,
+      "progress_events": 2040,
+      "slowest_files": [
+        {
+          "ms": 3213.0,
+          "path": "/project/third_party/tree-sitter-go/src/parser.c"
+        },
+        {
+          "ms": 1798.6,
+          "path": "/project/engine/src/symbolparser.cpp"
+        },
+        {
+          "ms": 494.8,
+          "path": "/project/third_party/tree-sitter-typescript/examples/parser.ts"
+        },
+        {
+          "ms": 428.5,
+          "path": "/project/third_party/tree-sitter/lib/src/parser.c"
+        },
+        {
+          "ms": 372.7,
+          "path": "/project/apps/macos/Sources/LumencodeNativeBridge/lumencode_bridge.cpp"
+        }
+      ]
+    },
+    {
+      "browser": "Playwright WebKit on Linux",
+      "completed": true,
+      "selected_files": 1226,
+      "indexed_files": 590,
+      "failed": 0,
+      "index_ms": 14917,
+      "linear_memory_capacity_bytes": 96665600,
+      "main_thread_timer_max_gap_ms": 13,
+      "progress_events": 2041,
+      "slowest_files": [
+        {
+          "ms": 2991,
+          "path": "/project/third_party/tree-sitter-go/src/parser.c"
+        },
+        {
+          "ms": 1681,
+          "path": "/project/engine/src/symbolparser.cpp"
+        },
+        {
+          "ms": 473,
+          "path": "/project/third_party/tree-sitter-typescript/examples/parser.ts"
+        },
+        {
+          "ms": 415,
+          "path": "/project/third_party/tree-sitter/lib/src/parser.c"
+        },
+        {
+          "ms": 369,
+          "path": "/project/third_party/tree-sitter-css/src/parser.c"
+        }
+      ]
+    }
+  ]
+}

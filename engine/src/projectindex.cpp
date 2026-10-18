@@ -1126,6 +1126,10 @@ QHash<QString, QVariantMap> runHelperBatch(const QString &helperPath, const QStr
 
 SnapshotPtr build(const BuildOptions &options)
 {
+    const auto activity = [&](const QString &phase, const QString &path, int done, int total) {
+        if (options.activity) options.activity(phase, path, done, total);
+    };
+    activity(QStringLiteral("discovering"), {}, 0, 0);
     QElapsedTimer timer;
     timer.start();
     auto snapshot = std::make_shared<Snapshot>();
@@ -1168,6 +1172,10 @@ SnapshotPtr build(const BuildOptions &options)
         if (options.cancel && options.cancel->load()) {
             return;
         }
+        if (options.activity) {
+            QMutexLocker locker(&mutex);
+            activity(QStringLiteral("analysing"), batch.isEmpty() ? QString() : batch.first(), done, paths.size());
+        }
         QHash<QString, QVariantMap> produced = runHelperBatch(options.helperPath, batch);
         for (const QString &path : batch) {
             if (!produced.contains(path) && batch.size() > 1) {
@@ -1206,10 +1214,12 @@ SnapshotPtr build(const BuildOptions &options)
     QtConcurrent::blockingMap(batches, runBatch);
 #endif
     if (!stale.isEmpty() && !(options.cancel && options.cancel->load())) {
+        activity(QStringLiteral("saving"), {}, done, paths.size());
         saveCache(cachePath, snapshot->root, fingerprint, snapshot->files);
     }
 
     // Definitions and the edge graph.
+    activity(QStringLiteral("definitions"), {}, 0, snapshot->files.size());
     for (auto it = snapshot->files.cbegin(); it != snapshot->files.cend(); ++it) {
         for (const Definition &definition : it->definitions) {
             snapshot->definitionsByName.insert(definition.name, snapshot->allDefinitions.size());
@@ -1217,6 +1227,8 @@ SnapshotPtr build(const BuildOptions &options)
         }
     }
     for (int index = 0; index < snapshot->allDefinitions.size(); ++index) {
+        if (index % 128 == 0)
+            activity(QStringLiteral("declarations"), {}, index, snapshot->allDefinitions.size());
         const Definition &declaration = snapshot->allDefinitions.at(index);
         if (!declaration.declaration) {
             continue;
@@ -1232,9 +1244,13 @@ SnapshotPtr build(const BuildOptions &options)
     QHash<QString, int> crossByLanguage;
     int sites = 0;
     int unresolved = 0;
+    int linked = 0;
     for (auto it = snapshot->files.cbegin(); it != snapshot->files.cend(); ++it) {
+        activity(QStringLiteral("linking"), it.key(), linked++, snapshot->files.size());
         for (const CallSite &site : it->callSites) {
             ++sites;
+            if (sites % 128 == 0)
+                activity(QStringLiteral("linking"), it.key(), linked - 1, snapshot->files.size());
             Edge edge;
             if (!resolveWith(*snapshot, it.value(), site, &edge)) {
                 ++unresolved;
@@ -1249,6 +1265,7 @@ SnapshotPtr build(const BuildOptions &options)
         }
     }
 
+    activity(QStringLiteral("routes"), {}, 0, snapshot->files.size());
     // Router files mounted under a prefix (Express app.use('/api', router)).
     for (auto it = snapshot->files.cbegin(); it != snapshot->files.cend(); ++it) {
         for (const QVariant &entry : it->routes) {
@@ -1266,7 +1283,9 @@ SnapshotPtr build(const BuildOptions &options)
     }
 
     int httpCalls = 0;
+    int routed = 0;
     for (auto it = snapshot->files.cbegin(); it != snapshot->files.cend(); ++it) {
+        activity(QStringLiteral("routes"), it.key(), routed++, snapshot->files.size());
         for (const QVariant &call : it->httpCalls) {
             ++httpCalls;
             for (const Edge &edge : resolveHttpCall(*snapshot, it->path, call.toMap())) {
@@ -1277,6 +1296,7 @@ SnapshotPtr build(const BuildOptions &options)
         }
     }
 
+    activity(QStringLiteral("complete"), {}, paths.size(), paths.size());
     QVariantMap via;
     for (auto it = viaCounts.cbegin(); it != viaCounts.cend(); ++it) {
         via.insert(it.key(), it.value());
