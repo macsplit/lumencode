@@ -10,7 +10,7 @@ import shutil
 import subprocess
 
 ROOT = Path(__file__).resolve().parent.parent
-ASSETS = ('index.html', 'app.js', 'worker.js', 'worker-client.js', 'storage.js', 'style.css', 'manifest.webmanifest',
+ASSETS = ('index.html', 'app.js', 'worker.js', 'worker-client.js', 'workspace.js', 'storage.js', 'style.css', 'manifest.webmanifest',
           'icon.svg', 'engine.js', 'engine.wasm', 'engine-version.js')
 
 

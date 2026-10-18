@@ -72,8 +72,10 @@ function controls() {
   $('refresh').disabled = busy || !directory;
   $('index').disabled = busy || !currentFiles.length;
   $('cancel').disabled = !busy;
-  $('search').disabled = busy || !indexed;
-  $('search').placeholder = indexed ? 'Name or initial letters' : 'Build relationships first';
+  $('search').disabled = busy || !currentFiles.length;
+  $('search').dataset.indexed = String(indexed);
+  Workspace.controls();
+  $('search').placeholder = indexed ? 'Search files and symbols' : 'Search files';
   for (const button of $('files').querySelectorAll('button')) button.disabled = busy;
 }
 function rpc(operation, extra = {}) {
@@ -134,6 +136,8 @@ function restart(message) {
   for (const task of pending.values()) { clearTimeout(task.timeout); task.reject(new Error('Operation cancelled')); }
   pending.clear();
   currentFiles = []; selected = undefined; indexed = false;
+  Workspace.reset();
+  clearSearch();
   $('files').replaceChildren(); $('file-count').textContent = '';
   $('symbols').replaceChildren(); $('search-results').replaceChildren();
   $('source').textContent = ''; $('result').textContent = '';
@@ -145,8 +149,8 @@ async function task(action) {
   if (busy) return;
   const token = revision;
   busy = true; controls();
-  try { await action(); }
-  catch (error) { if (token === revision && error.name !== 'AbortError') status(error.message); }
+  try { return await action(); }
+  catch (error) { if (token === revision && error.name !== 'AbortError') status(error.message); return false; }
   finally { if (token === revision) { busy = false; controls(); } }
 }
 function accepted(path) {
@@ -178,57 +182,25 @@ async function mount(files, name, {projectKey, verifyContents = false} = {}) {
     busy = true;
   }
   indexed = false; selected = undefined;
+  Workspace.reset();
+  clearSearch();
   $('search-results').replaceChildren(); $('symbols').replaceChildren();
   $('result').textContent = ''; $('source').textContent = '';
   const reply = await rpc('mount', {files, projectKey, verifyContents});
   currentFiles = reply.result.paths;
   $('project-name').textContent = name;
   $('file-count').textContent = `(${currentFiles.length})`;
-  const fragment = document.createDocumentFragment();
-  for (const path of currentFiles) {
-    const button = document.createElement('button');
-    const relative = path.slice('/project/'.length);
-    button.textContent = relative;
-    button.dataset.path = relative;
-    button.onclick = () => task(() => analyse(relative));
-    fragment.append(button);
-  }
-  $('files').replaceChildren(fragment);
+  Workspace.files(currentFiles);
   status(`${currentFiles.length} analysable files · ${Math.round(reply.elapsedMs)} ms to mount and list`);
   if (currentFiles.length) await analyse(currentFiles[0].slice('/project/'.length));
   if (reply.result.cacheRestored) await buildRelationships();
 }
-function renderSymbols(symbols, parent) {
-  for (const symbol of symbols || []) {
-    const row = document.createElement('div'); row.className = 'symbol';
-    const head = document.createElement('div'); head.className = 'symbol-head';
-    for (const [name, text] of [['symbol-kind', symbol.kind], ['', symbol.name], ['symbol-line', `L${symbol.line || '?'}`]]) {
-      const span = document.createElement('span'); span.className = name; span.textContent = text; head.append(span);
-    }
-    row.append(head);
-    if (symbol.detail) { const detail = document.createElement('div'); detail.className = 'symbol-detail'; detail.textContent = symbol.detail; row.append(detail); }
-    for (const [field, label] of [['calls', 'Calls'], ['calledBy', 'Called by']]) {
-      if (symbol[field]?.length) {
-        const relation = document.createElement('div'); relation.className = 'relations';
-        relation.textContent = `${label}: ${symbol[field].map(item => item.name || item.target || item.detail || JSON.stringify(item)).join(', ')}`;
-        row.append(relation);
-      }
-    }
-    if (symbol.members?.length) { const members = document.createElement('div'); members.className = 'members'; renderSymbols(symbol.members, members); row.append(members); }
-    parent.append(row);
-  }
-}
-async function analyse(path) {
+async function analyse(path, focus = {}) {
   status(`Analysing ${path}…`);
   const {result, elapsedMs} = await rpc('analyse', {path, indexed});
   const source = await rpc('read', {path});
   selected = path;
-  $('selected-name').textContent = path;
-  $('summary').textContent = result.summary || `${result.language} analysis`;
-  $('result').textContent = JSON.stringify(result, null, 2);
-  $('source').textContent = source.result.text;
-  $('symbols').replaceChildren(); renderSymbols(result.symbols, $('symbols'));
-  for (const button of $('files').querySelectorAll('button')) button.setAttribute('aria-current', String(button.dataset.path === path));
+  Workspace.show(result, source.result.text, path, focus);
   status(`${result.language || 'Source'} · ${Math.round(elapsedMs)} ms analysis${indexed ? ' · relationships included' : ''}`);
   return result;
 }
@@ -298,20 +270,48 @@ $('clear-saved').onclick = () => task(async () => {
   await loadRecentProjects();
   status('Saved indexes and recent folders cleared. The current project remains open.');
 });
-$('search').onkeydown = event => {
-  if (event.key === 'Enter') task(async () => {
-    const reply = await rpc('search', {query: $('search').value});
-    $('search-results').replaceChildren();
-    for (const item of reply.result.results || []) {
-      const button = document.createElement('button');
+let searchGeneration = 0, searchDelay;
+function clearSearch() {
+  searchGeneration++; clearTimeout(searchDelay);
+  $('search').value = ''; $('files').hidden = false; $('search-results').hidden = true;
+}
+async function searchProject() {
+  const generation = ++searchGeneration;
+  const query = $('search').value.trim();
+  const container = $('search-results'); container.replaceChildren();
+  container.hidden = !query; $('files').hidden = Boolean(query);
+  if (!query) return;
+  const fileResults = currentFiles.filter(path => path.toLowerCase().includes(query.toLowerCase())).slice(0, 50)
+    .map(path => ({name:path.split('/').at(-1), path, kind:'file'}));
+  const render = results => {
+    if (generation !== searchGeneration) return;
+    container.replaceChildren();
+    for (const item of results) {
       const path = item.path?.replace(/^\/project\//, '');
-      button.textContent = `${item.name || item.label || 'Symbol'} · ${path || ''}:${item.line || ''}`;
-      if (path) button.onclick = () => task(() => analyse(path));
-      $('search-results').append(button);
+      const button = document.createElement('button');
+      const title = document.createElement('span'); title.textContent = item.name || item.label || 'Symbol';
+      const detail = document.createElement('small'); detail.textContent = `${item.kind || 'symbol'} · ${path || ''}${item.line ? ':' + item.line : ''}`;
+      button.append(title, detail);
+      if (path) button.onclick = () => Workspace.navigate(path, item.line, item.name);
+      container.append(button);
     }
-    status(`${reply.result.results?.length || 0} results`);
-  });
+    if (!results.length) { const empty = document.createElement('p'); empty.className = 'empty'; empty.textContent = 'No matches'; container.append(empty); }
+  };
+  render(fileResults);
+  if (indexed && !busy) {
+    try {
+      const reply = await rpc('search', {query});
+      if (generation === searchGeneration) render([...fileResults, ...(reply.result.results || [])]);
+    } catch (error) { if (generation === searchGeneration) status(error.message); }
+  }
+}
+$('search').oninput = () => { clearTimeout(searchDelay); searchDelay = setTimeout(searchProject, 180); };
+$('search').onkeydown = event => {
+  if (event.key === 'Escape') { $('search').value = ''; searchProject(); }
+  if (event.key === 'Enter') { clearTimeout(searchDelay); searchProject(); }
 };
+Workspace.setup({available: () => !busy, status,
+  open: (path, focus) => task(() => analyse(path, focus))});
 $('cancel').onclick = () => restart('Cancelled. Restarting engine…');
 
 async function prepareOffline() {

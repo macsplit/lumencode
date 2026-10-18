@@ -121,7 +121,7 @@ def main():
             page.locator('#demo').click()
             page.wait_for_function("document.getElementById('result').textContent.length > 2", timeout=30000)
             page.locator('#index').click()
-            page.wait_for_function("!document.getElementById('search').disabled", timeout=30000)
+            page.wait_for_function("document.getElementById('search').dataset.indexed === 'true' && !document.getElementById('search').disabled", timeout=30000)
             page.locator('#search').fill('greeting')
             page.locator('#search').press('Enter')
             page.wait_for_function("document.querySelectorAll('#search-results button').length > 0")
@@ -157,7 +157,7 @@ def main():
             assert 'firstVersion' not in page.locator('#result').inner_text()
             report['directory_handle_enumeration_refresh'] = 'Real OPFS handle through test-supplied picker; OS permission dialog not tested'
             page.locator('#index').click()
-            page.wait_for_function("!document.getElementById('search').disabled")
+            page.wait_for_function("document.getElementById('search').dataset.indexed === 'true' && !document.getElementById('search').disabled")
 
             # Use the actual directory-import control and its File objects.
             fixture_root = ROOT / 'tests/fixtures/baseline'
@@ -264,7 +264,7 @@ def main():
             page.wait_for_function("!document.getElementById('demo').disabled", timeout=90000)
             page.wait_for_function("document.querySelectorAll('#recent option').length > 1")
             page.locator('#recent').select_option(label='handle-test')
-            page.wait_for_function("!document.getElementById('search').disabled", timeout=30000)
+            page.wait_for_function("document.getElementById('search').dataset.indexed === 'true' && !document.getElementById('search').disabled", timeout=30000)
             assert '1 reused' in page.locator('#status').inner_text()
             report['recent_folder_and_index_survive_offline_browser_restart'] = True
             page.evaluate(HARNESS)

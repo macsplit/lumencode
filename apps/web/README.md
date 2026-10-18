@@ -11,6 +11,13 @@ a replacement for the native applications.
   heuristics, facts and graph construction as native consumers.
 - Read-only folder selection, a directory-import fallback, example project,
   source/symbol inspection, relationships and symbol search.
+- Desktop-style project tree, file overview, inspector and bottom source preview.
+  Select symbols/members for details, parameters, returns, calls and callers;
+  follow local relationships and return with Back/Forward (Alt+Left/Right).
+- Pointer/keyboard-resizable panes with saved sizes; compact-screen pane tabs.
+  Source is numbered, line-focused and paged in 160-line blocks, with full-source
+  copying. Ctrl/Cmd+F focuses search; files are searchable before indexing and
+  canonical symbol search becomes available after building relationships.
 - Refresh of a granted directory; a fresh worker clears source/path caches.
 - File-backed WORKERFS mapping preserves relative hierarchy and modification
   times without eagerly copying every file's contents into WebAssembly memory.
@@ -19,8 +26,8 @@ a replacement for the native applications.
 - Browser-local persistence of canonical index facts and recent granted folders.
   An unchanged project restores relationships automatically when reopened.
 
-The small interface and worker are plain JavaScript/HTML/CSS to keep the first
-prototype independent of a frontend framework. A TypeScript/component-tooling
+The interface and worker remain plain JavaScript/HTML/CSS, with workspace
+presentation separated from analysis and worker scheduling. A TypeScript/component-tooling
 decision remains open for a fuller interface.
 
 ## Toolchain setup
@@ -202,3 +209,18 @@ python tools/check_web_parallel.py \
 ```
 
 Add `--browser webkit` for the second browser engine.
+
+Four-pane interaction checks run against the real browser engine, including
+cross-file navigation, symbol history, pointer/keyboard splitters, persisted sizes,
+large-file source paging and narrow-screen access to all panes:
+
+```sh
+python tools/check_web_workspace.py \
+  --web-root /home/user/Code/Coding/lumencode-wasm-build/web \
+  --output /tmp/lumencode-workspace-validation
+```
+
+Use `--browser webkit` for Playwright WebKit. Native OS picker prompts and native
+Safari still require platform-specific acceptance checks. The project tree lists
+the engine's supported candidate files; auxiliary-file browsing, syntax colouring
+and richer search filters remain future interface work.

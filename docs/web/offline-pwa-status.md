@@ -15,9 +15,10 @@ index. The web-specific adaptation replaces native helper subprocesses and Qt
 Concurrent batching with independently scheduled worker analysis; facts, recovery and graph matching
 remain canonical. A new worker on refresh clears static path/mtime caches.
 
-The minimal dark interface supports folder selection/import, an example project,
-symbols and source, project relationships and search. No framework was needed to
-prove the engine boundary. Source text is rendered as text rather than HTML.
+The dark interface now follows the desktop four-pane layout: project tree, file
+overview, inspector and bottom source preview. It supports folder selection/import,
+an example project, symbols and source, project relationships and search. Workspace
+presentation remains separate from the engine and worker scheduler. Source text is rendered as text rather than HTML.
 Cancellation/timeouts terminate the coordinator and every parser worker. All essential assets are precached,
 with a cache version derived from asset hashes and a storage-persistence result
 shown to the user.
@@ -201,6 +202,38 @@ coordinator heap; they are not sampled peak RSS or total browser memory. Childre
 are terminated before final graph construction. See the
 [recorded performance comparison](evidence/offline-pwa-parallel-performance.json).
 
+### Desktop-style workspace milestone
+
+The browser now presents the same four main panes as the Qt, SwiftUI and WinUI
+applications, with independently scrolling content and draggable dividers. Divider
+sizes persist locally; arrow keys resize focused dividers. At narrow widths,
+Project / Overview / Inspector / Source tabs keep every pane reachable.
+
+The project tree groups candidate files by folder and unfolds the current file.
+File search works before indexing; symbol results still come from the shared engine.
+Overview symbols and members select inspector details and focus their source line.
+The inspector presents parameters, returns, members, calls/callers, dependencies,
+routes, related files, quick links and available CSS/package metadata. Local relation
+links navigate between files. Bounded Back/Forward history restores file/symbol
+selection; Alt+Left/Right and Ctrl/Cmd+F follow desktop navigation conventions.
+
+The source pane renders at most 160 numbered lines per page, jumps to a selected
+line, supports page navigation and copies the full original source. Text nodes
+preserve source safely; engine notices remain visible. Raw engine JSON is tucked
+under a diagnostic disclosure. These changes do not modify parser/graph behaviour
+or the worker-pool policy.
+
+[Workspace interaction evidence](evidence/offline-pwa-workspace.json) covers real
+Chromium and Playwright WebKit on Linux: all four panes, pre-index file search,
+symbol parameters, cross-file relationships, Back/Forward selection, pointer and
+keyboard resizing, reload persistence, source paging/focused lines and literal
+HTML rendering, mobile pane access and no horizontal page overflow. Desktop and
+mobile screenshots are retained in `workspace-chromium/` and `workspace-webkit/`
+in the durable evidence directory. [Lifecycle checks](evidence/offline-pwa-workspace-lifecycle.json)
+retain native/browser JSON parity, indexed comparisons, offline restart, saved
+folders and cancellation/watchdog recovery. Native Safari and the actual OS folder
+permission prompts remain separate acceptance work.
+
 ### Next steps
 
 1. Try the actual Open folder permission flow interactively in desktop Chrome
@@ -215,9 +248,10 @@ are terminated before final graph construction. See the
 4. Extend cache validation to native permission reconnection, interrupted updates,
    quota pressure and cache loss. Consider fine-grained invalidation and broader
    native-browser/platform checks. Public-hosted app update UX remains future work.
-5. Decide the scope and UI tooling for a fuller browser application once those
-   gates are satisfied. Packaging/public preview and distribution remain separate
-   work; native releases and the public website have not been changed.
+5. Extend the four-pane workspace with auxiliary-file browsing, syntax colouring,
+   richer search filters and broader keyboard/accessibility acceptance. Packaging,
+   public preview and distribution remain separate work; native releases and the
+   public website have not been changed.
 
 [Build/run/test instructions](../../apps/web/README.md) ·
 [Original feasibility and decision gates](offline-pwa-feasibility.md)
