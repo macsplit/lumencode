@@ -1,0 +1,3143 @@
+{
+  "date": "2026-10-18",
+  "baseline_revision": "6c74a2747675152db0f1a00c8ff17ec12fecaa1c",
+  "archive": "lumencode-validation-20261017/lumencode-cross-corpus.tar.gz",
+  "scope": "Headless testing only; no native OS permission dialogs; application engine unchanged",
+  "content_equivalent": true,
+  "strict_json_equal": false,
+  "reports": {
+    "real-projects-chromium": {
+      "passed": false,
+      "browser": "chromium",
+      "method": "Complete JSON; physical root prefix normalization only",
+      "projects": [
+        {
+          "name": "express",
+          "files_compared": 149,
+          "languages": {
+            "script": 141,
+            "html": 8
+          },
+          "modes": {
+            "ast": 149
+          },
+          "native_index": {
+            "analysed": 149,
+            "buildMs": 1033,
+            "cachePath": "/home/user/Code/Coding/lumencode-validation-20261018-pwa/real-projects-chromium/express/native-index.json",
+            "callSites": 8267,
+            "crossFileEdges": 178,
+            "declarationsPaired": 0,
+            "definitions": 150,
+            "edgesByEvidence": {
+              "import": 59,
+              "package": 5,
+              "unique-name": 114
+            },
+            "edgesByLanguage": {
+              "script": 178
+            },
+            "failed": 0,
+            "files": 149,
+            "httpCalls": 1,
+            "httpEdges": 1,
+            "reusedFromCache": 0,
+            "unresolvedCallSites": 8089
+          },
+          "browser_index": {
+            "analysed": 149,
+            "buildMs": 110,
+            "cachePath": "/cache/project-index.json",
+            "callSites": 8267,
+            "crossFileEdges": 178,
+            "declarationsPaired": 0,
+            "definitions": 150,
+            "edgesByEvidence": {
+              "import": 59,
+              "package": 5,
+              "unique-name": 114
+            },
+            "edgesByLanguage": {
+              "script": 178
+            },
+            "failed": 0,
+            "files": 149,
+            "httpCalls": 1,
+            "httpEdges": 1,
+            "reusedFromCache": 0,
+            "unresolvedCallSites": 8089
+          },
+          "browser_index_ms": 729.9000000003725,
+          "heartbeat_ticks": 72,
+          "max_timer_gap_ms": 19,
+          "parser_workers": 4,
+          "candidate_source_sha256": "443f9f8f09b8756cae6ceac92b146cda0ef4926aaad941eeb002e829377a1fd2",
+          "graph_statistics_equal": true
+        },
+        {
+          "name": "flask",
+          "files_compared": 105,
+          "languages": {
+            "python": 83,
+            "html": 20,
+            "sql": 2
+          },
+          "modes": {
+            "ast": 103,
+            "heuristic": 2
+          },
+          "native_index": {
+            "analysed": 105,
+            "buildMs": 475,
+            "cachePath": "/home/user/Code/Coding/lumencode-validation-20261018-pwa/real-projects-chromium/flask/native-index.json",
+            "callSites": 2975,
+            "crossFileEdges": 611,
+            "declarationsPaired": 0,
+            "definitions": 913,
+            "edgesByEvidence": {
+              "import": 378,
+              "package": 6,
+              "qualifier": 1,
+              "unique-name": 226
+            },
+            "edgesByLanguage": {
+              "python": 611
+            },
+            "failed": 0,
+            "files": 105,
+            "httpCalls": 1,
+            "httpEdges": 0,
+            "reusedFromCache": 0,
+            "unresolvedCallSites": 2364
+          },
+          "browser_index": {
+            "analysed": 105,
+            "buildMs": 72,
+            "cachePath": "/cache/project-index.json",
+            "callSites": 2975,
+            "crossFileEdges": 611,
+            "declarationsPaired": 0,
+            "definitions": 913,
+            "edgesByEvidence": {
+              "import": 378,
+              "package": 6,
+              "qualifier": 1,
+              "unique-name": 226
+            },
+            "edgesByLanguage": {
+              "python": 611
+            },
+            "failed": 0,
+            "files": 105,
+            "httpCalls": 1,
+            "httpEdges": 0,
+            "reusedFromCache": 0,
+            "unresolvedCallSites": 2364
+          },
+          "browser_index_ms": 521,
+          "heartbeat_ticks": 52,
+          "max_timer_gap_ms": 10.200000000186265,
+          "parser_workers": 4,
+          "candidate_source_sha256": "87e67fa6a56609332e2c640272107d2314475bc0a16c42fff90881f808b3d85c",
+          "graph_statistics_equal": true
+        },
+        {
+          "name": "cobra",
+          "files_compared": 36,
+          "languages": {
+            "go": 36
+          },
+          "modes": {
+            "ast": 36
+          },
+          "native_index": {
+            "analysed": 36,
+            "buildMs": 315,
+            "cachePath": "/home/user/Code/Coding/lumencode-validation-20261018-pwa/real-projects-chromium/cobra/native-index.json",
+            "callSites": 2968,
+            "crossFileEdges": 813,
+            "declarationsPaired": 0,
+            "definitions": 623,
+            "edgesByEvidence": {
+              "package": 334,
+              "qualifier": 2,
+              "unique-name": 477
+            },
+            "edgesByLanguage": {
+              "go": 813
+            },
+            "failed": 0,
+            "files": 36,
+            "httpCalls": 0,
+            "httpEdges": 0,
+            "reusedFromCache": 0,
+            "unresolvedCallSites": 2155
+          },
+          "browser_index": {
+            "analysed": 36,
+            "buildMs": 56,
+            "cachePath": "/cache/project-index.json",
+            "callSites": 2968,
+            "crossFileEdges": 813,
+            "declarationsPaired": 0,
+            "definitions": 623,
+            "edgesByEvidence": {
+              "package": 334,
+              "qualifier": 2,
+              "unique-name": 477
+            },
+            "edgesByLanguage": {
+              "go": 813
+            },
+            "failed": 0,
+            "files": 36,
+            "httpCalls": 0,
+            "httpEdges": 0,
+            "reusedFromCache": 0,
+            "unresolvedCallSites": 2155
+          },
+          "browser_index_ms": 382.5,
+          "heartbeat_ticks": 38,
+          "max_timer_gap_ms": 13.300000000279397,
+          "parser_workers": 4,
+          "candidate_source_sha256": "1d174fa459921e4fc62c9b272f71fe3ffe4576c4e4b4a18f63d854e17cdd20ed",
+          "graph_statistics_equal": true
+        },
+        {
+          "name": "cJSON",
+          "files_compared": 120,
+          "languages": {
+            "cpp": 99,
+            "shell": 3,
+            "ruby": 16,
+            "python": 2
+          },
+          "modes": {
+            "ast": 82,
+            "recovered": 16,
+            "heuristic": 22
+          },
+          "native_index": {
+            "analysed": 120,
+            "buildMs": 1709,
+            "cachePath": "/home/user/Code/Coding/lumencode-validation-20261018-pwa/real-projects-chromium/cJSON/native-index.json",
+            "callSites": 3129,
+            "crossFileEdges": 631,
+            "declarationsPaired": 151,
+            "definitions": 1578,
+            "edgesByEvidence": {
+              "import": 603,
+              "package": 1,
+              "qualifier": 3,
+              "unique-name": 24
+            },
+            "edgesByLanguage": {
+              "cpp": 603,
+              "python": 6,
+              "ruby": 22
+            },
+            "failed": 0,
+            "files": 120,
+            "httpCalls": 0,
+            "httpEdges": 0,
+            "reusedFromCache": 0,
+            "unresolvedCallSites": 2498
+          },
+          "browser_index": {
+            "analysed": 120,
+            "buildMs": 75,
+            "cachePath": "/cache/project-index.json",
+            "callSites": 3129,
+            "crossFileEdges": 631,
+            "declarationsPaired": 151,
+            "definitions": 1578,
+            "edgesByEvidence": {
+              "import": 603,
+              "package": 1,
+              "qualifier": 3,
+              "unique-name": 24
+            },
+            "edgesByLanguage": {
+              "cpp": 603,
+              "python": 6,
+              "ruby": 22
+            },
+            "failed": 0,
+            "files": 120,
+            "httpCalls": 0,
+            "httpEdges": 0,
+            "reusedFromCache": 0,
+            "unresolvedCallSites": 2498
+          },
+          "browser_index_ms": 1256.2000000001863,
+          "heartbeat_ticks": 125,
+          "max_timer_gap_ms": 11,
+          "parser_workers": 4,
+          "candidate_source_sha256": "5a1cf679c0b804d6648fcfb705ab722b74236599ca059ca7bed2222fd5f78477",
+          "graph_statistics_equal": true
+        }
+      ],
+      "corpus_samples": [
+        {
+          "name": "50projects50days",
+          "manifest_revision": "c92b0bc3a87fc95d44b89552b7b6a2eeb36ca481",
+          "files": [
+            {
+              "path": "3d-boxes-background/index.html",
+              "sha256": "133da8a33f4830da78f7c611f3aeba4d38f02dc3a21439da031784ceb7bacb68",
+              "language": "html",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 6.7000000001862645
+            },
+            {
+              "path": "incrementing-counter/index.html",
+              "sha256": "62fff64b0d3a4f6f3e76de283c858cd74cf9c765b7590df7fb960677fcf880a5",
+              "language": "html",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 5
+            },
+            {
+              "path": "verify-account-ui/style.css",
+              "sha256": "fa92f34426652f8ab8adea4e2f68e4d19198caa74575bee58556c83293711bfc",
+              "language": "css",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 6.899999999906868
+            }
+          ]
+        },
+        {
+          "name": "todomvc",
+          "manifest_revision": "ff43b02e59dfa604386bb382034b2cd07c2bcd8a",
+          "files": [
+            {
+              "path": "cypress/e2e/spec.cy.js",
+              "sha256": "81beec13cc2f6e28577c560325fa07297e3b480d7694bf6f4bd822c0a3f57c22",
+              "language": "script",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 72.60000000009313
+            },
+            {
+              "path": "examples/gwt/gwttodo/D6D931BA9B534E30A73C8FD93F9AAC9A.cache.js",
+              "sha256": "487ce8e3e74b311295ec9581ba70754c9ae65e725ac98a64204bfd7680b8c68b",
+              "language": "script",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 1.5
+            },
+            {
+              "path": "tests/server.js",
+              "sha256": "5e7b464ccd75f74b9fd4dd0c55f4bc83476fb7f5feac7159badfcf18078b8ce0",
+              "language": "script",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 4.099999999627471
+            }
+          ]
+        },
+        {
+          "name": "html5-boilerplate",
+          "manifest_revision": "b6597338e695dc4a8165c5abcb2bfffa586c3ee5",
+          "files": [
+            {
+              "path": "src/404.html",
+              "sha256": "57f3228f1361508362003ac5eb25cc8303b0b8fd19bf2470e462b2b8e97eef78",
+              "language": "html",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 2.8999999999068677
+            },
+            {
+              "path": "src/webpack.common.js",
+              "sha256": "e0b8e6d415a7d5d7f039c5cb43b5410294bfc21683e7f0edb1819235ecbbde84",
+              "language": "script",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 6.7999999998137355
+            },
+            {
+              "path": "src/webpack.config.prod.js",
+              "sha256": "6a1cd0e01a8b1b7ccefe259cdf15f50840404f4c05f2295815d83bfab036eda2",
+              "language": "script",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 6.5
+            }
+          ]
+        },
+        {
+          "name": "express",
+          "manifest_revision": "7ef98448f8b38099ab1ded55e458538ad47a51e7",
+          "files": [
+            {
+              "path": "examples/auth/index.js",
+              "sha256": "4acca9f794d50f57c41967b471031f7410cc61a2b979c86ad0f264567f06e69b",
+              "language": "script",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 9.600000000093132
+            },
+            {
+              "path": "test/app.engine.js",
+              "sha256": "30d1606056440d76ffef7b74ee7ccfca94adbf85ae456ee58bcd66ad9e4fd3c9",
+              "language": "script",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 7.399999999906868
+            },
+            {
+              "path": "test/utils.js",
+              "sha256": "022f171575ba38ed5f595ec8080da0bb4578130d280942a0d4aea019a172711e",
+              "language": "script",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 8.299999999813735
+            }
+          ]
+        },
+        {
+          "name": "hono",
+          "manifest_revision": "37ce06904e732d4bc11c9075adf362c76049a594",
+          "files": [
+            {
+              "path": "adapters/aws-lambda/src/conninfo.test.ts",
+              "sha256": "93f505c1a3a77dcf36e60927058c0176fea4410aabc883b3ec7e510488ab651e",
+              "language": "ts",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 9.799999999813735
+            },
+            {
+              "path": "src/helper/streaming/sse.test.tsx",
+              "sha256": "f9dbd0817e70ec61f9aa8f67162ec6658363c6a4c1b5ab34ee4022f5f457275c",
+              "language": "tsx",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 32.10000000009313
+            },
+            {
+              "path": "vitest.config.ts",
+              "sha256": "e9698e0fe673dcd54e4e19692c65c4c0513f07cae1d4888140e57e7477fed03c",
+              "language": "ts",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 4.2999999998137355
+            }
+          ]
+        },
+        {
+          "name": "flask",
+          "manifest_revision": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35",
+          "files": [
+            {
+              "path": "docs/conf.py",
+              "sha256": "a9732cff1ca5ee0420bc5f656df105c32cea32389033742c8f46dffab3b435cd",
+              "language": "python",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 5.400000000372529
+            },
+            {
+              "path": "src/flask/templating.py",
+              "sha256": "3ed7a044a96c911267e855b7359d9f159f06321f75fbe678a6656923d5e0989e",
+              "language": "python",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 9.799999999813735
+            },
+            {
+              "path": "tests/type_check/typing_route.py",
+              "sha256": "4554c7c77994fdd2ba2a8c50756c418aba619707f3e951551f26e8e9fd37c72a",
+              "language": "python",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 7.900000000372529
+            }
+          ]
+        },
+        {
+          "name": "requests",
+          "manifest_revision": "611c6162cbc4ac2020a2f91c7cfa4f3abf9bbb60",
+          "files": [
+            {
+              "path": "docs/_themes/flask_theme_support.py",
+              "sha256": "bba3677c6eeb99f678e808e90142a025b798b7658bac1ab4632591df8441d209",
+              "language": "python",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 5.899999999906868
+            },
+            {
+              "path": "src/requests/sessions.py",
+              "sha256": "3d2089736ced93b2b405624a943f866d22652b17df06a85eb010f86272fc3e7d",
+              "language": "python",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 26.600000000093132
+            },
+            {
+              "path": "tests/utils.py",
+              "sha256": "cfaec86690eba62573c8c730a121332837809333fb2b1006a20e2e8f4d34d4de",
+              "language": "python",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 1.6999999997206032
+            }
+          ]
+        },
+        {
+          "name": "Slim",
+          "manifest_revision": "3675bf6baac66b07032575b7bef4200b60b7974b",
+          "files": [
+            {
+              "path": "Slim/App.php",
+              "sha256": "515a46fff1f2f014b49302d2f37eb617718a5d9dffd06da265b17f781f5ef42d",
+              "language": "php",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 17.100000000093132
+            },
+            {
+              "path": "Slim/Routing/FastRouteDispatcher.php",
+              "sha256": "65950d13598d497a0da227efdbf91b1736f9109fd578960ffc9ec3f8ff8d3568",
+              "language": "php",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 5.800000000279397
+            },
+            {
+              "path": "tests/bootstrap.php",
+              "sha256": "7a9b06ad0c87c0ee677557cbd61aeda07c214c7b4aa5ee8a4094aa1e17dbee91",
+              "language": "php",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 3.7999999998137355
+            }
+          ]
+        },
+        {
+          "name": "PHPMailer",
+          "manifest_revision": "50cd271fdf4e23673ded5455cdbaea007e05f619",
+          "files": [
+            {
+              "path": "get_oauth_token.php",
+              "sha256": "c461d8181348df478a5639013af6719e89182bd6153b2e48469525763371f743",
+              "language": "php",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 7.2999999998137355
+            },
+            {
+              "path": "src/SMTP.php",
+              "sha256": "4b4f5d5bad1c01f22a716f9de937e22cde4fe87346f6fece671d023f9b6342aa",
+              "language": "php",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 36.39999999990687
+            },
+            {
+              "path": "test/validators.php",
+              "sha256": "be5540ac203b90dc28f01f5b99b0484ff0a18b45e6bd7a9bee31f5c59ba043ff",
+              "language": "php",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 2.6000000000931323
+            }
+          ]
+        },
+        {
+          "name": "CodeIgniter",
+          "manifest_revision": "3658d731eaabe6117298a105ffb5b9dd59e190ce",
+          "files": [
+            {
+              "path": "application/config/autoload.php",
+              "sha256": "60a0580ed13988fbd86ae67de7bc203558b9a2385bcd7805bf1f60016f72ebfc",
+              "language": "php",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 8.699999999720603
+            },
+            {
+              "path": "system/language/english/calendar_lang.php",
+              "sha256": "4e80526cc3ac20ff63416caeafd81a89ce8f5922b29dc15ad4e482ecf6101e6c",
+              "language": "php",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 7.699999999720603
+            },
+            {
+              "path": "tests/mocks/libraries/table.php",
+              "sha256": "f02a7c145bb35e0a6adccc704a0516e5977977643d23505399107447212be002",
+              "language": "php",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 2.7999999998137355
+            }
+          ]
+        },
+        {
+          "name": "gson",
+          "manifest_revision": "854c8255b625cf1e13c701a83ea9ccb4caaa576a",
+          "files": [
+            {
+              "path": "extras/src/main/java/com/google/gson/extras/examples/rawcollections/RawCollectionsExample.java",
+              "sha256": "17be0448aa0041e8f36bb9069a0b8535176b6b9b0899a6aeb1d8e0d98cda2d2e",
+              "language": "java",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 6.800000000279397
+            },
+            {
+              "path": "gson/src/test/java/com/google/gson/TypeAdapterTest.java",
+              "sha256": "9d79609f6d9c0511a70b30b6e9d2b34845abc3619c29ef38c7ba3aa2e71cea40",
+              "language": "java",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 9.400000000372529
+            },
+            {
+              "path": "test-shrinker/src/test/java/com/google/gson/it/ShrinkingIT.java",
+              "sha256": "ad6b34cb2537d3c25beb0cf3bfab45279e54d1d3b15fb5b3795e7f2b9724cf9c",
+              "language": "java",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 16.299999999813735
+            }
+          ]
+        },
+        {
+          "name": "MediatR",
+          "manifest_revision": "916ef1b3d68ccdc96db8f914eaf1b32fc7db52c5",
+          "files": [
+            {
+              "path": "samples/MediatR.Examples/ConstrainedRequestPostProcessor.cs",
+              "sha256": "ad311a4014b27eb59d373fd70e677cf7d04727de35aa89b71c6bfea9e4c3f5b9",
+              "language": "csharp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 6.099999999627471
+            },
+            {
+              "path": "src/MediatR.Contracts/INotification.cs",
+              "sha256": "7e749babf379dd54bf0326985427753e2857112b16720bfff8401add190ba8a2",
+              "language": "csharp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 1.3000000002793968
+            },
+            {
+              "path": "test/MediatR.Tests/UnitTests.cs",
+              "sha256": "c74aac6a7c81f8461054aad05da93708dd8f29752ac3fdc95485ca15e135d66d",
+              "language": "csharp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 6.900000000372529
+            }
+          ]
+        },
+        {
+          "name": "Polly",
+          "manifest_revision": "0275bc22a5a8defb77415313112454a558d0f43a",
+          "files": [
+            {
+              "path": "bench/Polly.Benchmarks/Bulkhead.cs",
+              "sha256": "af879742391ad7138923cd968c48c602a40a45286fa930f25db7138245720789",
+              "language": "csharp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 4.699999999720603
+            },
+            {
+              "path": "src/Polly.Core/Utils/Pipeline/ComponentWithDisposeCallbacks.cs",
+              "sha256": "ce29ae19713560d2780796b25120eb4daab63596ee574395f5c5b34b9dcf80f7",
+              "language": "csharp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 2.6000000000931323
+            },
+            {
+              "path": "test/Shared/TestCancellation.cs",
+              "sha256": "ba4361717d9a3dbe855d5037b8dd0414a93250cba7147168fa9be7917265707d",
+              "language": "csharp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 1.2000000001862645
+            }
+          ]
+        },
+        {
+          "name": "ripgrep",
+          "manifest_revision": "3fce3b5bb0236da2df6d99672afb8a719642eca7",
+          "files": [
+            {
+              "path": "build.rs",
+              "sha256": "07d72d8929ecd1cc2277e7d1f16092521c9160c92cca9544a682b275bd53d955",
+              "language": "rust",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 6.300000000279397
+            },
+            {
+              "path": "crates/index/src/literal.rs",
+              "sha256": "09c40115a676960db2e4f40b39c4b4ba07f180fc19ab4169b90a3ce5543d2714",
+              "language": "rust",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 48.60000000009313
+            },
+            {
+              "path": "tests/util.rs",
+              "sha256": "6862edaf5adad5eff8b7bf3c50ed28c221c0212fe733b22387d1f4f09909b447",
+              "language": "rust",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 20
+            }
+          ]
+        },
+        {
+          "name": "Alamofire",
+          "manifest_revision": "bda9ed57d72988a3a2ada33d824583541f86eac6",
+          "files": [
+            {
+              "path": "Example/Source/AppDelegate.swift",
+              "sha256": "85d9695a972ee715d7fc58cb062fee8e0cc8c892f2f661c3d85b3b578300df31",
+              "language": "swift",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 19.899999999906868
+            },
+            {
+              "path": "Source/Features/URLEncodedFormEncoder.swift",
+              "sha256": "0f3f91e4cdb9f5ddf9308151f9267c713a8abfbe28c9e2bcae6bfc8bef3c7ccd",
+              "language": "swift",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 173.39999999990687
+            },
+            {
+              "path": "watchOS Example/watchOS Example WatchKit Extension/Networking.swift",
+              "sha256": "fcf8a9a297f907f5e75105c30c43c5a24662ee930b92193e652a01b377be9e08",
+              "language": "swift",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 3.8999999999068677
+            }
+          ]
+        },
+        {
+          "name": "gin",
+          "manifest_revision": "43fe48e8a0f44af783116cdb010725e6bb50255f",
+          "files": [
+            {
+              "path": "auth.go",
+              "sha256": "be38ef38614d2b9488d0e73ff2f8b432fc61cc90f4b7e071d0bbf78d898464c1",
+              "language": "go",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 5.399999999906868
+            },
+            {
+              "path": "fs.go",
+              "sha256": "adc80ccabbe903cd7be2ae755ebc879629cb77e59a22c94957c679ddeab5a791",
+              "language": "go",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 2
+            },
+            {
+              "path": "version.go",
+              "sha256": "64a9cd75a68233df9d82eae6d72df5aec5a468af253d437d078ca82f6409c501",
+              "language": "go",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 0.8999999999068677
+            }
+          ]
+        },
+        {
+          "name": "cobra",
+          "manifest_revision": "adbc8813901bba65827259daa8e22ff94ec1f30e",
+          "files": [
+            {
+              "path": "active_help.go",
+              "sha256": "92bde33086d33e413b9ac945ddb38f7487f9ce91067453a7ce97fd62fa59cdc5",
+              "language": "go",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 3.1999999997206032
+            },
+            {
+              "path": "doc/man_docs_test.go",
+              "sha256": "3af3faa35a5f2042b76c76e58c4a2ec9425456aced698eb9f47da40b6d7b3eeb",
+              "language": "go",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 8.100000000093132
+            },
+            {
+              "path": "zsh_completions_test.go",
+              "sha256": "88aacf930d16a2c9c6508c36684215053f681ec51532c778378009e19d8af26d",
+              "language": "go",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 1.6999999997206032
+            }
+          ]
+        },
+        {
+          "name": "cJSON",
+          "manifest_revision": "6d9f2443ab071f86e5d9b43025a40929ec41c46c",
+          "files": [
+            {
+              "path": "cJSON.c",
+              "sha256": "607e756460fa0de37d20a7a9181f2de29c97bfb7ce5a0e6c2f548243836cd852",
+              "language": "cpp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 136.20000000018626
+            },
+            {
+              "path": "tests/unity/examples/example_3/src/ProductionCode2.c",
+              "sha256": "a929e7ef393ec5ccc53e3f885d663a1c8fbe5cc5f72a0fcad5c0d2f6cbc8b210",
+              "language": "cpp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 3.1000000000931323
+            },
+            {
+              "path": "tests/unity_setup.c",
+              "sha256": "5f00ce6ea0455d5b898b5da3abc483e616f7d1f37fd2f8cc0ca84b09ff23e067",
+              "language": "cpp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 1.3999999999068677
+            }
+          ]
+        },
+        {
+          "name": "kilo",
+          "manifest_revision": "323d93b29bd89a2cb446de90c4ed4fea1764176e",
+          "files": [
+            {
+              "path": "kilo.c",
+              "sha256": "4a44dd0e41670a9e49ecccb338ee199334f0dd472fc7f86467569cf99c391abe",
+              "language": "cpp",
+              "mode": "recovered",
+              "ast_errors": true,
+              "browser_ms": 194.59999999962747
+            }
+          ]
+        },
+        {
+          "name": "fmt",
+          "manifest_revision": "5da4e9a3fb15626ba92969199061e0169ebc8a00",
+          "files": [
+            {
+              "path": "include/fmt/args.h",
+              "sha256": "b105f72e62d7eb403c12c4c0ba22a94d42344b20206664814bf9568c6785fc83",
+              "language": "cpp",
+              "mode": "recovered",
+              "ast_errors": true,
+              "browser_ms": 73.90000000037253
+            },
+            {
+              "path": "test/fuzzing/chrono-timepoint.cc",
+              "sha256": "2238b277d8c4248927e7a3278b93246dc1a707171bca31d5de1e38e81db692ca",
+              "language": "cpp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 1.8999999999068677
+            },
+            {
+              "path": "test/xchar-test.cc",
+              "sha256": "58c8078f6ef83ed0663596055bab9e13fd3d83711b43b46c42dff9afd222d77c",
+              "language": "cpp",
+              "mode": "recovered",
+              "ast_errors": true,
+              "browser_ms": 52
+            }
+          ]
+        },
+        {
+          "name": "sinatra",
+          "manifest_revision": "cb22afd7902b566b6eaba6c4ea89739494a65d12",
+          "files": [
+            {
+              "path": "examples/chat.rb",
+              "sha256": "5249bbd26bca7863d8b0b4c170e9f18e79b8fdbdb0dd05031354e9ad433da3af",
+              "language": "ruby",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 2.6000000000931323
+            },
+            {
+              "path": "sinatra-contrib/lib/sinatra/streaming.rb",
+              "sha256": "dc32d99c2ef8332bae83cdd1021ec70c8512c3f8e8389d2327441667a893bb0f",
+              "language": "ruby",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 5.899999999906868
+            },
+            {
+              "path": "test/yajl_test.rb",
+              "sha256": "39d442339c41063a972e7c300134ff6b72546d91c336d16665ce23104f08279f",
+              "language": "ruby",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 2.7000000001862645
+            }
+          ]
+        },
+        {
+          "name": "okio",
+          "manifest_revision": "fb4817a396dd37d515d94e6033216214e07323d1",
+          "files": [
+            {
+              "path": "android-test/build.gradle.kts",
+              "sha256": "31044a32211b30be0d4ad5c537a258514c6585459be85475ca23497f82330ce2",
+              "language": "kotlin",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 3.1000000000931323
+            },
+            {
+              "path": "okio/src/jvmTest/kotlin/okio/JimfsOkioRoundTripTest.kt",
+              "sha256": "b162c02552520060eeebd5c74b077abd6a8aa8a02446ab14a2e1d34aefb8c767",
+              "language": "kotlin",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 11.600000000093132
+            },
+            {
+              "path": "settings.gradle.kts",
+              "sha256": "8a9b1eae5328c7e19b1e3168f2500a32c3d83b87f69abb4f9ed494fccf0860a0",
+              "language": "kotlin",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 1.099999999627471
+            }
+          ]
+        },
+        {
+          "name": "nvm",
+          "manifest_revision": "09822033d2bdb555fc52fa64489aaa4928695da3",
+          "files": [
+            {
+              "path": "install.sh",
+              "sha256": "48a0eee9a60e07422dce0eb5774754c83889570ca1ee2566c516acbe8af03a9e",
+              "language": "shell",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 18.09999999962747
+            },
+            {
+              "path": "rename_test.sh",
+              "sha256": "170b6eac6f918960427dc854cb5c2cf2fc8bb31d711b3325f9e630efe0a460e2",
+              "language": "shell",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 2.1000000000931323
+            },
+            {
+              "path": "update_test_mocks.sh",
+              "sha256": "d731b383265aad0c46f82b9940c3d9f5d3e0c6c9aa9339966ae22bfab89beaf9",
+              "language": "shell",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 1.2999999998137355
+            }
+          ]
+        },
+        {
+          "name": "test_db",
+          "manifest_revision": "e324b56193ca506ab7cc1ab143a9153d8c4535d7",
+          "files": [
+            {
+              "path": "employees.sql",
+              "sha256": "cfe3f89f7b21326c516ba65d253e35e795877e9bb60c388520d915f348403a9a",
+              "language": "sql",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 6
+            },
+            {
+              "path": "postgresql/test_employees_sha.sql",
+              "sha256": "1d7d08042406255e044f47f4208a51ea5c38c5851568088e5aa00612bfcc20d2",
+              "language": "sql",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 2.3000000002793968
+            },
+            {
+              "path": "test_employees_sha2.sql",
+              "sha256": "a78e6b89ffbdb569239b070d5489ac8db83e7c027f9df7ea849982ab28459c66",
+              "language": "sql",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 1.7999999998137355
+            }
+          ]
+        },
+        {
+          "name": "kirigami",
+          "manifest_revision": "fead580c77c2a60f67e9e6075ec700f745983be3",
+          "files": [
+            {
+              "path": "autotests/mobile/tst_pagerow.qml",
+              "sha256": "f8a69dc6e7d6fe3cd1e64b682fadeaa2a5a2fc9f7af63e1099cd6fb8d9939012",
+              "language": "qml",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 3.8000000002793968
+            },
+            {
+              "path": "src/controls/LoadingPlaceholder.qml",
+              "sha256": "02ef0461ae36e684feca298412efb20f94bff81f35f620e4f815991ebc2546ca",
+              "language": "qml",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 2.1999999997206032
+            },
+            {
+              "path": "tests/wheelhandler/WheelHandlerScrollViewTextAreaTest.qml",
+              "sha256": "bbbd53611a20fd43ce201410d7cac99c98b326373dcf89061f68af6d4db2a706",
+              "language": "qml",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 3.5
+            }
+          ]
+        },
+        {
+          "name": "SDWebImage",
+          "manifest_revision": "c3ad5e1a9bf55c9b76d4c362430b5fcded96c502",
+          "files": [
+            {
+              "path": "Examples/SDWebImage Demo/AppDelegate.h",
+              "sha256": "1ae584cacd10fb136be3e50b9db2207e2ee056974edc20ab6fdd7bfe585d04f4",
+              "language": "cpp",
+              "mode": "recovered",
+              "ast_errors": true,
+              "browser_ms": 3.8000000002793968
+            },
+            {
+              "path": "SDWebImage/Core/SDWebImageDownloaderOperation.m",
+              "sha256": "e74db292745d2d61ff458bef1adb5f979ff893ee3215439048f8ac1eb9fe331a",
+              "language": "objc",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 18.100000000093132
+            },
+            {
+              "path": "WebImage/SDWebImageMapKit.h",
+              "sha256": "3fed9ba28122de383fb0dd3853ac47a2b29c8dd5a89477556834da6cfc57cdb5",
+              "language": "cpp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 1.5
+            }
+          ]
+        },
+        {
+          "name": "dotnet-samples",
+          "manifest_revision": "acb39ceb13f910ae0f8f6298059c59102b749c41",
+          "files": [
+            {
+              "path": "async/async-and-await/vb/ParallelAsyncExample/Application.xaml.vb",
+              "sha256": "b127c174508830981638025004d222a06d6df572d33d73b1ae480bf414ec308d",
+              "language": "vbnet",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 2.099999999627471
+            },
+            {
+              "path": "framework/wcf/Basic/Services/Interop/ASMX/VB/client/client.vb",
+              "sha256": "cae182fa322d99219b949f76b4e0e36de9383556211f779a17ea125851e562b8",
+              "language": "vbnet",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 2.099999999627471
+            },
+            {
+              "path": "upgrades/matching-game-netframework/winforms/cs/MatchingGame/MainForm.Designer.cs",
+              "sha256": "2e30eeee8b22817a3830d9af49a09cd9cf6c70adacc1464242299a73c8a51e3e",
+              "language": "csharp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 22.700000000186265
+            },
+            {
+              "path": "windowsforms/datagridview/CSWinFormDataGridView/CustomDataGridViewColumn/MainForm.cs",
+              "sha256": "69b8b70dae5cdfaef0b1a1bb0493098b6d09fdd51b5a6aad50839bcbfd48f0c1",
+              "language": "csharp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 11.5
+            },
+            {
+              "path": "windowsforms/helloworld-sharedsource/WindowsFormsForm/Properties/AssemblyInfo.cs",
+              "sha256": "cc94563600aeffaf0e4cd1d993005d38b302ad0826593223706e9b3c6ae28b25",
+              "language": "csharp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 1.3999999999068677
+            },
+            {
+              "path": "wpf/Threading/Weather/net48/vb/Weather.xaml.vb",
+              "sha256": "9fd82599c39c7e324723d14467fd2fa0018a81e9d95f610318a471e57c96d21f",
+              "language": "vbnet",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 1.900000000372529
+            }
+          ]
+        }
+      ],
+      "differences": [
+        {
+          "project": "express",
+          "path": "examples/auth/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/content-negotiation/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/cookie-sessions/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/cookies/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/downloads/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/ejs/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/error/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/error-pages/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/hello-world/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/markdown/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/multi-router/controllers/api_v1.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/multi-router/controllers/api_v2.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/multi-router/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/mvc/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/mvc/lib/boot.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/online/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/params/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/resource/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/route-separation/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/search/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/session/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/session/redis.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/static-files/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/vhost/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/view-constructor/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/view-locals/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/web-service/index.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/Route.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[2].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/Router.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.all.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.engine.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.head.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.listen.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.locals.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.options.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.param.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.request.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.response.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.route.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.router.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.routes.error.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/exports.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/express.json.js",
+          "stage": "file",
+          "first_difference": "$.symbols[0].members[9].calls[0].kind: value",
+          "difference_kind": "relation array order"
+        },
+        {
+          "project": "express",
+          "path": "test/express.raw.js",
+          "stage": "file",
+          "first_difference": "$.symbols[0].members[7].calls[0].kind: value",
+          "difference_kind": "relation array order"
+        },
+        {
+          "project": "express",
+          "path": "test/express.static.js",
+          "stage": "file",
+          "first_difference": "$.symbols[3].members[4].calls[0].kind: value",
+          "difference_kind": "relation array order"
+        },
+        {
+          "project": "express",
+          "path": "test/express.text.js",
+          "stage": "file",
+          "first_difference": "$.symbols[0].members[8].calls[0].kind: value",
+          "difference_kind": "relation array order"
+        },
+        {
+          "project": "express",
+          "path": "test/express.urlencoded.js",
+          "stage": "file",
+          "first_difference": "$.symbols[0].members[7].calls[0].kind: value",
+          "difference_kind": "relation array order"
+        },
+        {
+          "project": "express",
+          "path": "test/middleware.basic.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/regression.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.accepts.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.acceptsCharsets.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.acceptsEncodings.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.acceptsLanguages.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.fresh.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.get.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.host.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.hostname.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.ip.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.ips.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.path.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.protocol.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.query.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.route.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.secure.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.signedCookies.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.stale.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.subdomains.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.xhr.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.attachment.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.clearCookie.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.cookie.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.format.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.json.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.jsonp.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.locals.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.location.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.sendFile.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[3].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.status.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.type.js",
+          "stage": "file",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/auth/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/content-negotiation/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/cookie-sessions/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/cookies/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/downloads/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/ejs/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/error/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/error-pages/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/hello-world/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/markdown/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/multi-router/controllers/api_v1.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/multi-router/controllers/api_v2.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/multi-router/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/mvc/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/mvc/lib/boot.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/online/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/params/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/resource/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/route-separation/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/search/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/session/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/session/redis.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/static-files/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/vhost/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/view-constructor/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/view-locals/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/web-service/index.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/Route.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[2].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/Router.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.all.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.engine.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.head.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.listen.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.locals.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.options.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.param.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.request.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.response.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.route.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.router.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.routes.error.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/exports.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/express.json.js",
+          "stage": "indexed",
+          "first_difference": "$.symbols[0].members[9].calls[0].kind: value",
+          "difference_kind": "relation array order"
+        },
+        {
+          "project": "express",
+          "path": "test/express.raw.js",
+          "stage": "indexed",
+          "first_difference": "$.symbols[0].members[7].calls[0].kind: value",
+          "difference_kind": "relation array order"
+        },
+        {
+          "project": "express",
+          "path": "test/express.static.js",
+          "stage": "indexed",
+          "first_difference": "$.symbols[3].members[4].calls[0].kind: value",
+          "difference_kind": "relation array order"
+        },
+        {
+          "project": "express",
+          "path": "test/express.text.js",
+          "stage": "indexed",
+          "first_difference": "$.symbols[0].members[8].calls[0].kind: value",
+          "difference_kind": "relation array order"
+        },
+        {
+          "project": "express",
+          "path": "test/express.urlencoded.js",
+          "stage": "indexed",
+          "first_difference": "$.symbols[0].members[7].calls[0].kind: value",
+          "difference_kind": "relation array order"
+        },
+        {
+          "project": "express",
+          "path": "test/middleware.basic.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/regression.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.accepts.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.acceptsCharsets.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.acceptsEncodings.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.acceptsLanguages.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.fresh.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.get.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.host.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.hostname.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.ip.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.ips.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.path.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.protocol.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.query.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.route.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.secure.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.signedCookies.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.stale.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.subdomains.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/req.xhr.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.attachment.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.clearCookie.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.cookie.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.format.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.json.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.jsonp.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.locals.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.location.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.sendFile.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[3].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.status.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/res.type.js",
+          "stage": "indexed",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "examples/auth/index.js",
+          "stage": "sample",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.engine.js",
+          "stage": "sample",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        }
+      ],
+      "errors": [],
+      "content_equivalent": true,
+      "repository_revision": "6c74a2747675152db0f1a00c8ff17ec12fecaa1c",
+      "native_helper_sha256": "c4de26d23b05b97a2ea401487d5f84827467dc3d4006da043833a2e0b7a71054",
+      "wasm_sha256": "dfea97d9366755274aedde151ea30560c4f50edc0c52ab6e132206dd636d2234"
+    },
+    "real-project-samples-webkit": {
+      "passed": false,
+      "browser": "webkit",
+      "method": "Complete JSON; physical root prefix normalization only",
+      "projects": [],
+      "corpus_samples": [
+        {
+          "name": "50projects50days",
+          "manifest_revision": "c92b0bc3a87fc95d44b89552b7b6a2eeb36ca481",
+          "files": [
+            {
+              "path": "3d-boxes-background/index.html",
+              "sha256": "133da8a33f4830da78f7c611f3aeba4d38f02dc3a21439da031784ceb7bacb68",
+              "language": "html",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 13
+            },
+            {
+              "path": "incrementing-counter/index.html",
+              "sha256": "62fff64b0d3a4f6f3e76de283c858cd74cf9c765b7590df7fb960677fcf880a5",
+              "language": "html",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 6
+            },
+            {
+              "path": "verify-account-ui/style.css",
+              "sha256": "fa92f34426652f8ab8adea4e2f68e4d19198caa74575bee58556c83293711bfc",
+              "language": "css",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 9
+            }
+          ]
+        },
+        {
+          "name": "todomvc",
+          "manifest_revision": "ff43b02e59dfa604386bb382034b2cd07c2bcd8a",
+          "files": [
+            {
+              "path": "cypress/e2e/spec.cy.js",
+              "sha256": "81beec13cc2f6e28577c560325fa07297e3b480d7694bf6f4bd822c0a3f57c22",
+              "language": "script",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 90
+            },
+            {
+              "path": "examples/gwt/gwttodo/D6D931BA9B534E30A73C8FD93F9AAC9A.cache.js",
+              "sha256": "487ce8e3e74b311295ec9581ba70754c9ae65e725ac98a64204bfd7680b8c68b",
+              "language": "script",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 2
+            },
+            {
+              "path": "tests/server.js",
+              "sha256": "5e7b464ccd75f74b9fd4dd0c55f4bc83476fb7f5feac7159badfcf18078b8ce0",
+              "language": "script",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 6
+            }
+          ]
+        },
+        {
+          "name": "html5-boilerplate",
+          "manifest_revision": "b6597338e695dc4a8165c5abcb2bfffa586c3ee5",
+          "files": [
+            {
+              "path": "src/404.html",
+              "sha256": "57f3228f1361508362003ac5eb25cc8303b0b8fd19bf2470e462b2b8e97eef78",
+              "language": "html",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 7
+            },
+            {
+              "path": "src/webpack.common.js",
+              "sha256": "e0b8e6d415a7d5d7f039c5cb43b5410294bfc21683e7f0edb1819235ecbbde84",
+              "language": "script",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 10
+            },
+            {
+              "path": "src/webpack.config.prod.js",
+              "sha256": "6a1cd0e01a8b1b7ccefe259cdf15f50840404f4c05f2295815d83bfab036eda2",
+              "language": "script",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 9
+            }
+          ]
+        },
+        {
+          "name": "express",
+          "manifest_revision": "7ef98448f8b38099ab1ded55e458538ad47a51e7",
+          "files": [
+            {
+              "path": "examples/auth/index.js",
+              "sha256": "4acca9f794d50f57c41967b471031f7410cc61a2b979c86ad0f264567f06e69b",
+              "language": "script",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 29
+            },
+            {
+              "path": "test/app.engine.js",
+              "sha256": "30d1606056440d76ffef7b74ee7ccfca94adbf85ae456ee58bcd66ad9e4fd3c9",
+              "language": "script",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 16
+            },
+            {
+              "path": "test/utils.js",
+              "sha256": "022f171575ba38ed5f595ec8080da0bb4578130d280942a0d4aea019a172711e",
+              "language": "script",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 20
+            }
+          ]
+        },
+        {
+          "name": "hono",
+          "manifest_revision": "37ce06904e732d4bc11c9075adf362c76049a594",
+          "files": [
+            {
+              "path": "adapters/aws-lambda/src/conninfo.test.ts",
+              "sha256": "93f505c1a3a77dcf36e60927058c0176fea4410aabc883b3ec7e510488ab651e",
+              "language": "ts",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 21
+            },
+            {
+              "path": "src/helper/streaming/sse.test.tsx",
+              "sha256": "f9dbd0817e70ec61f9aa8f67162ec6658363c6a4c1b5ab34ee4022f5f457275c",
+              "language": "tsx",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 51
+            },
+            {
+              "path": "vitest.config.ts",
+              "sha256": "e9698e0fe673dcd54e4e19692c65c4c0513f07cae1d4888140e57e7477fed03c",
+              "language": "ts",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 6
+            }
+          ]
+        },
+        {
+          "name": "flask",
+          "manifest_revision": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35",
+          "files": [
+            {
+              "path": "docs/conf.py",
+              "sha256": "a9732cff1ca5ee0420bc5f656df105c32cea32389033742c8f46dffab3b435cd",
+              "language": "python",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 15
+            },
+            {
+              "path": "src/flask/templating.py",
+              "sha256": "3ed7a044a96c911267e855b7359d9f159f06321f75fbe678a6656923d5e0989e",
+              "language": "python",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 19
+            },
+            {
+              "path": "tests/type_check/typing_route.py",
+              "sha256": "4554c7c77994fdd2ba2a8c50756c418aba619707f3e951551f26e8e9fd37c72a",
+              "language": "python",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 12
+            }
+          ]
+        },
+        {
+          "name": "requests",
+          "manifest_revision": "611c6162cbc4ac2020a2f91c7cfa4f3abf9bbb60",
+          "files": [
+            {
+              "path": "docs/_themes/flask_theme_support.py",
+              "sha256": "bba3677c6eeb99f678e808e90142a025b798b7658bac1ab4632591df8441d209",
+              "language": "python",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 14
+            },
+            {
+              "path": "src/requests/sessions.py",
+              "sha256": "3d2089736ced93b2b405624a943f866d22652b17df06a85eb010f86272fc3e7d",
+              "language": "python",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 48
+            },
+            {
+              "path": "tests/utils.py",
+              "sha256": "cfaec86690eba62573c8c730a121332837809333fb2b1006a20e2e8f4d34d4de",
+              "language": "python",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 2
+            }
+          ]
+        },
+        {
+          "name": "Slim",
+          "manifest_revision": "3675bf6baac66b07032575b7bef4200b60b7974b",
+          "files": [
+            {
+              "path": "Slim/App.php",
+              "sha256": "515a46fff1f2f014b49302d2f37eb617718a5d9dffd06da265b17f781f5ef42d",
+              "language": "php",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 28
+            },
+            {
+              "path": "Slim/Routing/FastRouteDispatcher.php",
+              "sha256": "65950d13598d497a0da227efdbf91b1736f9109fd578960ffc9ec3f8ff8d3568",
+              "language": "php",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 8
+            },
+            {
+              "path": "tests/bootstrap.php",
+              "sha256": "7a9b06ad0c87c0ee677557cbd61aeda07c214c7b4aa5ee8a4094aa1e17dbee91",
+              "language": "php",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 5
+            }
+          ]
+        },
+        {
+          "name": "PHPMailer",
+          "manifest_revision": "50cd271fdf4e23673ded5455cdbaea007e05f619",
+          "files": [
+            {
+              "path": "get_oauth_token.php",
+              "sha256": "c461d8181348df478a5639013af6719e89182bd6153b2e48469525763371f743",
+              "language": "php",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 18
+            },
+            {
+              "path": "src/SMTP.php",
+              "sha256": "4b4f5d5bad1c01f22a716f9de937e22cde4fe87346f6fece671d023f9b6342aa",
+              "language": "php",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 58
+            },
+            {
+              "path": "test/validators.php",
+              "sha256": "be5540ac203b90dc28f01f5b99b0484ff0a18b45e6bd7a9bee31f5c59ba043ff",
+              "language": "php",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 2
+            }
+          ]
+        },
+        {
+          "name": "CodeIgniter",
+          "manifest_revision": "3658d731eaabe6117298a105ffb5b9dd59e190ce",
+          "files": [
+            {
+              "path": "application/config/autoload.php",
+              "sha256": "60a0580ed13988fbd86ae67de7bc203558b9a2385bcd7805bf1f60016f72ebfc",
+              "language": "php",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 12
+            },
+            {
+              "path": "system/language/english/calendar_lang.php",
+              "sha256": "4e80526cc3ac20ff63416caeafd81a89ce8f5922b29dc15ad4e482ecf6101e6c",
+              "language": "php",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 11
+            },
+            {
+              "path": "tests/mocks/libraries/table.php",
+              "sha256": "f02a7c145bb35e0a6adccc704a0516e5977977643d23505399107447212be002",
+              "language": "php",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 5
+            }
+          ]
+        },
+        {
+          "name": "gson",
+          "manifest_revision": "854c8255b625cf1e13c701a83ea9ccb4caaa576a",
+          "files": [
+            {
+              "path": "extras/src/main/java/com/google/gson/extras/examples/rawcollections/RawCollectionsExample.java",
+              "sha256": "17be0448aa0041e8f36bb9069a0b8535176b6b9b0899a6aeb1d8e0d98cda2d2e",
+              "language": "java",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 15
+            },
+            {
+              "path": "gson/src/test/java/com/google/gson/TypeAdapterTest.java",
+              "sha256": "9d79609f6d9c0511a70b30b6e9d2b34845abc3619c29ef38c7ba3aa2e71cea40",
+              "language": "java",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 18
+            },
+            {
+              "path": "test-shrinker/src/test/java/com/google/gson/it/ShrinkingIT.java",
+              "sha256": "ad6b34cb2537d3c25beb0cf3bfab45279e54d1d3b15fb5b3795e7f2b9724cf9c",
+              "language": "java",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 24
+            }
+          ]
+        },
+        {
+          "name": "MediatR",
+          "manifest_revision": "916ef1b3d68ccdc96db8f914eaf1b32fc7db52c5",
+          "files": [
+            {
+              "path": "samples/MediatR.Examples/ConstrainedRequestPostProcessor.cs",
+              "sha256": "ad311a4014b27eb59d373fd70e677cf7d04727de35aa89b71c6bfea9e4c3f5b9",
+              "language": "csharp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 9
+            },
+            {
+              "path": "src/MediatR.Contracts/INotification.cs",
+              "sha256": "7e749babf379dd54bf0326985427753e2857112b16720bfff8401add190ba8a2",
+              "language": "csharp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 2
+            },
+            {
+              "path": "test/MediatR.Tests/UnitTests.cs",
+              "sha256": "c74aac6a7c81f8461054aad05da93708dd8f29752ac3fdc95485ca15e135d66d",
+              "language": "csharp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 12
+            }
+          ]
+        },
+        {
+          "name": "Polly",
+          "manifest_revision": "0275bc22a5a8defb77415313112454a558d0f43a",
+          "files": [
+            {
+              "path": "bench/Polly.Benchmarks/Bulkhead.cs",
+              "sha256": "af879742391ad7138923cd968c48c602a40a45286fa930f25db7138245720789",
+              "language": "csharp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 13
+            },
+            {
+              "path": "src/Polly.Core/Utils/Pipeline/ComponentWithDisposeCallbacks.cs",
+              "sha256": "ce29ae19713560d2780796b25120eb4daab63596ee574395f5c5b34b9dcf80f7",
+              "language": "csharp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 5
+            },
+            {
+              "path": "test/Shared/TestCancellation.cs",
+              "sha256": "ba4361717d9a3dbe855d5037b8dd0414a93250cba7147168fa9be7917265707d",
+              "language": "csharp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 2
+            }
+          ]
+        },
+        {
+          "name": "ripgrep",
+          "manifest_revision": "3fce3b5bb0236da2df6d99672afb8a719642eca7",
+          "files": [
+            {
+              "path": "build.rs",
+              "sha256": "07d72d8929ecd1cc2277e7d1f16092521c9160c92cca9544a682b275bd53d955",
+              "language": "rust",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 12
+            },
+            {
+              "path": "crates/index/src/literal.rs",
+              "sha256": "09c40115a676960db2e4f40b39c4b4ba07f180fc19ab4169b90a3ce5543d2714",
+              "language": "rust",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 74
+            },
+            {
+              "path": "tests/util.rs",
+              "sha256": "6862edaf5adad5eff8b7bf3c50ed28c221c0212fe733b22387d1f4f09909b447",
+              "language": "rust",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 28
+            }
+          ]
+        },
+        {
+          "name": "Alamofire",
+          "manifest_revision": "bda9ed57d72988a3a2ada33d824583541f86eac6",
+          "files": [
+            {
+              "path": "Example/Source/AppDelegate.swift",
+              "sha256": "85d9695a972ee715d7fc58cb062fee8e0cc8c892f2f661c3d85b3b578300df31",
+              "language": "swift",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 23
+            },
+            {
+              "path": "Source/Features/URLEncodedFormEncoder.swift",
+              "sha256": "0f3f91e4cdb9f5ddf9308151f9267c713a8abfbe28c9e2bcae6bfc8bef3c7ccd",
+              "language": "swift",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 183
+            },
+            {
+              "path": "watchOS Example/watchOS Example WatchKit Extension/Networking.swift",
+              "sha256": "fcf8a9a297f907f5e75105c30c43c5a24662ee930b92193e652a01b377be9e08",
+              "language": "swift",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 5
+            }
+          ]
+        },
+        {
+          "name": "gin",
+          "manifest_revision": "43fe48e8a0f44af783116cdb010725e6bb50255f",
+          "files": [
+            {
+              "path": "auth.go",
+              "sha256": "be38ef38614d2b9488d0e73ff2f8b432fc61cc90f4b7e071d0bbf78d898464c1",
+              "language": "go",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 14
+            },
+            {
+              "path": "fs.go",
+              "sha256": "adc80ccabbe903cd7be2ae755ebc879629cb77e59a22c94957c679ddeab5a791",
+              "language": "go",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 4
+            },
+            {
+              "path": "version.go",
+              "sha256": "64a9cd75a68233df9d82eae6d72df5aec5a468af253d437d078ca82f6409c501",
+              "language": "go",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 1
+            }
+          ]
+        },
+        {
+          "name": "cobra",
+          "manifest_revision": "adbc8813901bba65827259daa8e22ff94ec1f30e",
+          "files": [
+            {
+              "path": "active_help.go",
+              "sha256": "92bde33086d33e413b9ac945ddb38f7487f9ce91067453a7ce97fd62fa59cdc5",
+              "language": "go",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 9
+            },
+            {
+              "path": "doc/man_docs_test.go",
+              "sha256": "3af3faa35a5f2042b76c76e58c4a2ec9425456aced698eb9f47da40b6d7b3eeb",
+              "language": "go",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 14
+            },
+            {
+              "path": "zsh_completions_test.go",
+              "sha256": "88aacf930d16a2c9c6508c36684215053f681ec51532c778378009e19d8af26d",
+              "language": "go",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 3
+            }
+          ]
+        },
+        {
+          "name": "cJSON",
+          "manifest_revision": "6d9f2443ab071f86e5d9b43025a40929ec41c46c",
+          "files": [
+            {
+              "path": "cJSON.c",
+              "sha256": "607e756460fa0de37d20a7a9181f2de29c97bfb7ce5a0e6c2f548243836cd852",
+              "language": "cpp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 205
+            },
+            {
+              "path": "tests/unity/examples/example_3/src/ProductionCode2.c",
+              "sha256": "a929e7ef393ec5ccc53e3f885d663a1c8fbe5cc5f72a0fcad5c0d2f6cbc8b210",
+              "language": "cpp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 4
+            },
+            {
+              "path": "tests/unity_setup.c",
+              "sha256": "5f00ce6ea0455d5b898b5da3abc483e616f7d1f37fd2f8cc0ca84b09ff23e067",
+              "language": "cpp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 1
+            }
+          ]
+        },
+        {
+          "name": "kilo",
+          "manifest_revision": "323d93b29bd89a2cb446de90c4ed4fea1764176e",
+          "files": [
+            {
+              "path": "kilo.c",
+              "sha256": "4a44dd0e41670a9e49ecccb338ee199334f0dd472fc7f86467569cf99c391abe",
+              "language": "cpp",
+              "mode": "recovered",
+              "ast_errors": true,
+              "browser_ms": 269
+            }
+          ]
+        },
+        {
+          "name": "fmt",
+          "manifest_revision": "5da4e9a3fb15626ba92969199061e0169ebc8a00",
+          "files": [
+            {
+              "path": "include/fmt/args.h",
+              "sha256": "b105f72e62d7eb403c12c4c0ba22a94d42344b20206664814bf9568c6785fc83",
+              "language": "cpp",
+              "mode": "recovered",
+              "ast_errors": true,
+              "browser_ms": 108
+            },
+            {
+              "path": "test/fuzzing/chrono-timepoint.cc",
+              "sha256": "2238b277d8c4248927e7a3278b93246dc1a707171bca31d5de1e38e81db692ca",
+              "language": "cpp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 3
+            },
+            {
+              "path": "test/xchar-test.cc",
+              "sha256": "58c8078f6ef83ed0663596055bab9e13fd3d83711b43b46c42dff9afd222d77c",
+              "language": "cpp",
+              "mode": "recovered",
+              "ast_errors": true,
+              "browser_ms": 63
+            }
+          ]
+        },
+        {
+          "name": "sinatra",
+          "manifest_revision": "cb22afd7902b566b6eaba6c4ea89739494a65d12",
+          "files": [
+            {
+              "path": "examples/chat.rb",
+              "sha256": "5249bbd26bca7863d8b0b4c170e9f18e79b8fdbdb0dd05031354e9ad433da3af",
+              "language": "ruby",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 6
+            },
+            {
+              "path": "sinatra-contrib/lib/sinatra/streaming.rb",
+              "sha256": "dc32d99c2ef8332bae83cdd1021ec70c8512c3f8e8389d2327441667a893bb0f",
+              "language": "ruby",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 13
+            },
+            {
+              "path": "test/yajl_test.rb",
+              "sha256": "39d442339c41063a972e7c300134ff6b72546d91c336d16665ce23104f08279f",
+              "language": "ruby",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 5
+            }
+          ]
+        },
+        {
+          "name": "okio",
+          "manifest_revision": "fb4817a396dd37d515d94e6033216214e07323d1",
+          "files": [
+            {
+              "path": "android-test/build.gradle.kts",
+              "sha256": "31044a32211b30be0d4ad5c537a258514c6585459be85475ca23497f82330ce2",
+              "language": "kotlin",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 9
+            },
+            {
+              "path": "okio/src/jvmTest/kotlin/okio/JimfsOkioRoundTripTest.kt",
+              "sha256": "b162c02552520060eeebd5c74b077abd6a8aa8a02446ab14a2e1d34aefb8c767",
+              "language": "kotlin",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 18
+            },
+            {
+              "path": "settings.gradle.kts",
+              "sha256": "8a9b1eae5328c7e19b1e3168f2500a32c3d83b87f69abb4f9ed494fccf0860a0",
+              "language": "kotlin",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 2
+            }
+          ]
+        },
+        {
+          "name": "nvm",
+          "manifest_revision": "09822033d2bdb555fc52fa64489aaa4928695da3",
+          "files": [
+            {
+              "path": "install.sh",
+              "sha256": "48a0eee9a60e07422dce0eb5774754c83889570ca1ee2566c516acbe8af03a9e",
+              "language": "shell",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 34
+            },
+            {
+              "path": "rename_test.sh",
+              "sha256": "170b6eac6f918960427dc854cb5c2cf2fc8bb31d711b3325f9e630efe0a460e2",
+              "language": "shell",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 5
+            },
+            {
+              "path": "update_test_mocks.sh",
+              "sha256": "d731b383265aad0c46f82b9940c3d9f5d3e0c6c9aa9339966ae22bfab89beaf9",
+              "language": "shell",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 3
+            }
+          ]
+        },
+        {
+          "name": "test_db",
+          "manifest_revision": "e324b56193ca506ab7cc1ab143a9153d8c4535d7",
+          "files": [
+            {
+              "path": "employees.sql",
+              "sha256": "cfe3f89f7b21326c516ba65d253e35e795877e9bb60c388520d915f348403a9a",
+              "language": "sql",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 15
+            },
+            {
+              "path": "postgresql/test_employees_sha.sql",
+              "sha256": "1d7d08042406255e044f47f4208a51ea5c38c5851568088e5aa00612bfcc20d2",
+              "language": "sql",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 5
+            },
+            {
+              "path": "test_employees_sha2.sql",
+              "sha256": "a78e6b89ffbdb569239b070d5489ac8db83e7c027f9df7ea849982ab28459c66",
+              "language": "sql",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 2
+            }
+          ]
+        },
+        {
+          "name": "kirigami",
+          "manifest_revision": "fead580c77c2a60f67e9e6075ec700f745983be3",
+          "files": [
+            {
+              "path": "autotests/mobile/tst_pagerow.qml",
+              "sha256": "f8a69dc6e7d6fe3cd1e64b682fadeaa2a5a2fc9f7af63e1099cd6fb8d9939012",
+              "language": "qml",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 11
+            },
+            {
+              "path": "src/controls/LoadingPlaceholder.qml",
+              "sha256": "02ef0461ae36e684feca298412efb20f94bff81f35f620e4f815991ebc2546ca",
+              "language": "qml",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 3
+            },
+            {
+              "path": "tests/wheelhandler/WheelHandlerScrollViewTextAreaTest.qml",
+              "sha256": "bbbd53611a20fd43ce201410d7cac99c98b326373dcf89061f68af6d4db2a706",
+              "language": "qml",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 5
+            }
+          ]
+        },
+        {
+          "name": "SDWebImage",
+          "manifest_revision": "c3ad5e1a9bf55c9b76d4c362430b5fcded96c502",
+          "files": [
+            {
+              "path": "Examples/SDWebImage Demo/AppDelegate.h",
+              "sha256": "1ae584cacd10fb136be3e50b9db2207e2ee056974edc20ab6fdd7bfe585d04f4",
+              "language": "cpp",
+              "mode": "recovered",
+              "ast_errors": true,
+              "browser_ms": 11
+            },
+            {
+              "path": "SDWebImage/Core/SDWebImageDownloaderOperation.m",
+              "sha256": "e74db292745d2d61ff458bef1adb5f979ff893ee3215439048f8ac1eb9fe331a",
+              "language": "objc",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 38
+            },
+            {
+              "path": "WebImage/SDWebImageMapKit.h",
+              "sha256": "3fed9ba28122de383fb0dd3853ac47a2b29c8dd5a89477556834da6cfc57cdb5",
+              "language": "cpp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 3
+            }
+          ]
+        },
+        {
+          "name": "dotnet-samples",
+          "manifest_revision": "acb39ceb13f910ae0f8f6298059c59102b749c41",
+          "files": [
+            {
+              "path": "async/async-and-await/vb/ParallelAsyncExample/Application.xaml.vb",
+              "sha256": "b127c174508830981638025004d222a06d6df572d33d73b1ae480bf414ec308d",
+              "language": "vbnet",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 4
+            },
+            {
+              "path": "framework/wcf/Basic/Services/Interop/ASMX/VB/client/client.vb",
+              "sha256": "cae182fa322d99219b949f76b4e0e36de9383556211f779a17ea125851e562b8",
+              "language": "vbnet",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 5
+            },
+            {
+              "path": "upgrades/matching-game-netframework/winforms/cs/MatchingGame/MainForm.Designer.cs",
+              "sha256": "2e30eeee8b22817a3830d9af49a09cd9cf6c70adacc1464242299a73c8a51e3e",
+              "language": "csharp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 47
+            },
+            {
+              "path": "windowsforms/datagridview/CSWinFormDataGridView/CustomDataGridViewColumn/MainForm.cs",
+              "sha256": "69b8b70dae5cdfaef0b1a1bb0493098b6d09fdd51b5a6aad50839bcbfd48f0c1",
+              "language": "csharp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 15
+            },
+            {
+              "path": "windowsforms/helloworld-sharedsource/WindowsFormsForm/Properties/AssemblyInfo.cs",
+              "sha256": "cc94563600aeffaf0e4cd1d993005d38b302ad0826593223706e9b3c6ae28b25",
+              "language": "csharp",
+              "mode": "ast",
+              "ast_errors": false,
+              "browser_ms": 3
+            },
+            {
+              "path": "wpf/Threading/Weather/net48/vb/Weather.xaml.vb",
+              "sha256": "9fd82599c39c7e324723d14467fd2fa0018a81e9d95f610318a471e57c96d21f",
+              "language": "vbnet",
+              "mode": "heuristic",
+              "ast_errors": false,
+              "browser_ms": 4
+            }
+          ]
+        }
+      ],
+      "differences": [
+        {
+          "project": "express",
+          "path": "examples/auth/index.js",
+          "stage": "sample",
+          "first_difference": "$.dependencies[0].label: value",
+          "difference_kind": "root display label"
+        },
+        {
+          "project": "express",
+          "path": "test/app.engine.js",
+          "stage": "sample",
+          "first_difference": "$.dependencies[1].label: value",
+          "difference_kind": "root display label"
+        }
+      ],
+      "errors": [],
+      "native_helper_sha256": "c4de26d23b05b97a2ea401487d5f84827467dc3d4006da043833a2e0b7a71054",
+      "wasm_sha256": "dfea97d9366755274aedde151ea30560c4f50edc0c52ab6e132206dd636d2234",
+      "repository_revision": "6c74a2747675152db0f1a00c8ff17ec12fecaa1c",
+      "content_equivalent": true
+    },
+    "real-project-responsiveness": {
+      "passed": true,
+      "scope": "Headless Chromium, actual app folder-import and navigation; no permission prompts",
+      "errors": [],
+      "timing_scope": "Single diagnostic run on this machine, not a performance guarantee",
+      "navigation_during_index": {
+        "path": "apps/macos/Sources/LumencodeCLI/main.swift",
+        "elapsedMs": 417.5,
+        "indexingAtStart": true,
+        "completedBeforeIndex": true,
+        "sourceVisible": true
+      },
+      "cold": {
+        "wallIncludingImportMs": 6969.200000000186,
+        "indexMs": 5001.800000000745,
+        "workers": 4,
+        "index": {
+          "analysed": 590,
+          "buildMs": 433,
+          "cachePath": "/cache/project-index.json",
+          "callSites": 27293,
+          "crossFileEdges": 1988,
+          "declarationsPaired": 395,
+          "definitions": 6708,
+          "edgesByEvidence": {
+            "import": 917,
+            "package": 41,
+            "qualifier": 56,
+            "qualifier-project": 1,
+            "unique-name": 973
+          },
+          "edgesByLanguage": {
+            "cpp": 773,
+            "csharp": 49,
+            "go": 2,
+            "java": 3,
+            "kotlin": 4,
+            "objc": 1,
+            "php": 6,
+            "python": 25,
+            "ruby": 1,
+            "rust": 199,
+            "script": 565,
+            "scss": 2,
+            "shell": 5,
+            "swift": 91,
+            "ts": 257,
+            "vbnet": 5
+          },
+          "failed": 0,
+          "files": 590,
+          "httpCalls": 7,
+          "httpEdges": 8,
+          "reusedFromCache": 0,
+          "unresolvedCallSites": 25305
+        },
+        "maxTimerGapMs": 375.79999999981374,
+        "heartbeatTicks": 646,
+        "selectedFiles": 1264,
+        "mountedBytes": 155130146,
+        "aggregateWasmCapacityBytes": 445644800
+      },
+      "warm": {
+        "wallIncludingContentVerificationMs": 2397.699999999255,
+        "status": "590 indexed files \u00b7 590 reused \u00b7 1988 relationships"
+      }
+    }
+  }
+}

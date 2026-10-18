@@ -297,3 +297,43 @@ directory and run `python3 tools/build_prism_bundle.py --source /path/to/prism`.
 The tool verifies the pinned revision, resolves grammar order with upstream's
 build helper, retains the MIT license and records SHA-256 provenance. Node is
 needed only for rebuilding this bundle, not for building/running LumenCode.
+
+### Real-project comparisons
+
+`check_web_project_parity.py` runs headlessly. Each `--project` compares all
+canonical candidates natively and in the browser, both individually and with
+project relationships. `--corpus-root` additionally samples up to three files per
+focus language from each entry in `tools/corpus.json` (100 bytes–256 KiB per file).
+Use the pinned corpus from `tools/fetch_corpus.py`, or the existing archived
+corpus used for cross-platform checks. Use a fresh output directory for each run.
+
+```sh
+python tools/check_web_project_parity.py \
+  --web-root /home/user/Code/Coding/lumencode-wasm-build/web \
+  --native-helper /home/user/Code/Coding/lumencode-wasm-native-check/bin/lumencode-engine \
+  --project /path/to/corpus/express --project /path/to/corpus/flask \
+  --project /path/to/corpus/cobra --project /path/to/corpus/cJSON \
+  --corpus-root /path/to/corpus --output /tmp/lumencode-real-projects
+```
+
+Add `--browser webkit` for headless Playwright WebKit. Every analysis JSON field
+and array order is compared; only the native physical root prefix is normalised.
+Differences and full browser results are saved in the output directory. The tool
+returns nonzero for strict differences, even where the secondary diagnosis finds
+only a root display label or call-relation order difference. See the
+[recorded findings](../../docs/web/offline-pwa-status.md#real-project-engine-comparison-18-october-2026).
+
+The UI measurement uses the real folder-import control and the production parser
+pool, opens another file while indexing continues, and measures re-import/cache
+reuse. It opens no GUI or OS permission prompts. Choose a project large enough
+for a real navigation action to complete before indexing finishes.
+
+```sh
+python tools/check_web_project_responsiveness.py \
+  --web-root /home/user/Code/Coding/lumencode-wasm-build/web \
+  --project /path/to/large/project --output /tmp/lumencode-project-responsiveness
+```
+
+Timings are diagnostic. The heartbeat includes automated import and UI work;
+reported aggregate WASM capacity is not peak browser memory. Neither checker
+modifies project source.

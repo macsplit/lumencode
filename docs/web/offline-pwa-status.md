@@ -308,8 +308,8 @@ so it survives `/tmp` cleanup.
 
 1. Try the actual Open folder permission flow interactively in desktop Chrome
    and Edge; check denial/revocation and refresh after external edits/deletions.
-2. Extend complete parity comparisons to representative public repositories,
-   damaged source and project-wide indexed results. Investigate path case,
+2. Extend the real-project comparison to more complete repositories and explicit
+   damaged-source mutations. Investigate path case,
    symlinks and dependencies outside the granted root explicitly.
 3. Broaden scheduling measurements on lower-memory hardware and representative
    projects before tuning the pool limit/cutoff further. Preserve shared facts and
@@ -341,3 +341,54 @@ Playwright WebKit checks plus workspace/background-index and offline regression
 results. Native Safari and OS folder-permission prompts still need manual
 acceptance. See the [browser README](../../apps/web/README.md#offline-syntax-highlighting)
 for limits, tests and the reproducible vendoring command.
+
+### Real-project engine comparison (18 October 2026)
+
+Headless Chromium compared every candidate in Express (**149** files), Flask
+(**105**), Cobra (**36**) and cJSON (**120**): **410 files**, each both before and
+after project indexing (**820 complete JSON comparisons**). Native/browser graph
+statistics also matched, excluding only build duration and physical cache path.
+The primary analysis comparison normalises only the physical root prefix; it
+retains every field and array order.
+
+A separate bounded sample compared **82 files from 27 public repositories** in
+both Chromium and Playwright WebKit. It covered **20 engine language labels**,
+with **58 AST**, **20 heuristic** and **4 recovered** analyses per browser. The
+four recovered samples also reported AST errors. This is sample coverage, not
+proof of every file or feature in those repositories. Inputs came from the
+existing cross-platform corpus archive; the report records manifest revisions,
+actual sample SHA-256 hashes and aggregate candidate-source fingerprints.
+
+There were **no unexplained content differences**, missing symbols or missing
+relationships in these comparisons. Exact JSON equality nevertheless failed in
+Express for two recorded reasons:
+
+- Dependencies pointing to the selected root display `express` natively and
+  `project` in WASM, whose mounted root is always `/project`.
+- Five Express test files contain the same call relations in a different array
+  order. The difference occurs both before and after project augmentation.
+
+The strict checker still returns nonzero for these differences. A separate
+diagnostic compares root display labels and permutations of only `calls` and
+`calledBy`, preserving their full contents and duplicates, to classify the
+differences. That diagnostic does not turn the strict check green. Shared-engine
+ordering and browser root labels are minor follow-ups; no parser, heuristic,
+relationship or UI production code was changed for this investigation. The
+copyright false positive remains deferred in issue #15.
+
+The actual app also imported the existing larger project headlessly:
+**1,264 selected files / 155 MB**, including **590 indexed candidates**. Its
+four-parser cold index took **5.00 seconds** (**6.97 seconds** including import);
+a file search/open completed in **418 ms while indexing continued**. Re-import
+and content verification reused all 590 facts in **2.40 seconds**. Aggregate
+reported WASM capacity was **425 MiB**, including the temporary inspection module;
+this is not browser peak RSS.
+
+The 10 ms heartbeat recorded a **376 ms maximum gap across the complete cold
+import/index interval**. That includes automated file import, tree rendering and
+other UI work; it does not isolate a parsing stall. Profile this initial pause
+before adding more scheduling complexity. These are single diagnostic timings on
+Kubuntu, not performance guarantees or low-memory-device acceptance.
+
+[Real-project evidence](evidence/offline-pwa-real-projects.json) ·
+[Reproduction commands](../../apps/web/README.md#real-project-comparisons)
