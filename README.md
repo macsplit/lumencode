@@ -82,6 +82,10 @@ runtime built by `tools/build_engine.py`; an independent CLI distribution must
 carry `EngineRuntime` beside its executable. A packaged app uses its embedded
 runtime and never searches for another checkout.
 
+For universal Intel/Apple Silicon downloads, use the private macOS 14 Qt kit and
+the staged Developer ID signing/notarization workflow in the
+[macOS distribution guide](docs/macos/distribution.md).
+
 ## Verification
 
 ```sh

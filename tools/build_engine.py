@@ -18,6 +18,9 @@ parser.add_argument("--build", type=Path, default=repo / ".build/engine")
 parser.add_argument("--runtime", type=Path, default=repo / ".build/EngineRuntime")
 parser.add_argument("--qt", type=Path, default=Path(os.environ.get("QT5_PREFIX", "/opt/homebrew/opt/qt@5")))
 parser.add_argument("--verify-only", action="store_true")
+parser.add_argument("--architectures", nargs="+", choices=("arm64", "x86_64"),
+                    default=os.environ.get("LUMENCODE_MACOS_ARCHITECTURES", "").split() or None,
+                    help="macOS slices; also settable with LUMENCODE_MACOS_ARCHITECTURES")
 args = parser.parse_args()
 vendor = json.loads((repo / "third_party/provenance.json").read_text())
 for record in vendor["files"]:
@@ -29,7 +32,8 @@ if args.verify_only:
 if not (args.qt / "lib/cmake/Qt5/Qt5Config.cmake").exists():
     raise SystemExit("Qt 5 not found. Install qt@5 or provide --qt /path/to/qt5")
 build, runtime = args.build.resolve(), args.runtime.resolve()
-subprocess.run(["cmake", "-S", str(repo), "-B", str(build), "-DCMAKE_BUILD_TYPE=Release", "-DLUMENCODE_BUILD_QT_APP=OFF", "-DLUMENCODE_BUILD_CLI=OFF", "-DLUMENCODE_BUILD_ENGINE_HELPER=ON", "-DCMAKE_PREFIX_PATH=" + str(args.qt), "-DCMAKE_OSX_DEPLOYMENT_TARGET=14.0"], check=True)
+architecture_options = ["-DCMAKE_OSX_ARCHITECTURES=" + ";".join(args.architectures)] if args.architectures else []
+subprocess.run(["cmake", "-S", str(repo), "-B", str(build), "-DCMAKE_BUILD_TYPE=Release", "-DLUMENCODE_BUILD_QT_APP=OFF", "-DLUMENCODE_BUILD_CLI=OFF", "-DLUMENCODE_BUILD_ENGINE_HELPER=ON", "-DCMAKE_PREFIX_PATH=" + str(args.qt), "-DCMAKE_OSX_DEPLOYMENT_TARGET=14.0", *architecture_options], check=True)
 subprocess.run(["cmake", "--build", str(build), "--parallel", "6"], check=True)
 (runtime / "bin").mkdir(parents=True, exist_ok=True)
 (runtime / "lib").mkdir(exist_ok=True)
@@ -38,7 +42,11 @@ shutil.copy2(build / "bin/lumencode-engine", binary)
 
 
 def dependencies(file):
-    return [line.strip().split(" (compatibility")[0] for line in subprocess.check_output(["otool", "-L", str(file)], text=True).splitlines()[1:]]
+    # Universal binaries repeat dependencies beneath an architecture heading.
+    # Only tab-indented entries are load commands; headings are not libraries.
+    return list(dict.fromkeys(line.strip().split(" (compatibility")[0]
+                for line in subprocess.check_output(["otool", "-L", str(file)], text=True).splitlines()
+                if line.startswith("\t")))
 
 
 def resolve(reference, owner):
@@ -51,7 +59,10 @@ def resolve(reference, owner):
         candidates = [Path(reference)]
     else:
         raise RuntimeError(f"Unsupported library reference: {reference}")
-    return next(p.resolve() for p in candidates if p.exists())
+    match = next((p.resolve() for p in candidates if p.exists()), None)
+    if match is None:
+        raise RuntimeError(f"Cannot resolve {reference} from {owner}; tried {candidates}")
+    return match
 
 
 copied = {}
@@ -102,6 +113,11 @@ for source in (repo / "third_party").rglob("*"):
 shutil.copy2(repo / "THIRD_PARTY_NOTICES.md", licenses / "THIRD_PARTY_NOTICES.md")
 # Qt and transitive library formula receipts preserve source/version/license information.
 runtime_info = {}
+private_qt_receipt = args.qt / "lumencode-qt-build.json"
+if private_qt_receipt.is_file():
+    runtime_info["private-qt"] = json.loads(private_qt_receipt.read_text())
+    if (args.qt / "licenses").is_dir():
+        shutil.copytree(args.qt / "licenses", licenses / "qt-source", dirs_exist_ok=True)
 for source in copied:
     if "/Cellar/" in str(source):
         parts = source.parts
@@ -120,7 +136,8 @@ for source in copied:
 minimum_versions = {}
 for file in [binary, *copied.values()]:
     output = subprocess.check_output(["vtool", "-show-build", str(file)], text=True)
-    minimum = next((line.split()[1] for line in output.splitlines() if line.strip().startswith("minos ")), "unknown")
+    minimums = [line.split()[1] for line in output.splitlines() if line.strip().startswith("minos ")]
+    minimum = max(minimums, key=lambda value: tuple(map(int, value.split(".")))) if minimums else "unknown"
     minimum_versions[str(file.relative_to(runtime))] = minimum
 (runtime / "minimum-macos.json").write_text(json.dumps(minimum_versions, indent=2) + "\n")
 print(f"Engine ready: {binary} ({len(copied)} bundled libraries)")

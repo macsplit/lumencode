@@ -1,0 +1,44 @@
+{
+  "passed": true,
+  "notarized": true,
+  "submission_id": "067ad32b-9922-40c6-9b06-489e4da4afac",
+  "archive": "LumenCode-macOS-universal-0.1.0.zip",
+  "sha256": "ec53628804d4055500ddb120455efd600aa44f563af6a7b974dd6413fcf05c85",
+  "published": false,
+  "source_commit": "247b1babec5b3569efa55e550827490d94a1bfef",
+  "source_worktree_dirty": false,
+  "version": "0.1.0",
+  "build_number": "20261018",
+  "architectures": [
+    "x86_64",
+    "arm64"
+  ],
+  "apple_status": "Accepted",
+  "developer_id_team": "PNJ9AX7795",
+  "fresh_extraction": {
+    "path_contains_spaces": true,
+    "signature_valid": true,
+    "stapled_ticket_valid": true,
+    "gatekeeper": "accepted: Notarized Developer ID",
+    "launches": [
+      {
+        "launched_and_remained_running": true,
+        "exit_after_shutdown": -15,
+        "architecture": "arm64",
+        "diagnostics": "",
+        "method": "Production app executable launched with project folder from temporary cwd; terminated after five seconds"
+      },
+      {
+        "launched_and_remained_running": true,
+        "exit_after_shutdown": -15,
+        "architecture": "x86_64",
+        "diagnostics": "",
+        "method": "Production app executable launched with project folder from temporary cwd; terminated after five seconds"
+      }
+    ]
+  },
+  "limitations": [
+    "Intel launch used Rosetta; physical Intel and macOS 14 launch tests remain outstanding",
+    "Verified on the development Mac; clean-machine download acceptance remains outstanding"
+  ]
+}

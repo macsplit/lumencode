@@ -1,0 +1,90 @@
+{
+  "passed": true,
+  "normalization": "Only absolute snapshot-root path prefixes/separators; no fields or array ordering discarded",
+  "comparisons": [
+    {
+      "reference": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "actual": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "files": 6297,
+      "excludedFromReference": [],
+      "excludedFromActual": [],
+      "missingFiles": [],
+      "differentInputs": [],
+      "failures": [],
+      "differences": [],
+      "languages": {
+        "html": 718,
+        "script": 607,
+        "css": 110,
+        "json": 234,
+        "swift": 107,
+        "php": 537,
+        "shell": 35,
+        "python": 131,
+        "csharp": 1016,
+        "vbnet": 470,
+        "cpp": 374,
+        "objc": 104,
+        "ruby": 164,
+        "go": 135,
+        "sql": 17,
+        "java": 302,
+        "ts": 457,
+        "tsx": 34,
+        "qml": 225,
+        "kotlin": 327,
+        "rust": 110,
+        "scss": 1,
+        "less": 70,
+        "jsx": 12
+      },
+      "modes": {
+        "ast": 4365,
+        "heuristic": 1683,
+        "recovered": 249
+      }
+    },
+    {
+      "reference": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "actual": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "files": 6297,
+      "excludedFromReference": [],
+      "excludedFromActual": [],
+      "missingFiles": [],
+      "differentInputs": [],
+      "failures": [],
+      "differences": [],
+      "languages": {
+        "html": 718,
+        "script": 607,
+        "css": 110,
+        "json": 234,
+        "swift": 107,
+        "php": 537,
+        "shell": 35,
+        "python": 131,
+        "csharp": 1016,
+        "vbnet": 470,
+        "cpp": 374,
+        "objc": 104,
+        "ruby": 164,
+        "go": 135,
+        "sql": 17,
+        "java": 302,
+        "ts": 457,
+        "tsx": 34,
+        "qml": 225,
+        "kotlin": 327,
+        "rust": 110,
+        "scss": 1,
+        "less": 70,
+        "jsx": 12
+      },
+      "modes": {
+        "ast": 4365,
+        "heuristic": 1683,
+        "recovered": 249
+      }
+    }
+  ]
+}

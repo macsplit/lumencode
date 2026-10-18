@@ -1,0 +1,65 @@
+{
+  "status": "signed and notarized; distribution ZIP verified; not published",
+  "architectures": {
+    "Contents/MacOS/LumenCode": "x86_64 arm64",
+    "Contents/Resources/EngineRuntime/bin/lumencode-engine": "x86_64 arm64",
+    "Contents/Resources/EngineRuntime/lib/libQt5Concurrent.5.15.19.dylib": "x86_64 arm64",
+    "Contents/Resources/EngineRuntime/lib/libQt5Core.5.15.19.dylib": "x86_64 arm64"
+  },
+  "runtime": {
+    "passed": true,
+    "relocation_passed": true,
+    "exit_code": 0,
+    "external_dependencies": [],
+    "libraries": 2,
+    "relocated_path_with_spaces": true,
+    "minimum_macos": {
+      "bin/lumencode-engine": "14.0",
+      "lib/libQt5Concurrent.5.15.19.dylib": "14.0",
+      "lib/libQt5Core.5.15.19.dylib": "14.0"
+    },
+    "target_macos": "14.0",
+    "incompatible_dependencies": {}
+  },
+  "fixtures": {
+    "cases": 104,
+    "cases_passed": 104,
+    "assertions": 638,
+    "assertions_passed": 638,
+    "unique_invocations": 102,
+    "errors": 0
+  },
+  "contracts": {
+    "files": 102,
+    "contract_issues": [],
+    "compared_to_original": true,
+    "qt_hash_seed": 0,
+    "differing_files": []
+  },
+  "swift_integration": {
+    "tests": 9,
+    "failures": 0,
+    "engine_execution": "x86_64 under Rosetta"
+  },
+  "launches": [
+    {
+      "launched_and_remained_running": true,
+      "exit_after_shutdown": -15,
+      "architecture": "arm64",
+      "diagnostics": "",
+      "method": "Production app executable launched with project folder from temporary cwd; terminated after five seconds"
+    },
+    {
+      "launched_and_remained_running": true,
+      "exit_after_shutdown": -15,
+      "architecture": "x86_64",
+      "diagnostics": "",
+      "method": "Production app executable launched with project folder from temporary cwd; terminated after five seconds"
+    }
+  ],
+  "limitations": [
+    "Intel execution used Rosetta on an Apple Silicon Mac, not physical Intel hardware",
+    "No macOS 14 machine was available; deployment metadata and relocation gates passed",
+    "Five-second production app smoke covers startup, not complete GUI behaviour or frame latency"
+  ]
+}
