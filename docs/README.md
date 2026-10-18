@@ -5,6 +5,7 @@ The interfaces consume the shared engine in this repository. Start with the root
 
 - [0.1.0 downloads, validation and limitations](releases/0.1.0.md)
 - [Website and download deployment](web/deployment.md)
+- [Offline browser PWA feasibility and prototype direction](web/offline-pwa-feasibility.md)
 - [Consolidation plan](migration/plan.md)
 - [Consolidation status and evidence](migration/status.md)
 - [Qt user guide](qt/end-user-guide.md)
