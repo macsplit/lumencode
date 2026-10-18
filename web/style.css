@@ -270,7 +270,7 @@ button:focus-visible, a:focus-visible {
 }
 
 .gallery-controls .gallery-playback {
-    margin-left: 0.4rem;
+    margin-left: 8px;
     font-size: 0.85rem;
 }
 
@@ -298,27 +298,39 @@ button:focus-visible, a:focus-visible {
 
 .playback-icon {
     display: block;
-    width: 10px;
+    position: relative;
+    width: 8px;
     height: 12px;
 }
 
-.playback-icon::before {
+.playback-icon::before, .playback-icon::after {
     content: '';
-    display: block;
-    width: 3px;
+    position: absolute;
+    top: 0;
+    width: 2px;
     height: 12px;
     background: currentColor;
-    box-shadow: 7px 0 currentColor;
+}
+
+.playback-icon::before {
+    left: 0;
+}
+
+.playback-icon::after {
+    right: 0;
 }
 
 .gallery-playback[data-paused="true"] .playback-icon::before {
     width: 0;
     height: 0;
     background: transparent;
-    box-shadow: none;
     border-top: 6px solid transparent;
     border-bottom: 6px solid transparent;
-    border-left: 10px solid currentColor;
+    border-left: 8px solid currentColor;
+}
+
+.gallery-playback[data-paused="true"] .playback-icon::after {
+    display: none;
 }
 
 header h1 {

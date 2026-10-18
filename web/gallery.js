@@ -16,7 +16,7 @@
         clearTimeout(timer);
         const stopped = paused || hovering || gallery.contains(document.activeElement) || document.hidden;
         gallery.querySelector('.gallery-slides').setAttribute('aria-live', stopped ? 'polite' : 'off');
-        if (!stopped) timer = setTimeout(() => show(current + 1), 10000);
+        if (!stopped) timer = setTimeout(() => show(current + 1), 7000);
     };
     const dots = slides.map((slide, index) => {
         const dot = document.createElement('button');

@@ -15,7 +15,7 @@ No Cloudflare or nginx changes were needed.
 
 The compact six-image carousel uses plain HTML, CSS and `gallery.js`, without
 external dependencies. Dots and arrow keys select slides; autoplay advances every
-10 seconds, with a pause control. Hover, keyboard focus and hidden tabs suspend
+7 seconds, with a pause control. Hover, keyboard focus and hidden tabs suspend
 autoplay; reduced-motion preferences disable it by default. Images are capped
 at 800px and scale down with the viewport, with links to their original
 resolution. Without JavaScript, all images remain visible.
@@ -70,7 +70,7 @@ the remote name shown by `flatpak remotes` if it was renamed.
   show Swift members and HTML links; corrected Linux audit
   `gallery-sql-file.png` shows SQL tables and routines. All use actual app views.
 - Chromium checks at widths 1440, 1280, 768, 390 and 320 verified all six images,
-  dot selection, keyboard wraparound and focus, 10-second autoplay timing, hover
+  dot selection, keyboard wraparound and focus, 7-second autoplay timing, hover
   and manual pause, reduced-motion handling, local download/image
   links, no script errors and no horizontal page overflow.
   With JavaScript disabled all six screenshots remain available. Desktop and
