@@ -1,0 +1,76 @@
+{
+  "version": "0.1.0",
+  "tag": "v0.1.0",
+  "application_sources_verified_against": "f04dcd864d65cb2090896c2b85427c0a934b5431",
+  "packages": [
+    {
+      "platform": "linux",
+      "architectures": [
+        "x86_64"
+      ],
+      "filename": "LumenCode-Linux-x86_64-0.1.0.flatpak",
+      "bytes": 5023656,
+      "sha256": "dde51005fee618d3f8b575e2df00097a9e788b00fc0acd292a11ec4ccca27f7e",
+      "source_commit": "8f5241f9e905bd50dd7b81dcab9b58990f0eea8a",
+      "signed": true,
+      "notarized": false,
+      "website_url": "https://lumencode.app/downloads/v0.1.0/LumenCode-Linux-x86_64-0.1.0.flatpak",
+      "github_url": "https://github.com/macsplit/lumencode/releases/download/v0.1.0/LumenCode-Linux-x86_64-0.1.0.flatpak"
+    },
+    {
+      "platform": "macos",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "filename": "LumenCode-macOS-universal-0.1.0.zip",
+      "bytes": 12576738,
+      "sha256": "ec53628804d4055500ddb120455efd600aa44f563af6a7b974dd6413fcf05c85",
+      "source_commit": "247b1babec5b3569efa55e550827490d94a1bfef",
+      "signed": true,
+      "notarized": true,
+      "website_url": "https://lumencode.app/downloads/v0.1.0/LumenCode-macOS-universal-0.1.0.zip",
+      "github_url": "https://github.com/macsplit/lumencode/releases/download/v0.1.0/LumenCode-macOS-universal-0.1.0.zip"
+    },
+    {
+      "platform": "windows",
+      "architectures": [
+        "x64"
+      ],
+      "filename": "LumenCode-Windows-x64-0.1.0.zip",
+      "bytes": 111264369,
+      "sha256": "d11e7bad005875e42de76217e64b1f1ee14b92933e00f854f203278e02523c78",
+      "source_commit": "f04dcd864d65cb2090896c2b85427c0a934b5431",
+      "signed": false,
+      "notarized": false,
+      "website_url": "https://lumencode.app/downloads/v0.1.0/LumenCode-Windows-x64-0.1.0.zip",
+      "github_url": "https://github.com/macsplit/lumencode/releases/download/v0.1.0/LumenCode-Windows-x64-0.1.0.zip"
+    }
+  ],
+  "linux": {
+    "flatpak_commit": "4b94132ad6f278c1cfe444273f9828be25d795b9521eee88d0d799821dbb209b",
+    "runtime": "org.kde.Platform/x86_64/5.15-25.08",
+    "signing_key_fingerprint": "7509299D8A459F46B6F66C91A34D2DA12519F468",
+    "packaging_recipe_commit": "87120ad3d54f651e76e3ef46ed1aacbbc9a07f58"
+  },
+  "macos": {
+    "build_number": "20261018",
+    "target_macos": "14.0",
+    "notarization_id": "067ad32b-9922-40c6-9b06-489e4da4afac",
+    "developer_id_team": "PNJ9AX7795"
+  },
+  "windows": {
+    "passed": true,
+    "archiveSha256": "d11e7bad005875e42de76217e64b1f1ee14b92933e00f854f203278e02523c78",
+    "filesVerified": 565,
+    "sourceCommit": "f04dcd864d65cb2090896c2b85427c0a934b5431",
+    "sourceWorktreeDirty": false,
+    "guiChecks": 47,
+    "executableSignature": "NotSigned",
+    "limitations": "Fresh extraction and child process without developer discovery paths on the existing VM. Installed system components remain; not clean-machine, installer, signing or SmartScreen acceptance."
+  },
+  "limitations": [
+    "macOS 14 and physical Intel launch testing remain outstanding; Intel execution was tested under Rosetta",
+    "Windows is unsigned; the fresh-extraction checks ran on the existing development VM, not a clean machine"
+  ]
+}
