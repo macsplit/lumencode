@@ -45,20 +45,20 @@
     <button role="tab" data-pane="preview" aria-controls="preview-pane" tabindex="-1" aria-selected="false">Source</button>
   </div>
   <main id="workspace" data-pane="project">
-    <aside id="project-pane" class="pane project-pane" aria-label="Project files">
+    <aside id="project-pane" tabindex="-1" class="pane project-pane" aria-label="Project files">
       <div class="pane-heading"><h2>Project <span id="file-count"></span></h2>
         <div class="history-actions"><button id="back" aria-label="Back" title="Back (Alt+Left)" disabled>←</button>
           <button id="forward" aria-label="Forward" title="Forward (Alt+Right)" disabled>→</button></div>
       </div>
       <div class="project-search"><label class="sr-only" for="search">Search files and symbols</label>
-        <input id="search" type="search" placeholder="Search files and symbols" autocomplete="off">
+        <input id="search" type="search" aria-controls="search-results" title="Search (Ctrl/⌘ F). Down arrow enters results; Escape clears." placeholder="Search files and symbols" autocomplete="off">
       </div>
       <div id="search-results" aria-label="Search results" hidden></div>
       <div id="project-empty"><button id="choose-project" disabled>Open folder…</button><p>Choose a project to explore.</p></div>
       <div id="files" class="pane-scroll"></div>
     </aside>
     <div class="splitter vertical" id="project-divider" role="separator" aria-label="Resize project pane" aria-orientation="vertical" tabindex="0"></div>
-    <section id="overview-pane" class="pane overview-pane" aria-label="File overview">
+    <section id="overview-pane" tabindex="-1" class="pane overview-pane" aria-label="File overview">
       <div class="pane-heading"><h2>Overview</h2><button id="inspect-file" disabled>File details</button></div>
       <div class="pane-scroll overview-content">
         <h3 id="selected-name">Explore your code</h3>
@@ -68,14 +68,14 @@
       </div>
     </section>
     <div class="splitter vertical" id="overview-divider" role="separator" aria-label="Resize overview pane" aria-orientation="vertical" tabindex="0"></div>
-    <section id="inspector-pane" class="pane inspector-pane" aria-label="Inspector">
+    <section id="inspector-pane" tabindex="-1" class="pane inspector-pane" aria-label="Inspector">
       <div class="pane-heading"><h2>Inspector</h2></div>
       <div class="pane-scroll inspector-content">
         <div id="inspector"><p class="empty">Select a file or symbol to see its details.</p></div>
       </div>
     </section>
     <div class="splitter horizontal" id="source-divider" role="separator" aria-label="Resize source preview" aria-orientation="horizontal" tabindex="0"></div>
-    <section id="preview-pane" class="pane preview-pane" aria-label="Source preview">
+    <section id="preview-pane" tabindex="-1" class="pane preview-pane" aria-label="Source preview">
       <div class="pane-heading"><h2 id="preview-title">Source preview</h2>
         <div class="preview-actions"><button id="source-previous" aria-label="Previous source page" disabled>Previous</button>
           <span id="source-position"></span><button id="source-next" aria-label="Next source page" disabled>Next</button>
@@ -85,6 +85,6 @@
       <pre id="source" tabindex="0" aria-label="Source code"></pre>
     </section>
   </main>
-  <footer><span>Local analysis · Read-only</span></footer>
+  <footer><span>Local analysis · Read-only</span><span>F6 panes · Ctrl/⌘ F search</span></footer>
 </body>
 </html>

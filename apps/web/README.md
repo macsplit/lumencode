@@ -345,3 +345,33 @@ sends the fresh imported files to a plain worker before the engine, distinguishi
 first-transfer cost from WASM work. This control deliberately warms those file
 objects; compare its first transfer and subsequent engine transfer separately.
 Instrumentation is test-only and adds overhead.
+
+### Keyboard navigation
+
+- Ctrl/Cmd+F focuses search and selects the current query. Down enters the
+  results; Up from the first result returns to search. Escape clears the query.
+- Up/Down and Home/End move among visible file, symbol and relation controls.
+  Enter/Space activates the focused control; folder summaries retain native
+  expand/collapse behaviour.
+- F6 cycles Project, Overview, Inspector and Source; Shift+F6 cycles backwards.
+- Alt+Left/Right restores history and focuses the destination details (outside
+  text fields, where editing/browser shortcuts retain control).
+- Compact-screen pane tabs also support Left/Right and Home/End.
+
+Opening a file from the keyboard focuses its overview; selecting a symbol or
+following a reference focuses the inspector. Background updates preserve the
+focused symbol/reference, and returning to a selected symbol reveals it in the
+overview. A source pager that becomes disabled transfers focus to the source
+preview. Existing mouse, splitter and source-copy behaviour is retained.
+
+```sh
+python tools/check_web_keyboard.py \
+  --web-root /home/user/Code/Coding/lumencode-wasm-build/web \
+  --output /tmp/lumencode-keyboard-check
+```
+
+Add `--browser webkit` for headless Playwright WebKit. The fixture is imported
+through the actual app control, then tests exercise keyboard actions at desktop
+and compact sizes. A test-only gate delays an actual old search response to
+verify that newer results and focus survive it. These checks do not claim native
+OS shortcut, screen-reader or Safari acceptance.

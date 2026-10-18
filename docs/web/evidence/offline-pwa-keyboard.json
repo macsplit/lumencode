@@ -1,0 +1,74 @@
+{
+  "date": "2026-10-18",
+  "baseline_revision": "5b97bf17a79da9e1ada1b041abeb17736a32fd2d",
+  "method": "Headless app fixture import, real engine results and keyboard interaction; desktop and compact viewport",
+  "baseline_failure": "Previous UI fails the first Down-arrow entry into search results",
+  "limitations": [
+    "Native OS shortcut handling not tested",
+    "Native Safari and screen-reader acceptance not tested"
+  ],
+  "reports": {
+    "keyboard-chromium": {
+      "passed": true,
+      "browser": "chromium",
+      "errors": [],
+      "search_arrows_enter_focus_overview": true,
+      "symbol_reference_follow_and_update_focus": true,
+      "keyboard_history_restores_details_and_focus": true,
+      "forward_reverse_pane_cycle": true,
+      "symbol_arrows_and_source_page_boundary_focus": true,
+      "pane_cycle_reveals_selected_symbol": true,
+      "refreshed_search_results_keep_focus_and_escape_clears": true,
+      "old_search_reply_cannot_replace_new_query_or_focus": true,
+      "menu_escape_restores_summary_focus": true,
+      "compact_panes_keep_focus_visible_and_tabs_work": true
+    },
+    "keyboard-webkit": {
+      "passed": true,
+      "browser": "webkit",
+      "errors": [],
+      "search_arrows_enter_focus_overview": true,
+      "symbol_reference_follow_and_update_focus": true,
+      "keyboard_history_restores_details_and_focus": true,
+      "forward_reverse_pane_cycle": true,
+      "symbol_arrows_and_source_page_boundary_focus": true,
+      "pane_cycle_reveals_selected_symbol": true,
+      "refreshed_search_results_keep_focus_and_escape_clears": true,
+      "old_search_reply_cannot_replace_new_query_or_focus": true,
+      "menu_escape_restores_summary_focus": true,
+      "compact_panes_keep_focus_visible_and_tabs_work": true
+    },
+    "keyboard-workspace-chromium": {
+      "browser": "chromium",
+      "passed": true,
+      "four_panes_visible": true,
+      "empty_state_open_uses_folder_import_fallback": true,
+      "project_menu_and_open_shortcut": true,
+      "automatic_relationship_build_and_file_search": true,
+      "symbol_inspector_parameters_and_cross_file_navigation": true,
+      "back_forward_restore_symbol_and_file": true,
+      "pointer_and_keyboard_resize": true,
+      "bounded_source_paging_and_focused_line": true,
+      "source_html_rendered_as_text": true,
+      "mobile_all_panes_accessible_without_overflow": true,
+      "pane_size_survives_reload": true,
+      "page_errors": []
+    },
+    "keyboard-background-webkit": {
+      "browser": "webkit",
+      "passed": true,
+      "canonical_file_inspection_during_indexing": true,
+      "candidate_encoding_does_not_bypass_shared_parser": true,
+      "nonindexed_css_and_package_metadata_use_shared_parser": true,
+      "auxiliary_utf8_utf16_binary_and_size_limits": true,
+      "inspection_wasm_capacity_bytes": 67108864,
+      "index_completion_preserves_view_and_releases_inspection_worker": true,
+      "background_refresh_does_not_add_history": true,
+      "auxiliary_files_excluded_from_shared_index": true,
+      "switching_project_terminates_old_pool_and_viewer": true,
+      "cancel_terminates_all_project_workers": true,
+      "auxiliary_only_project_is_browsable": true,
+      "page_errors": []
+    }
+  }
+}

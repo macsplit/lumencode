@@ -14,12 +14,22 @@ globalThis.Workspace = (() => {
   let selection, paths = new Set(), history = [], historyPosition = -1, sourceText = '';
   const pageSize = 160;
   let syntaxLines = null, syntaxText, syntaxLanguage, syntaxGeneration = 0;
-  function activatePane(name) {
+  function focusPane(name) {
+    const target = name === 'project' ? (!get('search').disabled ? get('search') : get('choose-project')) :
+      name === 'overview' ? get('symbols').querySelector('[aria-current=true]') || get('symbols').querySelector('button') || get('inspect-file') :
+      name === 'preview' ? get('source') : get('inspector-pane');
+    const destination = target && !target.disabled && target.getClientRects().length ? target : get(name + '-pane');
+    destination.focus({preventScroll:true});
+    if (destination.classList.contains('symbol-button')) destination.scrollIntoView({block:'nearest',inline:'nearest'});
+  }
+  function activatePane(name, focus = false) {
     get('workspace').dataset.pane = name;
     for (const tab of document.querySelectorAll('[data-pane][role=tab]')) {
       const active = tab.dataset.pane === name;
       tab.setAttribute('aria-selected', String(active)); tab.tabIndex = active ? 0 : -1;
     }
+    const active = document.activeElement;
+    if (focus || active?.closest('.pane') && !active.getClientRects().length) focusPane(name);
   }
   function historyControls() {
     get('back').disabled = !actions?.available() || historyPosition <= 0;
@@ -40,10 +50,12 @@ globalThis.Workspace = (() => {
       if (match) return match;
     }
   }
-  async function navigate(targetPath, line, name, record = true) {
+  async function navigate(targetPath, line, name, record = true, destination = '') {
     if (!actions.available()) return;
     if (!paths.has(targetPath)) { actions.status('This target is outside the selected project.'); return; }
-    await actions.open(targetPath, {line, name, record});
+    const opened = await actions.open(targetPath, {line, name, record});
+    if (opened !== false && destination) activatePane(destination, true);
+    return opened;
   }
   function showSource(line = 0) {
     focusLine = Math.max(0, Math.min(sourceLines.length, Number(line) || 0));
@@ -94,12 +106,13 @@ globalThis.Workspace = (() => {
       button.append(node('span', label(item)));
       const target = relative(item.path) || (item.kind ? relative(item.sourcePath) : '');
       button.append(node('small', [target || item.detail || item.target, item.line ? `L${item.line}` : '', item.confidence].filter(Boolean).join(' · ')));
-      button.onclick = () => {
+      button.dataset.focusKey = JSON.stringify([title,label(item),item.path,item.sourcePath,item.line]);
+      button.onclick = event => {
         if (!actions.available()) return;
-        if (target && paths.has(target)) navigate(target, item.line, item.name);
+        if (target && paths.has(target)) navigate(target, item.line, item.name, true, event.detail === 0 ? 'inspector' : '');
         else {
           // Unresolved/external targets remain inspectable, never opened as URLs.
-          inspect(item, title, true); activatePane('inspector');
+          inspect(item, title, true); activatePane('inspector', event.detail === 0);
         }
       };
       container.append(button);
@@ -152,7 +165,8 @@ globalThis.Workspace = (() => {
       const destination = relative(item.path);
       if (destination && paths.has(destination)) {
         const open = node('button', 'Open file');
-        open.onclick = () => navigate(destination, item.line, item.name);
+        open.dataset.focusKey = JSON.stringify(['location',destination,item.line,item.name]);
+        open.onclick = event => navigate(destination, item.line, item.name, true, event.detail === 0 ? 'inspector' : '');
         section('Location', parent).append(open);
       }
       if (item.snippet) {
@@ -172,7 +186,8 @@ globalThis.Workspace = (() => {
       heading.append(node('span', item.kind, 'symbol-kind'), node('span', item.name, 'symbol-name'), node('span', `L${item.line || '?'}`, 'symbol-line'));
       button.append(heading);
       if (item.detail) button.append(node('div', item.detail, 'symbol-detail'));
-      button.onclick = () => { if (actions.available()) { inspect(item); activatePane('inspector'); } };
+      button.dataset.focusKey = JSON.stringify([item.kind,item.name,item.line]);
+      button.onclick = event => { if (actions.available()) { inspect(item); activatePane('inspector', event.detail === 0); } };
       row.append(button);
       if (item.members?.length) { const members = node('div', null, 'members'); renderSymbols(item.members, members); row.append(members); }
       parent.append(row);
@@ -197,7 +212,7 @@ globalThis.Workspace = (() => {
       for (const file of tree.files.sort((a,b) => a.name.localeCompare(b.name))) {
         const button = node('button', file.name, 'file-button');
         button.dataset.path = file.path; button.title = file.path;
-        button.onclick = () => navigate(file.path);
+        button.onclick = event => navigate(file.path, undefined, undefined, true, event.detail === 0 ? 'overview' : '');
         parent.append(button);
       }
     };
@@ -228,7 +243,8 @@ globalThis.Workspace = (() => {
       for (const item of result[field]) {
         const button = node('button', label(item), 'overview-item');
         button.append(node('small', item.detail || item.target || `Line ${item.line || '?'}`));
-        button.onclick = () => { if (actions.available()) { inspect(item, title); activatePane('inspector'); } };
+        button.dataset.focusKey = JSON.stringify([title,label(item),item.path,item.line]);
+        button.onclick = event => { if (actions.available()) { inspect(item, title); activatePane('inspector', event.detail === 0); } };
         block.append(button);
       }
       sections.append(block);
@@ -248,6 +264,7 @@ globalThis.Workspace = (() => {
   function update(result) {
     if (!analysis || analysis.previewOnly || result.path !== analysis.path) return;
     const previous = selection;
+    const focused = document.activeElement, focusKey = focused?.dataset.focusKey, focusedPane = focused?.closest('.pane');
     const saved = {page,focusLine,pane:get('workspace').dataset.pane,
       source:get('source').scrollTop,sourceLeft:get('source').scrollLeft,
       overview:document.querySelector('.overview-content').scrollTop,
@@ -268,6 +285,11 @@ globalThis.Workspace = (() => {
     document.querySelector('.overview-content').scrollTop = saved.overview;
     document.querySelector('.inspector-content').scrollTop = saved.inspector;
     activatePane(saved.pane);
+    if (focusedPane && !focused.isConnected) {
+      const replacement = [...focusedPane.querySelectorAll('[data-focus-key]')].find(element => element.dataset.focusKey === focusKey);
+      if (replacement) replacement.focus({preventScroll:true});
+      else focusPane(saved.pane);
+    }
   }
   function reset() {
     Syntax.reset(); syntaxLines = null; syntaxText = undefined; syntaxLanguage = undefined; syntaxGeneration++;
@@ -277,7 +299,7 @@ globalThis.Workspace = (() => {
     get('file-sections').replaceChildren(); get('source-notice').hidden = true;
     get('inspect-file').disabled = true; renderSource(); historyControls();
   }
-  async function travel(offset) {
+  async function travel(offset, focus = false) {
     const position = historyPosition + offset;
     if (!actions.available() || position < 0 || position >= history.length) return;
     const destination = history[position];
@@ -285,6 +307,7 @@ globalThis.Workspace = (() => {
     const opened = await actions.open(destination.path, {...destination, record:false});
     if (opened === false) return;
     historyPosition = position; historyControls();
+    activatePane(destination.file ? 'overview' : 'inspector', focus);
   }
   function setup(configuration) {
     actions = configuration;
@@ -298,18 +321,36 @@ globalThis.Workspace = (() => {
         if (destination >= 0) { event.preventDefault(); tabs[destination].focus(); activatePane(tabs[destination].dataset.pane); }
       };
     }
-    get('inspect-file').onclick = () => { if (analysis && actions.available()) { inspect(analysis,'File'); activatePane('inspector'); } };
-    get('back').onclick = () => travel(-1); get('forward').onclick = () => travel(1);
-    get('source-previous').onclick = () => { page--; renderSource(); get('source').scrollTop=0; };
-    get('source-next').onclick = () => { page++; renderSource(); get('source').scrollTop=0; };
+    get('inspect-file').onclick = event => { if (analysis && actions.available()) { inspect(analysis,'File'); activatePane('inspector', event.detail === 0); } };
+    get('back').onclick = event => travel(-1, event.detail === 0); get('forward').onclick = event => travel(1, event.detail === 0);
+    get('source-previous').onclick = event => { page--; renderSource(); get('source').scrollTop=0; if (event.detail === 0 && event.currentTarget.disabled) get('source').focus(); };
+    get('source-next').onclick = event => { page++; renderSource(); get('source').scrollTop=0; if (event.detail === 0 && event.currentTarget.disabled) get('source').focus(); };
     get('copy-source').onclick = async () => {
       try { await navigator.clipboard.writeText(sourceText); actions.status('Source copied.'); }
       catch (_) { actions.status('Clipboard access was not granted. You can select and copy source text.'); }
     };
     document.addEventListener('keydown', event => {
-      if (event.altKey && ['ArrowLeft','ArrowRight'].includes(event.key)) { event.preventDefault(); travel(event.key === 'ArrowLeft' ? -1 : 1); }
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') { event.preventDefault(); activatePane('project'); get('search').focus(); }
+      const editing = event.target.closest('input,textarea,select,[contenteditable=true]');
+      if (event.key === 'F6' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        event.preventDefault();
+        const panes = ['project','overview','inspector','preview'];
+        const current = event.target.closest('.pane')?.id.replace('-pane','') || get('workspace').dataset.pane;
+        activatePane(panes[(panes.indexOf(current) + (event.shiftKey ? 3 : 1)) % 4], true);
+      }
+      if (!editing && event.altKey && ['ArrowLeft','ArrowRight'].includes(event.key)) { event.preventDefault(); travel(event.key === 'ArrowLeft' ? -1 : 1, true); }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') { event.preventDefault(); activatePane('project'); get('search').focus(); get('search').select(); }
     });
+    for (const id of ['files','symbols','inspector','file-sections']) {
+      get(id).addEventListener('keydown', event => {
+        if (!['ArrowUp','ArrowDown','Home','End'].includes(event.key) || event.altKey || event.ctrlKey || event.metaKey) return;
+        const controls = [...get(id).querySelectorAll('button,summary')].filter(element => !element.disabled && element.getClientRects().length);
+        const index = controls.indexOf(event.target.closest('button,summary'));
+        if (index < 0) return;
+        event.preventDefault();
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? controls.length - 1 : Math.max(0,Math.min(controls.length-1,index + (event.key === 'ArrowDown' ? 1 : -1)));
+        controls[next].focus();
+      });
+    }
     const saved = (() => { try { return JSON.parse(localStorage.getItem('lumencode-pane-sizes')) || {}; } catch (_) { return {}; } })();
     const dimensions = {};
     for (const [id, variable, min, max, fallback, axis] of [
@@ -352,5 +393,5 @@ globalThis.Workspace = (() => {
       };
     }
   }
-  return {setup,files,show,update,reset,previewOnly:() => Boolean(analysis?.previewOnly),controls:historyControls,navigate,activatePane};
+  return {setup,files,show,update,reset,previewOnly:() => Boolean(analysis?.previewOnly),controls:historyControls,navigate,activatePane,focusPane};
 })();

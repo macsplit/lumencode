@@ -319,7 +319,7 @@ so it survives `/tmp` cleanup.
    quota pressure and cache loss. Consider fine-grained invalidation and broader
    native-browser/platform checks. Public-hosted app update UX remains future work.
 5. Extend the four-pane workspace with richer search filters
-   and broader keyboard/accessibility acceptance. Packaging,
+   and broader accessibility acceptance on native browsers and screen readers. Packaging,
    public preview and distribution remain separate work; native releases and the
    public website have not been changed.
 
@@ -445,3 +445,30 @@ differences** are solely selected-root display labels (`express` versus `project
 
 [Ordering evidence](evidence/offline-pwa-relation-order.json). The copyright
 false positive in issue #15 remains deferred.
+
+### Keyboard and focus usability (18 October 2026)
+
+The browser workspace now supports arrow/Home/End navigation among visible
+controls, keyboard entry into search results, and F6/Shift+F6 pane cycling.
+Ctrl/Cmd+F selects the current query. Keyboard file opens focus the overview;
+symbol/reference actions and history navigation focus their destination details.
+Compact-screen switches avoid leaving focus inside a hidden pane. Returning to
+a selected symbol scrolls it into view, and paging transfers focus to source
+when the pager button becomes disabled.
+
+Stable control identities restore focus across background relationship updates
+and refreshed search results. Editing a query immediately invalidates old
+responses, including during the debounce interval, so a delayed old search cannot
+replace the new query's results. Native text-field editing retains its Alt-key
+behaviour; the Project menu still restores focus to its summary on Escape.
+
+Headless Chromium and Playwright WebKit pass desktop/compact keyboard flows,
+reference following, back/forward history, page boundaries, focus restoration
+and a gated old-search-response regression. The acceptance check failed on the
+previous UI at entering results with Down. Existing Chromium workspace and WebKit
+background-index regressions also pass. The source engine and analysis rules
+are unchanged. Native OS shortcuts, Safari and screen-reader acceptance remain
+separate checks.
+
+[Keyboard evidence](evidence/offline-pwa-keyboard.json) ·
+[Keys and reproduction](../../apps/web/README.md#keyboard-navigation).

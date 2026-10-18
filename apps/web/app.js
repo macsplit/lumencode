@@ -335,13 +335,14 @@ function clearSearch() {
 async function searchProject() {
   const generation = ++searchGeneration;
   const query = $('search').value.trim();
-  const container = $('search-results'); container.replaceChildren();
+  const container = $('search-results');
   container.hidden = !query; $('files').hidden = Boolean(query);
-  if (!query) return;
+  if (!query) { container.replaceChildren(); return; }
   const fileResults = currentFiles.filter(path => path.toLowerCase().includes(query.toLowerCase())).slice(0, 50)
     .map(path => ({name:path.split('/').at(-1), path, kind:'file'}));
   const render = results => {
     if (generation !== searchGeneration) return;
+    const focusKey = container.contains(document.activeElement) ? document.activeElement.dataset.focusKey : undefined;
     container.replaceChildren();
     for (const item of results) {
       const path = item.path?.replace(/^\/project\//, '');
@@ -349,8 +350,13 @@ async function searchProject() {
       const title = document.createElement('span'); title.textContent = item.name || item.label || 'Symbol';
       const detail = document.createElement('small'); detail.textContent = `${item.kind || 'symbol'} · ${path || ''}${item.line ? ':' + item.line : ''}`;
       button.append(title, detail);
-      if (path) button.onclick = () => Workspace.navigate(path, item.line, item.name);
+      button.dataset.focusKey = JSON.stringify([path,item.line,item.kind,item.name,item.label]);
+      if (path) button.onclick = event => Workspace.navigate(path, item.line, item.name, true, event.detail === 0 ? (item.kind === 'file' ? 'overview' : 'inspector') : '');
       container.append(button);
+    }
+    if (focusKey) {
+      const replacement = [...container.querySelectorAll('button')].find(button => button.dataset.focusKey === focusKey);
+      (replacement || $('search')).focus({preventScroll:true});
     }
     if (!results.length) { const empty = document.createElement('p'); empty.className = 'empty'; empty.textContent = 'No matches'; container.append(empty); }
   };
@@ -362,10 +368,28 @@ async function searchProject() {
     } catch (error) { if (generation === searchGeneration) status(error.message); }
   }
 }
-$('search').oninput = () => { clearTimeout(searchDelay); searchDelay = setTimeout(searchProject, 180); };
-$('search').onkeydown = event => {
+$('search').oninput = () => { searchGeneration++; $('search-results').replaceChildren(); clearTimeout(searchDelay); searchDelay = setTimeout(searchProject, 180); };
+$('search').onkeydown = async event => {
   if (event.key === 'Escape') { $('search').value = ''; searchProject(); }
   if (event.key === 'Enter') { clearTimeout(searchDelay); searchProject(); }
+  if (event.key === 'ArrowDown') {
+    if ($('search').value.trim() && !$('search-results').querySelector('button')) {
+      event.preventDefault(); clearTimeout(searchDelay); await searchProject();
+      if (document.activeElement !== $('search')) return;
+    }
+    const target = $('search').value.trim() ? $('search-results').querySelector('button') : $('files').querySelector('[aria-current=true]');
+    if (target) { event.preventDefault(); target.focus(); }
+  }
+};
+$('search-results').onkeydown = event => {
+  const buttons = [...$('search-results').querySelectorAll('button')];
+  const index = buttons.indexOf(event.target.closest('button'));
+  if (event.key === 'Escape') { event.preventDefault(); $('search').value = ''; searchProject(); $('search').focus(); }
+  else if (index >= 0 && ['ArrowDown','ArrowUp','Home','End'].includes(event.key)) {
+    event.preventDefault();
+    if (event.key === 'ArrowUp' && index === 0) $('search').focus();
+    else buttons[event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length-1 : Math.max(0,Math.min(buttons.length-1,index+(event.key==='ArrowDown'?1:-1)))].focus();
+  }
 };
 Workspace.setup({available: () => !busy, status,
   open: (path, focus) => task(() => analyse(path, focus))});
