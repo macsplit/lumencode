@@ -44,9 +44,10 @@ application slices launch without diagnostics. See the
 - Application source revision: `247b1babec5b3569efa55e550827490d94a1bfef`;
   built from a clean worktree.
 
-The notarized ZIP and reports are preserved in the validation directory on
-Kubuntu. No download has been published and no store submission has been made.
-The website remains unchanged by this work.
+The notarized ZIP is published in the [0.1.0 GitHub release](https://github.com/macsplit/lumencode/releases/tag/v0.1.0)
+and independently hosted at [lumencode.app](https://lumencode.app/). Both copies
+have the checksum above. Reports are preserved in the validation directory on
+Kubuntu. No store submission has been made.
 
 The prepared version is 0.1.0, build 20261018. Build tools refuse existing output
 paths, keep credentials in Keychain, sign nested code explicitly, check the

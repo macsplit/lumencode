@@ -6,38 +6,56 @@
     <meta name="description" content="Explore local source trees, symbols and code relationships with LumenCode. Open source, with native Linux, macOS and Windows interfaces sharing one analysis engine.">
     <title>LumenCode - Structural Code Explorer</title>
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="style.css?v=0.1.0">
+    <link rel="stylesheet" href="style.css?v=0.1.0-gallery">
+    <script src="gallery.js?v=0.1.0-gallery" defer></script>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>LumenCode</h1>
             <p class="tagline">Structural code explorer for local source trees</p>
-            <p class="platforms">Linux · macOS · Windows <span class="beta">Beta</span></p>
+            <p class="platforms">Linux · macOS · Windows <span class="status-badge">Beta</span></p>
         </header>
 
         <main>
             <section class="screenshots" aria-label="Application screenshots">
-                <figure class="screenshot">
-                    <a href="screenshot-linux.png"><img src="screenshot-linux.png" alt="LumenCode on Linux, showing the project tree, symbols and source details" width="1680" height="952" fetchpriority="high"></a>
-                    <figcaption>Linux · Qt / Kirigami</figcaption>
-                </figure>
-                <div class="platform-gallery">
-                    <figure class="screenshot">
-                        <a href="screenshot-macos.png"><img src="screenshot-macos.png" alt="The native macOS beta exploring a JavaScript file" width="2480" height="1424" loading="lazy"></a>
-                        <figcaption>macOS · SwiftUI beta</figcaption>
+                <div class="gallery-slides" id="gallery-slides">
+                    <figure class="screenshot" id="slide-1" aria-label="1 of 6">
+                        <a href="screenshot-linux.png" title="Open full-size screenshot"><img src="screenshot-linux.png" alt="LumenCode on Linux showing the project tree, symbols and source details" width="1680" height="952" fetchpriority="high"></a>
+                        <figcaption>Linux · Project tree and JavaScript symbols</figcaption>
                     </figure>
-                    <figure class="screenshot">
-                        <a href="screenshot-windows.png"><img src="screenshot-windows.png" alt="The native Windows beta showing symbols and a syntax-coloured source preview" width="1422" height="873" loading="lazy"></a>
-                        <figcaption>Windows · WinUI beta</figcaption>
+                    <figure class="screenshot" id="slide-2" aria-label="2 of 6">
+                        <a href="screenshot-macos.png" title="Open full-size screenshot"><img src="screenshot-macos.png" alt="LumenCode on macOS exploring JavaScript and links to related files" width="2480" height="1424" loading="lazy"></a>
+                        <figcaption>macOS · JavaScript and related files</figcaption>
+                    </figure>
+                    <figure class="screenshot" id="slide-3" aria-label="3 of 6">
+                        <a href="screenshot-windows.png" title="Open full-size screenshot"><img src="screenshot-windows.png" alt="LumenCode on Windows showing symbols and a syntax-coloured source preview" width="1422" height="873" loading="lazy"></a>
+                        <figcaption>Windows · Symbols and source preview</figcaption>
+                    </figure>
+                    <figure class="screenshot" id="slide-4" aria-label="4 of 6">
+                        <a href="screenshot-swift.png" title="Open full-size screenshot"><img src="screenshot-swift.png" alt="A Swift struct with its properties, initializer and methods" width="2480" height="1424" loading="lazy"></a>
+                        <figcaption>macOS · Swift types and members</figcaption>
+                    </figure>
+                    <figure class="screenshot" id="slide-5" aria-label="5 of 6">
+                        <a href="screenshot-html.png" title="Open full-size screenshot"><img src="screenshot-html.png" alt="HTML elements and links to stylesheets, scripts and other pages" width="2480" height="1424" loading="lazy"></a>
+                        <figcaption>macOS · HTML structure and links</figcaption>
+                    </figure>
+                    <figure class="screenshot" id="slide-6" aria-label="6 of 6">
+                        <a href="screenshot-sql.png" title="Open full-size screenshot"><img src="screenshot-sql.png" alt="SQL tables, functions and stored procedures with database dependencies" width="1680" height="952" loading="lazy"></a>
+                        <figcaption>Linux · SQL tables and routines</figcaption>
                     </figure>
                 </div>
+                <div class="gallery-controls" hidden>
+                    <button type="button" data-direction="-1" aria-label="Previous screenshot" aria-controls="gallery-slides">← <span>Previous</span></button>
+                    <span class="gallery-status" aria-live="polite" aria-atomic="true">1 / 6</span>
+                    <button type="button" data-direction="1" aria-label="Next screenshot" aria-controls="gallery-slides"><span>Next</span> →</button>
+                </div>
+                <p class="gallery-hint">Select an image to view it full size.</p>
             </section>
 
             <section class="about">
                 <h2>Explore the shape of your code</h2>
-                <p>LumenCode reads a local source tree and lets you drill from folders to files, symbols and member details. Browse declarations, inspect syntax-coloured source snippets, and follow relationships across files.</p>
-                <p>It is a code explorer rather than an editor. The Linux, macOS and Windows interfaces share the same parser-assisted analysis engine, including its language heuristics and recovery for incomplete code.</p>
+                <p>Browse local source trees, inspect symbols and syntax-coloured code, and follow relationships across files. Native Linux, macOS and Windows interfaces share one analysis engine, with language-specific heuristics and recovery for incomplete code.</p>
             </section>
 
             <section class="specs">
@@ -47,12 +65,11 @@
 
             <section class="install">
                 <h2>Try LumenCode</h2>
-                <p>LumenCode is open source and in active beta development.</p>
                 <div class="install-options">
                     <div class="option">
                         <h3>Linux</h3>
                         <p>Install the x86_64 build from our hosted Flatpak repository:</p>
-                        <p><a href="app.lumencode.LumenCode.flatpakref" class="download-button">Install Linux beta</a></p>
+                        <p><a href="app.lumencode.LumenCode.flatpakref" class="download-button">Install for Linux</a></p>
 <pre><code>flatpak install --user --from https://lumencode.app/app.lumencode.LumenCode.flatpakref</code></pre>
                         <p class="small">Already installed? Run <code>flatpak update app.lumencode.LumenCode</code>.</p>
                         <p class="small"><a href="lumencode.flatpakrepo">Repository file</a> · <a href="downloads/v0.1.0/LumenCode-Linux-x86_64-0.1.0.flatpak">Standalone bundle</a></p>

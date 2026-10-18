@@ -1,14 +1,22 @@
-# Website and Linux beta distribution
+# Website and downloads
 
 The public website is tracked in root `web/`. The live directory
 `nuc:/var/www/lumencode` is a deployed copy, not a Git checkout. From the current
 Mac, reach nuc through Kubuntu (`ssh kubuntu`, then `ssh nuc`).
 
-The 18 October 2026 refresh keeps the existing static dark page and Linux install
-flow, adds real Linux/macOS/Windows screenshots, and describes the native ports
-as working betas with source build instructions. Signed macOS/Windows downloads
-and store releases are not yet offered. No Cloudflare or nginx changes are
-needed for this deployment.
+The 18 October 2026 refresh preserves the static dark page and Linux install
+flow. Version 0.1.0 is published on [GitHub](https://github.com/macsplit/lumencode/releases/tag/v0.1.0)
+and independently hosted under `https://lumencode.app/downloads/v0.1.0/`.
+Linux uses the existing signed Flatpak repository; macOS is a signed, notarized
+universal ZIP; Windows is an unsigned portable x64 ZIP. Store releases are not
+offered. See [release notes and package provenance](../releases/0.1.0.md).
+The three packages, `release-manifest.json` and `SHA256SUMS` match between hosts.
+No Cloudflare or nginx changes were needed.
+
+The six-image carousel uses plain HTML, CSS and `gallery.js`, without autoplay or
+external dependencies. Previous/next buttons and arrow keys navigate the slides;
+each image links to its original resolution. Without JavaScript, all images
+remain visible. The page mentions Beta once.
 
 ## Flatpak refresh
 
@@ -56,9 +64,18 @@ the remote name shown by `flatpak remotes` if it was renamed.
 - Windows image: fresh `run_windows_gui_audit.ps1` capture `windows-dark.png`,
   from the previously validated native package at `8f67b7c` (same app sources as
   the merge). The default GUI suite passed.
-- Chromium browser checks at widths 1440, 768, 390 and 320 verified all three
-  images, local links, no script errors and no horizontal page overflow.
-  Desktop and mobile renders were visually reviewed.
+- Additional carousel captures: macOS `03-swift-symbol.png` and `05-web-file.png`
+  show Swift members and HTML links; corrected Linux audit
+  `gallery-sql-file.png` shows SQL tables and routines. All use actual app views.
+- Chromium checks at widths 1440, 768, 390 and 320 verified all six images,
+  previous/next wraparound, keyboard navigation and focus, local download/image
+  links, one Beta mention, no script errors and no horizontal page overflow.
+  With JavaScript disabled all six screenshots remain available. Desktop and
+  mobile renders were visually reviewed.
+- All five versioned website assets were downloaded through public HTTPS and
+  matched local checksums and GitHub's recorded asset digests. Python's default
+  HTTP client received a 403, whereas an identifying User-Agent and ordinary
+  requests worked, including the Windows ZIP. No ZIP-specific block was observed.
 
 The user observed tests switching before loading appeared visually complete.
 Some transitions are intentional stress cases; passing functional checks do not
