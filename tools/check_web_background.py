@@ -12,7 +12,7 @@ from pathlib import Path
 import tempfile
 import threading
 from playwright.sync_api import sync_playwright
-from check_web_prototype import HARNESS, Quiet, project_action
+from check_web_prototype import HARNESS, Quiet
 
 
 def check_single_parser(browser, url, project):
@@ -83,6 +83,8 @@ def main():
                 (source.parent/'utf16.notes').write_bytes('Notes in UTF-16\n'.encode('utf-16'))
                 (source.parent/'image.bin').write_bytes(b'\x89PNG\0\xff\x01')
                 with (source.parent/'large.log').open('wb') as file: file.truncate(5*1024*1024+1)
+            replacement = root/'replacement'; replacement.mkdir()
+            (replacement/'done.js').write_text('export function done() {}\n')
             auxiliary = root/'notes'; auxiliary.mkdir()
             (auxiliary/'README.md').write_text('Only documentation.\n')
             browser = (p.chromium.launch(executable_path='/snap/bin/chromium',args=['--no-sandbox'])
@@ -179,8 +181,8 @@ def main():
             page.evaluate('gate.hold=true')
             page.locator('#folder-input').set_input_files(str(root/'project-b')); held()
             choose('src/main.js'); assert page.evaluate('!!worker.viewer')
-            project_action(page,'demo')
-            page.wait_for_function("document.getElementById('project-name').textContent === 'Example project' && indexed && !indexing && !busy")
+            page.locator('#folder-input').set_input_files(str(replacement))
+            page.wait_for_function("document.getElementById('project-name').textContent === 'replacement' && indexed && !indexing && !busy")
             page.evaluate('releaseFacts()')
             page.wait_for_function('gate.live.size === 1 && pending.size === 0')
             report['switching_project_terminates_old_pool_and_viewer'] = True

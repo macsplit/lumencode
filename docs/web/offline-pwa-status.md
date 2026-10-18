@@ -17,7 +17,7 @@ remain canonical. A new worker on refresh clears static path/mtime caches.
 
 The dark interface now follows the desktop four-pane layout: project tree, file
 overview, inspector and bottom source preview. It supports folder selection/import,
-an example project, symbols and source, project relationships and search. Workspace
+symbols and source, project relationships and search. Workspace
 presentation remains separate from the engine and worker scheduler. Source text is rendered as text rather than HTML.
 Cancellation/timeouts terminate the coordinator and every parser worker. All essential assets are precached,
 with a cache version derived from asset hashes and a storage-persistence result
@@ -243,8 +243,13 @@ remain visible during work. Folder opening lives in the header's Project menu an
 in the empty project pane, with Ctrl/Cmd+O as a shortcut. The same Open action uses
 the import picker where direct folder access is unavailable. Refreshing an imported
 snapshot prompts for reimport. Back/Forward now sit in the project-pane heading;
-recent folders, example, saved-state controls and diagnostics live in the Project
+recent folders, saved-state controls and diagnostics live in the Project
 menu. The installed app name is simply LumenCode.
+
+The built-in example project and its Project-menu action have been removed.
+Browser tests create local fixture folders and import them through the production
+folder control; there is no example/test project generator in shipped app code.
+
 
 [Automatic-workflow evidence](evidence/offline-pwa-automatic-workflow.json) covers
 Chromium/WebKit workspace interactions, empty-state folder import, menu/shortcut

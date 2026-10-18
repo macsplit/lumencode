@@ -31,11 +31,17 @@ def project_action(page, action):
     page.locator('#' + action).click()
 
 
-def check_index_watchdog(browser, url):
+def create_navigation_fixture(path):
+    path.mkdir()
+    (path / 'greeting.js').write_text('export function greeting(name) { return `Hello, ${name}`; }\n')
+    (path / 'main.js').write_text('import { greeting } from "./greeting.js";\nexport function run() { return greeting("world"); }\n')
+
+
+def check_index_watchdog(browser, url, fixture):
     """Virtual time: continued progress beyond two minutes vs a stalled worker."""
     page = browser.new_page()
     page.goto(url)
-    page.wait_for_function("!document.getElementById('demo').disabled", timeout=90000)
+    page.wait_for_function("!document.getElementById('choose-project').disabled", timeout=90000)
     page.evaluate("""() => {
       const instance = worker;
       const post = instance.postMessage.bind(instance);
@@ -47,7 +53,7 @@ def check_index_watchdog(browser, url):
       }));
     }""")
     page.clock.install()
-    project_action(page, 'demo')
+    page.locator('#folder-input').set_input_files(str(fixture))
     page.wait_for_function("!document.getElementById('index-details').hidden")
     page.clock.fast_forward(90000)
     page.evaluate("emitProgress('analysing')")
@@ -57,7 +63,7 @@ def check_index_watchdog(browser, url):
     assert 'slow.js' in page.locator('#index-message').inner_text()
     # No further progress: the watchdog must eventually terminate this request.
     page.clock.fast_forward(120001)
-    page.wait_for_function("!document.getElementById('demo').disabled", timeout=30000)
+    page.wait_for_function("!document.getElementById('choose-project').disabled", timeout=30000)
     assert 'No engine progress for 120 seconds' in page.locator('#status').inner_text()
     assert not page.locator('#index-details').is_visible()
     page.close()
@@ -115,7 +121,9 @@ def main():
     url = f'http://127.0.0.1:{server.server_port}/'
     report = {'passed': False, 'errors': [], 'differences': [], 'timings_ms': {}}
     try:
-        with sync_playwright() as p, tempfile.TemporaryDirectory(prefix='lumencode-pwa-profile-') as profile:
+        with sync_playwright() as p, tempfile.TemporaryDirectory(prefix='lumencode-pwa-profile-') as profile, tempfile.TemporaryDirectory(prefix='lumencode-navigation-',dir=Path.home()) as fixtures:
+            fixture = Path(fixtures) / 'navigation-fixture'
+            create_navigation_fixture(fixture)
             context = p.chromium.launch_persistent_context(profile, executable_path=args.chromium,
                 headless=True, args=['--no-sandbox'], viewport={'width': 1440, 'height': 900})
             page = context.pages[0]
@@ -123,8 +131,8 @@ def main():
             network = []
             page.on('request', lambda request: network.append((request.method, request.url)))
             page.goto(url)
-            page.wait_for_function("!document.getElementById('demo').disabled", timeout=90000)
-            project_action(page, 'demo')
+            page.wait_for_function("!document.getElementById('choose-project').disabled", timeout=90000)
+            page.locator('#folder-input').set_input_files(str(fixture))
             page.wait_for_function("document.getElementById('result').textContent.length > 2", timeout=30000)
             page.wait_for_function("document.getElementById('search').dataset.indexed === 'true' && !document.getElementById('search').disabled", timeout=30000)
             page.locator('#search').fill('greeting')
@@ -132,8 +140,8 @@ def main():
             page.wait_for_function("document.querySelectorAll('#search-results button').length > 0")
             page.screenshot(path=str(args.output / 'desktop.png'), full_page=True)
             assert not page.evaluate('document.documentElement.scrollWidth > innerWidth')
-            report['ui_demo_index_search'] = True
-            report['index_watchdog'] = check_index_watchdog(context, url)
+            report['ui_import_index_search'] = True
+            report['index_watchdog'] = check_index_watchdog(context, url, fixture)
 
             # Exercise the production folder-handle enumeration and refresh path
             # using a real OPFS directory handle supplied by a test-only picker.
@@ -173,7 +181,7 @@ def main():
             report['timings_ms']['worker_initialization'] = ready['initializationMs']
             # Reuse actual browser File objects, keeping binary contents and paths.
             # The import input is cleared by the UI; refill with no change handler.
-            page.evaluate("document.getElementById('folder-input').onchange = null")
+            page.evaluate("window.productionFolderImport = document.getElementById('folder-input').onchange; document.getElementById('folder-input').onchange = null")
             page.locator('#folder-input').set_input_files(str(fixture_root))
             page.evaluate("""async () => {
               const files = [...document.getElementById('folder-input').files].map(file => ({
@@ -242,15 +250,22 @@ def main():
                     (args.output / ('indexed-' + relative.replace('/', '_') + '.json')).write_text(json.dumps(
                         {'native': normalized(native, fixture_root), 'browser': browser}, indent=2))
 
-            # Cancel immediately after dispatch: stale worker replies must not
-            # restore the old project, and a new operation must still succeed.
+            # Hold automatic indexing long enough to cancel through the real UI.
             page.evaluate("""() => {
-              document.getElementById('demo').click();
-              document.getElementById('cancel').click();
+              document.getElementById('folder-input').onchange = productionFolderImport;
+              window.cancelIndexHeld = true;
+              const post = LumenCodeWorker.prototype.postMessage;
+              LumenCodeWorker.prototype.postMessage = function(data) {
+                if (data.operation !== 'index' || !cancelIndexHeld) post.call(this,data);
+              };
             }""")
-            page.wait_for_function("!document.getElementById('demo').disabled && document.querySelectorAll('#files button').length === 0")
-            project_action(page, 'demo')
-            page.wait_for_function("document.getElementById('project-name').textContent === 'Example project' && !document.getElementById('choose-project').disabled")
+            page.locator('#folder-input').set_input_files(str(fixture))
+            page.wait_for_function('indexing && !busy')
+            page.locator('#cancel').click()
+            page.wait_for_function("!document.getElementById('choose-project').disabled && document.querySelectorAll('#files button').length === 0")
+            page.evaluate('cancelIndexHeld = false')
+            page.locator('#folder-input').set_input_files(str(fixture))
+            page.wait_for_function("document.getElementById('project-name').textContent === 'navigation-fixture' && indexed && !indexing && !busy")
             report['cancel_and_worker_recovery'] = True
 
             page.set_viewport_size({'width': 390, 'height': 844})
@@ -268,7 +283,7 @@ def main():
             page = context.pages[0]
             page.on('pageerror', lambda error: report['errors'].append(str(error)))
             page.goto(url)
-            page.wait_for_function("!document.getElementById('demo').disabled", timeout=90000)
+            page.wait_for_function("!document.getElementById('choose-project').disabled", timeout=90000)
             page.wait_for_function("document.querySelectorAll('#recent option').length > 1")
             page.locator('#project-menu > summary').click()
             page.locator('#recent').select_option(label='handle-test')

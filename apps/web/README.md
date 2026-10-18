@@ -9,7 +9,7 @@ a replacement for the native applications.
 - Shared C++ analysis and all vendored grammars compiled into one WebAssembly module.
 - Analysis and project indexing in a dedicated worker, using the same recovery,
   heuristics, facts and graph construction as native consumers.
-- Read-only folder selection, a directory-import fallback, example project,
+- Read-only folder selection, a directory-import fallback,
   source/symbol inspection, relationships and symbol search.
 - Desktop-style project tree, file overview, inspector and bottom source preview.
   Select symbols/members for details, parameters, returns, calls and callers;
@@ -38,8 +38,8 @@ decision remains open for a fuller interface.
 
 Open a folder from the empty project pane, the **Project** menu, or Ctrl/Cmd+O.
 Where direct folder access is unavailable, the same action opens the folder-import
-picker. The Project menu also contains recent folders, refresh/reimport, an example
-and saved-state controls. Relationship indexing starts automatically on opening,
+picker. The Project menu also contains recent folders, refresh/reimport and
+saved-state controls. Relationship indexing starts automatically on opening,
 importing, refreshing or reopening a project; cached facts are reused as before.
 Progress and Cancel appear during work. Back/Forward sit in the project pane.
 

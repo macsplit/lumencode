@@ -67,7 +67,7 @@ function noteIndexProgress(data) {
 
 function status(text) { if ($('status').textContent !== text) $('status').textContent = text; }
 function controls() {
-  for (const id of ['open', 'import', 'demo', 'choose-project']) $(id).disabled = busy;
+  for (const id of ['open', 'import', 'choose-project']) $(id).disabled = busy;
   $('import').hidden = !('showDirectoryPicker' in window);
   $('project-empty').hidden = Boolean(currentFiles.length);
   $('workspace').setAttribute('aria-busy', String(busy));
@@ -301,15 +301,6 @@ $('refresh').onclick = () => {
     await mount(await enumerate(directory), directory.name, {projectKey: currentProjectKey});
   });
 };
-$('demo').onclick = () => task(async () => {
-  directory = undefined;
-  const sources = {
-    'greeting.js': 'export function greeting(name) { return `Hello, ${name}`; }\n',
-    'main.js': 'import { greeting } from "./greeting.js";\nexport function run() { return greeting("world"); }\n',
-    'index.html': '<!doctype html>\n<html><body><button id="greet" onclick="run()">Greet</button><script src="main.js"></script></body></html>\n',
-  };
-  await mount(Object.entries(sources).map(([path, text]) => ({path, file: new File([text], path, {lastModified: 1700000000000})})), 'Example project');
-});
 async function buildRelationships(project) {
   indexing = true; controls();
   const now = performance.now();
