@@ -18,3 +18,6 @@ xcuserdata/
 apps/windows/**/bin/
 apps/windows/**/obj/
 .vs/
+
+# Published binaries live in release storage, not Git history.
+web/downloads/

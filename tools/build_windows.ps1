@@ -3,9 +3,11 @@ param(
     [string]$Build = 'build-windows',
     [string]$Output = 'build-windows/package',
     [string]$Dotnet = 'dotnet',
-    [switch]$EngineOnly
+    [switch]$EngineOnly,
+    [string]$Version = '0.1.0'
 )
 $ErrorActionPreference = 'Stop'
+if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw 'Version must contain three numeric components' }
 function Invoke-Checked([string]$Program, [string[]]$ToolArguments) {
     $previousPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
@@ -57,6 +59,6 @@ Get-ChildItem "$repo\engine" -Recurse -File | Where-Object { $_.Extension -in '.
 }
 @{ monorepo_commit = (git -C $repo rev-parse HEAD); engine_sources = $sources; third_party = $manifest; qt = (& "$Qt\bin\qmake.exe" -query QT_VERSION) } | ConvertTo-Json -Depth 12 | Set-Content -Encoding UTF8 "$runtime\source-provenance.json"
 if (-not $EngineOnly) {
-    Invoke-Checked $Dotnet @('publish', "$repo\apps\windows\LumenCode.Windows\LumenCode.Windows.csproj", '-c', 'Release', '-p:Platform=x64', '--self-contained', 'true', '-o', $Output)
+    Invoke-Checked $Dotnet @('publish', "$repo\apps\windows\LumenCode.Windows\LumenCode.Windows.csproj", '-c', 'Release', '-p:Platform=x64', "-p:Version=$Version", '--self-contained', 'true', '-o', $Output)
 }
 Write-Output "Windows package: $Output"

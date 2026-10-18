@@ -6,7 +6,7 @@
     <meta name="description" content="Explore local source trees, symbols and code relationships with LumenCode. Open source, with native Linux, macOS and Windows interfaces sharing one analysis engine.">
     <title>LumenCode - Structural Code Explorer</title>
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="style.css?v=20261018">
+    <link rel="stylesheet" href="style.css?v=0.1.0">
 </head>
 <body>
     <div class="container">
@@ -55,16 +55,24 @@
                         <p><a href="app.lumencode.LumenCode.flatpakref" class="download-button">Install Linux beta</a></p>
 <pre><code>flatpak install --user --from https://lumencode.app/app.lumencode.LumenCode.flatpakref</code></pre>
                         <p class="small">Already installed? Run <code>flatpak update app.lumencode.LumenCode</code>.</p>
-                        <p class="small"><a href="lumencode.flatpakrepo">Repository file</a> · <a href="app.lumencode.LumenCode.flatpak">Standalone bundle</a></p>
+                        <p class="small"><a href="lumencode.flatpakrepo">Repository file</a> · <a href="downloads/v0.1.0/LumenCode-Linux-x86_64-0.1.0.flatpak">Standalone bundle</a></p>
                     </div>
-                    <div class="option">
-                        <h3>macOS &amp; Windows</h3>
-                        <p>Native SwiftUI and WinUI versions are working betas. Signed downloads and App Store / Microsoft Store releases are not available yet.</p>
-                        <p>For now, build from source using the platform instructions:</p>
-                        <p><a href="https://github.com/macsplit/lumencode/tree/main/apps/macos">macOS build instructions</a><br>
-                        <a href="https://github.com/macsplit/lumencode/tree/main/apps/windows">Windows build instructions</a></p>
+                    <div class="option native-downloads">
+                        <h3>macOS</h3>
+                        <p>Universal download for Intel and Apple Silicon, targeting macOS 14 or later. Signed with Developer ID and notarized by Apple.</p>
+                        <p><a href="downloads/v0.1.0/LumenCode-macOS-universal-0.1.0.zip" class="download-button">Download for macOS</a></p>
+                        <p class="small">Extract the ZIP and drag LumenCode to Applications.</p>
+
+                        <h3>Windows</h3>
+                        <p>Portable x64 download for Windows 10 (version 2004) or later.</p>
+                        <p><a href="downloads/v0.1.0/LumenCode-Windows-x64-0.1.0.zip" class="download-button">Download for Windows</a></p>
+                        <p class="small">Extract the entire ZIP, then run <code>LumenCode.Windows.exe</code>. This download is unsigned: Windows may show a SmartScreen warning, and some security policies may block it.</p>
                     </div>
                 </div>
+            </section>
+
+            <section class="release-info">
+                <p>Downloads: version 0.1.0 · <a href="downloads/v0.1.0/SHA256SUMS">SHA256 checksums</a> · <a href="https://github.com/macsplit/lumencode/releases/tag/v0.1.0">Release notes</a></p>
             </section>
 
             <section class="source">

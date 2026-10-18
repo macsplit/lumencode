@@ -22,11 +22,13 @@ try {
     New-Item -ItemType Directory $staged | Out-Null
     Copy-Item (Join-Path $Package '*') $staged -Recurse
     @'
-LumenCode Windows development build
+LumenCode for Windows
 
 Extract this entire ZIP into a writable folder, then run LumenCode.Windows.exe.
 Keep EngineRuntime and all other files beside the executable. No installer or
-separate .NET/Qt installation is intended. This build is unsigned.
+separate .NET/Qt installation is intended. This package is unsigned. Windows may
+show a SmartScreen warning; where permitted, choose More info, then Run anyway.
+Smart App Control or workplace policies may block unsigned applications.
 
 Open a source folder to begin. Large source previews have Previous/Next pages;
 Copy copies the full loaded preview. Files beyond the preview limit can be
@@ -41,7 +43,8 @@ source from https://github.com/macsplit/lumencode at the recorded source commit.
     $files = @(Get-ChildItem $staged -File -Recurse | Sort-Object FullName | ForEach-Object {
         [ordered]@{path=$_.FullName.Substring($staged.Length + 1).Replace('\','/');sha256=(Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant();bytes=$_.Length}
     })
-    [ordered]@{sourceCommit=$sourceCommit;sourceWorktreeDirty=$dirty;architecture='x64';signed=$false;files=$files} |
+    $version = [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $staged 'LumenCode.Windows.exe')).ProductVersion
+    [ordered]@{version=$version;sourceCommit=$sourceCommit;sourceWorktreeDirty=$dirty;architecture='x64';signed=$false;files=$files} |
         ConvertTo-Json -Depth 8 | Set-Content -Encoding UTF8 (Join-Path $staged 'package-manifest.json')
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     [IO.Compression.ZipFile]::CreateFromDirectory($temporary, $archive, [IO.Compression.CompressionLevel]::Optimal, $false)
