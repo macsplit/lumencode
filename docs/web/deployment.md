@@ -13,10 +13,12 @@ offered. See [release notes and package provenance](../releases/0.1.0.md).
 The three packages, `release-manifest.json` and `SHA256SUMS` match between hosts.
 No Cloudflare or nginx changes were needed.
 
-The six-image carousel uses plain HTML, CSS and `gallery.js`, without autoplay or
-external dependencies. Previous/next buttons and arrow keys navigate the slides;
-each image links to its original resolution. Without JavaScript, all images
-remain visible. The page mentions Beta once.
+The compact six-image carousel uses plain HTML, CSS and `gallery.js`, without
+external dependencies. Dots and arrow keys select slides; autoplay advances every
+10 seconds, with a pause control. Hover, keyboard focus and hidden tabs suspend
+autoplay; reduced-motion preferences disable it by default. Images are capped
+at 640px and scale down on shorter screens, with links to their original
+resolution. Without JavaScript, all images remain visible.
 
 ## Flatpak refresh
 
@@ -67,9 +69,10 @@ the remote name shown by `flatpak remotes` if it was renamed.
 - Additional carousel captures: macOS `03-swift-symbol.png` and `05-web-file.png`
   show Swift members and HTML links; corrected Linux audit
   `gallery-sql-file.png` shows SQL tables and routines. All use actual app views.
-- Chromium checks at widths 1440, 768, 390 and 320 verified all six images,
-  previous/next wraparound, keyboard navigation and focus, local download/image
-  links, one Beta mention, no script errors and no horizontal page overflow.
+- Chromium checks at widths 1440, 1280, 768, 390 and 320 verified all six images,
+  dot selection, keyboard wraparound and focus, 10-second autoplay timing, hover
+  and manual pause, reduced-motion handling, local download/image
+  links, no script errors and no horizontal page overflow.
   With JavaScript disabled all six screenshots remain available. Desktop and
   mobile renders were visually reviewed.
 - All five versioned website assets were downloaded through public HTTPS and

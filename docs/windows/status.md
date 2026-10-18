@@ -1,5 +1,15 @@
 # Windows development status
 
+Version 0.1.0 was published on 18 October 2026 as an unsigned portable x64 ZIP
+on [GitHub](https://github.com/macsplit/lumencode/releases/tag/v0.1.0) and
+[lumencode.app](https://lumencode.app/). The Windows frontend is merged into
+`main`. Fresh extraction checks pass all 565 package files and 47 GUI checks
+with developer discovery paths removed. See [release provenance and remaining
+validation](../releases/0.1.0.md).
+
+The development notes below record the 17 October checkpoints and measurements,
+including the original branch names and earlier audit counts.
+
 Updated 17 October 2026 after shared-engine portability fixes. The native Windows
 application opens normally, previews source with the macOS dark palette, and
 passes OS-injected keyboard and pane-drag checks on the Windows VM. Continue this branch rather than
@@ -12,7 +22,7 @@ The prior GUI/portable checkpoint is recorded in
 [resume-validation.md](resume-validation.md). Large previews use bounded,
 coloured pages; real folder-dialog cancellation/high contrast and input checks pass.
 
-## Position
+## Original development checkpoint
 
 - Branch: `windows/native-winui`, based on canonical main
   `4d164034b992a7818b54c8ce30d831c6c875c850`.
