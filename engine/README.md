@@ -22,6 +22,10 @@ minimum OS versions. Xcode invokes the same script with DerivedData-specific
 build and app runtime directories. This does not provide release signing or
 notarization, or fix the existing macOS 14 transitive-library limitation.
 
+The [macOS distribution workflow](../docs/macos/distribution.md) builds a private
+universal Core/Concurrent kit without those Homebrew transitive dependencies,
+checks both architecture slices and signs/notarizes the complete application.
+
 ## Normal development and provenance
 
 Edit analysis code here and validate both consumers in the same change. There is

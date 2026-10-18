@@ -20,7 +20,8 @@ with tempfile.TemporaryDirectory(prefix="lumencode-runtime-") as temporary:
     helper = runtime / "bin/lumencode-engine"
     bad_dependencies = []
     for file in [helper, *sorted((runtime / "lib").iterdir())]:
-        lines = subprocess.check_output(["otool", "-L", str(file)], text=True).splitlines()[1:]
+        lines = [line for line in subprocess.check_output(["otool", "-L", str(file)], text=True).splitlines()
+                 if line.startswith("\t")]
         for line in lines:
             dependency = line.strip().split(" (compatibility")[0]
             if not dependency.startswith(("@loader_path/", "@executable_path/", "/System/", "/usr/lib/")):
